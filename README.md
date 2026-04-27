@@ -222,19 +222,19 @@ The inference layer talks to llama.cpp over HTTP. Swap in any GGUF model. Swap i
     ╔══════════════════════════════════════════════════╗
     ║  Python 3.11+  ·  No heavy frameworks            ║
     ╠══════════════════════════════════════════════════╣
-    ║  llama.cpp ············ local LLM inference       ║
-    ║  SQLite + FTS5 ········ memory, search, audit     ║
-    ║  sqlite-vec ··········· vector similarity         ║
-    ║  smolagents ··········· agent orchestration       ║
-    ║  Click ················ CLI interface             ║
-    ║  OpenTelemetry ········ structured telemetry      ║
-    ║  asyncio ·············· phantom agent lifecycle   ║
+    ║  llama.cpp ············ local LLM inference      ║
+    ║  SQLite + FTS5 ········ memory, search, audit    ║
+    ║  sqlite-vec ··········· vector similarity        ║
+    ║  smolagents ··········· agent orchestration      ║
+    ║  Click ················ CLI interface            ║
+    ║  OpenTelemetry ········ structured telemetry     ║
+    ║  asyncio ·············· phantom agent lifecycle  ║
     ╠══════════════════════════════════════════════════╣
-    ║  MCP ·················· local module protocol     ║
-    ║  Google A2A ··········· inter-agent protocol      ║
+    ║  MCP ·················· local module protocol    ║
+    ║  Google A2A ··········· inter-agent protocol     ║
     ╠══════════════════════════════════════════════════╣
     ║  Models: Qwen 3 · DeepSeek · Phi · Gemma         ║
-    ║  (MIT / Apache 2.0 only -- no Llama)              ║
+    ║  (MIT / Apache 2.0 only -- no Llama)             ║
     ╚══════════════════════════════════════════════════╝
 ```
 
