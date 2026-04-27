@@ -1,0 +1,277 @@
+---
+// No props — static hero section
+---
+
+<section class="nexus-hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <p class="hero-subtitle">Neural Executive for Unified Superintelligence</p>
+    <h1 class="hero-title">N E X U S</h1>
+    <p class="hero-tagline">
+      An autonomous intelligence OS that runs on your hardware, answers to no cloud,
+      and gets smarter the longer it runs.
+    </p>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-value">23</span>
+        <span class="stat-label">Modules</span>
+      </div>
+      <span class="stat-divider" aria-hidden="true">|</span>
+      <div class="stat">
+        <span class="stat-value">233</span>
+        <span class="stat-label">Tests</span>
+      </div>
+      <span class="stat-divider" aria-hidden="true">|</span>
+      <div class="stat">
+        <span class="stat-value">8GB</span>
+        <span class="stat-label">Min RAM</span>
+      </div>
+      <span class="stat-divider" aria-hidden="true">|</span>
+      <div class="stat">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Cloud Dependencies</span>
+      </div>
+    </div>
+
+    <div class="hero-actions">
+      <a href="/NEXUS/getting-started/installation/" class="btn-primary">Get Started</a>
+      <a href="https://github.com/AllStreets/NEXUS" class="btn-secondary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+
+    <div class="hero-quickstart">
+      <div class="quickstart-header">
+        <span class="qs-dot qs-red"></span>
+        <span class="qs-dot qs-yellow"></span>
+        <span class="qs-dot qs-green"></span>
+        <span class="qs-label">quickstart</span>
+      </div>
+      <pre class="quickstart-body"><code><span class="qs-comment"># clone and install</span>
+<span class="qs-prompt">$</span> git clone https://github.com/AllStreets/NEXUS.git
+<span class="qs-prompt">$</span> pip install -e ".[all]"
+
+<span class="qs-comment"># launch the kernel</span>
+<span class="qs-prompt">$</span> nexus run</code></pre>
+    </div>
+  </div>
+</section>
+
+<style>
+  .nexus-hero {
+    position: relative;
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--nexus-bg-base);
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(0, 212, 255, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.5rem;
+    padding: 4rem 1.5rem;
+    max-width: 64rem;
+    width: 100%;
+  }
+
+  .hero-subtitle {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--nexus-text-secondary);
+    margin: 0;
+  }
+
+  .hero-title {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 700;
+    color: var(--nexus-accent-primary);
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 40px rgba(0, 212, 255, 0.5), 0 0 80px rgba(0, 212, 255, 0.2);
+    margin: 0;
+    line-height: 1.1;
+    border: none;
+  }
+
+  .hero-tagline {
+    font-size: 1.1rem;
+    color: var(--nexus-text-primary);
+    line-height: 1.65;
+    max-width: 42rem;
+    margin: 0;
+  }
+
+  /* Stats row */
+  .hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--nexus-accent-primary);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--nexus-text-secondary);
+  }
+
+  .stat-divider {
+    color: var(--nexus-border);
+    font-size: 1.5rem;
+    line-height: 1;
+    user-select: none;
+  }
+
+  @media (max-width: 640px) {
+    .stat-divider {
+      display: none;
+    }
+  }
+
+  /* Buttons */
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-primary {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 0.7rem 1.8rem;
+    background: var(--nexus-accent-primary);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: box-shadow 0.2s ease, opacity 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.45);
+    text-shadow: none;
+  }
+
+  .btn-secondary {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 0.7rem 1.8rem;
+    background: transparent;
+    color: var(--nexus-text-primary);
+    border: 1px solid var(--nexus-border);
+    border-radius: 4px;
+    text-decoration: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--nexus-accent-secondary);
+    color: var(--nexus-text-primary);
+    box-shadow: 0 0 14px rgba(123, 92, 255, 0.3);
+    text-shadow: none;
+  }
+
+  /* Quickstart terminal */
+  .hero-quickstart {
+    width: 100%;
+    max-width: 38rem;
+    background: var(--nexus-bg-surface);
+    border: 1px solid var(--nexus-border);
+    border-radius: 6px;
+    overflow: hidden;
+    text-align: left;
+  }
+
+  .quickstart-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1rem;
+    background: var(--nexus-bg-surface-hover);
+    border-bottom: 1px solid var(--nexus-border);
+  }
+
+  .qs-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .qs-red    { background: #ff5f57; }
+  .qs-yellow { background: #febc2e; }
+  .qs-green  { background: #28c840; }
+
+  .qs-label {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--nexus-text-secondary);
+    margin-left: 0.35rem;
+  }
+
+  .quickstart-body {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    border: none;
+    overflow-x: auto;
+  }
+
+  .quickstart-body code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: var(--nexus-text-primary);
+    background: none;
+  }
+
+  .qs-comment {
+    color: var(--nexus-text-secondary);
+    opacity: 0.7;
+  }
+
+  .qs-prompt {
+    color: var(--nexus-accent-primary);
+    user-select: none;
+  }
+</style>

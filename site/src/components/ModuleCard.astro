@@ -1,0 +1,95 @@
+---
+interface Props {
+  name: string;
+  description: string;
+  tier: string;
+  status?: string;
+}
+
+const { name, description, tier, status = 'BUILT' } = Astro.props;
+
+const tierColors: Record<string, string> = {
+  'Kernel': '#00d4ff',
+  'Perception': '#7b5cff',
+  'Intelligence': '#7b5cff',
+  'Action': '#ff9d00',
+  'Advanced Intelligence': '#ff4d6a',
+  'Network': '#00ff88',
+};
+
+const accentColor = tierColors[tier] ?? '#00d4ff';
+---
+
+<div class="module-card" style={`--card-accent: ${accentColor};`}>
+  <div class="card-header">
+    <span class="card-name">{name}</span>
+    <span class="card-status">{status}</span>
+  </div>
+  <p class="card-description">{description}</p>
+  <span class="card-tier">{tier}</span>
+</div>
+
+<style>
+  .module-card {
+    background: var(--nexus-bg-surface);
+    border: 1px solid var(--nexus-border);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+  }
+
+  .module-card:hover {
+    border-color: var(--card-accent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--card-accent) 25%, transparent);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .card-name {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--card-accent);
+    letter-spacing: 0.02em;
+  }
+
+  .card-status {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 0.2em 0.5em;
+    border: 1px solid var(--card-accent);
+    color: var(--card-accent);
+    border-radius: 2px;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+
+  .card-description {
+    font-size: 0.85rem;
+    color: var(--nexus-text-secondary);
+    line-height: 1.55;
+    margin: 0;
+    flex: 1;
+  }
+
+  .card-tier {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--nexus-text-secondary);
+    opacity: 0.6;
+  }
+</style>

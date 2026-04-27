@@ -3,16 +3,35 @@ title: NEXUS
 description: Neural Executive for Unified Superintelligence
 template: splash
 hero:
-  title: N E X U S
-  tagline: An autonomous intelligence operating system that runs on your hardware, answers to no cloud, and gets smarter the longer it runs.
-  actions:
-    - text: Get Started
-      link: /NEXUS/getting-started/installation/
-      icon: right-arrow
-    - text: GitHub
-      link: https://github.com/AllStreets/NEXUS
-      icon: external
-      variant: minimal
+  title: ' '
+  tagline: ' '
 ---
 
-Site under construction.
+import Hero from '../../components/Hero.astro';
+import ModuleGrid from '../../components/ModuleGrid.astro';
+
+<Hero />
+
+<div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
+
+## 23 Modules. One Kernel. Your Hardware.
+
+Five kernel components, eighteen intelligence modules, zero cloud dependencies.
+Everything runs locally in a single SQLite database. The smallest useful
+configuration fits in 8GB of RAM.
+
+</div>
+
+<ModuleGrid />
+
+<div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
+
+## Hardware Requirements
+
+| RAM | What you get |
+|-----|-------------|
+| **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
+| **16 GB** | Kernel + 10 modules, larger context windows |
+| **32 GB+** | All 23 modules, bigger models, concurrent agents |
+
+</div>

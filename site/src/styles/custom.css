@@ -101,3 +101,18 @@ starlight-theme-select,
 [data-theme-toggle] {
   display: none !important;
 }
+
+/* Landing page — hide default Starlight hero on splash template */
+[data-page-type='splash'] .hero {
+  display: none;
+}
+
+[data-page-type='splash'] .sl-markdown-content {
+  max-width: none;
+  padding: 0;
+}
+
+[data-page-type='splash'] header {
+  background: var(--nexus-bg-base);
+  border-bottom: 1px solid var(--nexus-border);
+}
