@@ -13,6 +13,15 @@ from nexus.config import NexusConfig
 
 
 class Cortex:
+    # Module keyword hints for routing
+    _MODULE_KEYWORDS: dict[str, list[str]] = {
+        "oracle": ["trigger", "alert", "monitor", "scan", "anticipat", "pattern"],
+        "sentry": ["cognitive", "focus", "fatigue", "stress", "flow", "state", "energy", "tired"],
+        "atlas": ["fact", "know about", "world model", "knowledge", "who is", "what is"],
+        "cipher": ["trust", "source", "provenance", "conflict", "verify", "credib"],
+        "prism": ["synthesize", "connection", "cross-domain", "insight", "relate"],
+    }
+
     def __init__(
         self,
         engram: Engram,
@@ -45,14 +54,30 @@ class Cortex:
     def _select_module(self, message: str) -> str:
         """
         Select which module should handle this message.
-        Batch 1: always routes to 'general'.
-        Batch 2+ upgrades to LLM-based intent classification.
+        Uses keyword matching against registered modules, falls back to 'general'.
         """
+        if not self._modules:
+            return ""
+
+        msg_lower = message.lower()
+        best_module = ""
+        best_score = 0
+
+        for mod_name, keywords in self._MODULE_KEYWORDS.items():
+            if mod_name not in self._modules:
+                continue
+            score = sum(1 for kw in keywords if kw in msg_lower)
+            if score > best_score:
+                best_score = score
+                best_module = mod_name
+
+        if best_module:
+            return best_module
+
+        # Fallback to general, or first available module
         if "general" in self._modules:
             return "general"
-        if self._modules:
-            return next(iter(self._modules))
-        return ""
+        return next(iter(self._modules))
 
     async def process(self, message: str) -> str:
         """Route a user message to the appropriate module and return the response."""

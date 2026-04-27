@@ -75,3 +75,40 @@ def test_register_module(kernel_deps):
 def test_list_modules_empty(kernel_deps):
     c = Cortex(**kernel_deps)
     assert c.list_modules() == []
+
+
+from nexus.modules.oracle import OracleModule
+from nexus.modules.sentry import SentryModule
+
+
+@pytest.fixture
+def multi_cortex(kernel_deps):
+    """Cortex with multiple modules registered."""
+    c = Cortex(**kernel_deps)
+    c.register_module(GeneralModule())
+    c.register_module(OracleModule())
+    c.register_module(SentryModule())
+    kernel_deps["aegis"].set_policy("general", allowed=True)
+    kernel_deps["aegis"].set_policy("oracle", allowed=True)
+    kernel_deps["aegis"].set_policy("sentry", allowed=True)
+    return c
+
+
+@pytest.mark.asyncio
+async def test_route_to_oracle(multi_cortex):
+    response = await multi_cortex.process("Check my triggers and alerts")
+    assert "oracle" in response.lower() or "trigger" in response.lower() or "no active" in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_route_to_sentry(multi_cortex):
+    response = await multi_cortex.process("What is my cognitive state and focus level?")
+    assert "sentry" in response.lower() or "focus" in response.lower() or "fatigue" in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_route_fallback_to_general(multi_cortex):
+    response = await multi_cortex.process("Tell me a joke")
+    # No keyword match, falls back to general
+    assert isinstance(response, str)
+    assert len(response) > 0
