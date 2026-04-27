@@ -30,6 +30,8 @@ class Cortex:
         "dreamweaver": ["morning brief", "overnight", "synthesis", "sleep", "idle", "pattern"],
         "serendipity": ["surprising", "unexpected", "serendip", "random", "adjacent", "diverse"],
         "forge": ["negotiat", "bargain", "offer", "counter-offer", "concession", "deal"],
+        "collective": ["federated", "peer", "distributed", "swarm learning", "model sharing"],
+        "legacy": ["crystallize", "distill", "framework", "playbook", "wisdom", "pattern extract"],
     }
 
     def __init__(
