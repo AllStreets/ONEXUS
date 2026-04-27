@@ -3,7 +3,7 @@
   <img src="https://img.shields.io/badge/Python-3.11+-0d1117?style=for-the-badge&logo=python&logoColor=58a6ff&labelColor=0d1117" alt="Python"/>
   <img src="https://img.shields.io/badge/License-Apache_2.0-0d1117?style=for-the-badge&labelColor=0d1117&color=3fb950" alt="License"/>
   <img src="https://img.shields.io/badge/RAM-8GB_Min-0d1117?style=for-the-badge&labelColor=0d1117&color=d29922" alt="RAM"/>
-  <img src="https://img.shields.io/badge/Tests-49_Passing-0d1117?style=for-the-badge&labelColor=0d1117&color=3fb950" alt="Tests"/>
+  <img src="https://img.shields.io/badge/Tests-99_Passing-0d1117?style=for-the-badge&labelColor=0d1117&color=3fb950" alt="Tests"/>
 </p>
 
 <h1 align="center">N E X U S</h1>
@@ -18,7 +18,7 @@ Most AI tools are wrappers around an API. You send text up, you get text back, s
 
 NEXUS is the opposite. It's a microkernel — a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail — all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Nineteen modules are planned. Five kernel components are built. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+Nineteen modules are planned. Five kernel components and five perception/intelligence modules are built. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
@@ -73,30 +73,31 @@ Modules are loaded into this kernel. They don't know about each other. They comm
     ├── Chronicle ······· immutable audit trail
     └── Aegis ··········· earned autonomy engine
 
-    PERCEPTION (Batch 2) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
-    ├── Oracle ·········· anticipatory intelligence
-    ├── Sentry ·········· emotional state detection
-    ├── Echo ············ behavioral fingerprinting
-    └── Sigil ··········· ambient threat radar
-
-    INTELLIGENCE (Batch 3) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
+    PERCEPTION + INTELLIGENCE (Batch 2) ━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Oracle ·········· anticipatory trigger engine
+    ├── Sentry ·········· cognitive load model
+    ├── Atlas ··········· living world model (knowledge graph)
     ├── Prism ··········· cross-domain synthesis
-    ├── Chronos ········· temporal branching
-    ├── Atlas ··········· persistent world model
-    ├── Cipher ·········· trust-scored information
-    └── Dreamweaver ····· overnight synthesis
+    └── Cipher ·········· trust-scored information
 
-    ACTION (Batch 4) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
-    ├── Specter ········· adversarial red-teaming
+    ACTION (Batch 3) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
     ├── Wraith ·········· phantom task agents
-    ├── Forge ··········· autonomous negotiation
+    ├── Echo ············ behavioral fingerprinting
+    ├── Specter ········· adversarial red-teaming
+    ├── Sigil ··········· ambient threat radar
     └── Serendipity ····· anti-optimization engine
 
-    NETWORK (Batch 5) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
-    ├── Herald ·········· A2A agent communication
+    ADVANCED INTELLIGENCE (Batch 4) ━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
+    ├── Chronos ········· temporal branching
+    ├── Dreamweaver ····· overnight synthesis
+    ├── Forge ··········· autonomous negotiation
+    └── Herald ·········· A2A agent communication
+
+    NETWORK + PLATFORM (Batch 5) ━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
     ├── Weave ··········· social graph intelligence
     ├── Collective ······ federated learning
-    └── Legacy ·········· knowledge crystallization
+    ├── Legacy ·········· knowledge crystallization
+    └── Nexus Site ······ community & documentation
 ```
 
 ---
@@ -175,7 +176,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-49 tests. Under a second. No network, no mocks of external services, no flaky anything.
+99 tests. Under a second. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -196,7 +197,12 @@ nexus/
 │   └── llm.py ··········· llama.cpp HTTP client
 └── modules/
     ├── base.py ·········· abstract NexusModule
-    └── general.py ······· default conversation handler
+    ├── general.py ······· default conversation handler
+    ├── oracle.py ········ anticipatory trigger engine
+    ├── sentry.py ········ cognitive load model
+    ├── atlas.py ········· living world model
+    ├── prism.py ········· cross-domain synthesis
+    └── cipher.py ········ trust-scored information
 ```
 
 ---
