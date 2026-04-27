@@ -116,3 +116,8 @@ starlight-theme-select,
   background: var(--nexus-bg-base);
   border-bottom: 1px solid var(--nexus-border);
 }
+
+/* Override Starlight content spacing on grid children */
+.module-grid > * {
+  margin: 0 !important;
+}
