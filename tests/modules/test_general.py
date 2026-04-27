@@ -37,3 +37,33 @@ async def test_module_handle():
     mod = EchoMod()
     result = await mod.handle("hello", {})
     assert result == "Echo: hello"
+
+
+# ---------- GeneralModule tests ----------
+
+from nexus.modules.general import GeneralModule
+
+
+@pytest.fixture
+def general():
+    return GeneralModule()
+
+
+@pytest.mark.asyncio
+async def test_general_module_responds(general):
+    result = await general.handle("hello", {"llm": None})
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+async def test_general_module_uses_llm(general, mock_llm_response):
+    fake_llm = mock_llm_response("The answer is 42.")
+    result = await general.handle("What is the meaning of life?", {"llm": fake_llm})
+    assert "42" in result
+
+
+@pytest.mark.asyncio
+async def test_general_module_fallback_without_llm(general):
+    result = await general.handle("test", {"llm": None})
+    assert isinstance(result, str)
