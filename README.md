@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-0d1117?style=for-the-badge&labelColor=0d1117&color=58a6ff" alt="Version"/>
-  <img src="https://img.shields.io/badge/Python-3.11+-0d1117?style=for-the-badge&logo=python&logoColor=58a6ff&labelColor=0d1117" alt="Python"/>
-  <img src="https://img.shields.io/badge/License-Apache_2.0-0d1117?style=for-the-badge&labelColor=0d1117&color=3fb950" alt="License"/>
-  <img src="https://img.shields.io/badge/RAM-8GB_Min-0d1117?style=for-the-badge&labelColor=0d1117&color=d29922" alt="RAM"/>
-  <img src="https://img.shields.io/badge/Tests-207_Passing-0d1117?style=for-the-badge&labelColor=0d1117&color=3fb950" alt="Tests"/>
-  <img src="https://img.shields.io/badge/Modules-21_Built-0d1117?style=for-the-badge&labelColor=0d1117&color=58a6ff" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>
+  <img src="https://img.shields.io/badge/Tests-233_Passing-green?style=for-the-badge" alt="Tests"/>
+  <img src="https://img.shields.io/badge/Modules-23_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <h1 align="center">N E X U S</h1>
@@ -19,61 +19,68 @@ Most AI tools are wrappers around an API. You send text up, you get text back, s
 
 NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Nineteen modules are planned. Twenty-one are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, and five advanced intelligence modules that handle adversarial reasoning, temporal modeling, overnight synthesis, engineered serendipity, and autonomous negotiation. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+Twenty-three components are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, five advanced intelligence modules, and two network-layer modules. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
 ## Architecture
 
 ```
-                              +------------+
-                              |  U S E R   |
-                              +-----+------+
-                                    |
-    +===============================+=================================+
-    ||                         NEXUS KERNEL                          ||
-    ||                              |                                ||
-    ||                        +-----v-----+                          ||
-    ||                  +-----+  CORTEX   +-----+                    ||
-    ||                  |     | (router)   |     |                   ||
-    ||                  |     +-----+-----+     |                    ||
-    ||    +-------------+-----------|--------+--+--------+           ||
-    ||    |             |           |         |          |           ||
-    ||  +-v------+  +---v--+  +----v----+  +-v-----+  +-v----+      ||
-    ||  | ENGRAM |  |PULSE |  |CHRONICLE|  | AEGIS |  | LLM  |     ||
-    ||  |(memory)|  |(bus) |  | (audit) |  |(trust)|  |(inf.) |     ||
-    ||  +-+-+-+--+  +------+  +---------+  +-------+  +------+      ||
-    ||    | | |                                                      ||
-    ||  +-v+v-++v----+        Trust: 0==================100          ||
-    ||  |W ||Ep.||Sem.|       Earned autonomy per module             ||
-    ||  |  ||FTS|| vec|       Outcome-based adjustment               ||
-    ||  +--++---++----+       Logged to Chronicle                    ||
-    +================================================================+
-         |           |           |           |           |
-    +----v----+ +----v----+ +---v----+ +---v----+ +---v--------+
-    |PERCEPT. | | INTELL. | | ACTION | | SOCIAL | |  DEFENSE   |
-    |         | |         | |        | |        | |            |
-    | Oracle  | | Atlas   | | Wraith | | Herald | | Sigil      |
-    | Sentry  | | Prism   | | Echo   | | Weave  | |            |
-    |         | | Cipher  | |        | |        | |            |
-    +---------+ +---------+ +--------+ +--------+ +------------+
-         |           |           |
-    +----v-----------v-----------v-----------+
-    |         ADVANCED INTELLIGENCE          |
-    |                                        |
-    |  Specter ......... adversarial red-team|
-    |  Chronos ......... temporal branching  |
-    |  Dreamweaver ..... overnight synthesis |
-    |  Serendipity ..... anti-optimization   |
-    |  Forge ........... autonomous negotiat.|
-    +----------------------------------------+
+                            ┌──────────┐
+                            │  U S E R │
+                            └────┬─────┘
+                                 │
+  ╔══════════════════════════════╪══════════════════════════════╗
+  ║                         NEXUS KERNEL                       ║
+  ║                              │                             ║
+  ║                        ┌─────▼─────┐                       ║
+  ║                  ┌─────┤  CORTEX   ├─────┐                 ║
+  ║                  │     │ (router)  │     │                 ║
+  ║                  │     └─────┬─────┘     │                 ║
+  ║    ┌─────────────┼───────────┼───────────┼──────────┐      ║
+  ║    │             │           │           │          │      ║
+  ║  ┌─▼──────┐  ┌──▼───┐  ┌───▼─────┐  ┌──▼────┐  ┌─▼───┐  ║
+  ║  │ ENGRAM │  │PULSE │  │CHRONICLE│  │ AEGIS │  │ LLM │  ║
+  ║  │(memory)│  │(bus) │  │ (audit) │  │(trust)│  │(inf.)│  ║
+  ║  └─┬──┬─┬─┘  └──────┘  └─────────┘  └───────┘  └─────┘  ║
+  ║    │  │ │                                                  ║
+  ║  ┌─▼┐┌▼──┐┌─▼───┐        Trust: 0━━━━━━━━━━━100           ║
+  ║  │W ││Ep.││Sem. │        Earned autonomy per module        ║
+  ║  │  ││FTS││ vec │        Outcome-based adjustment           ║
+  ║  └──┘└───┘└─────┘        Logged to Chronicle               ║
+  ╚════════════════════════════════════════════════════════════╝
+       │           │           │           │           │
+  ┌────▼────┐ ┌────▼────┐ ┌───▼────┐ ┌───▼────┐ ┌───▼────┐
+  │PERCEPT. │ │ INTELL. │ │ ACTION │ │ SOCIAL │ │DEFENSE │
+  │         │ │         │ │        │ │        │ │        │
+  │ Oracle  │ │ Atlas   │ │ Wraith │ │ Herald │ │ Sigil  │
+  │ Sentry  │ │ Prism   │ │ Echo   │ │ Weave  │ │        │
+  │         │ │ Cipher  │ │        │ │        │ │        │
+  └─────────┘ └─────────┘ └────────┘ └────────┘ └────────┘
+       │           │           │
+  ┌────▼───────────▼───────────▼───────────┐
+  │         ADVANCED INTELLIGENCE          │
+  │                                        │
+  │  Specter ·········· adversarial red-team│
+  │  Chronos ·········· temporal branching  │
+  │  Dreamweaver ······ overnight synthesis │
+  │  Serendipity ······ anti-optimization   │
+  │  Forge ············ autonomous negotiat.│
+  └────────────────────────────────────────┘
+       │           │
+  ┌────▼───────────▼───────────┐
+  │     NETWORK + PLATFORM     │
+  │                            │
+  │  Collective ··· federated  │
+  │  Legacy ······· knowledge  │
+  └────────────────────────────┘
 ```
 
 The kernel is five components, each with one job:
 
 | Component | Role | Storage |
 |-----------|------|---------|
-| **Cortex** | Keyword-scored routing to 16+ modules, permission enforcement | -- |
+| **Cortex** | Keyword-scored routing to 18 modules, permission enforcement | -- |
 | **Engram** | Three-tier memory: working (ephemeral), episodic (FTS5), semantic (vector) | SQLite |
 | **Pulse** | Async pub/sub message bus with priority queuing and wildcards | In-memory |
 | **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
@@ -120,44 +127,53 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Serendipity** | Anti-optimization -- inverted relevance scoring to surface surprising cross-domain connections |
 | **Forge** | Autonomous negotiation -- multi-round structured bargaining with escalation guardrails |
 
+### Network + Platform
+
+| Module | What it does |
+|--------|-------------|
+| **Collective** | Federated learning -- peer model sharing with differential privacy, opt-in only |
+| **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts |
+
 ---
 
 ## Module Roadmap
 
 ```
-    KERNEL (Batch 1) ===================================== :::::::::: BUILT
-    |-- Cortex .......... router & orchestrator
-    |-- Engram .......... three-tier memory
-    |-- Pulse ........... priority message bus
-    |-- Chronicle ....... immutable audit trail
-    \-- Aegis ........... earned autonomy engine
+    KERNEL (Batch 1) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Cortex ·········· router & orchestrator
+    ├── Engram ·········· three-tier memory
+    ├── Pulse ··········· priority message bus
+    ├── Chronicle ······· immutable audit trail
+    └── Aegis ··········· earned autonomy engine
 
-    PERCEPTION + INTELLIGENCE (Batch 2) ================== :::::::::: BUILT
-    |-- Oracle .......... anticipatory trigger engine
-    |-- Sentry .......... cognitive load model
-    |-- Atlas ........... living world model (knowledge graph)
-    |-- Prism ........... cross-domain synthesis
-    \-- Cipher .......... trust-scored information
+    PERCEPTION + INTELLIGENCE (Batch 2) ━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Oracle ·········· anticipatory trigger engine
+    ├── Sentry ·········· cognitive load model
+    ├── Atlas ··········· living world model (knowledge graph)
+    ├── Prism ··········· cross-domain synthesis
+    └── Cipher ·········· trust-scored information
 
-    ACTION (Batch 3) ===================================== :::::::::: BUILT
-    |-- Wraith .......... phantom agent spawner (death clocks)
-    |-- Echo ............ behavioral fingerprinting
-    |-- Sigil ........... ambient threat radar
-    |-- Herald .......... A2A agent communication
-    |-- Weave ........... social graph intelligence
-    \-- Aegis .......... graduated trust (0-100, outcome-based)
+    ACTION (Batch 3) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Wraith ·········· phantom agent spawner (death clocks)
+    ├── Echo ············ behavioral fingerprinting
+    ├── Sigil ··········· ambient threat radar
+    ├── Herald ·········· A2A agent communication
+    ├── Weave ··········· social graph intelligence
+    └── Aegis ·········· graduated trust (0-100, outcome-based)
 
-    ADVANCED INTELLIGENCE (Batch 4) ====================== :::::::::: BUILT
-    |-- Specter ......... adversarial red-teaming
-    |-- Chronos ......... temporal branching
-    |-- Dreamweaver ..... overnight synthesis
-    |-- Serendipity ..... anti-optimization engine
-    \-- Forge ........... autonomous negotiation
+    ADVANCED INTELLIGENCE (Batch 4) ━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Specter ········· adversarial red-teaming
+    ├── Chronos ········· temporal branching
+    ├── Dreamweaver ····· overnight synthesis
+    ├── Serendipity ····· anti-optimization engine
+    └── Forge ··········· autonomous negotiation
 
-    NETWORK + PLATFORM (Batch 5) ========================= .......... PLANNED
-    |-- Collective ...... federated learning
-    |-- Legacy .......... knowledge crystallization
-    \-- Nexus Site ...... community & documentation
+    NETWORK + PLATFORM (Batch 5) ━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Collective ······ federated learning
+    └── Legacy ·········· knowledge crystallization
+
+    NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
+    └── Community site ·· documentation & module catalog
 ```
 
 ---
@@ -200,7 +216,7 @@ NEXUS was designed for machines people actually own.
 |-----|-------------|
 | **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
 | **16 GB** | Kernel + 10 modules, larger context windows |
-| **32 GB+** | All 21 modules, bigger models, concurrent agents |
+| **32 GB+** | All 23 modules, bigger models, concurrent agents |
 
 The inference layer talks to llama.cpp over HTTP. Swap in any GGUF model. Swap in Ollama. Swap in a remote endpoint. The kernel doesn't care -- it speaks one protocol.
 
@@ -209,23 +225,23 @@ The inference layer talks to llama.cpp over HTTP. Swap in any GGUF model. Swap i
 ## The Stack
 
 ```
-    +==================================================+
-    |  Python 3.11+  .  No heavy frameworks            |
-    +==================================================+
-    |  llama.cpp ............ local LLM inference      |
-    |  SQLite + FTS5 ........ memory, search, audit    |
-    |  sqlite-vec ........... vector similarity        |
-    |  smolagents ........... agent orchestration      |
-    |  Click ................ CLI interface            |
-    |  OpenTelemetry ........ structured telemetry     |
-    |  asyncio .............. phantom agent lifecycle  |
-    +==================================================+
-    |  MCP .................. local module protocol    |
-    |  Google A2A ........... inter-agent protocol     |
-    +==================================================+
-    |  Models: Qwen 3 . DeepSeek . Phi . Gemma        |
-    |  (MIT / Apache 2.0 only -- no Llama)            |
-    +==================================================+
+    ╔══════════════════════════════════════════════════╗
+    ║  Python 3.11+  ·  No heavy frameworks            ║
+    ╠══════════════════════════════════════════════════╣
+    ║  llama.cpp ············ local LLM inference       ║
+    ║  SQLite + FTS5 ········ memory, search, audit     ║
+    ║  sqlite-vec ··········· vector similarity         ║
+    ║  smolagents ··········· agent orchestration       ║
+    ║  Click ················ CLI interface             ║
+    ║  OpenTelemetry ········ structured telemetry      ║
+    ║  asyncio ·············· phantom agent lifecycle   ║
+    ╠══════════════════════════════════════════════════╣
+    ║  MCP ·················· local module protocol     ║
+    ║  Google A2A ··········· inter-agent protocol      ║
+    ╠══════════════════════════════════════════════════╣
+    ║  Models: Qwen 3 · DeepSeek · Phi · Gemma         ║
+    ║  (MIT / Apache 2.0 only -- no Llama)              ║
+    ╚══════════════════════════════════════════════════╝
 ```
 
 ---
@@ -237,7 +253,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-207 tests. Under two seconds. No network, no mocks of external services, no flaky anything.
+233 tests. Under two seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -245,35 +261,37 @@ pytest tests/ -v
 
 ```
 nexus/
-|-- __init__.py .......... version
-|-- config.py ............ XDG paths, env overrides
-|-- cli.py ............... Click entry point
-|-- kernel/
-|   |-- cortex.py ........ keyword-scored router
-|   |-- engram.py ........ three-tier memory
-|   |-- pulse.py ......... priority message bus
-|   |-- chronicle.py ..... immutable audit trail
-|   \-- aegis.py ......... graduated trust engine
-|-- inference/
-|   \-- llm.py ........... llama.cpp HTTP client
-\-- modules/
-    |-- base.py .......... abstract NexusModule
-    |-- general.py ....... default conversation handler
-    |-- oracle.py ........ anticipatory trigger engine
-    |-- sentry.py ........ cognitive load model
-    |-- atlas.py ......... living world model
-    |-- prism.py ......... cross-domain synthesis
-    |-- cipher.py ........ trust-scored information
-    |-- wraith.py ........ phantom agent spawner
-    |-- echo.py .......... behavioral fingerprinting
-    |-- sigil.py ......... ambient threat radar
-    |-- herald.py ........ A2A agent communication
-    |-- weave.py ......... social graph intelligence
-    |-- specter.py ....... adversarial red-team
-    |-- chronos.py ....... temporal branching
-    |-- dreamweaver.py ... overnight synthesis
-    |-- serendipity.py ... anti-optimization engine
-    \-- forge.py ......... autonomous negotiation
+├── __init__.py ·········· version
+├── config.py ············ XDG paths, env overrides
+├── cli.py ··············· Click entry point
+├── kernel/
+│   ├── cortex.py ········ keyword-scored router
+│   ├── engram.py ········ three-tier memory
+│   ├── pulse.py ········· priority message bus
+│   ├── chronicle.py ····· immutable audit trail
+│   └── aegis.py ········· graduated trust engine
+├── inference/
+│   └── llm.py ··········· llama.cpp HTTP client
+└── modules/
+    ├── base.py ·········· abstract NexusModule
+    ├── general.py ······· default conversation handler
+    ├── oracle.py ········ anticipatory trigger engine
+    ├── sentry.py ········ cognitive load model
+    ├── atlas.py ········· living world model
+    ├── prism.py ········· cross-domain synthesis
+    ├── cipher.py ········ trust-scored information
+    ├── wraith.py ········ phantom agent spawner
+    ├── echo.py ·········· behavioral fingerprinting
+    ├── sigil.py ········· ambient threat radar
+    ├── herald.py ········ A2A agent communication
+    ├── weave.py ········· social graph intelligence
+    ├── specter.py ······· adversarial red-team
+    ├── chronos.py ······· temporal branching
+    ├── dreamweaver.py ··· overnight synthesis
+    ├── serendipity.py ··· anti-optimization engine
+    ├── forge.py ········· autonomous negotiation
+    ├── collective.py ···· federated learning
+    └── legacy.py ········ knowledge crystallization
 ```
 
 ---
@@ -293,6 +311,8 @@ nexus/
 **Anti-fragile.** The system includes a threat radar (Sigil), behavioral fingerprinting (Echo), trust-scored information (Cipher), adversarial red-teaming (Specter), and engineered serendipity to break filter bubbles. NEXUS is designed to make the user more robust, not more dependent.
 
 **Adversarial by design.** Specter stress-tests your decisions before you make them. Serendipity fights the optimization trap by surfacing connections from fields you aren't looking at. Forge negotiates within boundaries you set, escalating when it hits limits. The system argues with itself so you don't have to.
+
+**Compounding value.** Through behavioral fingerprinting (Echo), knowledge crystallization (Legacy), and long-term memory (Engram), NEXUS becomes more valuable over months and years. It does not reset between sessions. It builds a persistent, evolving model of your world, your patterns, and your accumulated wisdom.
 
 ---
 
