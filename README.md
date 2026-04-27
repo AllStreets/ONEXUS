@@ -167,7 +167,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
     ├── Collective ······ federated learning
     └── Legacy ·········· knowledge crystallization
 
-    NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ░░░░░░░░░░ PLANNED
+    NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     └── Community site ·· documentation & module catalog
 ```
 
