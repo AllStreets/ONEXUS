@@ -1,0 +1,103 @@
+/* NEXUS Brand Theme — Dark Only */
+
+:root {
+  /* Colors */
+  --nexus-bg-base: #0a0a0f;
+  --nexus-bg-surface: #12121f;
+  --nexus-bg-surface-hover: #1a1a2e;
+  --nexus-text-primary: #e0e2eb;
+  --nexus-text-secondary: #8888a0;
+  --nexus-accent-primary: #00d4ff;
+  --nexus-accent-secondary: #7b5cff;
+  --nexus-accent-danger: #ff9d00;
+  --nexus-border: #1e1e3a;
+  --nexus-glow-primary: 0 0 12px rgba(0, 212, 255, 0.3);
+  --nexus-glow-secondary: 0 0 12px rgba(123, 92, 255, 0.3);
+}
+
+/* Starlight dark theme overrides */
+:root,
+[data-theme='dark'] {
+  --sl-color-bg: var(--nexus-bg-base);
+  --sl-color-bg-nav: var(--nexus-bg-surface);
+  --sl-color-bg-sidebar: var(--nexus-bg-surface);
+  --sl-color-bg-inline-code: var(--nexus-bg-surface);
+  --sl-color-hairline-light: var(--nexus-border);
+  --sl-color-hairline: var(--nexus-border);
+  --sl-color-white: var(--nexus-text-primary);
+  --sl-color-gray-1: var(--nexus-text-primary);
+  --sl-color-gray-2: #c0c2d0;
+  --sl-color-gray-3: var(--nexus-text-secondary);
+  --sl-color-gray-4: #555570;
+  --sl-color-gray-5: #333350;
+  --sl-color-gray-6: var(--nexus-bg-surface);
+  --sl-color-accent-low: #0a1a2f;
+  --sl-color-accent: var(--nexus-accent-primary);
+  --sl-color-accent-high: #b0f0ff;
+  --sl-color-text: var(--nexus-text-primary);
+  --sl-color-text-accent: var(--nexus-accent-primary);
+
+  /* Typography */
+  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Borders */
+  --sl-border-radius: 4px;
+}
+
+/* Force dark mode — no light mode */
+:root[data-theme='light'] {
+  --sl-color-bg: var(--nexus-bg-base);
+  --sl-color-bg-nav: var(--nexus-bg-surface);
+  --sl-color-bg-sidebar: var(--nexus-bg-surface);
+  --sl-color-bg-inline-code: var(--nexus-bg-surface);
+  --sl-color-hairline-light: var(--nexus-border);
+  --sl-color-hairline: var(--nexus-border);
+  --sl-color-white: var(--nexus-text-primary);
+  --sl-color-gray-1: var(--nexus-text-primary);
+  --sl-color-gray-2: #c0c2d0;
+  --sl-color-gray-3: var(--nexus-text-secondary);
+  --sl-color-gray-4: #555570;
+  --sl-color-gray-5: #333350;
+  --sl-color-gray-6: var(--nexus-bg-surface);
+  --sl-color-accent-low: #0a1a2f;
+  --sl-color-accent: var(--nexus-accent-primary);
+  --sl-color-accent-high: #b0f0ff;
+  --sl-color-text: var(--nexus-text-primary);
+  --sl-color-text-accent: var(--nexus-accent-primary);
+  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --sl-border-radius: 4px;
+}
+
+/* Headings in JetBrains Mono */
+h1, h2, h3, h4, h5, h6,
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4 {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Sidebar styling */
+nav.sidebar {
+  border-right: 1px solid var(--nexus-border);
+}
+
+/* Links glow on hover */
+a:hover {
+  text-shadow: var(--nexus-glow-primary);
+}
+
+/* Code blocks */
+.expressive-code pre {
+  background: var(--nexus-bg-surface) !important;
+  border: 1px solid var(--nexus-border);
+}
+
+/* Hide theme toggle — dark only */
+starlight-theme-select,
+[data-theme-toggle] {
+  display: none !important;
+}
