@@ -27,25 +27,25 @@ Twenty-three components are built -- five kernel components, five perception/int
                                     │
     ╔═══════════════════════════════╪═══════════════════════════════╗
     ║                           NEXUS KERNEL                        ║
-    ║                                │                              ║
-    ║                          ┌─────▼─────┐                        ║
-    ║                    ┌─────┤  CORTEX   ├─────┐                  ║
-    ║                    │     │ (router)  │     │                  ║
-    ║                    │     └─────┬─────┘     │                  ║
-    ║      ┌─────────────┼───────────┼───────────┼──────────┐       ║
-    ║      │             │           │           │          │       ║
-    ║    ┌─▼──────┐  ┌──▼────┐  ┌───▼─────┐  ┌──▼────┐  ┌─▼───┐     ║
-    ║    │ ENGRAM │  │ PULSE │  │CHRONICLE│  │ AEGIS │  │ LLM │     ║
-    ║    │(memory)│  │ (bus) │  │ (audit) │  │(trust)│  │(inf.)│    ║
-    ║    └─┬──┬─┬─┘  └───────┘  └─────────┘  └───────┘  └─────┘     ║
-    ║      │  │ │                                                   ║
-    ║    ┌─▼┐┌▼──┐┌▼────┐       Trust: 0━━━━━━━━━━━100              ║
-    ║    │W ││Ep.││Sem. │       Earned autonomy per module          ║
-    ║    │  ││FTS││ vec │       Outcome-based adjustment            ║
-    ║    └──┘└───┘└─────┘       Logged to Chronicle                 ║
+    ║                               │                               ║
+    ║                         ┌─────V─────┐                         ║
+    ║                   ┌─────┤  CORTEX   ├─────┐                   ║
+    ║                   │     │ (router)  │     │                   ║
+    ║                   │     └─────┬─────┘     │                   ║
+    ║     ┌─────────────┼───────────┼───────────┼──────────┐        ║
+    ║     │             │           │           │          │        ║
+    ║   ┌─V──────┐  ┌──V────┐  ┌───V─────┐  ┌──V────┐  ┌─V───┐      ║
+    ║   │ ENGRAM │  │ PULSE │  │CHRONICLE│  │ AEGIS │  │ LLM │      ║
+    ║   │(memory)│  │ (bus) │  │ (audit) │  │(trust)│  │(inf.)│     ║
+    ║   └─┬──┬─┬─┘  └───────┘  └─────────┘  └───────┘  └─────┘      ║
+    ║     │  │ │                                                    ║
+    ║   ┌─V┐┌V──┐┌V────┐       Trust: 0━━━━━━━━━━━100               ║
+    ║   │W ││Ep.││Sem. │       Earned autonomy per module           ║
+    ║   │  ││FTS││ vec │       Outcome-based adjustment             ║
+    ║   └──┘└───┘└─────┘       Logged to Chronicle                  ║
     ╚═══════════════════════════════════════════════════════════════╝
          │           │           │           │           │
-    ┌────▼────┐ ┌────▼────┐ ┌───▼────┐ ┌───▼────┐ ┌───▼────┐
+    ┌────V────┐ ┌────V────┐ ┌───V────┐ ┌───V────┐ ┌───V────┐
     │PERCEPT. │ │ INTELL. │ │ ACTION │ │ SOCIAL │ │DEFENSE │
     │         │ │         │ │        │ │        │ │        │
     │ Oracle  │ │ Atlas   │ │ Wraith │ │ Herald │ │ Sigil  │
@@ -53,7 +53,7 @@ Twenty-three components are built -- five kernel components, five perception/int
     │         │ │ Cipher  │ │        │ │        │ │        │
     └─────────┘ └─────────┘ └────────┘ └────────┘ └────────┘
          │           │           │
-    ┌────▼───────────▼───────────▼────────────┐
+    ┌────V───────────V───────────V────────────┐
     │         ADVANCED INTELLIGENCE           │
     │                                         │
     │  Specter ·········· adversarial red-team│
@@ -63,7 +63,7 @@ Twenty-three components are built -- five kernel components, five perception/int
     │  Forge ············ autonomous negotiat.│
     └─────────────────────────────────────────┘
          │           │
-    ┌────▼───────────▼────────────┐
+    ┌────V───────────V────────────┐
     │     NETWORK + PLATFORM      │
     │                             │
     │  Collective ··· federated   │
