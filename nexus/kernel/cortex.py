@@ -32,6 +32,11 @@ class Cortex:
         "forge": ["negotiat", "bargain", "offer", "counter-offer", "concession", "deal"],
         "collective": ["federated", "peer", "distributed", "swarm learning", "model sharing"],
         "legacy": ["crystallize", "distill", "framework", "playbook", "wisdom", "pattern extract"],
+        "council": ["deliberate", "debate", "council", "perspectives", "weigh", "consider",
+                     "should i", "decide", "pros and cons", "think through", "advise"],
+        "autonomic": ["automate", "routine", "autopilot", "autonomous", "on my behalf",
+                       "handle it", "take care of", "manage for me", "do it for me",
+                       "autonomic", "trust status", "domain trust"],
     }
 
     def __init__(
