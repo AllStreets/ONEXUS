@@ -63,3 +63,65 @@ class Aegis:
         rows = conn.execute("SELECT module, allowed, trust FROM aegis_policies").fetchall()
         conn.close()
         return [{"module": r["module"], "allowed": bool(r["allowed"]), "trust": r["trust"]} for r in rows]
+
+    def get_trust(self, module: str) -> int:
+        conn = self._conn()
+        row = conn.execute("SELECT trust FROM aegis_policies WHERE module = ?", (module,)).fetchone()
+        conn.close()
+        return int(row["trust"]) if row else 0
+
+    def adjust_trust(self, module: str, delta: int, reason: str) -> int:
+        conn = self._conn()
+        row = conn.execute("SELECT trust FROM aegis_policies WHERE module = ?", (module,)).fetchone()
+        if row is None:
+            conn.close()
+            return 0
+        new_trust = max(0, min(100, int(row["trust"]) + delta))
+        conn.execute("UPDATE aegis_policies SET trust = ? WHERE module = ?", (new_trust, module))
+        conn.commit()
+        conn.close()
+        self._log_trust_change(module, delta, new_trust, reason)
+        return new_trust
+
+    def check_trust(self, module: str, required_trust: int) -> bool:
+        return self.get_trust(module) >= required_trust
+
+    def _log_trust_change(self, module: str, delta: int, new_trust: int, reason: str) -> None:
+        conn = self._conn()
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS aegis_trust_log (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                module    TEXT NOT NULL,
+                delta     INTEGER NOT NULL,
+                new_trust INTEGER NOT NULL,
+                reason    TEXT NOT NULL
+            )
+        """)
+        from datetime import datetime, timezone
+        ts = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO aegis_trust_log (timestamp, module, delta, new_trust, reason) VALUES (?, ?, ?, ?, ?)",
+            (ts, module, delta, new_trust, reason),
+        )
+        conn.commit()
+        conn.close()
+
+    def trust_history(self, module: str, limit: int = 50) -> list[dict[str, Any]]:
+        conn = self._conn()
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS aegis_trust_log (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                module    TEXT NOT NULL,
+                delta     INTEGER NOT NULL,
+                new_trust INTEGER NOT NULL,
+                reason    TEXT NOT NULL
+            )
+        """)
+        rows = conn.execute(
+            "SELECT timestamp, delta, new_trust, reason FROM aegis_trust_log WHERE module = ? ORDER BY id ASC LIMIT ?",
+            (module, limit),
+        ).fetchall()
+        conn.close()
+        return [{"timestamp": r["timestamp"], "delta": r["delta"], "new_trust": r["new_trust"], "reason": r["reason"]} for r in rows]

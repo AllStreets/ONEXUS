@@ -50,3 +50,46 @@ def test_list_policies(aegis):
     assert len(policies) == 2
     names = {p["module"] for p in policies}
     assert names == {"mod_a", "mod_b"}
+
+
+def test_get_trust_level(aegis):
+    aegis.set_policy("oracle", allowed=True)
+    assert aegis.get_trust("oracle") == 0
+
+
+def test_adjust_trust_positive(aegis):
+    aegis.set_policy("oracle", allowed=True)
+    aegis.adjust_trust("oracle", delta=10, reason="successful prediction")
+    assert aegis.get_trust("oracle") == 10
+
+
+def test_adjust_trust_negative(aegis):
+    aegis.set_policy("oracle", allowed=True)
+    aegis.adjust_trust("oracle", delta=30, reason="setup")
+    aegis.adjust_trust("oracle", delta=-15, reason="bad prediction")
+    assert aegis.get_trust("oracle") == 15
+
+
+def test_trust_clamped_0_100(aegis):
+    aegis.set_policy("oracle", allowed=True)
+    aegis.adjust_trust("oracle", delta=200, reason="overflow test")
+    assert aegis.get_trust("oracle") == 100
+    aegis.adjust_trust("oracle", delta=-300, reason="underflow test")
+    assert aegis.get_trust("oracle") == 0
+
+
+def test_check_with_trust_threshold(aegis):
+    aegis.set_policy("wraith", allowed=True)
+    aegis.adjust_trust("wraith", delta=25, reason="earned")
+    # Should pass if required trust <= current trust
+    assert aegis.check_trust("wraith", required_trust=20) is True
+    assert aegis.check_trust("wraith", required_trust=50) is False
+
+
+def test_trust_history(aegis):
+    aegis.set_policy("echo", allowed=True)
+    aegis.adjust_trust("echo", delta=10, reason="good draft")
+    aegis.adjust_trust("echo", delta=5, reason="style match")
+    history = aegis.trust_history("echo")
+    assert len(history) == 2
+    assert history[0]["reason"] == "good draft"
