@@ -20,6 +20,11 @@ class Cortex:
         "atlas": ["fact", "know about", "world model", "knowledge", "who is", "what is"],
         "cipher": ["trust", "source", "provenance", "conflict", "verify", "credib"],
         "prism": ["synthesize", "connection", "cross-domain", "insight", "relate"],
+        "wraith": ["phantom", "spawn", "agent", "swarm", "research task"],
+        "echo": ["behavioral", "fingerprint", "style", "voice", "profile", "writing"],
+        "herald": ["external agent", "a2a", "communicate", "connected agent"],
+        "weave": ["contact", "network", "relationship", "social graph", "reconnect"],
+        "sigil": ["threat", "danger", "security", "breach", "risk", "radar"],
     }
 
     def __init__(
