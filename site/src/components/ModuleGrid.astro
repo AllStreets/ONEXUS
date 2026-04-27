@@ -39,12 +39,16 @@ const modules: Module[] = [
   { name: 'Serendipity', description: 'Lateral-connection finder — discovers non-obvious links between distant memory clusters to surface novel insights.', tier: 'Advanced Intelligence' },
   { name: 'Forge', description: 'Self-improvement harness — proposes, validates, and integrates improvements to existing module logic under human approval.', tier: 'Advanced Intelligence' },
 
+  // Orchestration
+  { name: 'Council', description: 'Multi-agent deliberation — structured multi-round debate across modules with synthesized recommendations and preserved dissent.', tier: 'Orchestration' },
+  { name: 'Autonomic', description: 'Earned autonomous action — observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure.', tier: 'Orchestration' },
+
   // Network
   { name: 'Collective', description: 'Multi-instance coordination layer — synchronises state and task delegation across parallel NEXUS processes.', tier: 'Network' },
   { name: 'Legacy', description: 'External system bridge — wraps legacy APIs, databases, and services into first-class NEXUS data sources.', tier: 'Network' },
 ];
 
-const tiers = ['Kernel', 'Perception', 'Intelligence', 'Action', 'Advanced Intelligence', 'Network'];
+const tiers = ['Kernel', 'Perception', 'Intelligence', 'Action', 'Advanced Intelligence', 'Orchestration', 'Network'];
 
 const tierColors: Record<string, string> = {
   'Kernel': '#00d4ff',
@@ -52,6 +56,7 @@ const tierColors: Record<string, string> = {
   'Intelligence': '#3b82f6',
   'Action': '#ff9d00',
   'Advanced Intelligence': '#ff4d6a',
+  'Orchestration': '#e040fb',
   'Network': '#00ff88',
 };
 ---
