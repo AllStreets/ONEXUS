@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-233_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-23_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-288_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-25_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <h1 align="center">N E X U S</h1>
@@ -14,7 +14,7 @@ Most AI tools are wrappers around an API. You send text up, you get text back, s
 
 NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Twenty-three components are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, five advanced intelligence modules, and two network-layer modules. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+Twenty-five components are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, five advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, and two network-layer modules. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
@@ -62,6 +62,13 @@ Twenty-three components are built -- five kernel components, five perception/int
      │  Forge ············ autonomous negotiat.│
      └─────────────────────────────────────────┘
           │             │
+     ┌────V─────────────V──────────────────────┐
+     │            ORCHESTRATION                │
+     │                                         │
+     │  Council ·········· multi-agent debate  │
+     │  Autonomic ········ earned autonomy     │
+     └─────────────────────────────────────────┘
+          │             │
      ┌────V─────────────V──────────┐
      │     NETWORK + PLATFORM      │
      │                             │
@@ -74,7 +81,7 @@ The kernel is five components, each with one job:
 
 | Component | Role | Storage |
 |-----------|------|---------|
-| **Cortex** | Keyword-scored routing to 18 modules, permission enforcement | -- |
+| **Cortex** | Keyword-scored routing to 20 modules, permission enforcement | -- |
 | **Engram** | Three-tier memory: working (ephemeral), episodic (FTS5), semantic (vector) | SQLite |
 | **Pulse** | Async pub/sub message bus with priority queuing and wildcards | In-memory |
 | **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
@@ -121,6 +128,13 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Serendipity** | Anti-optimization -- inverted relevance scoring to surface surprising cross-domain connections |
 | **Forge** | Autonomous negotiation -- multi-round structured bargaining with escalation guardrails |
 
+### Orchestration
+
+| Module | What it does |
+|--------|-------------|
+| **Council** | Multi-agent deliberation -- structured multi-round debate across modules with synthesized recommendations and preserved dissent |
+| **Autonomic** | Earned autonomous action -- observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure |
+
 ### Network + Platform
 
 | Module | What it does |
@@ -166,6 +180,10 @@ Modules are loaded into this kernel. They don't know about each other. They comm
     ├── Collective ······ federated learning
     └── Legacy ·········· knowledge crystallization
 
+    ORCHESTRATION (Batch 6) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Council ·········· multi-agent deliberation
+    └── Autonomic ········ earned autonomous action
+
     NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     └── Community site ·· documentation & module catalog
 ```
@@ -210,7 +228,7 @@ NEXUS was designed for machines people actually own.
 |-----|-------------|
 | **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
 | **16 GB** | Kernel + 10 modules, larger context windows |
-| **32 GB+** | All 23 modules, bigger models, concurrent agents |
+| **32 GB+** | All 25 modules, bigger models, concurrent agents |
 
 The inference layer talks to llama.cpp over HTTP. Swap in any GGUF model. Swap in Ollama. Swap in a remote endpoint. The kernel doesn't care -- it speaks one protocol.
 
@@ -247,7 +265,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-233 tests. Under two seconds. No network, no mocks of external services, no flaky anything.
+288 tests. Under two seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -285,7 +303,9 @@ nexus/
     ├── serendipity.py ··· anti-optimization engine
     ├── forge.py ········· autonomous negotiation
     ├── collective.py ···· federated learning
-    └── legacy.py ········ knowledge crystallization
+    ├── legacy.py ········ knowledge crystallization
+    ├── council.py ······· multi-agent deliberation
+    └── autonomic.py ····· earned autonomous action
 ```
 
 ---
