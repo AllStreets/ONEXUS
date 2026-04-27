@@ -11,7 +11,7 @@ const { name, description, tier, status = 'BUILT' } = Astro.props;
 const tierColors: Record<string, string> = {
   'Kernel': '#00d4ff',
   'Perception': '#7b5cff',
-  'Intelligence': '#7b5cff',
+  'Intelligence': '#3b82f6',
   'Action': '#ff9d00',
   'Advanced Intelligence': '#ff4d6a',
   'Network': '#00ff88',
@@ -40,6 +40,8 @@ const accentColor = tierColors[tier] ?? '#00d4ff';
     gap: 0.75rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     cursor: default;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .module-card:hover {
