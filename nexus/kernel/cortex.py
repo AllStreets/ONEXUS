@@ -25,6 +25,11 @@ class Cortex:
         "herald": ["external agent", "a2a", "communicate", "connected agent"],
         "weave": ["contact", "network", "relationship", "social graph", "reconnect"],
         "sigil": ["threat", "danger", "security", "breach", "risk", "radar"],
+        "specter": ["red team", "adversarial", "counter-argument", "devil's advocate", "risk analysis"],
+        "chronos": ["timeline", "future", "branch", "counterfactual", "what if", "temporal"],
+        "dreamweaver": ["morning brief", "overnight", "synthesis", "sleep", "idle", "pattern"],
+        "serendipity": ["surprising", "unexpected", "serendip", "random", "adjacent", "diverse"],
+        "forge": ["negotiat", "bargain", "offer", "counter-offer", "concession", "deal"],
     }
 
     def __init__(
