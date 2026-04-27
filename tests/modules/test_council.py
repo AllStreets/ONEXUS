@@ -126,6 +126,7 @@ async def test_council_handle(council_with_modules):
     assert "[Council]" in result
     assert "Deliberation complete" in result
     assert "Confidence" in result
+    assert "Recommendation:" in result
 
 
 @pytest.mark.asyncio
@@ -135,3 +136,4 @@ async def test_council_handle_includes_participants(council_with_modules):
         {"llm": None, "engram": None, "chronicle": None, "pulse": None},
     )
     assert "Participants:" in result
+    assert "Uncertainties:" in result
