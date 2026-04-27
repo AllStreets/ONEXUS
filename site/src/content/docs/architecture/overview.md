@@ -1,6 +1,6 @@
 ---
 title: Overview
-description: NEXUS microkernel architecture — 5 components, 18 modules, one message loop.
+description: NEXUS microkernel architecture — 5 components, 20 modules, one message loop.
 sidebar:
   order: 1
 ---
@@ -62,12 +62,13 @@ Modules are organized by capability tier. Tier assignment is documentation only 
 | Intelligence | Atlas, Prism, Cipher |
 | Action | Wraith, Echo, Sigil, Herald, Weave |
 | Advanced | Specter, Chronos, Dreamweaver, Serendipity, Forge |
+| Orchestration | Council, Autonomic |
 | Network | Collective, Legacy |
 | Core | General |
 
 ## Testing
 
-NEXUS ships with 233 tests covering all kernel components and modules. The test suite requires no running LLM — all LLM calls are mocked. Run with:
+NEXUS ships with 288 tests covering all kernel components and modules. The test suite requires no running LLM — all LLM calls are mocked. Run with:
 
 ```bash
 pytest tests/ -v

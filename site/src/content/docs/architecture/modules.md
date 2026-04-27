@@ -1,6 +1,6 @@
 ---
 title: Modules
-description: NexusModule base class, lifecycle hooks, context object, and how all 18 modules are structured.
+description: NexusModule base class, lifecycle hooks, context object, and how all 20 modules are structured.
 sidebar:
   order: 3
 ---
@@ -60,7 +60,7 @@ Modules access kernel services only through this context. They do not import ker
 
 ## Module Tiers
 
-The 18 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
+The 20 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
 
 | Tier | Modules | Role |
 |------|---------|------|
@@ -68,6 +68,7 @@ The 18 modules are grouped by functional tier. All use the same `NexusModule` in
 | Intelligence | Atlas, Prism, Cipher | Analyze, reason, and decode using LLM |
 | Action | Wraith, Echo, Sigil, Herald, Weave | Execute tasks, remember, sign, notify, orchestrate |
 | Advanced | Specter, Chronos, Dreamweaver, Serendipity, Forge | Red-team, branch timelines, synthesize, discover, negotiate |
+| Orchestration | Council, Autonomic | Multi-agent deliberation, earned autonomous action |
 | Network | Collective, Legacy | Federated learning, knowledge crystallization |
 | Core | General | Catch-all fallback for unrouted messages |
 
