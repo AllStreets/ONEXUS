@@ -135,23 +135,43 @@ def run():
         user=msg,
     ))
 
+    # Start messaging bridges if configured
+    from nexus.messaging.manager import BridgeManager
+    bridge_manager = BridgeManager(pulse=pulse, cortex_process=cortex.process)
+
+    if cfg.telegram_token and cfg.telegram_chat_ids:
+        from nexus.messaging.telegram import TelegramBridge
+        tg_bridge = TelegramBridge(token=cfg.telegram_token, allowed_chat_ids=cfg.telegram_chat_ids)
+        bridge_manager.register(tg_bridge)
+        click.echo(f"Telegram bridge registered ({len(cfg.telegram_chat_ids)} allowed chats)")
+
+    if cfg.discord_token and cfg.discord_channel_ids:
+        from nexus.messaging.discord_bridge import DiscordBridge
+        dc_bridge = DiscordBridge(token=cfg.discord_token, allowed_channel_ids=cfg.discord_channel_ids)
+        bridge_manager.register(dc_bridge)
+        click.echo(f"Discord bridge registered ({len(cfg.discord_channel_ids)} allowed channels)")
+
     click.echo("")
     click.echo("NEXUS v" + __version__)
     click.echo("Type a message. Ctrl+C to exit.")
     click.echo("---")
 
     async def session():
-        while True:
-            try:
-                user_input = click.prompt("", prompt_suffix="> ")
-            except (click.Abort, EOFError):
-                click.echo("\nSession ended.")
-                break
-            if not user_input.strip():
-                continue
-            response = await cortex.process(user_input)
-            click.echo(response)
-            click.echo("")
+        await bridge_manager.start()
+        try:
+            while True:
+                try:
+                    user_input = click.prompt("", prompt_suffix="> ")
+                except (click.Abort, EOFError):
+                    click.echo("\nSession ended.")
+                    break
+                if not user_input.strip():
+                    continue
+                response = await cortex.process(user_input)
+                click.echo(response)
+                click.echo("")
+        finally:
+            await bridge_manager.stop()
 
     asyncio.run(session())
 
