@@ -1,6 +1,6 @@
 ---
 title: Running Tests
-description: Run the 470-test NEXUS suite, target specific tests, and write tests for new modules.
+description: Run the 484-test NEXUS suite, target specific tests, and write tests for new modules.
 sidebar:
   order: 3
 ---
@@ -14,7 +14,7 @@ pytest tests/ -v
 Expected output ends with:
 
 ```
-470 passed in X.XXs
+484 passed in X.XXs
 ```
 
 No running LLM is required. All LLM calls are mocked in the test suite.

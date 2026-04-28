@@ -105,3 +105,18 @@ async def test_collective_handle_peers(collective):
     collective.register_peer(peer)
     result = await collective.handle("List connected peers", {"llm": None})
     assert "peer-001" in result or "1" in result
+
+
+def test_collective_requires_network(collective):
+    assert collective.requires_network is True
+
+
+def test_collective_outbound_logged(collective, tmp_config):
+    from nexus.kernel.chronicle import Chronicle
+    chronicle = Chronicle(tmp_config.db_path)
+    chronicle.init_db()
+    context = {"chronicle": chronicle}
+    collective.create_update("model-v1", {"l1": [1.0, 2.0]}, context=context)
+    events = chronicle.query(source="collective", action="outbound_data")
+    assert len(events) == 1
+    assert "model-v1" in events[0]["payload"]["summary"]

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-470_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-31_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-484_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-31_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <p align="center">
@@ -138,7 +138,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Wraith** | Spawns ephemeral async micro-agents with death clocks -- auto-terminate on completion or timeout |
 | **Echo** | Behavioral fingerprinting -- learns your writing style per domain, scores new text for voice match |
 | **Sigil** | Severity-prioritized threat radar -- CRITICAL through INFO, acknowledge/filter, early warning |
-| **Herald** | A2A agent communication -- external agent registry, reputation tracking, message history |
+| **Herald** | A2A agent communication -- external agent registry, reputation tracking, message history (requires `--network`) |
 | **Weave** | Social graph -- contact mapping, interaction tracking, relationship health, reconnection suggestions |
 
 ### Advanced Intelligence
@@ -156,12 +156,12 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Council** | Multi-agent deliberation -- structured multi-round debate across modules with synthesized recommendations and preserved dissent |
 | **Autonomic** | Earned autonomous action -- observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure |
 
-### Network + Platform
+### Network + Platform (requires `--network` consent)
 
 | Module | What it does |
 |--------|-------------|
-| **Collective** | Distributed state synchronization -- peer registry with local model aggregation and noise-injected privacy |
-| **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts |
+| **Collective** | Distributed state synchronization -- peer registry with local model aggregation and noise-injected privacy. Shares only noise-injected aggregates, never raw data. |
+| **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts (local-only) |
 
 ### Multi-Provider Inference
 
@@ -360,7 +360,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-470 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
+484 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -427,13 +427,15 @@ nexus/
 
 ## Design Principles
 
-**Local-first.** Your data never leaves your machine unless you tell it to.
+**Local-first.** The kernel never touches the network. No telemetry, no central server, no cloud dependency -- architecturally enforced, not just policy. Your conversations, memory, and audit trail live on your machine in a single SQLite database.
+
+**Data sovereignty.** Two modules (Collective and Herald) can optionally connect to other NEXUS instances peer-to-peer. They are blocked by default. Enabling them requires explicit `nexus allow --network <module>` consent. Even then: Collective shares only noise-injected model aggregates, never raw data. Herald logs every outbound message to Chronicle. There is no central server collecting anything from anyone. Every machine owns its own data.
 
 **Earned autonomy.** Modules start at trust level 0. Every action outcome adjusts trust -- positive results earn latitude, failures revoke it. This isn't a binary switch. It's a continuous score, per module, per domain, enforced on every call by Aegis and logged permanently by Chronicle.
 
 **Microkernel, not monolith.** The kernel is ~500 lines across five files. Modules are loaded and unloaded without restarting. If a module misbehaves, deny it and move on.
 
-**Immutable audit.** Chronicle logs every routing decision, every permission check, every module response, every trust adjustment. SOC 2 and HIPAA exportable by design. You can always answer: *why did the system do that?*
+**Immutable audit.** Chronicle logs every routing decision, every permission check, every module response, every trust adjustment, and every outbound data event. SOC 2 and HIPAA exportable by design. You can always answer: *what left my machine, when, and where did it go?*
 
 **Model-agnostic.** Qwen, DeepSeek, Phi, Gemma -- anything served over HTTP works. Cloud providers (OpenAI, Anthropic) available when configured. No vendor lock-in. No API keys required for local operation.
 

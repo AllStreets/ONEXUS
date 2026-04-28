@@ -29,20 +29,28 @@ class Aegis:
         conn = self._conn()
         conn.execute("""
             CREATE TABLE IF NOT EXISTS aegis_policies (
-                module  TEXT PRIMARY KEY,
-                allowed INTEGER NOT NULL DEFAULT 0,
-                trust   INTEGER NOT NULL DEFAULT 0
+                module          TEXT PRIMARY KEY,
+                allowed         INTEGER NOT NULL DEFAULT 0,
+                trust           INTEGER NOT NULL DEFAULT 0,
+                network_allowed INTEGER NOT NULL DEFAULT 0
             )
         """)
+        # Migrate: add network_allowed column if missing (existing DBs)
+        try:
+            conn.execute("SELECT network_allowed FROM aegis_policies LIMIT 1")
+        except Exception:
+            conn.execute("ALTER TABLE aegis_policies ADD COLUMN network_allowed INTEGER NOT NULL DEFAULT 0")
         conn.commit()
         conn.close()
 
-    def set_policy(self, module: str, allowed: bool) -> None:
+    def set_policy(self, module: str, allowed: bool, network: bool = False) -> None:
         conn = self._conn()
         conn.execute("""
-            INSERT INTO aegis_policies (module, allowed) VALUES (?, ?)
-            ON CONFLICT(module) DO UPDATE SET allowed = excluded.allowed
-        """, (module, int(allowed)))
+            INSERT INTO aegis_policies (module, allowed, network_allowed) VALUES (?, ?, ?)
+            ON CONFLICT(module) DO UPDATE SET
+                allowed = excluded.allowed,
+                network_allowed = excluded.network_allowed
+        """, (module, int(allowed), int(network)))
         conn.commit()
         conn.close()
 
@@ -58,11 +66,33 @@ class Aegis:
         if not self.is_allowed(module, action):
             raise PermissionDenied(module, action)
 
+    def is_network_allowed(self, module: str) -> bool:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT network_allowed FROM aegis_policies WHERE module = ?", (module,)
+        ).fetchone()
+        conn.close()
+        if row is None:
+            return False
+        return bool(row["network_allowed"])
+
+    def check_network(self, module: str) -> None:
+        if not self.is_network_allowed(module):
+            raise PermissionDenied(module, "network")
+
     def list_policies(self) -> list[dict[str, Any]]:
         conn = self._conn()
-        rows = conn.execute("SELECT module, allowed, trust FROM aegis_policies").fetchall()
+        rows = conn.execute("SELECT module, allowed, trust, network_allowed FROM aegis_policies").fetchall()
         conn.close()
-        return [{"module": r["module"], "allowed": bool(r["allowed"]), "trust": r["trust"]} for r in rows]
+        return [
+            {
+                "module": r["module"],
+                "allowed": bool(r["allowed"]),
+                "trust": r["trust"],
+                "network_allowed": bool(r["network_allowed"]),
+            }
+            for r in rows
+        ]
 
     def get_trust(self, module: str) -> int:
         conn = self._conn()

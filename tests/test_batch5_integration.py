@@ -37,7 +37,7 @@ def network_system(tmp_config):
 
     for mod in modules.values():
         cortex.register_module(mod)
-        aegis.set_policy(mod.name, allowed=True)
+        aegis.set_policy(mod.name, allowed=True, network=mod.requires_network)
 
     return {"cortex": cortex, **modules}
 

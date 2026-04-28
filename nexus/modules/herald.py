@@ -35,6 +35,7 @@ class HeraldModule(NexusModule):
     name = "herald"
     description = "Agent-to-agent communication — discovery, auth, and message exchange"
     version = "0.1.0"
+    requires_network = True
 
     def __init__(self):
         self._agents: dict[str, ExternalAgent] = {}
@@ -70,9 +71,11 @@ class HeraldModule(NexusModule):
         to_agent: str,
         content: str,
         msg_type: str,
+        context: dict[str, Any] | None = None,
     ) -> A2AMessage:
         if to_agent not in self._agents:
             raise KeyError(f"Unknown agent: {to_agent}")
+        agent = self._agents[to_agent]
         msg = A2AMessage(
             id=uuid.uuid4().hex[:10],
             from_agent="nexus-local",
@@ -82,6 +85,8 @@ class HeraldModule(NexusModule):
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
         self._messages.append(msg)
+        if context:
+            self._log_outbound(context, agent.endpoint, f"A2A {msg_type} to {agent.name}")
         return msg
 
     def message_history(self, agent_id: str) -> list[A2AMessage]:

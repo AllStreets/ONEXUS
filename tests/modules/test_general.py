@@ -17,6 +17,19 @@ def test_module_has_required_attrs():
     assert mod.description == "A test module"
 
 
+def test_module_requires_network_defaults_false():
+    class LocalMod(NexusModule):
+        name = "local"
+        description = "A local module"
+        version = "0.1.0"
+
+        async def handle(self, message: str, context: dict) -> str:
+            return "ok"
+
+    mod = LocalMod()
+    assert mod.requires_network is False
+
+
 def test_module_without_name_raises():
     with pytest.raises(TypeError):
         class BadMod(NexusModule):

@@ -93,3 +93,40 @@ def test_trust_history(aegis):
     history = aegis.trust_history("echo")
     assert len(history) == 2
     assert history[0]["reason"] == "good draft"
+
+
+def test_network_denied_by_default(aegis):
+    aegis.set_policy("herald", allowed=True)
+    assert aegis.is_network_allowed("herald") is False
+
+
+def test_network_granted_explicitly(aegis):
+    aegis.set_policy("herald", allowed=True, network=True)
+    assert aegis.is_network_allowed("herald") is True
+
+
+def test_network_revoked(aegis):
+    aegis.set_policy("herald", allowed=True, network=True)
+    aegis.set_policy("herald", allowed=True, network=False)
+    assert aegis.is_network_allowed("herald") is False
+
+
+def test_check_network_raises(aegis):
+    aegis.set_policy("collective", allowed=True)
+    with pytest.raises(PermissionDenied):
+        aegis.check_network("collective")
+
+
+def test_check_network_passes(aegis):
+    aegis.set_policy("collective", allowed=True, network=True)
+    aegis.check_network("collective")  # should not raise
+
+
+def test_list_policies_includes_network(aegis):
+    aegis.set_policy("herald", allowed=True, network=True)
+    aegis.set_policy("oracle", allowed=True)
+    policies = aegis.list_policies()
+    herald = next(p for p in policies if p["module"] == "herald")
+    oracle = next(p for p in policies if p["module"] == "oracle")
+    assert herald["network_allowed"] is True
+    assert oracle["network_allowed"] is False

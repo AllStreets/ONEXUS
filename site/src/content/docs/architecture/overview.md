@@ -42,7 +42,7 @@ No step is skipped. Every message — including internal module-to-module calls 
 
 These constraints are architectural commitments, not guidelines:
 
-**Local-first.** No telemetry, no external API calls from the kernel. The only outbound network connection is to the user-configured LLM endpoint, which defaults to localhost.
+**Local-first.** The kernel never touches the network. No telemetry, no central server, no cloud dependency — architecturally enforced, not just policy. Two modules (Collective and Herald) can optionally connect peer-to-peer, but they are blocked by default and require explicit `nexus allow --network` consent. Even then, every outbound event is logged to Chronicle. There is no central server. Every machine owns its own data.
 
 **8 GB RAM floor.** The smallest supported model (Phi-4 Mini) fits comfortably in 6 GB. The kernel adds ~100 MB. Everything runs on a baseline consumer machine.
 
@@ -61,16 +61,16 @@ Modules are organized by capability tier. Tier assignment is documentation only 
 | Perception | Oracle, Sentry |
 | Intelligence | Atlas, Prism, Cipher |
 | Action | Wraith, Echo, Sigil, Herald, Weave |
-| Advanced | Specter, Chronos, Dreamweaver, Serendipity, Forge |
+| Advanced | Specter, Serendipity, Forge |
 | Orchestration | Council, Autonomic |
 | Network | Collective, Legacy |
-| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Emergence, Ethical Prism |
+| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism |
 | Community | User-contributed modules via `community/modules/` |
 | Core | General |
 
 ## Testing
 
-NEXUS ships with 470 tests covering all kernel components, modules, inference providers, messaging bridges, community ecosystem, and differentiation modules. The test suite requires no running LLM — all LLM calls are mocked. Run with:
+NEXUS ships with 484 tests covering all kernel components, modules, inference providers, messaging bridges, community ecosystem, and differentiation modules. The test suite requires no running LLM — all LLM calls are mocked. Run with:
 
 ```bash
 pytest tests/ -v

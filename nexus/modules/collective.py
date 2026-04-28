@@ -48,6 +48,7 @@ class CollectiveModule(NexusModule):
     name = "collective"
     description = "Federated learning -- peer model sharing with differential privacy"
     version = "0.1.0"
+    requires_network = True
 
     def __init__(self):
         self._peers: dict[str, PeerNode] = {}
@@ -73,18 +74,26 @@ class CollectiveModule(NexusModule):
         self,
         model_id: str,
         weights: dict[str, list[float]],
+        context: dict[str, Any] | None = None,
     ) -> ModelUpdate:
         noised = {}
         for layer, values in weights.items():
             noised[layer] = [
                 v + random.gauss(0, self.noise_scale) for v in values
             ]
-        return ModelUpdate(
+        update = ModelUpdate(
             model_id=model_id,
             noised_weights=noised,
             peer_id=uuid.uuid4().hex[:8],
             round_num=0,
         )
+        if context:
+            layers = len(noised)
+            self._log_outbound(
+                context, "federated_peers",
+                f"Noised model update for {model_id} ({layers} layers, noise={self.noise_scale})",
+            )
+        return update
 
     def aggregate(self, updates: list[ModelUpdate]) -> AggregationResult:
         if not updates:

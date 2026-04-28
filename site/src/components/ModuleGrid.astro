@@ -29,7 +29,7 @@ const modules: Module[] = [
   { name: 'Wraith', description: 'Stealthy subprocess executor — runs shell commands in isolated contexts with full stdin/stdout capture.', tier: 'Action' },
   { name: 'Echo', description: 'Notification and response bus — routes alerts to configured channels (terminal, webhook, file) and awaits human reply.', tier: 'Action' },
   { name: 'Sigil', description: 'Ambient threat radar — registers, prioritizes, and tracks threats across security, reputation, financial, and competitive categories.', tier: 'Action' },
-  { name: 'Herald', description: 'Agent-to-agent communication handler — manages discovery, authentication, and message exchange with external agents via reputation scoring.', tier: 'Action' },
+  { name: 'Herald', description: 'Agent-to-agent communication handler — manages discovery, authentication, and message exchange with external agents via reputation scoring. Requires --network consent.', tier: 'Action' },
   { name: 'Weave', description: 'Social graph intelligence — maps contacts, tracks interaction frequency, detects decaying relationships, and models who-knows-who.', tier: 'Action' },
 
   // Advanced Intelligence
@@ -42,7 +42,7 @@ const modules: Module[] = [
   { name: 'Autonomic', description: 'Earned autonomous action — observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure.', tier: 'Orchestration' },
 
   // Network
-  { name: 'Collective', description: 'Distributed state synchronization — peer registry with local model aggregation and noise-injected privacy for collaborative learning.', tier: 'Network' },
+  { name: 'Collective', description: 'Distributed state synchronization — peer registry with local model aggregation and noise-injected privacy for collaborative learning. Requires --network consent.', tier: 'Network' },
   { name: 'Legacy', description: 'Knowledge crystallization engine — distills decisions, outcomes, and behavioral patterns into structured frameworks and playbooks.', tier: 'Network' },
 
   // Differentiation

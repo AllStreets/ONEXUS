@@ -82,3 +82,19 @@ async def test_herald_handle(herald):
 async def test_herald_handle_empty(herald):
     result = await herald.handle("agents", {"llm": None})
     assert "no external" in result.lower() or "no agent" in result.lower()
+
+
+def test_herald_requires_network(herald):
+    assert herald.requires_network is True
+
+
+def test_herald_outbound_logged_to_chronicle(herald, tmp_config):
+    from nexus.kernel.chronicle import Chronicle
+    chronicle = Chronicle(tmp_config.db_path)
+    chronicle.init_db()
+    context = {"chronicle": chronicle}
+    herald.register_agent("a1", "Agent A", "http://a:8400", 50)
+    herald.compose_message("a1", "hello", "request", context=context)
+    events = chronicle.query(source="herald", action="outbound_data")
+    assert len(events) == 1
+    assert "Agent A" in events[0]["payload"]["summary"]

@@ -130,3 +130,37 @@ def test_build_context(kernel_deps):
     assert "chronicle" in ctx
     assert "pulse" in ctx
     assert "llm" in ctx
+
+
+from nexus.modules.herald import HeraldModule
+
+
+@pytest.mark.asyncio
+async def test_network_module_blocked_without_permission(kernel_deps):
+    c = Cortex(**kernel_deps)
+    c.register_module(HeraldModule())
+    kernel_deps["aegis"].set_policy("herald", allowed=True)  # no network=True
+    response = await c.process("Show connected external agents")
+    assert "network access" in response.lower()
+    assert "nexus allow --network" in response
+
+
+@pytest.mark.asyncio
+async def test_network_module_allowed_with_permission(kernel_deps):
+    c = Cortex(**kernel_deps)
+    herald = HeraldModule()
+    c.register_module(herald)
+    kernel_deps["aegis"].set_policy("herald", allowed=True, network=True)
+    response = await c.process("Show connected external agents")
+    assert "network access" not in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_network_denial_logged_to_chronicle(kernel_deps):
+    c = Cortex(**kernel_deps)
+    c.register_module(HeraldModule())
+    kernel_deps["aegis"].set_policy("herald", allowed=True)  # no network
+    await c.process("Show connected external agents")
+    events = kernel_deps["chronicle"].query(source="cortex", action="network_denied")
+    assert len(events) >= 1
+    assert events[0]["payload"]["module"] == "herald"

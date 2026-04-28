@@ -143,6 +143,17 @@ class Cortex:
             })
             return f"[Nexus] Module '{target}' is not allowed to respond. Enable it with: nexus allow {target}"
 
+        # Check network permission for peer-aware modules
+        module = self._modules[target]
+        if module.requires_network and not self._aegis.is_network_allowed(target):
+            self._chronicle.log("cortex", "network_denied", {
+                "module": target, "message_preview": message[:100],
+            })
+            return (
+                f"[Nexus] Module '{target}' requires network access but it is not enabled. "
+                f"Grant it with: nexus allow --network {target}"
+            )
+
         # Log the routing decision
         self._chronicle.log("cortex", "route", {
             "target": target, "message_preview": message[:100],
@@ -155,7 +166,6 @@ class Cortex:
         context = self._build_context()
 
         # Execute
-        module = self._modules[target]
         response = await module.handle(message, context)
 
         # Store the response in episodic memory

@@ -21,13 +21,14 @@ class MyModule(NexusModule):
         return f"Echo: {message}"
 ```
 
-Three class attributes are required:
+Three class attributes are required, one is optional:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `name` | `str` | Unique identifier used for routing, trust tracking, and audit logs |
 | `description` | `str` | Human-readable description shown in `nexus status` |
 | `version` | `str` | Semantic version string |
+| `requires_network` | `bool` | Default `False`. Set `True` for modules that connect to external endpoints. Aegis enforces a separate `--network` consent gate for these modules, and Chronicle logs every outbound data event. |
 
 ## Lifecycle Hooks
 
@@ -82,10 +83,10 @@ The 26 modules are grouped by functional tier. All use the same `NexusModule` in
 | Perception | Oracle, Sentry | Observe the environment and detect anomalies |
 | Intelligence | Atlas, Prism, Cipher | Analyze, reason, and decode using LLM |
 | Action | Wraith, Echo, Sigil, Herald, Weave | Execute tasks, remember, sign, notify, orchestrate |
-| Advanced | Specter, Chronos, Dreamweaver, Serendipity, Forge | Red-team, branch timelines, synthesize, discover, negotiate |
+| Advanced | Specter, Serendipity, Forge | Stress-test, discover, negotiate |
 | Orchestration | Council, Autonomic | Multi-agent deliberation, earned autonomous action |
-| Network | Collective, Legacy | Federated learning, knowledge crystallization |
-| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Emergence, Ethical Prism | Self-reflection, stress-testing, ethical analysis, pattern discovery |
+| Network | Collective, Legacy | Federated learning (`--network`), knowledge crystallization |
+| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism | Self-reflection, stress-testing, ethical analysis, pattern discovery |
 | Community | User-contributed | Third-party modules via `community/modules/` |
 | Core | General | Catch-all fallback for unrouted messages |
 
