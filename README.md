@@ -1,19 +1,16 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-464_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-34_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-464_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-34_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=60&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=600&height=80&lines=N+E+X+U+S"/>
-    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=60&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=600&height=80&lines=N+E+X+U+S" alt="NEXUS"/>
-  </picture>
+  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=64&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=650&height=100&lines=N+E+X+U+S" alt="NEXUS"/>
 </p>
 <p align="center"><strong>Neural Executive for Unified Superintelligence</strong></p>
 <p align="center"><em>An autonomous intelligence operating system that runs on your hardware, answers to no cloud, and gets smarter the longer it runs.</em></p>
 
 ---
 
-## :brain: The Idea
+## The Idea
 
 Most AI tools are wrappers around an API. You send text up, you get text back, someone else stores your data.
 
@@ -23,63 +20,85 @@ Thirty-four components are built -- five kernel components, five perception/inte
 
 ---
 
-## :building_construction: Architecture
+## Architecture
 
 ```
                                ┌──────────┐
                                │  U S E R │
                                └────┬─────┘
                                     │
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║                           NEXUS KERNEL                        ║
-    ║                               │                               ║
-    ║                         ┌─────V─────┐                         ║
-    ║                   ┌─────┤  CORTEX   ├─────┐                   ║
-    ║                   │     │ (router)  │     │                   ║
-    ║                   │     └─────┬─────┘     │                   ║
-    ║     ┌─────────────┼───────────┼───────────┼──────────┐        ║
-    ║     │             │           │           │          │        ║
-    ║   ┌─V──────┐  ┌───V────┐ ┌────V─────┐ ┌───V────┐ ┌───V───┐    ║
-    ║   │ ENGRAM │  │ PULSE  │ │CHRONICLE │ │ AEGIS  │ │  LLM  │    ║
-    ║   │(memory)│  │ (bus)  │ │ (audit)  │ │(trust) │ │ (inf.)│    ║
-    ║   └────────┘  └────────┘ └──────────┘ └────────┘ └───────┘    ║
-    ║   ┌─┐┌───┐┌─────┐        Trust: 0━━━━━━━━━━━100               ║
-    ║   │W││Ep.││Sem. │        Earned autonomy per module           ║
-    ║   │ ││FTS││ vec │        Outcome-based adjustment             ║
-    ║   └─┘└───┘└─────┘        Logged to Chronicle                  ║
-    ╚═══════════════════════════════════════════════════════════════╝
+    ╔═══════════════════════════════════════════════════════════════════╗
+    ║                            NEXUS KERNEL                          ║
+    ║                                │                                 ║
+    ║                          ┌─────V─────┐                           ║
+    ║                    ┌─────┤  CORTEX   ├─────┐                     ║
+    ║                    │     │ (router)  │     │                     ║
+    ║                    │     └─────┬─────┘     │                     ║
+    ║     ┌──────────────┼──────────┼───────────┼───────────┐          ║
+    ║     │              │          │           │           │          ║
+    ║   ┌─V──────┐  ┌────V───┐ ┌───V──────┐ ┌──V─────┐ ┌──V─────┐    ║
+    ║   │ ENGRAM │  │ PULSE  │ │CHRONICLE │ │ AEGIS  │ │  LLM   │    ║
+    ║   │(memory)│  │ (bus)  │ │ (audit)  │ │(trust) │ │ (inf.) │    ║
+    ║   └────────┘  └────────┘ └──────────┘ └────────┘ └────────┘    ║
+    ║   ┌──┐┌────┐┌──────┐      Trust: 0━━━━━━━━━━━100                ║
+    ║   │W ││Ep. ││ Sem. │      Earned autonomy per module             ║
+    ║   │  ││FTS ││ vec  │      Outcome-based adjustment               ║
+    ║   └──┘└────┘└──────┘      Logged to Chronicle                    ║
+    ╚═══════════════════════════════════════════════════════════════════╝
           │             │           │           │          │
-     ┌────V────┐   ┌────V────┐ ┌────V────┐ ┌────V────┐ ┌───V────┐
-     │ PERCEPT.│   │ INTELL. │ │  ACTION │ │  SOCIAL │ │DEFENSE │
+     ┌────V────┐   ┌────V────┐ ┌────V────┐ ┌────V────┐ ┌──V─────┐
+     │PERCEPT. │   │ INTELL. │ │  ACTION │ │  SOCIAL │ │DEFENSE │
      │         │   │         │ │         │ │         │ │        │
      │  Oracle │   │  Atlas  │ │  Wraith │ │  Herald │ │ Sigil  │
      │  Sentry │   │  Prism  │ │   Echo  │ │  Weave  │ │        │
      │         │   │  Cipher │ │         │ │         │ │        │
      └─────────┘   └─────────┘ └─────────┘ └─────────┘ └────────┘
           │             │           │
-     ┌────V─────────────V───────────V──────────┐
-     │         ADVANCED INTELLIGENCE           │
-     │                                         │
-     │  Specter ·········· adversarial red-team│
-     │  Chronos ·········· temporal branching  │
-     │  Dreamweaver ······ overnight synthesis │
-     │  Serendipity ······ anti-optimization   │
-     │  Forge ············ autonomous negotiat.│
-     └─────────────────────────────────────────┘
+     ┌────V─────────────V───────────V──────────────────────────────┐
+     │                 ADVANCED INTELLIGENCE                       │
+     │                                                             │
+     │  Specter ·········· adversarial red-team                    │
+     │  Chronos ·········· temporal branching                      │
+     │  Dreamweaver ······ overnight synthesis                     │
+     │  Serendipity ······ anti-optimization                       │
+     │  Forge ············ autonomous negotiation                  │
+     └─────────────────────────────────────────────────────────────┘
           │             │
-     ┌────V─────────────V──────────────────────┐
-     │            ORCHESTRATION                │
-     │                                         │
-     │  Council ·········· multi-agent debate  │
-     │  Autonomic ········ earned autonomy     │
-     └─────────────────────────────────────────┘
+     ┌────V─────────────V──────────────────────────────────────────┐
+     │                   ORCHESTRATION                             │
+     │                                                             │
+     │  Council ·········· multi-agent debate                      │
+     │  Autonomic ········ earned autonomy                         │
+     └─────────────────────────────────────────────────────────────┘
           │             │
-     ┌────V─────────────V──────────┐
-     │     NETWORK + PLATFORM      │
-     │                             │
-     │  Collective ··· federated   │
-     │  Legacy ······· knowledge   │
-     └─────────────────────────────┘
+     ┌────V─────────────V──────────────────────────────────────────┐
+     │               NETWORK + PLATFORM                            │
+     │                                                             │
+     │  Collective ······· federated learning                      │
+     │  Legacy ··········· knowledge crystallization               │
+     └─────────────────────────────────────────────────────────────┘
+          │             │
+     ┌────V─────────────V──────────────────────────────────────────┐
+     │                 DIFFERENTIATION                             │
+     │                                                             │
+     │  Dream Loop ······ background pattern discovery             │
+     │  Adversarial ····· self-improvement red-teaming             │
+     │  Tripwire ········ contradiction detection                  │
+     │  Provenance ······ reasoning chain tracer                   │
+     │  Sandbox ········· hypothetical simulation                  │
+     │  Symbiosis ······· module pathway mapping                   │
+     │  Consciousness ··· self-reflective journal                  │
+     │  Emergence ······· implicit goal detection                  │
+     │  Ethical Prism ··· seven-framework ethical analysis          │
+     └─────────────────────────────────────────────────────────────┘
+          │             │
+     ┌────V─────────────V──────────────────────────────────────────┐
+     │            INFRASTRUCTURE + COMMUNITY                       │
+     │                                                             │
+     │  Multi-Provider ·· OpenAI, Anthropic, local fallback        │
+     │  Messaging ······· Telegram, Discord two-way bridges        │
+     │  Community ······· validated third-party module ecosystem    │
+     └─────────────────────────────────────────────────────────────┘
 ```
 
 The kernel is five components, each with one job:
@@ -96,16 +115,16 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 
 ---
 
-## :package: What's Built
+## What's Built
 
-### :eye: Perception
+### Perception
 
 | Module | What it does |
 |--------|-------------|
 | **Oracle** | Keyword-weighted trigger rules that fire when pattern density exceeds thresholds |
 | **Sentry** | Real-time cognitive state model -- focus, fatigue, stress, flow detection |
 
-### :bulb: Intelligence
+### Intelligence
 
 | Module | What it does |
 |--------|-------------|
@@ -113,7 +132,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Prism** | Tag-based cross-domain synthesis -- finds connections across calendar, email, finance, weather |
 | **Cipher** | Source trust registry, provenance chains, automatic conflict detection between sources |
 
-### :zap: Action
+### Action
 
 | Module | What it does |
 |--------|-------------|
@@ -123,7 +142,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Herald** | A2A agent communication -- external agent registry, reputation tracking, message history |
 | **Weave** | Social graph -- contact mapping, interaction tracking, relationship health, reconnection suggestions |
 
-### :crystal_ball: Advanced Intelligence
+### Advanced Intelligence
 
 | Module | What it does |
 |--------|-------------|
@@ -133,21 +152,21 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Serendipity** | Anti-optimization -- inverted relevance scoring to surface surprising cross-domain connections |
 | **Forge** | Autonomous negotiation -- multi-round structured bargaining with escalation guardrails |
 
-### :circus_tent: Orchestration
+### Orchestration
 
 | Module | What it does |
 |--------|-------------|
 | **Council** | Multi-agent deliberation -- structured multi-round debate across modules with synthesized recommendations and preserved dissent |
 | **Autonomic** | Earned autonomous action -- observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure |
 
-### :globe_with_meridians: Network + Platform
+### Network + Platform
 
 | Module | What it does |
 |--------|-------------|
 | **Collective** | Federated learning -- peer model sharing with differential privacy, opt-in only |
 | **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts |
 
-### :satellite: Multi-Provider Inference
+### Multi-Provider Inference
 
 | Component | What it does |
 |-----------|-------------|
@@ -159,7 +178,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 
 Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to configure. Local provider is always available as fallback.
 
-### :speech_balloon: Messaging Integrations
+### Messaging Integrations
 
 | Component | What it does |
 |-----------|-------------|
@@ -170,7 +189,7 @@ Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to confi
 
 Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `NEXUS_DISCORD_CHANNEL_IDS` to configure.
 
-### :dna: Differentiation
+### Differentiation
 
 | Module | What it does |
 |--------|-------------|
@@ -184,7 +203,7 @@ Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `N
 | **Emergence** | Emergent goal detection -- analyzes behavioral history to surface implicit goals the user never explicitly stated |
 | **Ethical Prism** | Seven-framework ethical analysis -- evaluates decisions through Utilitarian, Deontological, Virtue Ethics, Care Ethics, Contractualist, Rights-Based, and Pragmatic Ethics lenses with synthesis |
 
-### :jigsaw: Community Ecosystem
+### Community Ecosystem
 
 | Component | What it does |
 |-----------|-------------|
@@ -197,7 +216,7 @@ Community modules live in `community/modules/<author>/<name>/` with a manifest, 
 
 ---
 
-## :world_map: Module Roadmap
+## Module Roadmap
 
 ```
     KERNEL (Batch 1) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
@@ -264,7 +283,7 @@ Community modules live in `community/modules/<author>/<name>/` with a manifest, 
 
 ---
 
-## :rocket: Quickstart
+## Quickstart
 
 ```bash
 # Clone and install
@@ -282,7 +301,7 @@ nexus run
 
 ---
 
-## :keyboard: Commands
+## Commands
 
 | Command | What it does |
 |---------|-------------|
@@ -298,7 +317,7 @@ nexus run
 
 ---
 
-## :desktop_computer: Hardware
+## Hardware
 
 NEXUS was designed for machines people actually own.
 
@@ -312,31 +331,36 @@ The inference layer supports multiple providers. Local models run via llama.cpp 
 
 ---
 
-## :toolbox: The Stack
+## The Stack
 
 ```
-    ╔══════════════════════════════════════════════════╗
-    ║  Python 3.11+  ·  No heavy frameworks            ║
-    ╠══════════════════════════════════════════════════╣
-    ║  llama.cpp ············ local LLM inference      ║
-    ║  SQLite + FTS5 ········ memory, search, audit    ║
-    ║  sqlite-vec ··········· vector similarity        ║
-    ║  smolagents ··········· agent orchestration      ║
-    ║  Click ················ CLI interface            ║
-    ║  OpenTelemetry ········ structured telemetry     ║
-    ║  asyncio ·············· phantom agent lifecycle  ║
-    ╠══════════════════════════════════════════════════╣
-    ║  MCP ·················· local module protocol    ║
-    ║  Google A2A ··········· inter-agent protocol     ║
-    ╠══════════════════════════════════════════════════╣
-    ║  Models: Qwen 3 · DeepSeek · Phi · Gemma         ║
-    ║  (MIT / Apache 2.0 only -- no Llama)             ║
-    ╚══════════════════════════════════════════════════╝
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  Python 3.11+  ·  No heavy frameworks                       ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  llama.cpp ············ local LLM inference                  ║
+    ║  SQLite + FTS5 ········ memory, search, audit                ║
+    ║  sqlite-vec ··········· vector similarity                    ║
+    ║  smolagents ··········· agent orchestration                  ║
+    ║  Click ················ CLI interface                        ║
+    ║  OpenTelemetry ········ structured telemetry                 ║
+    ║  asyncio ·············· phantom agent lifecycle              ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  OpenAI SDK ··········· cloud inference (GPT-4o, etc.)       ║
+    ║  Anthropic SDK ········ cloud inference (Claude, etc.)       ║
+    ║  python-telegram-bot ·· Telegram bridge                     ║
+    ║  discord.py ··········· Discord bridge                       ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  MCP ·················· local module protocol                ║
+    ║  Google A2A ··········· inter-agent protocol                 ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  Models: Qwen 3 · DeepSeek · Phi · Gemma                    ║
+    ║  (MIT / Apache 2.0 only -- no Llama)                         ║
+    ╚══════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## :test_tube: Running Tests
+## Running Tests
 
 ```bash
 pip install pytest pytest-asyncio
@@ -347,7 +371,7 @@ pytest tests/ -v
 
 ---
 
-## :file_folder: Project Structure
+## Project Structure
 
 ```
 nexus/
@@ -372,37 +396,37 @@ nexus/
 │   ├── telegram.py ······ Telegram two-way bridge
 │   ├── discord_bridge.py  Discord two-way bridge
 │   └── manager.py ······· BridgeManager lifecycle
-└── modules/
-    ├── base.py ·········· abstract NexusModule
-    ├── general.py ······· default conversation handler
-    ├── oracle.py ········ anticipatory trigger engine
-    ├── sentry.py ········ cognitive load model
-    ├── atlas.py ········· living world model
-    ├── prism.py ········· cross-domain synthesis
-    ├── cipher.py ········ trust-scored information
-    ├── wraith.py ········ phantom agent spawner
-    ├── echo.py ·········· behavioral fingerprinting
-    ├── sigil.py ········· ambient threat radar
-    ├── herald.py ········ A2A agent communication
-    ├── weave.py ········· social graph intelligence
-    ├── specter.py ······· adversarial red-team
-    ├── chronos.py ······· temporal branching
-    ├── dreamweaver.py ··· overnight synthesis
-    ├── serendipity.py ··· anti-optimization engine
-    ├── forge.py ········· autonomous negotiation
-    ├── collective.py ···· federated learning
-    ├── legacy.py ········ knowledge crystallization
-    ├── council.py ······· multi-agent deliberation
-    ├── autonomic.py ····· earned autonomous action
-    ├── dream_loop.py ···· background pattern discovery
-    ├── adversarial.py ··· self-improvement red-teaming
-    ├── tripwire.py ······ contradiction detection
-    ├── provenance.py ···· reasoning chain tracer
-    ├── sandbox.py ······· hypothetical simulation
-    ├── symbiosis.py ····· module pathway mapping
-    ├── consciousness.py · self-reflective journal
-    ├── emergence.py ····· implicit goal detection
-    └── ethical_prism.py · seven-framework ethical analysis
+├── modules/
+│   ├── base.py ·········· abstract NexusModule
+│   ├── general.py ······· default conversation handler
+│   ├── oracle.py ········ anticipatory trigger engine
+│   ├── sentry.py ········ cognitive load model
+│   ├── atlas.py ········· living world model
+│   ├── prism.py ········· cross-domain synthesis
+│   ├── cipher.py ········ trust-scored information
+│   ├── wraith.py ········ phantom agent spawner
+│   ├── echo.py ·········· behavioral fingerprinting
+│   ├── sigil.py ········· ambient threat radar
+│   ├── herald.py ········ A2A agent communication
+│   ├── weave.py ········· social graph intelligence
+│   ├── specter.py ······· adversarial red-team
+│   ├── chronos.py ······· temporal branching
+│   ├── dreamweaver.py ··· overnight synthesis
+│   ├── serendipity.py ··· anti-optimization engine
+│   ├── forge.py ········· autonomous negotiation
+│   ├── collective.py ···· federated learning
+│   ├── legacy.py ········ knowledge crystallization
+│   ├── council.py ······· multi-agent deliberation
+│   ├── autonomic.py ····· earned autonomous action
+│   ├── dream_loop.py ···· background pattern discovery
+│   ├── adversarial.py ··· self-improvement red-teaming
+│   ├── tripwire.py ······ contradiction detection
+│   ├── provenance.py ···· reasoning chain tracer
+│   ├── sandbox.py ······· hypothetical simulation
+│   ├── symbiosis.py ····· module pathway mapping
+│   ├── consciousness.py · self-reflective journal
+│   ├── emergence.py ····· implicit goal detection
+│   └── ethical_prism.py · seven-framework ethical analysis
 └── community/
     ├── validator.py ····· module validation engine
     ├── registry.py ······ searchable module catalog
@@ -411,7 +435,7 @@ nexus/
 
 ---
 
-## :compass: Design Principles
+## Design Principles
 
 **Local-first.** Your data never leaves your machine unless you tell it to.
 
@@ -431,7 +455,7 @@ nexus/
 
 ---
 
-## :scroll: License
+## License
 
 Apache 2.0. Use it, fork it, ship it. The core will always be open.
 

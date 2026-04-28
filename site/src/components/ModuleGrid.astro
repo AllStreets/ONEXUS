@@ -46,9 +46,29 @@ const modules: Module[] = [
   // Network
   { name: 'Collective', description: 'Multi-instance coordination layer — synchronises state and task delegation across parallel NEXUS processes.', tier: 'Network' },
   { name: 'Legacy', description: 'External system bridge — wraps legacy APIs, databases, and services into first-class NEXUS data sources.', tier: 'Network' },
+
+  // Differentiation
+  { name: 'Dream Loop', description: 'Background pattern discovery — replays recent memories through the LLM to find recurring themes and actionable insights.', tier: 'Differentiation' },
+  { name: 'Adversarial', description: 'Self-improvement red-teaming — analyzes Chronicle logs for failures, blind spots, and improvement opportunities.', tier: 'Differentiation' },
+  { name: 'Tripwire', description: 'Cognitive tripwires — monitors decision history for contradictions, inconsistencies, and behavioral drift.', tier: 'Differentiation' },
+  { name: 'Provenance', description: 'Reasoning chain tracer — reconstructs the full reasoning path behind any past decision from Chronicle events.', tier: 'Differentiation' },
+  { name: 'Sandbox', description: 'Temporal sandbox — simulates hypothetical scenarios without modifying real memory or system state.', tier: 'Differentiation' },
+  { name: 'Symbiosis', description: 'Module pathway mapping — tracks which modules route to each other and discovers emergent collaboration patterns.', tier: 'Differentiation' },
+  { name: 'Consciousness', description: 'Self-reflective journal — synthesizes system activity into introspective entries about the system\'s own state.', tier: 'Differentiation' },
+  { name: 'Emergence', description: 'Emergent goal detection — analyzes behavioral history to surface implicit goals the user never explicitly stated.', tier: 'Differentiation' },
+  { name: 'Ethical Prism', description: 'Seven-framework ethical analysis — evaluates decisions through Utilitarian, Deontological, Virtue, Care, Contractualist, Rights-Based, and Pragmatic lenses.', tier: 'Differentiation' },
+
+  // Infrastructure
+  { name: 'Multi-Provider', description: 'Inference routing across OpenAI, Anthropic, and local llama.cpp — automatic fallback when a provider goes unhealthy.', tier: 'Infrastructure' },
+  { name: 'Messaging', description: 'Two-way Telegram and Discord bridges — routes inbound messages to Cortex, forwards Pulse notify events outbound.', tier: 'Infrastructure' },
+
+  // Community
+  { name: 'Validator', description: 'Validates community module structure, manifest schema, file layout, and kernel import restrictions before installation.', tier: 'Community' },
+  { name: 'Registry', description: 'JSON-backed module catalog with search by name, author, description, and keywords.', tier: 'Community' },
+  { name: 'Installer', description: 'Installs and uninstalls community modules, registers routing keywords in Cortex automatically.', tier: 'Community' },
 ];
 
-const tiers = ['Kernel', 'Perception', 'Intelligence', 'Action', 'Advanced Intelligence', 'Orchestration', 'Network'];
+const tiers = ['Kernel', 'Perception', 'Intelligence', 'Action', 'Advanced Intelligence', 'Orchestration', 'Network', 'Differentiation', 'Infrastructure', 'Community'];
 
 const tierColors: Record<string, string> = {
   'Kernel': '#00d4ff',
@@ -58,6 +78,9 @@ const tierColors: Record<string, string> = {
   'Advanced Intelligence': '#ff4d6a',
   'Orchestration': '#e040fb',
   'Network': '#00ff88',
+  'Differentiation': '#ff6b9d',
+  'Infrastructure': '#fbbf24',
+  'Community': '#34d399',
 };
 ---
 
