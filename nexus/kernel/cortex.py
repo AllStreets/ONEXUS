@@ -65,6 +65,14 @@ class Cortex:
     def unregister_module(self, name: str) -> None:
         self._modules.pop(name, None)
 
+    def register_keywords(self, module_name: str, keywords: list[str]) -> None:
+        """Register routing keywords for a module (used by community installer)."""
+        self._MODULE_KEYWORDS[module_name] = keywords
+
+    def unregister_keywords(self, module_name: str) -> None:
+        """Remove routing keywords for a module."""
+        self._MODULE_KEYWORDS.pop(module_name, None)
+
     def list_modules(self) -> list[str]:
         return list(self._modules.keys())
 

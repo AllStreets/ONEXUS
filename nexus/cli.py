@@ -4,6 +4,7 @@ Commands: run, status, forget, allow, deny
 """
 import asyncio
 import os
+from pathlib import Path
 import click
 from nexus import __version__
 from nexus.config import NexusConfig
@@ -64,6 +65,84 @@ def deny(module_name):
     aegis.init_db()
     aegis.set_policy(module_name, allowed=False)
     click.echo(f"Module '{module_name}' is now denied.")
+
+
+@main.command()
+@click.argument("module_path")
+def install(module_path):
+    """Install a community module (format: author/module_name)."""
+    from nexus.community.installer import ModuleInstaller
+    cfg = NexusConfig()
+    community_root = Path(__file__).parent.parent / "community"
+    install_dir = cfg.data_dir / "community_modules"
+    install_dir.mkdir(parents=True, exist_ok=True)
+
+    installer = ModuleInstaller(community_root=community_root, install_dir=install_dir)
+    result = installer.install(module_path)
+
+    if result.success:
+        click.echo(f"Installed '{module_path}'")
+        if result.keywords:
+            click.echo(f"Keywords registered: {', '.join(result.keywords)}")
+    else:
+        click.echo(f"Error: {result.error}")
+
+
+@main.command()
+@click.argument("module_name")
+def uninstall(module_name):
+    """Uninstall a community module."""
+    from nexus.community.installer import ModuleInstaller
+    cfg = NexusConfig()
+    community_root = Path(__file__).parent.parent / "community"
+    install_dir = cfg.data_dir / "community_modules"
+
+    installer = ModuleInstaller(community_root=community_root, install_dir=install_dir)
+    result = installer.uninstall(module_name)
+
+    if result.success:
+        click.echo(f"Uninstalled '{module_name}'")
+    else:
+        click.echo(f"Error: {result.error}")
+
+
+@main.group()
+def community():
+    """Community module management."""
+    pass
+
+
+@community.command("list")
+def community_list():
+    """List available community modules."""
+    from nexus.community.registry import ModuleRegistry
+    registry_path = Path(__file__).parent.parent / "community" / "registry.json"
+    reg = ModuleRegistry(registry_path)
+    modules = reg.list_all()
+
+    if not modules:
+        click.echo("No community modules available.")
+        return
+
+    for mod in modules:
+        click.echo(f"  {mod['author']}/{mod['name']} v{mod['version']} — {mod['description']}")
+
+
+@community.command("search")
+@click.argument("query")
+def community_search(query):
+    """Search community modules by name, keyword, or description."""
+    from nexus.community.registry import ModuleRegistry
+    registry_path = Path(__file__).parent.parent / "community" / "registry.json"
+    reg = ModuleRegistry(registry_path)
+    results = reg.search(query)
+
+    if not results:
+        click.echo(f"No modules matching '{query}'.")
+        return
+
+    for mod in results:
+        click.echo(f"  {mod['author']}/{mod['name']} v{mod['version']} — {mod['description']}")
 
 
 @main.command()
