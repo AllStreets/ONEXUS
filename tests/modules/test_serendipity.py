@@ -1,6 +1,7 @@
 # tests/modules/test_serendipity.py
 import pytest
 from nexus.modules.serendipity import SerendipityModule, SurprisingConnection
+from nexus.kernel.pulse import Pulse, Message
 
 
 @pytest.fixture
@@ -89,3 +90,36 @@ async def test_serendipity_handle(serendipity):
 async def test_serendipity_handle_empty(serendipity):
     result = await serendipity.handle("surprise me", {"llm": None})
     assert "no focus" in result.lower() or "no knowledge" in result.lower() or "nothing" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_serendipity_on_load_subscribes():
+    s = SerendipityModule()
+    pulse = Pulse()
+    await s.on_load({"pulse": pulse})
+    assert s._sub_id is not None
+
+
+@pytest.mark.asyncio
+async def test_serendipity_auto_records_focus():
+    s = SerendipityModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "oracle", "message": "supply chain logistics", "response": "Analysis complete"},
+    )
+    await s._on_response(msg)
+    assert len(s.list_focus_areas()) == 1
+    assert len(s.list_knowledge()) == 1
+
+
+@pytest.mark.asyncio
+async def test_serendipity_ignores_own_responses():
+    s = SerendipityModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "serendipity", "message": "test", "response": "test"},
+    )
+    await s._on_response(msg)
+    assert len(s.list_focus_areas()) == 0

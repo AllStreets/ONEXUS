@@ -69,8 +69,24 @@ class Cortex:
     def register_module(self, module: NexusModule) -> None:
         self._modules[module.name] = module
 
-    def unregister_module(self, name: str) -> None:
-        self._modules.pop(name, None)
+    async def unregister_module(self, name: str) -> None:
+        module = self._modules.pop(name, None)
+        if module:
+            await module.on_unload(self._build_context())
+
+    def _build_context(self) -> dict[str, Any]:
+        return {
+            "llm": self._llm,
+            "engram": self._engram,
+            "chronicle": self._chronicle,
+            "pulse": self._pulse,
+        }
+
+    async def initialize_modules(self) -> None:
+        """Call on_load for all registered modules with kernel context."""
+        context = self._build_context()
+        for module in self._modules.values():
+            await module.on_load(context)
 
     def register_keywords(self, module_name: str, keywords: list[str]) -> None:
         """Register routing keywords for a module (used by community installer)."""
@@ -136,12 +152,7 @@ class Cortex:
         self._engram.episodic.store(f"User: {message}", source="user_input")
 
         # Build context for the module
-        context: dict[str, Any] = {
-            "llm": self._llm,
-            "engram": self._engram,
-            "chronicle": self._chronicle,
-            "pulse": self._pulse,
-        }
+        context = self._build_context()
 
         # Execute
         module = self._modules[target]

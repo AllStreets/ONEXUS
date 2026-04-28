@@ -5,6 +5,9 @@ Monitors what the user focuses on, identifies adjacent fields they are NOT
 looking at, and surfaces surprising cross-domain connections with deep
 structural similarity. Uses an inverted relevance function — penalizes
 obvious connections, rewards surprising ones.
+
+Data pipeline: subscribes to cortex.response events via Pulse, automatically
+recording user messages as focus areas and module responses as knowledge entries.
 """
 import re
 from dataclasses import dataclass, field
@@ -40,6 +43,29 @@ class SerendipityModule(NexusModule):
     def __init__(self):
         self._focus_areas: list[str] = []
         self._knowledge: list[KnowledgeEntry] = []
+        self._sub_id: str | None = None
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        if context and "pulse" in context:
+            self._sub_id = context["pulse"].subscribe(
+                "cortex.response", self._on_response
+            )
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        if self._sub_id and context and "pulse" in context:
+            context["pulse"].unsubscribe(self._sub_id)
+            self._sub_id = None
+
+    async def _on_response(self, msg) -> None:
+        payload = msg.payload
+        module = payload.get("module", "unknown")
+        if module == self.name:
+            return
+        message = payload.get("message", "")
+        response = payload.get("response", "")
+        self.record_focus(message)
+        tags = list(_extract_terms(response))[:10]
+        self.add_knowledge(domain=module, content=response[:200], tags=tags)
 
     def record_focus(self, area: str) -> None:
         self._focus_areas.append(area)

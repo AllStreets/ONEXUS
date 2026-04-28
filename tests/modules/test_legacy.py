@@ -6,6 +6,7 @@ from nexus.modules.legacy import (
     DecisionPattern,
     ArtifactType,
 )
+from nexus.kernel.pulse import Pulse, Message
 
 
 @pytest.fixture
@@ -99,3 +100,55 @@ async def test_legacy_handle(legacy):
 async def test_legacy_handle_empty(legacy):
     result = await legacy.handle("Show my knowledge", {"llm": None})
     assert "no decisions" in result.lower() or "no data" in result.lower() or "record" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_legacy_on_load_subscribes():
+    leg = LegacyModule()
+    pulse = Pulse()
+    await leg.on_load({"pulse": pulse})
+    assert leg._sub_id is not None
+
+
+@pytest.mark.asyncio
+async def test_legacy_auto_records_council_decisions():
+    leg = LegacyModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={
+            "module": "council",
+            "message": "Should I invest in this startup?",
+            "response": "After deliberation, the council recommends caution",
+        },
+    )
+    await leg._on_response(msg)
+    assert leg.decision_count() == 1
+
+
+@pytest.mark.asyncio
+async def test_legacy_records_ethical_prism_decisions():
+    leg = LegacyModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={
+            "module": "ethical_prism",
+            "message": "Is this decision morally sound?",
+            "response": "Ethical analysis complete",
+        },
+    )
+    await leg._on_response(msg)
+    assert leg.decision_count() == 1
+
+
+@pytest.mark.asyncio
+async def test_legacy_ignores_non_decision_modules():
+    leg = LegacyModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "oracle", "message": "scan alerts", "response": "All clear"},
+    )
+    await leg._on_response(msg)
+    assert leg.decision_count() == 0

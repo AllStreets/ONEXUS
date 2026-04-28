@@ -2,6 +2,9 @@
 Atlas — the living world model.
 A temporal knowledge graph where facts have confidence scores, sources,
 and time-based decay. Conflicting facts coexist with competing confidence.
+
+Data pipeline: subscribes to cortex.response events via Pulse, automatically
+extracting facts from module responses and storing them with confidence decay.
 """
 import json
 import sqlite3
@@ -32,6 +35,37 @@ class AtlasModule(NexusModule):
 
     def __init__(self, db_path: str | Path | None = None):
         self._db_path = str(db_path) if db_path else ":memory:"
+        self._sub_id: str | None = None
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        self.init_db()
+        if context and "pulse" in context:
+            self._sub_id = context["pulse"].subscribe(
+                "cortex.response", self._on_response
+            )
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        if self._sub_id and context and "pulse" in context:
+            context["pulse"].unsubscribe(self._sub_id)
+            self._sub_id = None
+
+    async def _on_response(self, msg) -> None:
+        payload = msg.payload
+        module = payload.get("module", "unknown")
+        if module == self.name:
+            return
+        message = payload.get("message", "")
+        response = payload.get("response", "")
+        subject = self._extract_subject(message)
+        if subject:
+            self.add_fact(
+                subject=subject,
+                predicate="reported_by",
+                obj=response[:200],
+                confidence=0.6,
+                source=module,
+                max_age_days=90,
+            )
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self._db_path, timeout=5.0)

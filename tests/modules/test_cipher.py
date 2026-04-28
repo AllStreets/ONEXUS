@@ -1,6 +1,7 @@
 # tests/modules/test_cipher.py
 import pytest
 from nexus.modules.cipher import CipherModule, SourceProfile
+from nexus.kernel.pulse import Pulse, Message
 
 
 @pytest.fixture
@@ -70,3 +71,49 @@ async def test_cipher_handle_with_conflict(cipher):
     cipher.record_claim("disputed", "no", source="anonymous_blog", trust=0.12)
     result = await cipher.handle("conflicts", {"llm": None})
     assert "conflict" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_cipher_on_load_subscribes():
+    c = CipherModule()
+    pulse = Pulse()
+    await c.on_load({"pulse": pulse})
+    assert c._sub_id is not None
+
+
+@pytest.mark.asyncio
+async def test_cipher_auto_registers_source():
+    c = CipherModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "oracle", "message": "scan alerts", "response": "No threats detected"},
+    )
+    await c._on_response(msg)
+    sources = c.list_sources()
+    assert any(s.name == "oracle" for s in sources)
+
+
+@pytest.mark.asyncio
+async def test_cipher_auto_records_claim():
+    c = CipherModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "oracle", "message": "scan", "response": "All clear"},
+    )
+    await c._on_response(msg)
+    # Should have one claim
+    assert len(c._claims) == 1
+
+
+@pytest.mark.asyncio
+async def test_cipher_ignores_own_responses():
+    c = CipherModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "cipher", "message": "test", "response": "test"},
+    )
+    await c._on_response(msg)
+    assert len(c._claims) == 0

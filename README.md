@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-445_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-31_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-470_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-31_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <p align="center">
@@ -360,7 +360,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-445 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
+470 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 

@@ -58,6 +58,21 @@ Every call to `handle()`, `on_load()`, and `on_unload()` receives a `context` di
 
 Modules access kernel services only through this context. They do not import kernel classes directly. This keeps modules testable in isolation — pass a mock context and the module has no external dependencies.
 
+## Data Pipelines
+
+Six modules subscribe to `cortex.response` Pulse events in their `on_load()` hook to automatically collect data from the conversation flow:
+
+| Module | What It Collects | Source |
+|--------|-----------------|--------|
+| Prism | Cross-domain observations | Every module response, tagged by module name |
+| Serendipity | Focus areas + knowledge entries | User messages and module responses |
+| Cipher | Source profiles + claims | Module outputs with auto-assigned trust scores |
+| Atlas | Temporal facts | Extracts subject from user query, stores response as fact |
+| Weave | Contact mentions + interactions | Proper nouns detected in user messages |
+| Legacy | Decision records | Responses from Council, Ethical Prism, and Autonomic |
+
+These modules require no manual data entry. They build their internal stores passively from system activity, becoming more useful the longer NEXUS runs.
+
 ## Module Tiers
 
 The 26 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.

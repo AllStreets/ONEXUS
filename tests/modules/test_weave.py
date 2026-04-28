@@ -1,6 +1,7 @@
 # tests/modules/test_weave.py
 import pytest
 from nexus.modules.weave import WeaveModule, Contact, RelationshipHealth
+from nexus.kernel.pulse import Pulse, Message
 
 
 @pytest.fixture
@@ -80,3 +81,56 @@ async def test_weave_handle(weave):
 async def test_weave_handle_empty(weave):
     result = await weave.handle("network", {"llm": None})
     assert "no contacts" in result.lower() or "empty" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_weave_on_load_subscribes():
+    w = WeaveModule()
+    pulse = Pulse()
+    await w.on_load({"pulse": pulse})
+    assert w._sub_id is not None
+
+
+@pytest.mark.asyncio
+async def test_weave_auto_detects_names():
+    w = WeaveModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={
+            "module": "oracle",
+            "message": "Check on. Alice mentioned the quarterly review",
+            "response": "No alerts",
+        },
+    )
+    await w._on_response(msg)
+    assert len(w._contacts) == 1
+    contact = list(w._contacts.values())[0]
+    assert contact.name == "Alice"
+
+
+@pytest.mark.asyncio
+async def test_weave_updates_existing_contact():
+    w = WeaveModule()
+    msg1 = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "oracle", "message": "Talk to. Alice about budget", "response": "Done"},
+    )
+    msg2 = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "herald", "message": "Tell. Alice the update", "response": "Sent"},
+    )
+    await w._on_response(msg1)
+    await w._on_response(msg2)
+    # Should still be one contact, with 2 interactions
+    assert len(w._contacts) == 1
+    contact = list(w._contacts.values())[0]
+    assert contact.interaction_count == 1  # second message creates interaction
+
+
+def test_extract_names():
+    names = WeaveModule._extract_names("Meeting with. Alice and. Bob next week")
+    assert "Alice" in names
+    assert "Bob" in names

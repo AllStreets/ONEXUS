@@ -1,6 +1,8 @@
 # tests/modules/test_prism.py
 import pytest
+from unittest.mock import MagicMock
 from nexus.modules.prism import PrismModule, Insight
+from nexus.kernel.pulse import Pulse, Message
 
 
 @pytest.fixture
@@ -67,3 +69,49 @@ async def test_prism_handle_with_insights(prism):
 async def test_prism_handle_no_observations(prism):
     result = await prism.handle("synthesize", {"llm": None})
     assert "no observations" in result.lower() or "no insights" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_prism_on_load_subscribes_to_pulse():
+    prism = PrismModule()
+    pulse = Pulse()
+    await prism.on_load({"pulse": pulse})
+    assert prism._sub_id is not None
+    assert prism._sub_id in pulse._subs
+
+
+@pytest.mark.asyncio
+async def test_prism_on_unload_unsubscribes():
+    prism = PrismModule()
+    pulse = Pulse()
+    await prism.on_load({"pulse": pulse})
+    sub_id = prism._sub_id
+    await prism.on_unload({"pulse": pulse})
+    assert prism._sub_id is None
+    assert sub_id not in pulse._subs
+
+
+@pytest.mark.asyncio
+async def test_prism_auto_collects_from_pulse():
+    prism = PrismModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "oracle", "message": "check alerts now", "response": "No active alerts"},
+    )
+    await prism._on_response(msg)
+    assert len(prism.list_observations()) == 1
+    obs = prism.list_observations()[0]
+    assert obs.domain == "oracle"
+
+
+@pytest.mark.asyncio
+async def test_prism_ignores_own_responses():
+    prism = PrismModule()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "prism", "message": "test", "response": "test"},
+    )
+    await prism._on_response(msg)
+    assert len(prism.list_observations()) == 0

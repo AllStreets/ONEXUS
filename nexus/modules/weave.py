@@ -3,7 +3,11 @@
 Weave — social graph intelligence.
 Maps contacts, tracks interaction frequency, detects decaying relationships,
 and models who-knows-who connections.
+
+Data pipeline: subscribes to cortex.response events via Pulse, automatically
+detecting name mentions in messages and building the social graph.
 """
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -42,8 +46,56 @@ class WeaveModule(NexusModule):
     description = "Social graph intelligence — relationship mapping and health tracking"
     version = "0.1.0"
 
+    # Words that look like names but aren't (capitalized at sentence start, etc.)
+    _STOP_WORDS = frozenset({
+        "the", "this", "that", "what", "when", "where", "which", "who", "how",
+        "yes", "no", "not", "but", "and", "for", "are", "was", "were", "been",
+        "has", "have", "had", "will", "would", "could", "should", "may", "might",
+        "can", "did", "does", "just", "also", "very", "well", "here", "there",
+        "then", "than", "now", "some", "any", "all", "every", "each", "both",
+        "tell", "about", "know", "think", "help", "need", "want", "get", "make",
+        "nexus", "module", "prism", "atlas", "cipher", "oracle", "sentry",
+    })
+
+    @staticmethod
+    def _extract_names(text: str) -> list[str]:
+        """Extract likely proper nouns (capitalized words not at sentence start)."""
+        # Match capitalized words that aren't at the very start of the text
+        candidates = re.findall(r'(?<=[.!?\s])\s*([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})*)', text)
+        names = []
+        for name in candidates:
+            if name.lower() not in WeaveModule._STOP_WORDS:
+                names.append(name)
+        return names
+
     def __init__(self):
         self._contacts: dict[str, Contact] = {}
+        self._name_index: dict[str, str] = {}  # name -> contact_id
+        self._sub_id: str | None = None
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        if context and "pulse" in context:
+            self._sub_id = context["pulse"].subscribe(
+                "cortex.response", self._on_response
+            )
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        if self._sub_id and context and "pulse" in context:
+            context["pulse"].unsubscribe(self._sub_id)
+            self._sub_id = None
+
+    async def _on_response(self, msg) -> None:
+        payload = msg.payload
+        module = payload.get("module", "unknown")
+        message = payload.get("message", "")
+        names = self._extract_names(message)
+        for name in names:
+            if name in self._name_index:
+                contact_id = self._name_index[name]
+                self.record_interaction(contact_id, channel=module, note=message[:100])
+            else:
+                contact = self.add_contact(name, tags=[module])
+                self._name_index[name] = contact.id
 
     def add_contact(self, name: str, tags: list[str] | None = None) -> Contact:
         contact_id = uuid.uuid4().hex[:8]

@@ -2,7 +2,11 @@
 Cipher — trust-scored information.
 Every piece of information gets a provenance chain and computed trust score.
 When sources conflict, Cipher surfaces the conflict explicitly.
+
+Data pipeline: subscribes to cortex.response events via Pulse, automatically
+registering modules as sources and recording their responses as claims.
 """
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any
 from nexus.modules.base import NexusModule
@@ -33,6 +37,36 @@ class CipherModule(NexusModule):
     def __init__(self):
         self._sources: dict[str, SourceProfile] = {}
         self._claims: dict[str, list[Claim]] = {}
+        self._sub_id: str | None = None
+        self._claim_seq = 0
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        if context and "pulse" in context:
+            self._sub_id = context["pulse"].subscribe(
+                "cortex.response", self._on_response
+            )
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        if self._sub_id and context and "pulse" in context:
+            context["pulse"].unsubscribe(self._sub_id)
+            self._sub_id = None
+
+    async def _on_response(self, msg) -> None:
+        payload = msg.payload
+        module = payload.get("module", "unknown")
+        if module == self.name:
+            return
+        response = payload.get("response", "")
+        # Auto-register module as a source if not already known
+        if module not in self._sources:
+            self.register_source(SourceProfile(
+                name=module, base_trust=0.5, category="module"
+            ))
+        # Record the response as a claim
+        self._claim_seq += 1
+        claim_id = f"auto_{module}_{self._claim_seq}"
+        trust = self._sources[module].base_trust
+        self.record_claim(claim_id, response[:200], module, trust)
 
     def register_source(self, profile: SourceProfile) -> None:
         self._sources[profile.name] = profile

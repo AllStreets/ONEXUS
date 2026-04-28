@@ -112,3 +112,21 @@ async def test_route_fallback_to_general(multi_cortex):
     # No keyword match, falls back to general
     assert isinstance(response, str)
     assert len(response) > 0
+
+
+@pytest.mark.asyncio
+async def test_initialize_modules_calls_on_load(kernel_deps):
+    c = Cortex(**kernel_deps)
+    c.register_module(GeneralModule())
+    kernel_deps["aegis"].set_policy("general", allowed=True)
+    # Should not raise
+    await c.initialize_modules()
+
+
+def test_build_context(kernel_deps):
+    c = Cortex(**kernel_deps)
+    ctx = c._build_context()
+    assert "engram" in ctx
+    assert "chronicle" in ctx
+    assert "pulse" in ctx
+    assert "llm" in ctx

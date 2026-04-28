@@ -2,7 +2,11 @@
 Prism — cross-domain synthesis engine.
 Collects observations from multiple domains, finds non-obvious connections
 through shared tags and context overlap, and surfaces synthesized insights.
+
+Data pipeline: subscribes to cortex.response events via Pulse, automatically
+collecting observations from every module's output tagged by domain.
 """
+import re
 from dataclasses import dataclass, field
 from typing import Any
 from nexus.modules.base import NexusModule
@@ -31,6 +35,32 @@ class PrismModule(NexusModule):
 
     def __init__(self):
         self._observations: list[Observation] = []
+        self._sub_id: str | None = None
+
+    @staticmethod
+    def _extract_tags(text: str) -> list[str]:
+        return list(set(re.findall(r'\b[a-z]{4,}\b', text.lower())))[:10]
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        if context and "pulse" in context:
+            self._sub_id = context["pulse"].subscribe(
+                "cortex.response", self._on_response
+            )
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        if self._sub_id and context and "pulse" in context:
+            context["pulse"].unsubscribe(self._sub_id)
+            self._sub_id = None
+
+    async def _on_response(self, msg) -> None:
+        payload = msg.payload
+        module = payload.get("module", "unknown")
+        if module == self.name:
+            return
+        message = payload.get("message", "")
+        response = payload.get("response", "")
+        tags = self._extract_tags(message)
+        self.add_observation(domain=module, content=response[:200], tags=tags)
 
     def add_observation(self, domain: str, content: str, tags: list[str]) -> None:
         self._observations.append(Observation(domain=domain, content=content, tags=tags))

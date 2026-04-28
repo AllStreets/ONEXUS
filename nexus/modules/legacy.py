@@ -4,6 +4,9 @@ Legacy -- knowledge crystallization engine.
 Distills months of decisions, outcomes, and behavioral patterns into
 structured, exportable knowledge artifacts. Extracts frameworks, playbooks,
 and heuristics from actual behavior -- not self-reported preferences.
+
+Data pipeline: subscribes to cortex.response events via Pulse, automatically
+recording decisions from deliberation modules (council, ethical_prism).
 """
 from collections import Counter
 from dataclasses import dataclass, field
@@ -48,8 +51,39 @@ class LegacyModule(NexusModule):
     description = "Knowledge crystallization -- distills decisions into transferable wisdom"
     version = "0.1.0"
 
+    _DECISION_MODULES = frozenset({"council", "ethical_prism", "autonomic"})
+
     def __init__(self):
         self._decisions: list[DecisionRecord] = []
+        self._sub_id: str | None = None
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        if context and "pulse" in context:
+            self._sub_id = context["pulse"].subscribe(
+                "cortex.response", self._on_response
+            )
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        if self._sub_id and context and "pulse" in context:
+            context["pulse"].unsubscribe(self._sub_id)
+            self._sub_id = None
+
+    async def _on_response(self, msg) -> None:
+        payload = msg.payload
+        module = payload.get("module", "unknown")
+        if module not in self._DECISION_MODULES:
+            return
+        message = payload.get("message", "")
+        response = payload.get("response", "")
+        # Extract decision factors from the user's question
+        words = [w.strip("?.,!") for w in message.lower().split() if len(w) > 3]
+        factors = words[:5] if words else ["unspecified"]
+        self.record_decision(
+            domain=module,
+            decision=message[:200],
+            outcome="recorded",
+            factors=factors,
+        )
 
     def record_decision(
         self,

@@ -25,11 +25,11 @@ class NexusModule(ABC):
         """Process a user message and return a response string."""
         ...
 
-    async def on_load(self) -> None:
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
         """Called when the module is loaded into the kernel."""
         pass
 
-    async def on_unload(self) -> None:
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
         """Called when the module is unloaded from the kernel."""
         pass
 

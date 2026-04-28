@@ -2,6 +2,7 @@
 import pytest
 import time
 from nexus.modules.atlas import AtlasModule, Fact
+from nexus.kernel.pulse import Pulse, Message
 
 
 @pytest.fixture
@@ -78,3 +79,65 @@ async def test_atlas_handle_query(atlas):
 async def test_atlas_handle_empty(atlas):
     result = await atlas.handle("What do you know about nobody?", {"llm": None})
     assert "no facts" in result.lower() or "nothing" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_atlas_on_load_subscribes_and_inits_db(tmp_config):
+    a = AtlasModule(db_path=tmp_config.db_path)
+    pulse = Pulse()
+    await a.on_load({"pulse": pulse})
+    assert a._sub_id is not None
+    # DB should be initialized (no error on query)
+    results = a.query()
+    assert isinstance(results, list)
+
+
+@pytest.mark.asyncio
+async def test_atlas_auto_extracts_facts(tmp_config):
+    a = AtlasModule(db_path=tmp_config.db_path)
+    a.init_db()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={
+            "module": "oracle",
+            "message": "What do you know about Python?",
+            "response": "Python is widely used for data science",
+        },
+    )
+    await a._on_response(msg)
+    results = a.query(subject="Python")
+    assert len(results) == 1
+    assert results[0]["source"] == "oracle"
+
+
+@pytest.mark.asyncio
+async def test_atlas_ignores_own_responses(tmp_config):
+    a = AtlasModule(db_path=tmp_config.db_path)
+    a.init_db()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={"module": "atlas", "message": "tell me about X", "response": "test"},
+    )
+    await a._on_response(msg)
+    results = a.query()
+    assert len(results) == 0
+
+
+@pytest.mark.asyncio
+async def test_atlas_skips_non_extractable_subject(tmp_config):
+    a = AtlasModule(db_path=tmp_config.db_path)
+    a.init_db()
+    msg = Message(
+        topic="cortex.response",
+        source="cortex",
+        payload={
+            "module": "oracle",
+            "message": "This is a very long message that has no clear subject to extract from the content",
+            "response": "Some response",
+        },
+    )
+    await a._on_response(msg)
+    results = a.query()
+    assert len(results) == 0
