@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-288_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-25_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-376_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-25_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <h1 align="center">N E X U S</h1>
@@ -142,6 +142,29 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Collective** | Federated learning -- peer model sharing with differential privacy, opt-in only |
 | **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts |
 
+### Multi-Provider Inference
+
+| Component | What it does |
+|-----------|-------------|
+| **InferenceProvider** | Abstract base -- any provider implements `infer()` and `health()` |
+| **LocalProvider** | llama.cpp HTTP client, ChatML conversion, zero-dependency local inference |
+| **OpenAIProvider** | OpenAI SDK wrapper, native messages format, configurable model |
+| **AnthropicProvider** | Anthropic SDK wrapper, system message separation per API contract |
+| **ProviderRouter** | Named provider registry, per-request routing, automatic fallback on unhealthy |
+
+Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to configure. Local provider is always available as fallback.
+
+### Messaging Integrations
+
+| Component | What it does |
+|-----------|-------------|
+| **MessageBridge** | Abstract base for platform integrations -- start, stop, send, on_message |
+| **TelegramBridge** | Two-way Telegram messaging with chat ID allowlisting |
+| **DiscordBridge** | Two-way Discord messaging with channel ID allowlisting, bot loop prevention |
+| **BridgeManager** | Lifecycle manager -- routes inbound to Cortex, forwards Pulse `notify.*` events outbound |
+
+Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `NEXUS_DISCORD_CHANNEL_IDS` to configure.
+
 ---
 
 ## Module Roadmap
@@ -183,6 +206,10 @@ Modules are loaded into this kernel. They don't know about each other. They comm
     ORCHESTRATION (Batch 6) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     ├── Council ·········· multi-agent deliberation
     └── Autonomic ········ earned autonomous action
+
+    INFRASTRUCTURE (Batch 7a) ━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Multi-Provider ·· OpenAI, Anthropic, local fallback
+    └── Messaging ······· Telegram, Discord two-way bridges
 
     NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     └── Community site ·· documentation & module catalog
@@ -230,7 +257,7 @@ NEXUS was designed for machines people actually own.
 | **16 GB** | Kernel + 10 modules, larger context windows |
 | **32 GB+** | All 25 modules, bigger models, concurrent agents |
 
-The inference layer talks to llama.cpp over HTTP. Swap in any GGUF model. Swap in Ollama. Swap in a remote endpoint. The kernel doesn't care -- it speaks one protocol.
+The inference layer supports multiple providers. Local models run via llama.cpp over HTTP. Cloud providers (OpenAI, Anthropic) are available when API keys are configured. The kernel routes to whichever provider you choose, with automatic fallback if one goes down.
 
 ---
 
@@ -265,7 +292,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-288 tests. Under two seconds. No network, no mocks of external services, no flaky anything.
+376 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -283,7 +310,17 @@ nexus/
 │   ├── chronicle.py ····· immutable audit trail
 │   └── aegis.py ········· graduated trust engine
 ├── inference/
-│   └── llm.py ··········· llama.cpp HTTP client
+│   ├── provider.py ······ InferenceProvider ABC
+│   ├── local.py ········· llama.cpp HTTP client
+│   ├── openai_provider.py OpenAI SDK wrapper
+│   ├── anthropic_provider.py Anthropic SDK wrapper
+│   ├── router.py ········ ProviderRouter with fallback
+│   └── llm.py ··········· LLMClient (delegates to router)
+├── messaging/
+│   ├── bridge.py ········ MessageBridge ABC
+│   ├── telegram.py ······ Telegram two-way bridge
+│   ├── discord_bridge.py  Discord two-way bridge
+│   └── manager.py ······· BridgeManager lifecycle
 └── modules/
     ├── base.py ·········· abstract NexusModule
     ├── general.py ······· default conversation handler
@@ -320,7 +357,7 @@ nexus/
 
 **Immutable audit.** Chronicle logs every routing decision, every permission check, every module response, every trust adjustment. SOC 2 and HIPAA exportable by design. You can always answer: *why did the system do that?*
 
-**Model-agnostic.** Qwen, DeepSeek, Phi, Gemma -- anything served over HTTP works. No vendor lock-in. No API keys required.
+**Model-agnostic.** Qwen, DeepSeek, Phi, Gemma -- anything served over HTTP works. Cloud providers (OpenAI, Anthropic) available when configured. No vendor lock-in. No API keys required for local operation.
 
 **Anti-fragile.** The system includes a threat radar (Sigil), behavioral fingerprinting (Echo), trust-scored information (Cipher), adversarial red-teaming (Specter), and engineered serendipity to break filter bubbles. NEXUS is designed to make the user more robust, not more dependent.
 

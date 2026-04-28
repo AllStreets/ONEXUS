@@ -1,6 +1,6 @@
 ---
 title: Running Tests
-description: Run the 288-test NEXUS suite, target specific tests, and write tests for new modules.
+description: Run the 376-test NEXUS suite, target specific tests, and write tests for new modules.
 sidebar:
   order: 3
 ---
@@ -14,7 +14,7 @@ pytest tests/ -v
 Expected output ends with:
 
 ```
-288 passed in X.XXs
+376 passed in X.XXs
 ```
 
 No running LLM is required. All LLM calls are mocked in the test suite.
@@ -29,6 +29,18 @@ tests/
 │   ├── test_pulse.py
 │   ├── test_chronicle.py
 │   └── test_aegis.py
+├── inference/
+│   ├── test_provider.py
+│   ├── test_local.py
+│   ├── test_openai_provider.py
+│   ├── test_anthropic_provider.py
+│   ├── test_router.py
+│   └── test_llm.py
+├── messaging/
+│   ├── test_bridge.py
+│   ├── test_telegram.py
+│   ├── test_discord.py
+│   └── test_manager.py
 ├── modules/
 │   ├── test_oracle.py
 │   ├── test_sentry.py

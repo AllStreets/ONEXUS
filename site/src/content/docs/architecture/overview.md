@@ -68,7 +68,7 @@ Modules are organized by capability tier. Tier assignment is documentation only 
 
 ## Testing
 
-NEXUS ships with 288 tests covering all kernel components and modules. The test suite requires no running LLM — all LLM calls are mocked. Run with:
+NEXUS ships with 376 tests covering all kernel components, modules, inference providers, and messaging bridges. The test suite requires no running LLM — all LLM calls are mocked. Run with:
 
 ```bash
 pytest tests/ -v
