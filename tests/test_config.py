@@ -79,3 +79,31 @@ def test_config_model_names_from_env(tmp_path, monkeypatch):
     cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
     assert cfg.openai_model == "gpt-4o"
     assert cfg.anthropic_model == "claude-opus-4-20250514"
+
+
+def test_config_telegram_defaults(tmp_path):
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.telegram_token is None
+    assert cfg.telegram_chat_ids == []
+
+
+def test_config_telegram_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEXUS_TELEGRAM_TOKEN", "tg-token-123")
+    monkeypatch.setenv("NEXUS_TELEGRAM_CHAT_IDS", "111,222,333")
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.telegram_token == "tg-token-123"
+    assert cfg.telegram_chat_ids == ["111", "222", "333"]
+
+
+def test_config_discord_defaults(tmp_path):
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.discord_token is None
+    assert cfg.discord_channel_ids == []
+
+
+def test_config_discord_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEXUS_DISCORD_TOKEN", "dc-token-456")
+    monkeypatch.setenv("NEXUS_DISCORD_CHANNEL_IDS", "aaa,bbb")
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.discord_token == "dc-token-456"
+    assert cfg.discord_channel_ids == ["aaa", "bbb"]

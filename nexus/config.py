@@ -46,6 +46,24 @@ def _default_anthropic_model() -> str:
     return os.environ.get("NEXUS_ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
 
 
+def _default_telegram_token() -> Optional[str]:
+    return os.environ.get("NEXUS_TELEGRAM_TOKEN")
+
+
+def _default_telegram_chat_ids() -> list[str]:
+    val = os.environ.get("NEXUS_TELEGRAM_CHAT_IDS", "")
+    return [s.strip() for s in val.split(",") if s.strip()] if val else []
+
+
+def _default_discord_token() -> Optional[str]:
+    return os.environ.get("NEXUS_DISCORD_TOKEN")
+
+
+def _default_discord_channel_ids() -> list[str]:
+    val = os.environ.get("NEXUS_DISCORD_CHANNEL_IDS", "")
+    return [s.strip() for s in val.split(",") if s.strip()] if val else []
+
+
 @dataclass
 class NexusConfig:
     data_dir: Path = field(default_factory=_default_data_dir)
@@ -58,6 +76,10 @@ class NexusConfig:
     anthropic_api_key: Optional[str] = field(default_factory=_default_anthropic_key)
     openai_model: str = field(default_factory=_default_openai_model)
     anthropic_model: str = field(default_factory=_default_anthropic_model)
+    telegram_token: Optional[str] = field(default_factory=_default_telegram_token)
+    telegram_chat_ids: list[str] = field(default_factory=_default_telegram_chat_ids)
+    discord_token: Optional[str] = field(default_factory=_default_discord_token)
+    discord_channel_ids: list[str] = field(default_factory=_default_discord_channel_ids)
 
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir)
