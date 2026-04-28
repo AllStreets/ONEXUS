@@ -37,6 +37,15 @@ class Cortex:
         "autonomic": ["automate", "routine", "autopilot", "autonomous", "on my behalf",
                        "handle it", "take care of", "manage for me", "do it for me",
                        "autonomic", "trust status", "domain trust"],
+        "dream_loop": ["dream", "dreams", "insights", "idle", "background", "patterns while idle"],
+        "adversarial": ["stress test", "red team", "self improve", "vulnerability", "harden"],
+        "tripwire": ["my patterns", "decision history", "contradictions", "tripwire", "mirror"],
+        "provenance": ["why do you think", "reasoning", "show reasoning", "provenance", "trace", "how did you"],
+        "sandbox": ["what if", "simulate", "hypothetical", "sandbox", "fork", "test scenario"],
+        "symbiosis": ["neural pathways", "module connections", "routing map", "symbiosis"],
+        "consciousness": ["how are you", "journal", "self reflect", "introspect", "consciousness"],
+        "emergence": ["emergent goals", "unintended behavior", "what are you doing", "implicit goals"],
+        "ethical_prism": ["ethically", "ethical", "moral", "ethics", "right thing", "should i morally"],
     }
 
     def __init__(

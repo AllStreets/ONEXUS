@@ -1,24 +1,29 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-376_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-25_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>  <img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>  <img src="https://img.shields.io/badge/Tests-464_Passing-green?style=for-the-badge" alt="Tests"/>  <img src="https://img.shields.io/badge/Modules-34_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
-<h1 align="center">N E X U S</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=60&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=600&height=80&lines=N+E+X+U+S"/>
+    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=60&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=600&height=80&lines=N+E+X+U+S" alt="NEXUS"/>
+  </picture>
+</p>
 <p align="center"><strong>Neural Executive for Unified Superintelligence</strong></p>
 <p align="center"><em>An autonomous intelligence operating system that runs on your hardware, answers to no cloud, and gets smarter the longer it runs.</em></p>
 
 ---
 
-## The Idea
+## :brain: The Idea
 
 Most AI tools are wrappers around an API. You send text up, you get text back, someone else stores your data.
 
 NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Twenty-five components are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, five advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, and two network-layer modules. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+Thirty-four components are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, five advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, two network-layer modules, nine differentiation modules that dream, argue, introspect, and stress-test the system from the inside, plus a community module ecosystem for unlimited third-party extensions. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
-## Architecture
+## :building_construction: Architecture
 
 ```
                                ┌──────────┐
@@ -81,7 +86,7 @@ The kernel is five components, each with one job:
 
 | Component | Role | Storage |
 |-----------|------|---------|
-| **Cortex** | Keyword-scored routing to 20 modules, permission enforcement | -- |
+| **Cortex** | Keyword-scored routing to 29 modules, permission enforcement | -- |
 | **Engram** | Three-tier memory: working (ephemeral), episodic (FTS5), semantic (vector) | SQLite |
 | **Pulse** | Async pub/sub message bus with priority queuing and wildcards | In-memory |
 | **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
@@ -91,16 +96,16 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 
 ---
 
-## What's Built
+## :package: What's Built
 
-### Perception
+### :eye: Perception
 
 | Module | What it does |
 |--------|-------------|
 | **Oracle** | Keyword-weighted trigger rules that fire when pattern density exceeds thresholds |
 | **Sentry** | Real-time cognitive state model -- focus, fatigue, stress, flow detection |
 
-### Intelligence
+### :bulb: Intelligence
 
 | Module | What it does |
 |--------|-------------|
@@ -108,7 +113,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Prism** | Tag-based cross-domain synthesis -- finds connections across calendar, email, finance, weather |
 | **Cipher** | Source trust registry, provenance chains, automatic conflict detection between sources |
 
-### Action
+### :zap: Action
 
 | Module | What it does |
 |--------|-------------|
@@ -118,7 +123,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Herald** | A2A agent communication -- external agent registry, reputation tracking, message history |
 | **Weave** | Social graph -- contact mapping, interaction tracking, relationship health, reconnection suggestions |
 
-### Advanced Intelligence
+### :crystal_ball: Advanced Intelligence
 
 | Module | What it does |
 |--------|-------------|
@@ -128,21 +133,21 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 | **Serendipity** | Anti-optimization -- inverted relevance scoring to surface surprising cross-domain connections |
 | **Forge** | Autonomous negotiation -- multi-round structured bargaining with escalation guardrails |
 
-### Orchestration
+### :circus_tent: Orchestration
 
 | Module | What it does |
 |--------|-------------|
 | **Council** | Multi-agent deliberation -- structured multi-round debate across modules with synthesized recommendations and preserved dissent |
 | **Autonomic** | Earned autonomous action -- observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure |
 
-### Network + Platform
+### :globe_with_meridians: Network + Platform
 
 | Module | What it does |
 |--------|-------------|
 | **Collective** | Federated learning -- peer model sharing with differential privacy, opt-in only |
 | **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts |
 
-### Multi-Provider Inference
+### :satellite: Multi-Provider Inference
 
 | Component | What it does |
 |-----------|-------------|
@@ -154,7 +159,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 
 Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to configure. Local provider is always available as fallback.
 
-### Messaging Integrations
+### :speech_balloon: Messaging Integrations
 
 | Component | What it does |
 |-----------|-------------|
@@ -165,9 +170,34 @@ Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to confi
 
 Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `NEXUS_DISCORD_CHANNEL_IDS` to configure.
 
+### :dna: Differentiation
+
+| Module | What it does |
+|--------|-------------|
+| **Dream Loop** | Background pattern discovery -- replays recent memories through the LLM to find recurring themes and insights |
+| **Adversarial** | Red-teams the system's own behavior -- analyzes Chronicle logs for failures, blind spots, and improvement opportunities |
+| **Tripwire** | Cognitive tripwires -- monitors decision history for contradictions, inconsistencies, and drift |
+| **Provenance** | Reasoning chain tracer -- reconstructs the full reasoning path behind any past decision from Chronicle events |
+| **Sandbox** | Temporal sandbox -- simulates hypothetical scenarios without modifying real memory or state |
+| **Symbiosis** | Module pathway mapping -- tracks which modules route to each other and discovers emergent collaboration patterns |
+| **Consciousness** | Self-reflective journal -- synthesizes system activity into introspective entries about the system's own state |
+| **Emergence** | Emergent goal detection -- analyzes behavioral history to surface implicit goals the user never explicitly stated |
+| **Ethical Prism** | Seven-framework ethical analysis -- evaluates decisions through Utilitarian, Deontological, Virtue Ethics, Care Ethics, Contractualist, Rights-Based, and Pragmatic Ethics lenses with synthesis |
+
+### :jigsaw: Community Ecosystem
+
+| Component | What it does |
+|-----------|-------------|
+| **ModuleValidator** | Validates community module structure, manifest schema, file layout, and kernel import restrictions |
+| **ModuleRegistry** | JSON-backed module catalog with search by name, author, description, and keywords |
+| **ModuleInstaller** | Installs/uninstalls community modules, registers routing keywords in Cortex automatically |
+| **GitHub CI** | PR validation and post-merge registry rebuild workflows |
+
+Community modules live in `community/modules/<author>/<name>/` with a manifest, module code, tests, and README. See `community/CONTRIBUTING.md`.
+
 ---
 
-## Module Roadmap
+## :world_map: Module Roadmap
 
 ```
     KERNEL (Batch 1) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
@@ -211,13 +241,30 @@ Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `N
     ├── Multi-Provider ·· OpenAI, Anthropic, local fallback
     └── Messaging ······· Telegram, Discord two-way bridges
 
+    DIFFERENTIATION (Batch 7b) ━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Dream Loop ······ background pattern discovery
+    ├── Adversarial ····· self-improvement red-teaming
+    ├── Tripwire ········ contradiction detection
+    ├── Provenance ······ reasoning chain tracer
+    ├── Sandbox ········· hypothetical simulation
+    ├── Symbiosis ······· module pathway mapping
+    ├── Consciousness ··· self-reflective journal
+    ├── Emergence ······· implicit goal detection
+    └── Ethical Prism ··· seven-framework ethical analysis
+
+    COMMUNITY ECOSYSTEM (Batch 7b) ━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Validator ······· manifest + structure checks
+    ├── Registry ········ searchable module catalog
+    ├── Installer ······· install/uninstall + keyword wiring
+    └── GitHub CI ······· PR validation + registry rebuild
+
     NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     └── Community site ·· documentation & module catalog
 ```
 
 ---
 
-## Quickstart
+## :rocket: Quickstart
 
 ```bash
 # Clone and install
@@ -235,7 +282,7 @@ nexus run
 
 ---
 
-## Commands
+## :keyboard: Commands
 
 | Command | What it does |
 |---------|-------------|
@@ -244,10 +291,14 @@ nexus run
 | `nexus allow <module>` | Grant a module permission to operate |
 | `nexus deny <module>` | Revoke a module's permission |
 | `nexus forget --yes` | Erase all data (GDPR Art. 17) |
+| `nexus install <author/module>` | Install a community module |
+| `nexus uninstall <module>` | Uninstall a community module |
+| `nexus community list` | List available community modules |
+| `nexus community search <query>` | Search community modules |
 
 ---
 
-## Hardware
+## :desktop_computer: Hardware
 
 NEXUS was designed for machines people actually own.
 
@@ -255,13 +306,13 @@ NEXUS was designed for machines people actually own.
 |-----|-------------|
 | **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
 | **16 GB** | Kernel + 10 modules, larger context windows |
-| **32 GB+** | All 25 modules, bigger models, concurrent agents |
+| **32 GB+** | All 29 modules, bigger models, concurrent agents |
 
 The inference layer supports multiple providers. Local models run via llama.cpp over HTTP. Cloud providers (OpenAI, Anthropic) are available when API keys are configured. The kernel routes to whichever provider you choose, with automatic fallback if one goes down.
 
 ---
 
-## The Stack
+## :toolbox: The Stack
 
 ```
     ╔══════════════════════════════════════════════════╗
@@ -285,18 +336,18 @@ The inference layer supports multiple providers. Local models run via llama.cpp 
 
 ---
 
-## Running Tests
+## :test_tube: Running Tests
 
 ```bash
 pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-376 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
+464 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
-## Project Structure
+## :file_folder: Project Structure
 
 ```
 nexus/
@@ -342,12 +393,25 @@ nexus/
     ├── collective.py ···· federated learning
     ├── legacy.py ········ knowledge crystallization
     ├── council.py ······· multi-agent deliberation
-    └── autonomic.py ····· earned autonomous action
+    ├── autonomic.py ····· earned autonomous action
+    ├── dream_loop.py ···· background pattern discovery
+    ├── adversarial.py ··· self-improvement red-teaming
+    ├── tripwire.py ······ contradiction detection
+    ├── provenance.py ···· reasoning chain tracer
+    ├── sandbox.py ······· hypothetical simulation
+    ├── symbiosis.py ····· module pathway mapping
+    ├── consciousness.py · self-reflective journal
+    ├── emergence.py ····· implicit goal detection
+    └── ethical_prism.py · seven-framework ethical analysis
+└── community/
+    ├── validator.py ····· module validation engine
+    ├── registry.py ······ searchable module catalog
+    └── installer.py ····· install/uninstall manager
 ```
 
 ---
 
-## Design Principles
+## :compass: Design Principles
 
 **Local-first.** Your data never leaves your machine unless you tell it to.
 
@@ -367,7 +431,7 @@ nexus/
 
 ---
 
-## License
+## :scroll: License
 
 Apache 2.0. Use it, fork it, ship it. The core will always be open.
 

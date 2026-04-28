@@ -88,6 +88,18 @@ class EpisodicMemory:
         conn.close()
         return [{"id": r["id"], "timestamp": r["timestamp"], "source": r["source"], "content": r["content"]} for r in rows]
 
+    def recall_recent(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Return the most recent episodic memories without requiring a search query."""
+        conn = self._conn()
+        rows = conn.execute("""
+            SELECT id, timestamp, source, content
+            FROM episodic
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+        conn.close()
+        return [{"id": r["id"], "timestamp": r["timestamp"], "source": r["source"], "content": r["content"]} for r in rows]
+
 
 class SemanticMemory:
     def __init__(self, db_path: Path, dim: int = 64) -> None:

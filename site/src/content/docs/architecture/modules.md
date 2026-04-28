@@ -1,13 +1,13 @@
 ---
 title: Modules
-description: NexusModule base class, lifecycle hooks, context object, and how all 20 modules are structured.
+description: NexusModule base class, lifecycle hooks, context object, and how all 29 modules are structured.
 sidebar:
   order: 3
 ---
 
 ## NexusModule Base Class
 
-Every module in NEXUS — all 18 of them — is a subclass of `NexusModule`. The interface is minimal by design.
+Every module in NEXUS — all 29 of them — is a subclass of `NexusModule`. The interface is minimal by design.
 
 ```python
 from nexus.module import NexusModule
@@ -60,7 +60,7 @@ Modules access kernel services only through this context. They do not import ker
 
 ## Module Tiers
 
-The 20 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
+The 29 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
 
 | Tier | Modules | Role |
 |------|---------|------|
@@ -70,6 +70,8 @@ The 20 modules are grouped by functional tier. All use the same `NexusModule` in
 | Advanced | Specter, Chronos, Dreamweaver, Serendipity, Forge | Red-team, branch timelines, synthesize, discover, negotiate |
 | Orchestration | Council, Autonomic | Multi-agent deliberation, earned autonomous action |
 | Network | Collective, Legacy | Federated learning, knowledge crystallization |
+| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Emergence, Ethical Prism | Self-reflection, stress-testing, ethical analysis, pattern discovery |
+| Community | User-contributed | Third-party modules via `community/modules/` |
 | Core | General | Catch-all fallback for unrouted messages |
 
 ## Minimal Module Example

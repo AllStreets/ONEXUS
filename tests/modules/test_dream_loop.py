@@ -28,7 +28,7 @@ def test_module_attributes(module):
 
 @pytest.mark.asyncio
 async def test_handle_returns_string(module, context):
-    context["engram"].episodic.recall.return_value = [
+    context["engram"].episodic.recall_recent.return_value = [
         {"content": "User asked about emails", "source": "user_input"},
         {"content": "User asked about schedule", "source": "user_input"},
     ]
@@ -38,7 +38,7 @@ async def test_handle_returns_string(module, context):
 
 @pytest.mark.asyncio
 async def test_handle_calls_llm_with_memories(module, context):
-    context["engram"].episodic.recall.return_value = [
+    context["engram"].episodic.recall_recent.return_value = [
         {"content": "Interaction 1"},
         {"content": "Interaction 2"},
     ]
@@ -51,7 +51,7 @@ async def test_handle_calls_llm_with_memories(module, context):
 
 @pytest.mark.asyncio
 async def test_handle_stores_insight_in_semantic_memory(module, context):
-    context["engram"].episodic.recall.return_value = [{"content": "data"}]
+    context["engram"].episodic.recall_recent.return_value = [{"content": "data"}]
     await module.handle("dream", context)
     context["engram"].semantic.store.assert_called_once()
     call_args = context["engram"].semantic.store.call_args
@@ -60,7 +60,7 @@ async def test_handle_stores_insight_in_semantic_memory(module, context):
 
 @pytest.mark.asyncio
 async def test_handle_publishes_notify_event(module, context):
-    context["engram"].episodic.recall.return_value = [{"content": "data"}]
+    context["engram"].episodic.recall_recent.return_value = [{"content": "data"}]
     await module.handle("dream", context)
     context["pulse"].publish.assert_called()
     msg = context["pulse"].publish.call_args[0][0]
@@ -69,7 +69,7 @@ async def test_handle_publishes_notify_event(module, context):
 
 @pytest.mark.asyncio
 async def test_handle_logs_to_chronicle(module, context):
-    context["engram"].episodic.recall.return_value = [{"content": "data"}]
+    context["engram"].episodic.recall_recent.return_value = [{"content": "data"}]
     await module.handle("dream", context)
     context["chronicle"].log.assert_called()
     call_args = context["chronicle"].log.call_args
@@ -79,7 +79,7 @@ async def test_handle_logs_to_chronicle(module, context):
 
 @pytest.mark.asyncio
 async def test_handle_with_no_memories(module, context):
-    context["engram"].episodic.recall.return_value = []
+    context["engram"].episodic.recall_recent.return_value = []
     result = await module.handle("dream", context)
     assert isinstance(result, str)
     assert "no recent" in result.lower() or "nothing" in result.lower()

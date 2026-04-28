@@ -31,7 +31,7 @@ class DreamLoopModule(NexusModule):
         chronicle = context["chronicle"]
         pulse = context["pulse"]
 
-        memories = engram.episodic.recall("*", limit=50)
+        memories = engram.episodic.recall_recent(limit=50)
         if not memories:
             return "No recent memories to dream about. Interact more and try again later."
 
