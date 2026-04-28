@@ -45,3 +45,37 @@ def test_config_creates_data_dir(tmp_path):
 
     assert target.exists()
     assert target.is_dir()
+
+
+def test_config_default_provider(tmp_path):
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.default_provider == "local"
+
+def test_config_default_provider_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEXUS_DEFAULT_PROVIDER", "openai")
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.default_provider == "openai"
+
+def test_config_api_keys_default_none(tmp_path):
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.openai_api_key is None
+    assert cfg.anthropic_api_key is None
+
+def test_config_api_keys_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEXUS_OPENAI_KEY", "sk-test-123")
+    monkeypatch.setenv("NEXUS_ANTHROPIC_KEY", "ant-test-456")
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.openai_api_key == "sk-test-123"
+    assert cfg.anthropic_api_key == "ant-test-456"
+
+def test_config_model_names_default(tmp_path):
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.openai_model == "gpt-4o-mini"
+    assert cfg.anthropic_model == "claude-sonnet-4-20250514"
+
+def test_config_model_names_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEXUS_OPENAI_MODEL", "gpt-4o")
+    monkeypatch.setenv("NEXUS_ANTHROPIC_MODEL", "claude-opus-4-20250514")
+    cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
+    assert cfg.openai_model == "gpt-4o"
+    assert cfg.anthropic_model == "claude-opus-4-20250514"

@@ -78,6 +78,8 @@ def run():
     from nexus.kernel.cortex import Cortex
     from nexus.modules.general import GeneralModule
     from nexus.inference.llm import LLMClient
+    from nexus.inference.router import ProviderRouter
+    from nexus.inference.local import LocalProvider
 
     engram = Engram(cfg.db_path)
     engram.init_db()
@@ -99,16 +101,39 @@ def run():
     cortex.register_module(general)
     aegis.set_policy("general", allowed=True)
 
-    llm_client = LLMClient(base_url=f"http://localhost:{cfg.llm_port}")
-    if llm_client.health():
-        click.echo(f"LLM connected at localhost:{cfg.llm_port}")
-        cortex.set_llm(lambda msg: llm_client.chat(
-            system="You are Nexus, an autonomous intelligence operating system. Be helpful, precise, and concise.",
-            user=msg,
-        ))
+    # Build the provider router
+    router = ProviderRouter(default=cfg.default_provider)
+
+    # Always register local provider
+    local = LocalProvider(base_url=f"http://localhost:{cfg.llm_port}")
+    router.register(local)
+
+    # Register cloud providers if API keys are configured
+    if cfg.openai_api_key:
+        from nexus.inference.openai_provider import OpenAIProvider
+        router.register(OpenAIProvider(api_key=cfg.openai_api_key, model=cfg.openai_model))
+        click.echo(f"OpenAI provider registered (model: {cfg.openai_model})")
+
+    if cfg.anthropic_api_key:
+        from nexus.inference.anthropic_provider import AnthropicProvider
+        router.register(AnthropicProvider(api_key=cfg.anthropic_api_key, model=cfg.anthropic_model))
+        click.echo(f"Anthropic provider registered (model: {cfg.anthropic_model})")
+
+    llm_client = LLMClient(router=router)
+
+    if local.health():
+        click.echo(f"Local LLM connected at localhost:{cfg.llm_port}")
     else:
-        click.echo("LLM not detected — running in offline mode.")
-        click.echo(f"Start llama.cpp on port {cfg.llm_port} for full capability.")
+        if cfg.default_provider == "local":
+            click.echo("Local LLM not detected — running in offline mode.")
+            click.echo(f"Start llama.cpp on port {cfg.llm_port} for local inference.")
+        else:
+            click.echo(f"Using {cfg.default_provider} as default provider.")
+
+    cortex.set_llm(lambda msg: llm_client.chat(
+        system="You are Nexus, an autonomous intelligence operating system. Be helpful, precise, and concise.",
+        user=msg,
+    ))
 
     click.echo("")
     click.echo("NEXUS v" + __version__)

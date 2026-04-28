@@ -30,6 +30,22 @@ def _default_log_level() -> str:
     return os.environ.get("NEXUS_LOG_LEVEL", "INFO")
 
 
+def _default_provider() -> str:
+    return os.environ.get("NEXUS_DEFAULT_PROVIDER", "local")
+
+def _default_openai_key() -> Optional[str]:
+    return os.environ.get("NEXUS_OPENAI_KEY")
+
+def _default_anthropic_key() -> Optional[str]:
+    return os.environ.get("NEXUS_ANTHROPIC_KEY")
+
+def _default_openai_model() -> str:
+    return os.environ.get("NEXUS_OPENAI_MODEL", "gpt-4o-mini")
+
+def _default_anthropic_model() -> str:
+    return os.environ.get("NEXUS_ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+
+
 @dataclass
 class NexusConfig:
     data_dir: Path = field(default_factory=_default_data_dir)
@@ -37,6 +53,11 @@ class NexusConfig:
     model_path: Optional[str] = field(default_factory=_default_model_path)
     llm_port: int = field(default_factory=_default_llm_port)
     log_level: str = field(default_factory=_default_log_level)
+    default_provider: str = field(default_factory=_default_provider)
+    openai_api_key: Optional[str] = field(default_factory=_default_openai_key)
+    anthropic_api_key: Optional[str] = field(default_factory=_default_anthropic_key)
+    openai_model: str = field(default_factory=_default_openai_model)
+    anthropic_model: str = field(default_factory=_default_anthropic_model)
 
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir)
