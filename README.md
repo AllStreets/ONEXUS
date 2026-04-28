@@ -26,7 +26,7 @@ Thirty-four components are built -- five kernel components, five perception/inte
 
 ```
                           ┌──────────┐
-                          │  U S E R │
+                          │   USER   │
                           └────┬─────┘
                                │
   ╔═════════════════════════════════════════════════════════╗
