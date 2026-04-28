@@ -1,6 +1,6 @@
 ---
 title: Modules
-description: NexusModule base class, lifecycle hooks, context object, and how all 29 modules are structured.
+description: NexusModule base class, lifecycle hooks, context object, and how all 26 modules are structured.
 sidebar:
   order: 3
 ---
@@ -60,7 +60,7 @@ Modules access kernel services only through this context. They do not import ker
 
 ## Module Tiers
 
-The 29 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
+The 26 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
 
 | Tier | Modules | Role |
 |------|---------|------|

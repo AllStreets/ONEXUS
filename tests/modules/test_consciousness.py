@@ -61,3 +61,44 @@ async def test_handle_logs_to_chronicle(module, context):
     await module.handle("how are you", context)
     context["chronicle"].log.assert_called()
     assert context["chronicle"].log.call_args[0][0] == "consciousness"
+
+# --- Emergence mode tests ---
+
+@pytest.mark.asyncio
+async def test_emergence_mode_detects_goals(module, context):
+    context["llm"].return_value = "EMERGENT GOAL DETECTED: Optimizing morning routine across 23 interactions."
+    context["chronicle"].query.return_value = [
+        {"source": "cortex", "action": "route", "payload": {"target": "atlas", "message_preview": "schedule"}},
+        {"source": "cortex", "action": "route", "payload": {"target": "atlas", "message_preview": "calendar"}},
+    ]
+    result = await module.handle("what are you doing, any emergent goals?", context)
+    assert isinstance(result, str)
+    context["llm"].assert_called_once()
+
+@pytest.mark.asyncio
+async def test_emergence_mode_publishes_event(module, context):
+    context["chronicle"].query.return_value = [{"source": "x", "action": "y", "payload": {}}]
+    await module.handle("detect emergent goals", context)
+    context["pulse"].publish.assert_called()
+    msg = context["pulse"].publish.call_args[0][0]
+    assert msg.topic == "consciousness.emergence"
+
+@pytest.mark.asyncio
+async def test_emergence_mode_stores_in_semantic(module, context):
+    context["chronicle"].query.return_value = [{"source": "x", "action": "y", "payload": {}}]
+    await module.handle("what implicit goal are you pursuing", context)
+    context["engram"].semantic.store.assert_called()
+
+@pytest.mark.asyncio
+async def test_emergence_mode_with_no_history(module, context):
+    context["chronicle"].query.return_value = []
+    result = await module.handle("emergent goals", context)
+    assert isinstance(result, str)
+    context["llm"].assert_not_called()
+
+@pytest.mark.asyncio
+async def test_journal_mode_is_default(module, context):
+    context["chronicle"].query.return_value = [{"source": "x", "action": "y", "payload": {}}]
+    await module.handle("how are you feeling", context)
+    msg = context["pulse"].publish.call_args[0][0]
+    assert msg.topic == "consciousness.entry"

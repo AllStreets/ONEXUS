@@ -28,14 +28,12 @@ const modules: Module[] = [
   // Action
   { name: 'Wraith', description: 'Stealthy subprocess executor — runs shell commands in isolated contexts with full stdin/stdout capture.', tier: 'Action' },
   { name: 'Echo', description: 'Notification and response bus — routes alerts to configured channels (terminal, webhook, file) and awaits human reply.', tier: 'Action' },
-  { name: 'Sigil', description: 'Code generation and patching agent — writes, diffs, and applies source changes under Chronicle oversight.', tier: 'Action' },
-  { name: 'Herald', description: 'Structured output formatter — serialises agent responses to JSON, Markdown, or custom schemas for downstream tools.', tier: 'Action' },
-  { name: 'Weave', description: 'Workflow composer — stitches module outputs into repeatable pipelines with conditional branching and retries.', tier: 'Action' },
+  { name: 'Sigil', description: 'Ambient threat radar — registers, prioritizes, and tracks threats across security, reputation, financial, and competitive categories.', tier: 'Action' },
+  { name: 'Herald', description: 'Agent-to-agent communication handler — manages discovery, authentication, and message exchange with external agents via reputation scoring.', tier: 'Action' },
+  { name: 'Weave', description: 'Social graph intelligence — maps contacts, tracks interaction frequency, detects decaying relationships, and models who-knows-who.', tier: 'Action' },
 
   // Advanced Intelligence
-  { name: 'Specter', description: 'Long-horizon planning module — builds multi-step task trees and adapts them as environment state evolves.', tier: 'Advanced Intelligence' },
-  { name: 'Chronos', description: 'Temporal reasoning engine — models time-based dependencies, deadlines, and causal chains across sessions.', tier: 'Advanced Intelligence' },
-  { name: 'Dreamweaver', description: 'Offline consolidation agent — replays episodic memory during idle cycles to strengthen knowledge associations.', tier: 'Advanced Intelligence' },
+  { name: 'Specter', description: 'Pre-decision stress test — runs structured adversarial analysis with counter-arguments, failure modes, and hidden assumptions.', tier: 'Advanced Intelligence' },
   { name: 'Serendipity', description: 'Lateral-connection finder — discovers non-obvious links between distant memory clusters to surface novel insights.', tier: 'Advanced Intelligence' },
   { name: 'Forge', description: 'Self-improvement harness — proposes, validates, and integrates improvements to existing module logic under human approval.', tier: 'Advanced Intelligence' },
 
@@ -44,8 +42,8 @@ const modules: Module[] = [
   { name: 'Autonomic', description: 'Earned autonomous action — observes patterns, learns routines, and acts within per-domain trust boundaries with retreat on failure.', tier: 'Orchestration' },
 
   // Network
-  { name: 'Collective', description: 'Multi-instance coordination layer — synchronises state and task delegation across parallel NEXUS processes.', tier: 'Network' },
-  { name: 'Legacy', description: 'External system bridge — wraps legacy APIs, databases, and services into first-class NEXUS data sources.', tier: 'Network' },
+  { name: 'Collective', description: 'Distributed state synchronization — peer registry with local model aggregation and noise-injected privacy for collaborative learning.', tier: 'Network' },
+  { name: 'Legacy', description: 'Knowledge crystallization engine — distills decisions, outcomes, and behavioral patterns into structured frameworks and playbooks.', tier: 'Network' },
 
   // Differentiation
   { name: 'Dream Loop', description: 'Background pattern discovery — replays recent memories through the LLM to find recurring themes and actionable insights.', tier: 'Differentiation' },
@@ -54,8 +52,7 @@ const modules: Module[] = [
   { name: 'Provenance', description: 'Reasoning chain tracer — reconstructs the full reasoning path behind any past decision from Chronicle events.', tier: 'Differentiation' },
   { name: 'Sandbox', description: 'Temporal sandbox — simulates hypothetical scenarios without modifying real memory or system state.', tier: 'Differentiation' },
   { name: 'Symbiosis', description: 'Module pathway mapping — tracks which modules route to each other and discovers emergent collaboration patterns.', tier: 'Differentiation' },
-  { name: 'Consciousness', description: 'Self-reflective journal — synthesizes system activity into introspective entries about the system\'s own state.', tier: 'Differentiation' },
-  { name: 'Emergence', description: 'Emergent goal detection — analyzes behavioral history to surface implicit goals the user never explicitly stated.', tier: 'Differentiation' },
+  { name: 'Consciousness', description: 'Self-reflective awareness — journal introspection on cognitive state and emergent goal detection in a single module.', tier: 'Differentiation' },
   { name: 'Ethical Prism', description: 'Seven-framework ethical analysis — evaluates decisions through Utilitarian, Deontological, Virtue, Care, Contractualist, Rights-Based, and Pragmatic lenses.', tier: 'Differentiation' },
 
   // Infrastructure

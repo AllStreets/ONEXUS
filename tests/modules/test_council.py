@@ -50,14 +50,14 @@ def test_select_participants_max_count(council):
 
 
 def test_select_participants_relevant_modules(council):
-    """Temporal question should include chronos."""
+    """Temporal question should include sandbox."""
     selected = council.select_participants("What is the future timeline for this project?")
-    assert "chronos" in selected
+    assert "sandbox" in selected
     assert "specter" in selected
 
 
 from nexus.modules.specter import SpecterModule
-from nexus.modules.chronos import ChronosModule
+from nexus.modules.sandbox import SandboxModule
 from nexus.modules.serendipity import SerendipityModule
 
 
@@ -66,7 +66,7 @@ def council_with_modules():
     c = CouncilModule()
     c.set_modules({
         "specter": SpecterModule(),
-        "chronos": ChronosModule(),
+        "sandbox": SandboxModule(),
         "serendipity": SerendipityModule(),
     })
     return c
@@ -77,12 +77,12 @@ async def test_deliberate_runs_rounds(council_with_modules):
     result = await council_with_modules.deliberate(
         question="Should I switch to freelancing?",
         context={"llm": None, "engram": None, "chronicle": None, "pulse": None},
-        participants=["specter", "chronos", "serendipity"],
+        participants=["specter", "sandbox", "serendipity"],
     )
     assert isinstance(result, DeliberationResult)
     assert result.rounds == 3
     assert len(result.transcript) == 3
-    assert result.participants == ["specter", "chronos", "serendipity"]
+    assert result.participants == ["specter", "sandbox", "serendipity"]
 
 
 @pytest.mark.asyncio

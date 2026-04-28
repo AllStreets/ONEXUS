@@ -21,10 +21,10 @@ _DELIBERATION_ROLES: dict[str, dict[str, Any]] = {
         "instruction": "Find weaknesses, hidden assumptions, and failure modes.",
         "triggers": ["decision", "should i", "plan", "strategy", "risk"],
     },
-    "chronos": {
+    "sandbox": {
         "role": "temporal",
-        "instruction": "Model future timelines and consequences.",
-        "triggers": ["future", "long-term", "timeline", "when", "deadline"],
+        "instruction": "Simulate hypothetical outcomes and consequences.",
+        "triggers": ["future", "long-term", "timeline", "when", "deadline", "what if"],
     },
     "serendipity": {
         "role": "lateral",

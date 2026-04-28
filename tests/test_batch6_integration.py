@@ -13,7 +13,7 @@ from nexus.modules.general import GeneralModule
 from nexus.modules.council import CouncilModule
 from nexus.modules.autonomic import AutonomicModule
 from nexus.modules.specter import SpecterModule
-from nexus.modules.chronos import ChronosModule
+from nexus.modules.sandbox import SandboxModule
 from nexus.modules.serendipity import SerendipityModule
 
 
@@ -37,7 +37,7 @@ def orchestration_system(tmp_config):
 
     delib_modules = {
         "specter": SpecterModule(),
-        "chronos": ChronosModule(),
+        "sandbox": SandboxModule(),
         "serendipity": SerendipityModule(),
     }
     council.set_modules(delib_modules)

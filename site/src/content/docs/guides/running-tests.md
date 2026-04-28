@@ -1,6 +1,6 @@
 ---
 title: Running Tests
-description: Run the 464-test NEXUS suite, target specific tests, and write tests for new modules.
+description: Run the 445-test NEXUS suite, target specific tests, and write tests for new modules.
 sidebar:
   order: 3
 ---
@@ -14,7 +14,7 @@ pytest tests/ -v
 Expected output ends with:
 
 ```
-464 passed in X.XXs
+445 passed in X.XXs
 ```
 
 No running LLM is required. All LLM calls are mocked in the test suite.
@@ -53,8 +53,6 @@ tests/
 │   ├── test_herald.py
 │   ├── test_weave.py
 │   ├── test_specter.py
-│   ├── test_chronos.py
-│   ├── test_dreamweaver.py
 │   ├── test_serendipity.py
 │   ├── test_forge.py
 │   ├── test_collective.py
@@ -67,7 +65,6 @@ tests/
 │   ├── test_sandbox.py
 │   ├── test_symbiosis.py
 │   ├── test_consciousness.py
-│   ├── test_emergence.py
 │   └── test_ethical_prism.py
 ├── community/
 │   ├── test_validator.py

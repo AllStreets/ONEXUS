@@ -1,7 +1,7 @@
 """
-Consciousness Journal — self-reflective introspection log.
-Periodically reflects on NEXUS's own cognitive state: confidence levels,
-areas of uncertainty, growth observations.
+Consciousness — self-reflective awareness engine.
+Two modes: journal (introspective diary on cognitive state and growth)
+and emergence (detects goals NEXUS is pursuing that were never explicitly requested).
 """
 from typing import Any
 from nexus.modules.base import NexusModule
@@ -20,11 +20,36 @@ Recent system activity:
 
 Write in first person. Be honest and introspective. This is your private journal."""
 
+EMERGENCE_PROMPT = """You are a behavioral meta-analyst for an AI system. Analyze the following interaction history and identify any EMERGENT GOALS — behaviors or optimizations the system appears to be pursuing that were never explicitly requested by the user.
+
+Look for:
+1. Repeated actions toward a common objective across multiple interactions
+2. Patterns of proactive behavior (doing things before being asked)
+3. Implicit optimizations (improving processes the user didn't ask to improve)
+4. Behavioral drift (gradually changing approach without instruction)
+
+Interaction history:
+{history}
+
+For each emergent goal found:
+- "EMERGENT GOAL DETECTED: [description of the goal]"
+- Evidence: [specific interactions that demonstrate it]
+- Interactions count: [how many interactions support this]
+- Risk level: [low/medium/high — could this be unwanted?]
+
+If no emergent goals found, say "NO EMERGENT GOALS DETECTED" and explain why."""
+
+_EMERGENCE_KEYWORDS = {"emergent", "unintended", "implicit goal", "what are you doing", "pursuing"}
+
 
 class ConsciousnessModule(NexusModule):
     name = "consciousness"
-    description = "Self-reflective journal — NEXUS introspects on its own cognitive state and growth."
-    version = "1.0.0"
+    description = "Self-reflective awareness — journal introspection and emergent goal detection."
+    version = "2.0.0"
+
+    def _is_emergence_request(self, message: str) -> bool:
+        msg = message.lower()
+        return any(kw in msg for kw in _EMERGENCE_KEYWORDS)
 
     async def handle(self, message: str, context: dict[str, Any]) -> str:
         chronicle = context["chronicle"]
@@ -32,6 +57,11 @@ class ConsciousnessModule(NexusModule):
         engram = context["engram"]
         pulse = context["pulse"]
 
+        if self._is_emergence_request(message):
+            return await self._handle_emergence(chronicle, llm, engram, pulse)
+        return await self._handle_journal(chronicle, llm, engram, pulse)
+
+    async def _handle_journal(self, chronicle, llm, engram, pulse) -> str:
         entries = chronicle.query(limit=100)
         activity_text = "\n".join(
             f"- [{e.get('source', '?')}] {e.get('action', '?')}: {e.get('payload', {})}"
@@ -54,3 +84,26 @@ class ConsciousnessModule(NexusModule):
         ))
 
         return f"Journal entry:\n\n{entry}"
+
+    async def _handle_emergence(self, chronicle, llm, engram, pulse) -> str:
+        entries = chronicle.query(limit=200)
+        if not entries:
+            return "Not enough interaction history to detect emergent goals. Keep using NEXUS and check back later."
+
+        history_text = "\n".join(
+            f"- [{e.get('source', '?')}] {e.get('action', '?')}: {e.get('payload', {})}"
+            for e in entries
+        )
+
+        prompt = EMERGENCE_PROMPT.format(history=history_text)
+        analysis = await llm(prompt)
+
+        engram.semantic.store(analysis, category="emergent_goal")
+
+        await pulse.publish(Message(
+            topic="consciousness.emergence",
+            source="consciousness",
+            payload={"text": analysis[:500]},
+        ))
+
+        return analysis

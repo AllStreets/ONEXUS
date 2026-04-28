@@ -25,9 +25,7 @@ class Cortex:
         "herald": ["external agent", "a2a", "communicate", "connected agent"],
         "weave": ["contact", "network", "relationship", "social graph", "reconnect"],
         "sigil": ["threat", "danger", "security", "breach", "risk", "radar"],
-        "specter": ["red team", "adversarial", "counter-argument", "devil's advocate", "risk analysis"],
-        "chronos": ["timeline", "future", "branch", "counterfactual", "what if", "temporal"],
-        "dreamweaver": ["morning brief", "overnight", "synthesis", "sleep", "idle", "pattern"],
+        "specter": ["counter-argument", "devil's advocate", "risk analysis", "stress test this decision"],
         "serendipity": ["surprising", "unexpected", "serendip", "random", "adjacent", "diverse"],
         "forge": ["negotiat", "bargain", "offer", "counter-offer", "concession", "deal"],
         "collective": ["federated", "peer", "distributed", "swarm learning", "model sharing"],
@@ -43,8 +41,8 @@ class Cortex:
         "provenance": ["why do you think", "reasoning", "show reasoning", "provenance", "trace", "how did you"],
         "sandbox": ["what if", "simulate", "hypothetical", "sandbox", "fork", "test scenario"],
         "symbiosis": ["neural pathways", "module connections", "routing map", "symbiosis"],
-        "consciousness": ["how are you", "journal", "self reflect", "introspect", "consciousness"],
-        "emergence": ["emergent goals", "unintended behavior", "what are you doing", "implicit goals"],
+        "consciousness": ["how are you", "journal", "self reflect", "introspect", "consciousness",
+                          "emergent goals", "unintended behavior", "what are you doing", "implicit goals"],
         "ethical_prism": ["ethically", "ethical", "moral", "ethics", "right thing", "should i morally"],
     }
 

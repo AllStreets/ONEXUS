@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-464_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-34_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-445_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-31_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@ Most AI tools are wrappers around an API. You send text up, you get text back, s
 
 NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Thirty-four components are built -- five kernel components, five perception/intelligence modules, six action-layer modules with graduated trust, five advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, two network-layer modules, nine differentiation modules that dream, argue, introspect, and stress-test the system from the inside, plus a community module ecosystem for unlimited third-party extensions. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+Thirty-one components are built -- five kernel components, five perception/intelligence modules, five action-layer modules with graduated trust, three advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, two network-layer modules, eight differentiation modules that dream, argue, introspect, and stress-test the system from the inside, plus a community module ecosystem for unlimited third-party extensions. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
@@ -59,9 +59,7 @@ Thirty-four components are built -- five kernel components, five perception/inte
   ┌────V───────────V──────────V────────────────────────────┐
   │              ADVANCED INTELLIGENCE                     │
   │                                                        │
-  │  Specter ·········· adversarial red-team               │
-  │  Chronos ·········· temporal branching                 │
-  │  Dreamweaver ······ overnight synthesis                │
+  │  Specter ·········· pre-decision stress test           │
   │  Serendipity ······ anti-optimization                  │
   │  Forge ············ autonomous negotiation             │
   └────────────────────────────────────────────────────────┘
@@ -76,7 +74,7 @@ Thirty-four components are built -- five kernel components, five perception/inte
   ┌────V───────────V───────────────────────────────────────┐
   │              NETWORK + PLATFORM                        │
   │                                                        │
-  │  Collective ······· federated learning                 │
+  │  Collective ······· distributed state sync             │
   │  Legacy ··········· knowledge crystallization          │
   └────────────────────────────────────────────────────────┘
        │           │
@@ -89,8 +87,7 @@ Thirty-four components are built -- five kernel components, five perception/inte
   │  Provenance ······ reasoning chain tracer              │
   │  Sandbox ········· hypothetical simulation             │
   │  Symbiosis ······· module pathway mapping              │
-  │  Consciousness ··· self-reflective journal             │
-  │  Emergence ······· implicit goal detection             │
+  │  Consciousness ··· self-reflective awareness           │
   │  Ethical Prism ··· seven-framework ethical analysis    │
   └────────────────────────────────────────────────────────┘
        │           │
@@ -107,7 +104,7 @@ The kernel is five components, each with one job:
 
 | Component | Role | Storage |
 |-----------|------|---------|
-| **Cortex** | Keyword-scored routing to 29 modules, permission enforcement | -- |
+| **Cortex** | Keyword-scored routing to 26 modules, permission enforcement | -- |
 | **Engram** | Three-tier memory: working (ephemeral), episodic (FTS5), semantic (vector) | SQLite |
 | **Pulse** | Async pub/sub message bus with priority queuing and wildcards | In-memory |
 | **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
@@ -148,9 +145,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 
 | Module | What it does |
 |--------|-------------|
-| **Specter** | Adversarial red-team -- stake detection, counter-arguments, failure modes, hidden assumptions |
-| **Chronos** | Temporal branching -- probabilistic future modeling and counter-factual analysis |
-| **Dreamweaver** | Overnight synthesis -- ingests events, detects cross-event patterns, generates morning briefs |
+| **Specter** | Pre-decision stress test -- counter-arguments, failure modes, hidden assumptions, worst-case scenarios |
 | **Serendipity** | Anti-optimization -- inverted relevance scoring to surface surprising cross-domain connections |
 | **Forge** | Autonomous negotiation -- multi-round structured bargaining with escalation guardrails |
 
@@ -165,7 +160,7 @@ Modules are loaded into this kernel. They don't know about each other. They comm
 
 | Module | What it does |
 |--------|-------------|
-| **Collective** | Federated learning -- peer model sharing with differential privacy, opt-in only |
+| **Collective** | Distributed state synchronization -- peer registry with local model aggregation and noise-injected privacy |
 | **Legacy** | Knowledge crystallization -- distills decisions into frameworks, playbooks, and exportable artifacts |
 
 ### Multi-Provider Inference
@@ -201,8 +196,7 @@ Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `N
 | **Provenance** | Reasoning chain tracer -- reconstructs the full reasoning path behind any past decision from Chronicle events |
 | **Sandbox** | Temporal sandbox -- simulates hypothetical scenarios without modifying real memory or state |
 | **Symbiosis** | Module pathway mapping -- tracks which modules route to each other and discovers emergent collaboration patterns |
-| **Consciousness** | Self-reflective journal -- synthesizes system activity into introspective entries about the system's own state |
-| **Emergence** | Emergent goal detection -- analyzes behavioral history to surface implicit goals the user never explicitly stated |
+| **Consciousness** | Self-reflective awareness -- journal introspection on cognitive state plus emergent goal detection |
 | **Ethical Prism** | Seven-framework ethical analysis -- evaluates decisions through Utilitarian, Deontological, Virtue Ethics, Care Ethics, Contractualist, Rights-Based, and Pragmatic Ethics lenses with synthesis |
 
 ### Community Ecosystem
@@ -244,14 +238,12 @@ Community modules live in `community/modules/<author>/<name>/` with a manifest, 
     └── Aegis ·········· graduated trust (0-100, outcome-based)
 
     ADVANCED INTELLIGENCE (Batch 4) ━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
-    ├── Specter ········· adversarial red-teaming
-    ├── Chronos ········· temporal branching
-    ├── Dreamweaver ····· overnight synthesis
+    ├── Specter ········· pre-decision stress test
     ├── Serendipity ····· anti-optimization engine
     └── Forge ··········· autonomous negotiation
 
     NETWORK + PLATFORM (Batch 5) ━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
-    ├── Collective ······ federated learning
+    ├── Collective ······ distributed state sync
     └── Legacy ·········· knowledge crystallization
 
     ORCHESTRATION (Batch 6) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
@@ -269,8 +261,7 @@ Community modules live in `community/modules/<author>/<name>/` with a manifest, 
     ├── Provenance ······ reasoning chain tracer
     ├── Sandbox ········· hypothetical simulation
     ├── Symbiosis ······· module pathway mapping
-    ├── Consciousness ··· self-reflective journal
-    ├── Emergence ······· implicit goal detection
+    ├── Consciousness ··· self-reflective awareness + goal detection
     └── Ethical Prism ··· seven-framework ethical analysis
 
     COMMUNITY ECOSYSTEM (Batch 7b) ━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
@@ -327,7 +318,7 @@ NEXUS was designed for machines people actually own.
 |-----|-------------|
 | **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
 | **16 GB** | Kernel + 10 modules, larger context windows |
-| **32 GB+** | All 34 modules, bigger models, concurrent agents |
+| **32 GB+** | All 31 modules, bigger models, concurrent agents |
 
 The inference layer supports multiple providers. Local models run via llama.cpp over HTTP. Cloud providers (OpenAI, Anthropic) are available when API keys are configured. The kernel routes to whichever provider you choose, with automatic fallback if one goes down.
 
@@ -369,7 +360,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-464 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
+445 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -411,12 +402,10 @@ nexus/
 │   ├── sigil.py ········· ambient threat radar
 │   ├── herald.py ········ A2A agent communication
 │   ├── weave.py ········· social graph intelligence
-│   ├── specter.py ······· adversarial red-team
-│   ├── chronos.py ······· temporal branching
-│   ├── dreamweaver.py ··· overnight synthesis
+│   ├── specter.py ······· pre-decision stress test
 │   ├── serendipity.py ··· anti-optimization engine
 │   ├── forge.py ········· autonomous negotiation
-│   ├── collective.py ···· federated learning
+│   ├── collective.py ···· distributed state sync
 │   ├── legacy.py ········ knowledge crystallization
 │   ├── council.py ······· multi-agent deliberation
 │   ├── autonomic.py ····· earned autonomous action
@@ -426,8 +415,7 @@ nexus/
 │   ├── provenance.py ···· reasoning chain tracer
 │   ├── sandbox.py ······· hypothetical simulation
 │   ├── symbiosis.py ····· module pathway mapping
-│   ├── consciousness.py · self-reflective journal
-│   ├── emergence.py ····· implicit goal detection
+│   ├── consciousness.py · self-reflective awareness
 │   └── ethical_prism.py · seven-framework ethical analysis
 └── community/
     ├── validator.py ····· module validation engine

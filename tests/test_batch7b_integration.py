@@ -19,7 +19,6 @@ from nexus.modules.provenance import ProvenanceModule
 from nexus.modules.sandbox import SandboxModule
 from nexus.modules.symbiosis import SymbiosisModule
 from nexus.modules.consciousness import ConsciousnessModule
-from nexus.modules.emergence import EmergenceModule
 from nexus.modules.ethical_prism import EthicalPrismModule
 from nexus.community.validator import ModuleValidator
 from nexus.community.installer import ModuleInstaller
@@ -27,7 +26,7 @@ from nexus.community.installer import ModuleInstaller
 
 @pytest.fixture
 def full_kernel(tmp_config, mock_llm_response):
-    """Create a kernel with all 9 new modules registered."""
+    """Create a kernel with all 8 new modules registered."""
     engram = Engram(tmp_config.db_path)
     engram.init_db()
     chronicle = Chronicle(tmp_config.db_path)
@@ -41,7 +40,7 @@ def full_kernel(tmp_config, mock_llm_response):
     modules = [
         DreamLoopModule(), AdversarialModule(), TripwireModule(),
         ProvenanceModule(), SandboxModule(), SymbiosisModule(),
-        ConsciousnessModule(), EmergenceModule(), EthicalPrismModule(),
+        ConsciousnessModule(), EthicalPrismModule(),
     ]
     for mod in modules:
         cortex.register_module(mod)
@@ -94,7 +93,7 @@ async def test_all_new_modules_have_required_attrs():
     modules = [
         DreamLoopModule(), AdversarialModule(), TripwireModule(),
         ProvenanceModule(), SandboxModule(), SymbiosisModule(),
-        ConsciousnessModule(), EmergenceModule(), EthicalPrismModule(),
+        ConsciousnessModule(), EthicalPrismModule(),
     ]
     for mod in modules:
         assert mod.name, f"{mod.__class__.__name__} missing name"

@@ -11,8 +11,6 @@ from nexus.kernel.pulse import Pulse
 from nexus.kernel.cortex import Cortex
 from nexus.modules.general import GeneralModule
 from nexus.modules.specter import SpecterModule
-from nexus.modules.chronos import ChronosModule
-from nexus.modules.dreamweaver import DreamweaverModule
 from nexus.modules.serendipity import SerendipityModule
 from nexus.modules.forge import ForgeModule
 
@@ -35,8 +33,6 @@ def advanced_system(tmp_config):
     modules = {
         "general": GeneralModule(),
         "specter": SpecterModule(),
-        "chronos": ChronosModule(),
-        "dreamweaver": DreamweaverModule(),
         "serendipity": SerendipityModule(),
         "forge": ForgeModule(),
     }
@@ -51,24 +47,8 @@ def advanced_system(tmp_config):
 @pytest.mark.asyncio
 async def test_specter_via_cortex(advanced_system):
     cortex = advanced_system["cortex"]
-    response = await cortex.process("Red team this: I want to sign a $100k contract with a new vendor")
+    response = await cortex.process("Play devil's advocate on this risk analysis: I want to sign a $100k contract")
     assert "counter" in response.lower() or "risk" in response.lower() or "assumption" in response.lower()
-
-
-@pytest.mark.asyncio
-async def test_chronos_via_cortex(advanced_system):
-    cortex = advanced_system["cortex"]
-    response = await cortex.process("Model the future timeline if I switch to freelancing")
-    assert "branch" in response.lower() or "timeline" in response.lower()
-
-
-@pytest.mark.asyncio
-async def test_dreamweaver_via_cortex(advanced_system):
-    dw = advanced_system["dreamweaver"]
-    dw.ingest("Important Q4 planning session")
-    cortex = advanced_system["cortex"]
-    response = await cortex.process("Generate my morning brief from overnight synthesis")
-    assert "brief" in response.lower() or "q4" in response.lower()
 
 
 @pytest.mark.asyncio
@@ -92,5 +72,5 @@ async def test_forge_via_cortex(advanced_system):
 async def test_all_advanced_modules_registered(advanced_system):
     cortex = advanced_system["cortex"]
     modules = cortex.list_modules()
-    for name in ["general", "specter", "chronos", "dreamweaver", "serendipity", "forge"]:
+    for name in ["general", "specter", "serendipity", "forge"]:
         assert name in modules
