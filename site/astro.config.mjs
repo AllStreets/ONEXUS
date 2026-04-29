@@ -68,14 +68,26 @@ export default defineConfig({
           items: [
             { label: 'Building a Module', slug: 'guides/building-a-module' },
             { label: 'Connecting an LLM', slug: 'guides/connecting-an-llm' },
+            { label: 'Agent Workflows', slug: 'guides/agent-workflows' },
             { label: 'Running Tests', slug: 'guides/running-tests' },
+            { label: 'Troubleshooting', slug: 'guides/troubleshooting' },
+          ],
+        },
+        {
+          label: 'Discover',
+          items: [
+            { label: 'Use Cases', slug: 'community/use-cases' },
+            { label: 'Agent Discovery', slug: 'community/agents' },
+            { label: 'Comparisons', slug: 'community/comparisons' },
           ],
         },
         {
           label: 'Community',
           items: [
             { label: 'Community Hub', slug: 'community/hub' },
-            { label: 'Agent Discovery', slug: 'community/agents' },
+            { label: 'FAQ', slug: 'community/faq' },
+            { label: 'Changelog', slug: 'community/changelog' },
+            { label: 'Roadmap', slug: 'community/roadmap' },
           ],
         },
         {
