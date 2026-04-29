@@ -64,6 +64,11 @@ class Cortex:
         "dispatch": ["notify", "notification", "alert to", "send message", "slack", "email alert", "webhook"],
         "gauge": ["performance", "latency", "throughput", "benchmark", "bottleneck", "response time", "metrics"],
         "mnemonic": ["remember", "knowledge base", "recall", "notes", "store note", "look up", "retrieve"],
+        "sentinel": ["cron", "scheduled task", "job monitor", "crontab", "missed run", "task health"],
+        "mint": ["invoice", "receipt", "billing", "line items", "generate invoice", "bill to"],
+        "axiom": ["test case", "generate tests", "unit test", "test stub", "edge case", "test for"],
+        "loom": ["pipeline", "etl", "data flow", "workflow", "extract transform", "data pipeline"],
+        "rune": ["regex", "regular expression", "pattern match", "regexp", "pattern for", "match string"],
     }
 
     def __init__(
