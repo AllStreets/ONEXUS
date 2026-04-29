@@ -106,10 +106,10 @@ Fifty-one components are built -- five kernel components, five perception/intell
   │                    Scaffold  Axiom  Rune               │
   │  Data ············ Flux  Vigil  Gauge  Quarry  Loom    │
   │  Business ········ Ledger  Tally  Mint  Redline        │
-  │                    Mandate                              │
+  │                    Mandate                             │
   │  Content ········· Scribe  Kindle  Thesis  Compass     │
   │  Ops ············· Bastion  Dispatch  Sentinel         │
-  │                    Mnemonic                             │
+  │                    Mnemonic                            │
   └────────────────────────────────────────────────────────┘
 ```
 
