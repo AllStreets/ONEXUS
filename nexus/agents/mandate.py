@@ -67,6 +67,20 @@ _FRAMEWORKS: dict[str, list[dict[str, str]]] = {
         {"id": "HIPAA-7", "name": "Minimum Necessary", "desc": "Limit PHI access to minimum necessary for job function"},
         {"id": "HIPAA-8", "name": "Training", "desc": "Workforce security awareness training"},
     ],
+    "pci-dss": [
+        {"id": "PCI-1", "name": "Firewall Configuration", "desc": "Install and maintain a firewall configuration to protect cardholder data"},
+        {"id": "PCI-2", "name": "Vendor Default Passwords", "desc": "Do not use vendor-supplied defaults for system passwords and other security parameters"},
+        {"id": "PCI-3", "name": "Stored Cardholder Data", "desc": "Protect stored cardholder data with strong encryption and data retention policies"},
+        {"id": "PCI-4", "name": "Encryption in Transit", "desc": "Encrypt transmission of cardholder data across open, public networks using TLS"},
+        {"id": "PCI-5", "name": "Antivirus and Malware", "desc": "Protect all systems against malware and regularly update antivirus software"},
+        {"id": "PCI-6", "name": "Secure System Development", "desc": "Develop and maintain secure systems and applications using security best practices and patch management"},
+        {"id": "PCI-7", "name": "Access Restriction", "desc": "Restrict access to cardholder data by business need-to-know"},
+        {"id": "PCI-8", "name": "User Access Authentication", "desc": "Identify and authenticate access to system components with unique IDs and multi-factor authentication"},
+        {"id": "PCI-9", "name": "Physical Access Restriction", "desc": "Restrict physical access to cardholder data and systems"},
+        {"id": "PCI-10", "name": "Network Monitoring and Testing", "desc": "Track and monitor all access to network resources and cardholder data; regularly test security systems"},
+        {"id": "PCI-11", "name": "Information Security Policy", "desc": "Maintain a policy that addresses information security for all personnel"},
+        {"id": "PCI-12", "name": "Vulnerability Management", "desc": "Protect systems and networks from known vulnerabilities by deploying critical patches within one month"},
+    ],
 }
 
 
@@ -92,6 +106,8 @@ class MandateModule(AgentModule):
             return "gdpr"
         if any(w in msg_lower for w in ("health", "medical", "patient", "phi")):
             return "hipaa"
+        if any(w in msg_lower for w in ("pci", "cardholder", "payment card", "credit card", "card data")):
+            return "pci-dss"
         return "soc2"
 
     def assess(self, framework: str, practices: str) -> GapAnalysis:
@@ -201,9 +217,9 @@ class MandateModule(AgentModule):
         return "\n".join(lines)
 
     async def suggest(self, message: str, context: dict[str, Any]) -> str:
-        keywords = ("privacy", "compliance", "regulation", "gdpr", "hipaa", "soc2", "pci", "audit")
+        keywords = ("privacy", "compliance", "regulation", "gdpr", "hipaa", "soc2", "pci", "pci-dss", "cardholder", "audit")
         if any(kw in message.lower() for kw in keywords):
-            return "Run mandate to assess compliance gaps against GDPR, SOC2, or HIPAA frameworks."
+            return "Run mandate to assess compliance gaps against GDPR, SOC2, HIPAA, or PCI-DSS frameworks."
         return ""
 
     async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:

@@ -41,7 +41,7 @@ NEXUS ships with 25 agents built on the `AgentModule` base class. Each agent sta
 | [Tally](/NEXUS/reference/modules/tally/) | Builds financial projections with revenue modeling and runway calculation |
 | [Mint](/NEXUS/reference/modules/mint/) | Generates invoices from line items with tax calculation and formatting |
 | [Redline](/NEXUS/reference/modules/redline/) | Scans contracts for 15 risky clause patterns and missing protections |
-| [Mandate](/NEXUS/reference/modules/mandate/) | Assesses compliance against GDPR, SOC2, HIPAA with gap analysis |
+| [Mandate](/NEXUS/reference/modules/mandate/) | Assesses compliance against GDPR, SOC2, HIPAA, PCI-DSS with gap analysis |
 
 #### Content & Communication
 

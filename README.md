@@ -265,7 +265,7 @@ Twenty-five task-specialist agents built on the AgentModule base class. Each sta
 | **Tally** | Builds financial projections with revenue modeling and runway calculation |
 | **Mint** | Generates invoices from line items with tax calculation and formatting |
 | **Redline** | Scans contracts for 15 risky clause patterns and missing protections |
-| **Mandate** | Assesses compliance against GDPR, SOC2, HIPAA with gap analysis |
+| **Mandate** | Assesses compliance against GDPR, SOC2, HIPAA, PCI-DSS with gap analysis |
 
 #### Content & Communication
 

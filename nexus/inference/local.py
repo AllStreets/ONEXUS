@@ -48,7 +48,7 @@ class LocalProvider(InferenceProvider):
         except Exception as e:
             return f"[Inference error: {e}]"
 
-    def health(self) -> bool:
+    async def health(self) -> bool:
         try:
             req = urllib.request.Request(f"{self._base_url}/health")
             with urllib.request.urlopen(req, timeout=5) as resp:

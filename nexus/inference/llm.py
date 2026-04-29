@@ -57,9 +57,9 @@ class LLMClient:
             provider=provider,
         )
 
-    def health(self) -> bool:
-        """Synchronous health check — checks if the default local provider is up."""
+    async def health(self) -> bool:
+        """Health check — checks if the default local provider is up."""
         local = self._router.providers.get("local")
         if local and isinstance(local, LocalProvider):
-            return local.health()
+            return await local.health()
         return True

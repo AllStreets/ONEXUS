@@ -301,7 +301,7 @@ class BastionModule(AgentModule):
         if has_critical:
             # Forward to vex for deeper vulnerability analysis
             try:
-                vex_result = await cortex.send("vex", analysis_result, context)
+                vex_result = await cortex.route("vex", analysis_result, context)
                 if vex_result:
                     lines.append(f"[vex] {vex_result}")
             except Exception:
@@ -313,7 +313,7 @@ class BastionModule(AgentModule):
                     f"SECURITY ALERT from Bastion -- critical/high findings detected.\n"
                     f"{analysis_result[:500]}"
                 )
-                dispatch_result = await cortex.send("dispatch", alert_msg, context)
+                dispatch_result = await cortex.route("dispatch", alert_msg, context)
                 if dispatch_result:
                     lines.append(f"[dispatch] {dispatch_result}")
             except Exception:

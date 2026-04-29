@@ -1,6 +1,6 @@
 """
 Nexus CLI — entry point for the nexus command.
-Commands: run, status, forget, allow, deny
+Commands: run, status, forget, allow, deny, install, uninstall, community list, community search
 """
 import asyncio
 import os
@@ -200,7 +200,7 @@ def run():
 
     llm_client = LLMClient(router=router)
 
-    if local.health():
+    if asyncio.run(local.health()):
         click.echo(f"Local LLM connected at localhost:{cfg.llm_port}")
     else:
         if cfg.default_provider == "local":
@@ -209,10 +209,13 @@ def run():
         else:
             click.echo(f"Using {cfg.default_provider} as default provider.")
 
-    cortex.set_llm(lambda msg: llm_client.chat(
-        system="You are Nexus, an autonomous intelligence operating system. Be helpful, precise, and concise.",
-        user=msg,
-    ))
+    async def _llm_handler(msg):
+        return await llm_client.chat(
+            system="You are Nexus, an autonomous intelligence operating system. Be helpful, precise, and concise.",
+            user=msg,
+        )
+
+    cortex.set_llm(_llm_handler)
 
     # Start messaging bridges if configured
     from nexus.messaging.manager import BridgeManager

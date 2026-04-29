@@ -8,6 +8,7 @@ and heuristics from actual behavior -- not self-reported preferences.
 Data pipeline: subscribes to cortex.response events via Pulse, automatically
 recording decisions from deliberation modules (council, ethical_prism).
 """
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from enum import Enum
@@ -68,6 +69,66 @@ class LegacyModule(NexusModule):
             context["pulse"].unsubscribe(self._sub_id)
             self._sub_id = None
 
+    _POSITIVE_SIGNALS = frozenset({
+        "agreed", "approved", "yes", "good", "accepted", "confirmed",
+        "correct", "right", "great", "perfect", "done", "success", "ok",
+    })
+    _NEGATIVE_SIGNALS = frozenset({
+        "rejected", "denied", "no", "failed", "bad", "incorrect", "wrong",
+        "error", "refused", "blocked", "declined", "invalid", "unable",
+    })
+
+    # POS-tag approximation: stop words to exclude from factor extraction
+    _FACTOR_STOP = frozenset({
+        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+        "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+        "being", "have", "has", "had", "do", "does", "did", "will", "would",
+        "could", "should", "may", "might", "shall", "can", "need", "this",
+        "that", "these", "those", "it", "its", "i", "you", "we", "they",
+        "what", "which", "who", "how", "when", "where", "why", "just", "also",
+    })
+
+    @staticmethod
+    def _determine_outcome(response: str) -> str:
+        """Return 'positive', 'negative', or 'recorded' based on response text."""
+        lower = response.lower()
+        tokens = set(re.findall(r"[a-z]+", lower))
+        pos_hits = len(tokens & LegacyModule._POSITIVE_SIGNALS)
+        neg_hits = len(tokens & LegacyModule._NEGATIVE_SIGNALS)
+        if pos_hits > neg_hits:
+            return "positive"
+        if neg_hits > pos_hits:
+            return "negative"
+        return "recorded"
+
+    @staticmethod
+    def _extract_factors(message: str) -> list[str]:
+        """Extract decision-relevant key terms from a message.
+
+        Strategy: prefer noun-like tokens (longer, mixed-case or title-case
+        words), de-duplicate, and fall back to any word >4 chars if nothing
+        useful is found.
+        """
+        # Pull out capitalised phrases (likely named entities / proper nouns)
+        named = re.findall(r'\b[A-Z][a-zA-Z]{2,}\b', message)
+        # Pull out lowercase terms >4 chars that aren't stop words
+        lower_terms = [
+            w.strip("?.,!;:\"'()[]")
+            for w in message.split()
+            if len(w.strip("?.,!;:\"'()[]")) > 4
+            and w.strip("?.,!;:\"'()[]").lower() not in LegacyModule._FACTOR_STOP
+            and w[0].islower()
+        ]
+        combined: list[str] = []
+        seen: set[str] = set()
+        for term in named + lower_terms:
+            key = term.lower()
+            if key not in seen:
+                seen.add(key)
+                combined.append(term)
+        factors = combined[:8] if combined else ["unspecified"]
+        return factors
+
     async def _on_response(self, msg) -> None:
         payload = msg.payload
         module = payload.get("module", "unknown")
@@ -75,13 +136,12 @@ class LegacyModule(NexusModule):
             return
         message = payload.get("message", "")
         response = payload.get("response", "")
-        # Extract decision factors from the user's question
-        words = [w.strip("?.,!") for w in message.lower().split() if len(w) > 3]
-        factors = words[:5] if words else ["unspecified"]
+        outcome = self._determine_outcome(response)
+        factors = self._extract_factors(message)
         self.record_decision(
             domain=module,
             decision=message[:200],
-            outcome="recorded",
+            outcome=outcome,
             factors=factors,
         )
 
@@ -134,6 +194,51 @@ class LegacyModule(NexusModule):
 
         return patterns
 
+    @staticmethod
+    def _select_artifact_type(
+        patterns: list[DecisionPattern],
+        decisions: list[DecisionRecord],
+    ) -> ArtifactType:
+        """Choose the most appropriate artifact type for the crystallized data.
+
+        Rules:
+        - HEURISTIC  — one or more factors with a strong outcome correlation
+                       (positive_rate >= 0.75 or <= 0.25, freq >= 2).
+        - PLAYBOOK   — sequential/conditional patterns: decisions share similar
+                       factor sets and similar outcomes, implying a repeatable
+                       decision procedure.
+        - FRAMEWORK  — cross-cutting factors that appear in many different
+                       outcomes (no single strong correlation), or when neither
+                       of the above applies.
+        """
+        if not patterns:
+            return ArtifactType.FRAMEWORK
+
+        # Check for strong factor→outcome correlations → HEURISTIC
+        strong = [
+            p for p in patterns
+            if p.frequency >= 2 and (p.positive_rate >= 0.75 or p.positive_rate <= 0.25)
+        ]
+        if strong:
+            return ArtifactType.HEURISTIC
+
+        # Check for sequential / playbook signal: multiple decisions share
+        # overlapping factor sets and converge on the same outcome.
+        outcome_groups: dict[str, list[DecisionRecord]] = {}
+        for d in decisions:
+            outcome_groups.setdefault(d.outcome, []).append(d)
+        for outcome, group in outcome_groups.items():
+            if len(group) >= 3:
+                # Check factor overlap across the group
+                factor_sets = [set(d.factors) for d in group]
+                common = factor_sets[0]
+                for fs in factor_sets[1:]:
+                    common &= fs
+                if common:
+                    return ArtifactType.PLAYBOOK
+
+        return ArtifactType.FRAMEWORK
+
     def crystallize(self, domain: str) -> KnowledgeArtifact:
         domain_decisions = [d for d in self._decisions if d.domain == domain]
         if not domain_decisions:
@@ -146,8 +251,10 @@ class LegacyModule(NexusModule):
             )
 
         patterns = self.extract_patterns(domain)
+        artifact_type = self._select_artifact_type(patterns, domain_decisions)
 
-        lines = [f"Decision Framework: {domain.title()}"]
+        type_label = artifact_type.value.title()
+        lines = [f"Decision {type_label}: {domain.title()}"]
         lines.append(f"Based on {len(domain_decisions)} decisions.\n")
         if patterns:
             lines.append("Key factors (by frequency):")
@@ -163,7 +270,7 @@ class LegacyModule(NexusModule):
 
         return KnowledgeArtifact(
             domain=domain,
-            artifact_type=ArtifactType.FRAMEWORK,
+            artifact_type=artifact_type,
             patterns=patterns,
             content="\n".join(lines),
             decision_count=len(domain_decisions),

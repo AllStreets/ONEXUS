@@ -9,6 +9,7 @@ from the interaction of many simpler agents.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -78,7 +79,7 @@ class DeliberationResult:
 class CouncilModule(NexusModule):
     name = "council"
     description = "Multi-agent deliberation -- structured debate across modules with synthesized recommendations"
-    version = "0.1.0"
+    version = "0.2.0"
 
     def __init__(self, config: dict[str, Any] | None = None):
         self._config = {**_DEFAULT_CONFIG, **(config or {})}
@@ -178,7 +179,7 @@ class CouncilModule(NexusModule):
                     payload={"round": round_num, "participants": available},
                 ))
 
-        result = self._synthesize(question, available, transcript, context)
+        result = await self._synthesize(question, available, transcript, context)
 
         chronicle = context.get("chronicle")
         if chronicle:
@@ -198,7 +199,29 @@ class CouncilModule(NexusModule):
 
         return result
 
-    def _synthesize(
+    def _response_agreement_score(self, responses: dict[str, str]) -> float:
+        """
+        Rough proxy for agreement: measures how much unique content overlaps
+        across responses via mean pairwise Jaccard similarity on word sets.
+        Returns 0.0 (full disagreement) to 1.0 (identical).
+        """
+        texts = list(responses.values())
+        if len(texts) < 2:
+            return 1.0
+        stopwords = {"the", "a", "an", "is", "it", "to", "of", "and", "or", "in", "that", "this"}
+        word_sets = [set(t.lower().split()) - stopwords for t in texts]
+        pairs = 0
+        total_sim = 0.0
+        for i in range(len(word_sets)):
+            for j in range(i + 1, len(word_sets)):
+                a, b = word_sets[i], word_sets[j]
+                union = a | b
+                if union:
+                    total_sim += len(a & b) / len(union)
+                pairs += 1
+        return total_sim / pairs if pairs else 1.0
+
+    async def _synthesize(
         self,
         question: str,
         participants: list[str],
@@ -214,26 +237,107 @@ class CouncilModule(NexusModule):
 
         final_round = transcript[-1]["responses"]
 
-        recommendation = " | ".join(
-            f"{name}: {resp[:150]}" for name, resp in final_round.items()
-        )
+        # Confidence: blend participant coverage with response agreement.
+        # Very high agreement is penalised slightly (potential groupthink).
+        coverage = min(1.0, len(participants) / self._config["max_modules"])
+        agreement = self._response_agreement_score(final_round)
+        agreement_weight = agreement if agreement <= 0.9 else 0.9 - (agreement - 0.9) * 0.5
+        confidence = round(coverage * 0.6 + agreement_weight * 0.4, 2)
 
-        dissent = []
-        consensus_parts = []
+        # Separate adversarial voices from consensus voices
+        dissent: list[str] = []
+        consensus_parts: list[str] = []
         for name, resp in final_round.items():
             role = _DELIBERATION_ROLES.get(name, {}).get("role", "")
             if role == "adversarial":
                 dissent.append(f"[{name}] {resp[:200]}")
             else:
                 consensus_parts.append(resp[:200])
-
         consensus = " ".join(consensus_parts) if consensus_parts else ""
-        confidence = min(1.0, len(participants) / self._config["max_modules"])
+
+        # LLM synthesis path
+        llm = context.get("llm")
+        if llm is not None:
+            transcript_lines: list[str] = []
+            for entry in transcript:
+                transcript_lines.append(f"--- Round {entry['round']} ---")
+                for mod_name, resp in entry["responses"].items():
+                    role_label = _DELIBERATION_ROLES.get(mod_name, {}).get("role", "general")
+                    transcript_lines.append(f"[{mod_name} / {role_label}]: {resp[:400]}")
+            transcript_text = "\n".join(transcript_lines)
+
+            prompt = (
+                "You are synthesizing a multi-agent deliberation council. "
+                "Below is the full transcript across all rounds, followed by the original question. "
+                "Produce a structured synthesis that integrates every perspective. "
+                "Be specific — reference the actual content from the transcript.\n\n"
+                f"QUESTION: {question}\n\n"
+                f"TRANSCRIPT:\n{transcript_text}\n\n"
+                "Respond in this exact format:\n"
+                "RECOMMENDATION:\n"
+                "<A clear, actionable recommendation integrating the perspectives above>\n\n"
+                "KEY UNCERTAINTIES:\n"
+                "1. <uncertainty drawn from the deliberation>\n"
+                "2. <uncertainty drawn from the deliberation>\n"
+                "3. <uncertainty drawn from the deliberation>\n\n"
+                "DISSENTING VIEWS:\n"
+                "<Summarise significant disagreements or adversarial challenges raised>\n\n"
+                "CONSENSUS:\n"
+                "<One sentence capturing broad agreement among non-adversarial participants>"
+            )
+
+            try:
+                raw = await llm(prompt)
+            except Exception:
+                raw = None
+
+            if raw:
+                def _section(text: str, header: str) -> str:
+                    m = re.search(
+                        rf"{re.escape(header)}\s*\n(.*?)(?=\n[A-Z ]+:\n|\Z)",
+                        text,
+                        re.DOTALL | re.IGNORECASE,
+                    )
+                    return m.group(1).strip() if m else ""
+
+                rec = _section(raw, "RECOMMENDATION:") or raw[:400]
+
+                uncertainties_block = _section(raw, "KEY UNCERTAINTIES:")
+                uncertainties = [
+                    line.lstrip("0123456789.- ").strip()
+                    for line in uncertainties_block.splitlines()
+                    if line.strip()
+                ] or ["See full synthesis above."]
+
+                llm_dissent = _section(raw, "DISSENTING VIEWS:")
+                if llm_dissent:
+                    dissent = [f"[synthesis] {llm_dissent[:300]}"]
+
+                llm_consensus = _section(raw, "CONSENSUS:")
+                if llm_consensus:
+                    consensus = llm_consensus
+
+                return DeliberationResult(
+                    question=question,
+                    recommendation=rec,
+                    confidence=confidence,
+                    consensus_view=consensus,
+                    dissenting_views=dissent,
+                    key_uncertainties=uncertainties,
+                    participants=participants,
+                    rounds=len(transcript),
+                    transcript=transcript,
+                )
+
+        # Fallback: raw concatenation when no LLM is available or it failed
+        recommendation = " | ".join(
+            f"{name}: {resp[:150]}" for name, resp in final_round.items()
+        )
 
         return DeliberationResult(
             question=question,
             recommendation=recommendation,
-            confidence=round(confidence, 2),
+            confidence=confidence,
             consensus_view=consensus,
             dissenting_views=dissent,
             key_uncertainties=["LLM synthesis unavailable -- raw responses returned."],

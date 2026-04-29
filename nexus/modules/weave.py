@@ -59,9 +59,14 @@ class WeaveModule(NexusModule):
 
     @staticmethod
     def _extract_names(text: str) -> list[str]:
-        """Extract likely proper nouns (capitalized words not at sentence start)."""
-        # Match capitalized words that aren't at the very start of the text
-        candidates = re.findall(r'(?<=[.!?\s])\s*([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})*)', text)
+        """Extract likely proper nouns (capitalized words) from any position in text."""
+        # Match capitalized words preceded by whitespace/punctuation OR at
+        # position 0 of the string.  The alternation handles both cases without
+        # a lookbehind so position-0 names are no longer silently dropped.
+        candidates = re.findall(
+            r'(?:(?<=[.!?\s])\s*|^)([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})*)',
+            text,
+        )
         names = []
         for name in candidates:
             if name.lower() not in WeaveModule._STOP_WORDS:
@@ -121,11 +126,32 @@ class WeaveModule(NexusModule):
         count = contact.interaction_count
         if count == 0:
             return RelationshipHealth.NEW
+
+        # Determine recency from the most recent interaction timestamp.
+        last_ts: datetime | None = None
+        for interaction in contact.interactions:
+            try:
+                ts = datetime.fromisoformat(interaction.timestamp)
+                if last_ts is None or ts > last_ts:
+                    last_ts = ts
+            except (ValueError, TypeError):
+                pass
+
+        if last_ts is not None:
+            now = datetime.now(timezone.utc)
+            # Normalise to UTC if the stored timestamp had no tzinfo
+            if last_ts.tzinfo is None:
+                last_ts = last_ts.replace(tzinfo=timezone.utc)
+            days_since = (now - last_ts).days
+            if days_since > 90:
+                return RelationshipHealth.STALE
+            if days_since > 30:
+                return RelationshipHealth.COOLING
+
+        # Recent enough — fall through to count-based classification
         if count >= 3:
             return RelationshipHealth.ACTIVE
-        if count >= 1:
-            return RelationshipHealth.STABLE
-        return RelationshipHealth.COOLING
+        return RelationshipHealth.STABLE
 
     def find_connections(self, tag: str) -> list[Contact]:
         return [c for c in self._contacts.values() if tag.lower() in [t.lower() for t in c.tags]]

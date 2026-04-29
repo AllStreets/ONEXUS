@@ -1,6 +1,6 @@
 ---
 title: "MandateModule"
-description: "Compliance gap analyzer — GDPR, SOC2, HIPAA checklists and control assessment"
+description: "Compliance gap analyzer — GDPR, SOC2, HIPAA, PCI-DSS checklists and control assessment"
 sidebar:
   order: 42
 ---
@@ -8,7 +8,7 @@ sidebar:
 ## Overview
 
 Mandate — compliance gap analyzer.
-Assesses compliance against GDPR, SOC2, HIPAA, and other regulatory frameworks with gap analysis and control checklists.
+Assesses compliance against GDPR, SOC2, HIPAA, PCI-DSS, and other regulatory frameworks with gap analysis and control checklists.
 
 - **Version:** `0.1.0`
 - **Class:** `MandateModule`

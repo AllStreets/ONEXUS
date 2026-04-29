@@ -243,6 +243,18 @@ class AutonomicModule(NexusModule):
             dt.successes = 0
         self._proposals.clear()
 
+    # -- Lifecycle --
+
+    async def on_load(self, context: dict[str, Any]) -> None:
+        self._pulse = context.get("pulse")
+        if self._pulse:
+            await self._pulse.subscribe("cortex.response", self.on_pulse_event)
+
+    async def on_unload(self, context: dict[str, Any]) -> None:
+        pulse = context.get("pulse")
+        if pulse:
+            await pulse.unsubscribe("cortex.response", self.on_pulse_event)
+
     # -- Pulse event handler --
 
     async def on_pulse_event(self, msg: Any) -> None:

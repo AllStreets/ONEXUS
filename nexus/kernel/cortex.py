@@ -69,6 +69,7 @@ class Cortex:
         "axiom": ["test case", "generate tests", "unit test", "test stub", "edge case", "test for"],
         "loom": ["pipeline", "etl", "data flow", "workflow", "extract transform", "data pipeline"],
         "rune": ["regex", "regular expression", "pattern match", "regexp", "pattern for", "match string"],
+        "general": [],
     }
 
     def __init__(
@@ -191,7 +192,17 @@ class Cortex:
         context = self._build_context()
 
         # Execute
-        response = await module.handle(message, context)
+        try:
+            response = await module.handle(message, context)
+        except Exception as exc:
+            self._chronicle.log("cortex", "module_error", {
+                "module": target, "error": str(exc),
+            })
+            self._aegis.adjust_trust(target, -5, "unhandled exception")
+            return f"[Nexus] Module '{target}' encountered an error and could not complete your request."
+
+        # Record positive outcome with Aegis
+        self._aegis.adjust_trust(target, +1, "successful response")
 
         # Store the response in episodic memory
         self._engram.episodic.store(f"Nexus ({target}): {response}", source=f"module.{target}")

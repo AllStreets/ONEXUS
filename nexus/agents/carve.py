@@ -68,6 +68,111 @@ class CarveModule(AgentModule):
         }
 
     @staticmethod
+    def _extract_blocks(code: str) -> list[dict[str, Any]]:
+        """Split code into function/class blocks and return each with its name and start line."""
+        blocks: list[dict[str, Any]] = []
+        lines = code.split('\n')
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            m = re.match(r'^(\s*)(?:async\s+)?(?:def|class)\s+(\w+)', line)
+            if m:
+                indent = len(m.group(1))
+                name = m.group(2)
+                start = i
+                block_lines = [line]
+                i += 1
+                while i < len(lines):
+                    l = lines[i]
+                    if l.strip() == '':
+                        block_lines.append(l)
+                        i += 1
+                        continue
+                    cur_indent = len(l) - len(l.lstrip())
+                    if cur_indent <= indent and l.strip():
+                        break
+                    block_lines.append(l)
+                    i += 1
+                blocks.append({"name": name, "start": start + 1, "raw": block_lines})
+            else:
+                i += 1
+        return blocks
+
+    @staticmethod
+    def _normalize_block(raw_lines: list[str]) -> list[str]:
+        """Strip whitespace and remove comment lines from a block for structural comparison."""
+        normalized: list[str] = []
+        for line in raw_lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#'):
+                continue
+            # Remove inline comments
+            stripped = re.sub(r'\s*#.*$', '', stripped)
+            normalized.append(stripped)
+        return normalized
+
+    @staticmethod
+    def _block_similarity(a: list[str], b: list[str]) -> float:
+        """Return a similarity ratio between two normalized line lists (0.0 -- 1.0)."""
+        if not a or not b:
+            return 0.0
+        total = max(len(a), len(b))
+        matches = sum(1 for x, y in zip(a, b) if x == y)
+        return matches / total
+
+    @classmethod
+    def find_duplicate_blocks(cls, code: str) -> list[RefactorSuggestion]:
+        """Detect structurally identical or near-identical function/method blocks."""
+        suggestions: list[RefactorSuggestion] = []
+        blocks = cls._extract_blocks(code)
+        if len(blocks) < 2:
+            return suggestions
+
+        normalized = [(b, cls._normalize_block(b["raw"])) for b in blocks]
+        reported: set[frozenset[str]] = set()
+
+        for i in range(len(normalized)):
+            for j in range(i + 1, len(normalized)):
+                b1, n1 = normalized[i]
+                b2, n2 = normalized[j]
+                # Only compare blocks of similar length (within 20%)
+                if not n1 or not n2:
+                    continue
+                ratio = max(len(n1), len(n2)) / max(min(len(n1), len(n2)), 1)
+                if ratio > 1.5:
+                    continue
+                similarity = cls._block_similarity(n1, n2)
+                pair_key = frozenset([b1["name"], b2["name"]])
+                if similarity >= 1.0 and pair_key not in reported:
+                    reported.add(pair_key)
+                    suggestions.append(RefactorSuggestion(
+                        line=b1["start"],
+                        category="Duplicate Code",
+                        description=(
+                            f"'{b1['name']}' (line {b1['start']}) and "
+                            f"'{b2['name']}' (line {b2['start']}) are structurally identical -- "
+                            "extract shared logic into a single function"
+                        ),
+                        before=f"def {b1['name']}(...) / def {b2['name']}(...)",
+                        after=f"def {b1['name']}_shared(...) called by both",
+                    ))
+                elif similarity >= 0.8 and pair_key not in reported:
+                    reported.add(pair_key)
+                    suggestions.append(RefactorSuggestion(
+                        line=b1["start"],
+                        category="Near-Duplicate Code",
+                        description=(
+                            f"'{b1['name']}' (line {b1['start']}) and "
+                            f"'{b2['name']}' (line {b2['start']}) are {similarity:.0%} similar -- "
+                            "consider merging with a parameter to handle the differences"
+                        ),
+                        before=f"def {b1['name']}(...) / def {b2['name']}(...)",
+                        after=f"def {b1['name']}_unified(..., mode=...) handles both cases",
+                    ))
+
+        return suggestions
+
+    @staticmethod
     def find_suggestions(code: str) -> list[RefactorSuggestion]:
         """Find refactoring opportunities."""
         suggestions: list[RefactorSuggestion] = []
@@ -131,6 +236,9 @@ class CarveModule(AgentModule):
                         before="if x == 'a': ... elif x == 'b': ...",
                         after="dispatch = {'a': func_a, 'b': func_b}; dispatch[x]()",
                     ))
+
+        # Structural duplicate block detection
+        suggestions.extend(CarveModule.find_duplicate_blocks(code))
 
         return suggestions
 
