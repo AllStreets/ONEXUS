@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -44,10 +44,13 @@ _EDGE_CASES: dict[str, list[str]] = {
 }
 
 
-class AxiomModule(NexusModule):
+class AxiomModule(AgentModule):
     name = "axiom"
     description = "Test case generator -- creates unit test stubs, edge cases, and scenarios from code"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["carve"]
 
     def __init__(self):
         self._generated: list[dict[str, Any]] = []
@@ -173,7 +176,7 @@ class AxiomModule(NexusModule):
             lines.append("")
         return "\n".join(lines)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -233,3 +236,29 @@ class AxiomModule(NexusModule):
             lines.append(f"\n{test_code[:1000]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest test generation when functions are present but no tests are mentioned."""
+        has_functions = bool(self.extract_functions(message))
+        has_test_mention = any(kw in message for kw in ("test", "pytest", "unittest", "assert"))
+        if has_functions and not has_test_mention:
+            funcs = self.extract_functions(message)
+            count = len(funcs)
+            return f"{count} function(s) found with no test coverage mentioned -- generate test stubs now."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Flag cortex responses containing function definitions with no test mentions."""
+        response = event.get("data", {}).get("response", "")
+        funcs = self.extract_functions(response)
+        if funcs and not any(kw in response for kw in ("test", "pytest", "assert")):
+            names = ", ".join(f.name for f in funcs[:4])
+            return (
+                f"Cortex response defines {len(funcs)} function(s) ({names}) "
+                f"with no associated tests -- test generation recommended."
+            )
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route tested functions to carve to check complexity before finalising."""
+        return "carve: measure complexity of the functions being tested -- simplify any that score high before finalising"

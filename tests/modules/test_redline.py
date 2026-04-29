@@ -1,7 +1,7 @@
 # tests/modules/test_redline.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.redline import RedlineModule
+from nexus.agents.redline import RedlineModule
 
 
 @pytest.fixture

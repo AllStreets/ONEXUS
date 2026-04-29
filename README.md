@@ -16,9 +16,15 @@
 
 Most AI tools are wrappers around an API. You send text up, you get text back, someone else stores your data.
 
-NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
+NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence on demand. Everything runs local. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Fifty-one components are built -- five kernel components, five perception/intelligence modules, five action-layer modules with graduated trust, three advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, two network-layer modules, eight differentiation modules that dream, argue, introspect, and stress-test the system from the inside, a community module ecosystem for unlimited third-party extensions, and twenty-five narrow AI agents that solve focused problems using pattern-based analysis with optional LLM enhancement. Every agent runs locally, requires no cloud services, and fits within the 8GB RAM floor. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+The system has two kinds of intelligence: **modules** and **agents**.
+
+**Modules** are persistent intelligence components -- perception, reasoning, memory, social awareness. They run continuously, subscribe to system events, and maintain state across sessions. They are the nervous system. Twenty-six modules handle everything from anticipatory triggering (Oracle) to self-reflective awareness (Consciousness) to seven-framework ethical analysis (Ethical Prism).
+
+**Agents** are task specialists with **graduated sovereignty** -- the first AI architecture where agents start as passive, invocable skills and *earn* autonomy through demonstrated reliability. Every agent begins at trust level 0 (SKILL: user must invoke explicitly). As Aegis observes consistent, accurate results, trust rises through five tiers: SKILL, ADVISOR (proactive suggestions), MONITOR (background event watching), AUTONOMOUS (acts within boundaries without asking), and SOVEREIGN (coordinates with other agents independently). Trust is always revocable. One bad outcome and Aegis dials it back. Twenty-five agents cover code analysis, data pipelines, financial modeling, content generation, and infrastructure monitoring -- each works standalone using pattern-based analysis (no LLM required) and enhances with LLM when available.
+
+This is not prompt chaining, not tool use, not a wrapper around someone else's API. This is an operating system for intelligence with earned autonomy baked into every layer -- a design that has no direct precedent in open-source AI. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
@@ -100,7 +106,9 @@ Fifty-one components are built -- five kernel components, five perception/intell
   └────────────────────────────────────────────────────────┘
        │           │
   ┌────V───────────V───────────────────────────────────────┐
-  │              NARROW AI AGENTS (25)                     │
+  │         GRADUATED SOVEREIGNTY AGENTS (25)              │
+  │         Trust: SKILL > ADVISOR > MONITOR >             │
+  │                AUTONOMOUS > SOVEREIGN                  │
   │                                                        │
   │  Code ············ Vex  Arbiter  Carve  Remedy         │
   │                    Scaffold  Axiom  Rune               │
@@ -123,7 +131,7 @@ The kernel is five components, each with one job:
 | **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
 | **Aegis** | Graduated trust engine (0-100) with outcome-based adjustment and history | SQLite |
 
-Modules are loaded into this kernel. They don't know about each other. They communicate through Pulse. They're constrained by Aegis. They're remembered by Engram. They're accountable to Chronicle.
+Modules and agents are loaded into this kernel. They don't know about each other. They communicate through Pulse. They're constrained by Aegis. They're remembered by Engram. They're accountable to Chronicle. Agents additionally earn autonomy through graduated sovereignty -- Aegis tracks each agent's trust score independently and unlocks capabilities tier by tier.
 
 ---
 
@@ -223,9 +231,9 @@ Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `N
 
 Community modules live in `community/modules/<author>/<name>/` with a manifest, module code, tests, and README. See `community/CONTRIBUTING.md`.
 
-### Narrow AI Agents
+### Graduated Sovereignty Agents
 
-Twenty-five task-specialist agents. Each works standalone using pattern-based analysis (no LLM required) and enhances with LLM when available.
+Twenty-five task-specialist agents built on the AgentModule base class. Each starts as a passive skill (trust 0) and earns autonomy through demonstrated reliability. Every agent implements four tier methods: `analyze()` (always), `suggest()` (ADVISOR+), `monitor()` (MONITOR+), and `coordinate()` (SOVEREIGN). Each works standalone using pattern-based analysis (no LLM required) and enhances with LLM when available.
 
 #### Code & Development
 
@@ -337,7 +345,7 @@ Twenty-five task-specialist agents. Each works standalone using pattern-based an
     ├── Installer ······· install/uninstall + keyword wiring
     └── GitHub CI ······· PR validation + registry rebuild
 
-    NARROW AI AGENTS (Batch 8) ━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    GRADUATED SOVEREIGNTY AGENTS (Batch 8) ━━━━━━━━━━━━━━━ ██████████ BUILT
     ├── Scribe ·········· meeting transcript summarizer
     ├── Vex ············· static vulnerability scanner
     ├── Ledger ·········· financial transaction categorizer
@@ -510,32 +518,34 @@ nexus/
 │   ├── sandbox.py ······· hypothetical simulation
 │   ├── symbiosis.py ····· module pathway mapping
 │   ├── consciousness.py · self-reflective awareness
-│   ├── ethical_prism.py · seven-framework ethical analysis
-│   ├── scribe.py ········ meeting transcript summarizer
+│   └── ethical_prism.py · seven-framework ethical analysis
+├── agents/
+│   ├── base.py ·········· AgentModule + TrustTier (graduated sovereignty)
 │   ├── vex.py ··········· static vulnerability scanner
-│   ├── ledger.py ········ financial transaction categorizer
 │   ├── arbiter.py ······· AI code review agent
-│   ├── thesis.py ········ academic paper analyzer
-│   ├── scaffold.py ······ project boilerplate generator
-│   ├── remedy.py ········ error & stack trace diagnoser
-│   ├── compass.py ······· learning roadmap generator
-│   ├── tally.py ········· financial projection builder
-│   ├── redline.py ······· contract risk analyzer
 │   ├── carve.py ········· code refactoring assistant
-│   ├── vigil.py ········· log analysis agent
-│   ├── mandate.py ······· compliance gap analyzer
+│   ├── remedy.py ········ error & stack trace diagnoser
+│   ├── scaffold.py ······ project boilerplate generator
+│   ├── axiom.py ········· test case generator
+│   ├── rune.py ·········· regex builder & explainer
 │   ├── flux.py ·········· natural language to SQL
-│   ├── kindle.py ········ content expansion agent
+│   ├── vigil.py ········· log analysis agent
+│   ├── gauge.py ········· performance metrics analyzer
 │   ├── quarry.py ········ web data extraction
+│   ├── loom.py ·········· data pipeline builder
+│   ├── ledger.py ········ financial transaction categorizer
+│   ├── tally.py ········· financial projection builder
+│   ├── mint.py ·········· invoice generator
+│   ├── redline.py ······· contract risk analyzer
+│   ├── mandate.py ······· compliance gap analyzer
+│   ├── scribe.py ········ meeting transcript summarizer
+│   ├── kindle.py ········ content expansion agent
+│   ├── thesis.py ········ academic paper analyzer
+│   ├── compass.py ······· learning roadmap generator
 │   ├── bastion.py ······· API security scanner
 │   ├── dispatch.py ······ multi-channel notification router
-│   ├── gauge.py ········· performance metrics analyzer
-│   ├── mnemonic.py ······ knowledge base agent
 │   ├── sentinel.py ······ scheduled task monitor
-│   ├── mint.py ·········· invoice generator
-│   ├── axiom.py ········· test case generator
-│   ├── loom.py ·········· data pipeline builder
-│   └── rune.py ·········· regex builder & explainer
+│   └── mnemonic.py ······ knowledge base agent
 └── community/
     ├── validator.py ····· module validation engine
     ├── registry.py ······ searchable module catalog
@@ -550,7 +560,7 @@ nexus/
 
 **Data sovereignty.** Two modules (Collective and Herald) can optionally connect to other NEXUS instances peer-to-peer. They are blocked by default. Enabling them requires explicit `nexus allow --network <module>` consent. Even then: Collective shares only noise-injected model aggregates, never raw data. Herald logs every outbound message to Chronicle. There is no central server collecting anything from anyone. Every machine owns its own data.
 
-**Earned autonomy.** Modules start at trust level 0. Every action outcome adjusts trust -- positive results earn latitude, failures revoke it. This isn't a binary switch. It's a continuous score, per module, per domain, enforced on every call by Aegis and logged permanently by Chronicle.
+**Earned autonomy.** Every component starts at trust level 0. Every action outcome adjusts trust -- positive results earn latitude, failures revoke it. This isn't a binary switch. It's a continuous score, per module, per domain, enforced on every call by Aegis and logged permanently by Chronicle. Agents take this further with graduated sovereignty: five trust tiers (SKILL, ADVISOR, MONITOR, AUTONOMOUS, SOVEREIGN) that unlock progressively more capable behavior as the agent proves itself reliable.
 
 **Microkernel, not monolith.** The kernel is ~500 lines across five files. Modules are loaded and unloaded without restarting. If a module misbehaves, deny it and move on.
 

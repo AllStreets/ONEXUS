@@ -1,13 +1,13 @@
 ---
-title: Modules
-description: NexusModule base class, lifecycle hooks, context object, and how all 51 modules are structured.
+title: Modules & Agents
+description: NexusModule and AgentModule base classes, lifecycle hooks, context object, graduated sovereignty, and how all 51 components are structured.
 sidebar:
   order: 3
 ---
 
 ## NexusModule Base Class
 
-Every module in NEXUS — all 51 of them — is a subclass of `NexusModule`. The interface is minimal by design.
+NEXUS has two kinds of intelligence: 26 modules (persistent intelligence components) and 25 agents (task specialists with graduated sovereignty). Both share a common base. Every module is a subclass of `NexusModule`. The interface is minimal by design.
 
 ```python
 from nexus.module import NexusModule
@@ -74,22 +74,71 @@ Six modules subscribe to `cortex.response` Pulse events in their `on_load()` hoo
 
 These modules require no manual data entry. They build their internal stores passively from system activity, becoming more useful the longer NEXUS runs.
 
-## Module Tiers
+## AgentModule Base Class
 
-The 51 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
+The 25 agents extend `NexusModule` through `AgentModule`, which adds graduated sovereignty. Agents start as passive skills and earn autonomy through demonstrated reliability.
 
-| Tier | Modules | Role |
-|------|---------|------|
-| Perception | Oracle, Sentry | Observe the environment and detect anomalies |
-| Intelligence | Atlas, Prism, Cipher | Analyze, reason, and decode using LLM |
-| Action | Wraith, Echo, Sigil, Herald, Weave | Execute tasks, remember, sign, notify, orchestrate |
-| Advanced | Specter, Serendipity, Forge | Stress-test, discover, negotiate |
-| Orchestration | Council, Autonomic | Multi-agent deliberation, earned autonomous action |
-| Network | Collective, Legacy | Federated learning (`--network`), knowledge crystallization |
-| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism | Self-reflection, stress-testing, ethical analysis, pattern discovery |
-| Agents | Scribe, Vex, Ledger, Arbiter, Thesis, Scaffold, Remedy, Compass, Tally, Redline, Carve, Vigil, Mandate, Flux, Kindle, Quarry, Bastion, Dispatch, Gauge, Mnemonic, Sentinel, Mint, Axiom, Loom, Rune | 25 narrow AI task specialists -- pattern-based + LLM-enhanced |
-| Community | User-contributed | Third-party modules via `community/modules/` |
-| Core | General | Catch-all fallback for unrouted messages |
+```python
+from nexus.agents.base import AgentModule, TrustTier
+
+class MyAgent(AgentModule):
+    name = "my_agent"
+    description = "What this agent does."
+    version = "1.0.0"
+
+    watch_events = ["relevant.event"]        # Pulse topics at MONITOR+
+    coordination_targets = ["other_agent"]   # Agents to coordinate with at SOVEREIGN
+
+    async def analyze(self, message: str, context: dict) -> str:
+        """Core logic. Runs at every trust level."""
+        return f"Analysis: {message}"
+
+    async def suggest(self, message: str, context: dict) -> str:
+        """Proactive suggestions. ADVISOR+ trust."""
+        return "You might also want to check..."
+
+    async def monitor(self, event: dict, context: dict) -> str | None:
+        """Background event watching. MONITOR+ trust."""
+        return "Detected anomaly in event stream"
+
+    async def coordinate(self, analysis_result: str, context: dict) -> str:
+        """Cross-agent routing. SOVEREIGN trust only."""
+        cortex = context.get("cortex")
+        return await cortex.route("other_agent", analysis_result, context)
+```
+
+### Trust Tiers
+
+| Tier | Score | Behavior |
+|------|-------|----------|
+| **SKILL** | 0-24 | User invokes explicitly. No initiative. |
+| **ADVISOR** | 25-49 | Suggests actions when relevant context detected. |
+| **MONITOR** | 50-74 | Proactively watches Pulse events and reports findings. |
+| **AUTONOMOUS** | 75-99 | Acts within defined boundaries without asking. |
+| **SOVEREIGN** | 100 | Coordinates with other agents independently. |
+
+Trust is tracked by Aegis and can be revoked at any time. The `AgentModule.handle()` method routes through these tiers automatically -- agents only implement the tier-specific methods they support.
+
+## Component Tiers
+
+The 51 components are grouped by functional tier. Modules use `NexusModule`, agents use `AgentModule`.
+
+| Tier | Components | Interface |
+|------|-----------|-----------|
+| Perception | Oracle, Sentry | NexusModule |
+| Intelligence | Atlas, Prism, Cipher | NexusModule |
+| Action | Wraith, Echo, Sigil, Herald, Weave | NexusModule |
+| Advanced | Specter, Serendipity, Forge | NexusModule |
+| Orchestration | Council, Autonomic | NexusModule |
+| Network | Collective, Legacy | NexusModule |
+| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism | NexusModule |
+| Agents (Code) | Vex, Arbiter, Carve, Remedy, Scaffold, Axiom, Rune | AgentModule |
+| Agents (Data) | Flux, Vigil, Gauge, Quarry, Loom | AgentModule |
+| Agents (Business) | Ledger, Tally, Mint, Redline, Mandate | AgentModule |
+| Agents (Content) | Scribe, Kindle, Thesis, Compass | AgentModule |
+| Agents (Ops) | Bastion, Dispatch, Sentinel, Mnemonic | AgentModule |
+| Community | User-contributed | NexusModule |
+| Core | General | NexusModule |
 
 ## Minimal Module Example
 

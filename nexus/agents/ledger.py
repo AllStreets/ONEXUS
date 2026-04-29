@@ -15,7 +15,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -58,10 +58,13 @@ _CATEGORY_RULES: dict[str, list[str]] = {
 }
 
 
-class LedgerModule(NexusModule):
+class LedgerModule(AgentModule):
     name = "ledger"
     description = "Financial transaction categorizer — parses CSV statements, categorizes spending, flags anomalies"
     version = "0.1.0"
+
+    watch_events: list = []
+    coordination_targets: list = ["tally", "mandate"]
 
     def __init__(self):
         self._transactions: list[Transaction] = []
@@ -181,7 +184,7 @@ class LedgerModule(NexusModule):
             summary[t.category] += t.amount
         return dict(sorted(summary.items(), key=lambda x: x[1]))
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -254,3 +257,31 @@ class LedgerModule(NexusModule):
             lines.append(f"\n  {uncat} transaction(s) could not be auto-categorized.")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        keywords = ("money", "spending", "transaction", "expense", "purchase", "charge", "payment")
+        if any(kw in message.lower() for kw in keywords):
+            return "Run ledger analysis to categorize transactions and flag anomalies."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+        parts: list[str] = []
+        try:
+            tally_result = await cortex.route("tally", analysis_result, context)
+            if tally_result:
+                parts.append(f"[tally] {tally_result}")
+        except Exception:
+            pass
+        try:
+            mandate_result = await cortex.route("mandate", analysis_result, context)
+            if mandate_result:
+                parts.append(f"[mandate] {mandate_result}")
+        except Exception:
+            pass
+        return "\n".join(parts)

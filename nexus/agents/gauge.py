@@ -12,7 +12,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -43,10 +43,13 @@ _THRESHOLDS: dict[str, dict[str, float]] = {
 }
 
 
-class GaugeModule(NexusModule):
+class GaugeModule(AgentModule):
     name = "gauge"
     description = "Performance analyzer -- identifies bottlenecks, analyzes benchmarks, profiles resource usage"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["vigil"]
 
     def __init__(self):
         self._analyses: list[dict[str, Any]] = []
@@ -167,7 +170,7 @@ class GaugeModule(NexusModule):
             }
         return summary
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -235,3 +238,26 @@ class GaugeModule(NexusModule):
                 pass
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        if re.search(r'\b(slow|latency|performance|bottleneck|timeout|throughput|benchmark)\b', message, re.IGNORECASE):
+            return "Provide metrics with units (ms, %, MB, rps) and Gauge will identify bottlenecks."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        response = event.get("data", {}).get("response", "")
+        if re.search(r'\b(\d+\s*(?:ms|s|us|ns|%|MB|GB|rps))\b', response, re.IGNORECASE):
+            return f"[Gauge] Performance metrics detected in cortex response: {response[:200]}"
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+        if "bottleneck" in analysis_result.lower() or "critical" in analysis_result.lower():
+            try:
+                vigil_result = await cortex.route("vigil", analysis_result, context)
+                return f"[vigil] {vigil_result[:500]}"
+            except Exception:
+                pass
+        return ""

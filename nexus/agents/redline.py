@@ -14,7 +14,7 @@ Not legal advice. First-pass triage to flag issues for human review.
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -106,15 +106,18 @@ _CLAUSE_PATTERNS: list[tuple[str, str, str, str, str]] = [
 ]
 
 
-class RedlineModule(NexusModule):
+class RedlineModule(AgentModule):
     name = "redline"
     description = "Contract risk analyzer -- flags risky clauses, missing protections, and ambiguous language"
     version = "0.1.0"
 
+    watch_events: list = []
+    coordination_targets: list = ["mandate"]
+
     def __init__(self):
         self._reviews: list[dict[str, Any]] = []
 
-    def analyze(self, text: str) -> list[ClauseFinding]:
+    def scan_clauses(self, text: str) -> list[ClauseFinding]:
         """Scan contract text for risky clause patterns."""
         findings: list[ClauseFinding] = []
 
@@ -164,12 +167,12 @@ class RedlineModule(NexusModule):
         score = sum(weights.get(f.severity, 0) for f in findings)
         return min(score, 100)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
         # Pattern-based analysis
-        findings = self.analyze(message)
+        findings = self.scan_clauses(message)
         score = self.risk_score(findings)
 
         # LLM deep analysis
@@ -246,3 +249,24 @@ class RedlineModule(NexusModule):
             lines.append(f"  {llm_analysis[:1500]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        keywords = ("agreement", "contract", "terms", "clause", "nda", "license", "agreement")
+        if any(kw in message.lower() for kw in keywords):
+            return "Run redline analysis to flag risky clauses and missing protections in this document."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+        try:
+            mandate_result = await cortex.route("mandate", analysis_result, context)
+            if mandate_result:
+                return f"[mandate] {mandate_result}"
+        except Exception:
+            pass
+        return ""

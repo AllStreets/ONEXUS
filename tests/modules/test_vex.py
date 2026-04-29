@@ -1,7 +1,7 @@
 # tests/modules/test_vex.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.vex import VexModule
+from nexus.agents.vex import VexModule
 
 
 @pytest.fixture

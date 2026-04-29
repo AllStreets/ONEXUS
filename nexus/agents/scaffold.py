@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -65,10 +65,13 @@ _TEMPLATES: dict[str, dict[str, Any]] = {
 }
 
 
-class ScaffoldModule(NexusModule):
+class ScaffoldModule(AgentModule):
     name = "scaffold"
     description = "Project boilerplate generator -- creates complete project structures from natural language descriptions"
     version = "0.1.0"
+
+    watch_events: list[str] = []
+    coordination_targets: list[str] = ["axiom"]
 
     def __init__(self):
         self._generated: list[dict[str, Any]] = []
@@ -116,7 +119,7 @@ class ScaffoldModule(NexusModule):
     def list_templates(self) -> list[str]:
         return list(_TEMPLATES.keys())
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -195,3 +198,20 @@ class ScaffoldModule(NexusModule):
                 lines.append("  | ...")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest scaffolding when a new project is being discussed."""
+        new_project_indicators = ("new project", "start a", "create a", "build a", "scaffold", "boilerplate", "template")
+        msg_lower = message.lower()
+        if any(indicator in msg_lower for indicator in new_project_indicators):
+            template = self.detect_template(message)
+            return f"New project detected -- scaffold a {template} project structure to get started fast."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Scaffold has no background monitoring -- passive agent."""
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route scaffolded project to axiom for initial test stubs."""
+        return "axiom: generate test stubs for the scaffolded project entry points"

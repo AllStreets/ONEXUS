@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -23,10 +23,13 @@ class MeetingRecord:
     participants: list[str]
 
 
-class ScribeModule(NexusModule):
+class ScribeModule(AgentModule):
     name = "scribe"
     description = "Meeting transcript summarizer — extracts action items, decisions, and key discussion points"
     version = "0.1.0"
+
+    watch_events: list[str] = ["meeting.started", "transcript.uploaded"]
+    coordination_targets: list[str] = ["kindle", "mnemonic"]
 
     def __init__(self):
         self._records: list[MeetingRecord] = []
@@ -71,7 +74,7 @@ class ScribeModule(NexusModule):
     def list_records(self) -> list[MeetingRecord]:
         return list(self._records)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
         pulse = context.get("pulse")
@@ -176,3 +179,75 @@ class ScribeModule(NexusModule):
                 lines.append(f"    {i}. {kp}")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # AgentModule tier methods
+    # ------------------------------------------------------------------
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest summarization when transcript-like text is detected."""
+        # Look for speaker-turn patterns or common meeting keywords
+        speaker_turns = len(re.findall(r'^[A-Z][a-zA-Z]+\s*[:\-]', message, re.MULTILINE))
+        meeting_words = sum(1 for w in ("agenda", "minutes", "attendees", "action item",
+                                        "meeting", "discussion", "recap")
+                            if w in message.lower())
+        if speaker_turns >= 2 or meeting_words >= 2:
+            return (
+                "This looks like meeting content. Run Scribe to extract action items, "
+                "decisions, and a structured summary."
+            )
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for new transcripts and meeting start events."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "meeting.started":
+            meeting_name = payload.get("name", "unnamed meeting")
+            return f"Meeting started: '{meeting_name}'. Ready to summarize when transcript is available."
+
+        if topic == "transcript.uploaded":
+            source = payload.get("source", "unknown")
+            size = payload.get("size_words", 0)
+            return (
+                f"Transcript uploaded from {source} ({size} words). "
+                "Scribe can extract action items and decisions."
+            )
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route summaries to kindle for expansion or mnemonic for storage."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        parts: list[str] = []
+
+        # Send to mnemonic for long-term storage
+        try:
+            mem_result = await cortex.route(
+                "mnemonic",
+                f"Store meeting summary:\n{analysis_result}",
+                context,
+            )
+            if mem_result:
+                parts.append(f"[mnemonic] {mem_result}")
+        except Exception:
+            pass
+
+        # Offer expanded write-up via kindle if action items were found
+        if "Action Items" in analysis_result:
+            try:
+                kindle_result = await cortex.route(
+                    "kindle",
+                    f"Expand this meeting summary into a polished report:\n{analysis_result}",
+                    context,
+                )
+                if kindle_result:
+                    parts.append(f"[kindle] {kindle_result}")
+            except Exception:
+                pass
+
+        return "\n".join(parts)

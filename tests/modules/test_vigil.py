@@ -1,7 +1,7 @@
 # tests/modules/test_vigil.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.vigil import VigilModule, LogEntry, Anomaly
+from nexus.agents.vigil import VigilModule, LogEntry, Anomaly
 
 
 @pytest.fixture

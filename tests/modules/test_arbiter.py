@@ -1,7 +1,7 @@
 # tests/modules/test_arbiter.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.arbiter import ArbiterModule
+from nexus.agents.arbiter import ArbiterModule
 
 
 @pytest.fixture

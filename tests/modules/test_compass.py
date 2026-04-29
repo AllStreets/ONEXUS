@@ -1,7 +1,7 @@
 # tests/modules/test_compass.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.compass import CompassModule
+from nexus.agents.compass import CompassModule
 
 
 @pytest.fixture

@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -23,10 +23,13 @@ class RefactorSuggestion:
     after: str
 
 
-class CarveModule(NexusModule):
+class CarveModule(AgentModule):
     name = "carve"
     description = "Code refactoring assistant -- extracts functions, reduces complexity, improves readability"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["arbiter", "axiom"]
 
     def __init__(self):
         self._history: list[dict[str, Any]] = []
@@ -131,7 +134,7 @@ class CarveModule(NexusModule):
 
         return suggestions
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -193,3 +196,35 @@ class CarveModule(NexusModule):
             lines.append(f"  {llm_refactored[:2000]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest refactoring when complexity metrics look high."""
+        metrics = self.measure_complexity(message)
+        if metrics["complexity_rating"] == "high":
+            return (
+                f"High complexity detected ({metrics['branches']} branches, "
+                f"nesting {metrics['max_nesting']}) -- refactoring could improve maintainability."
+            )
+        if metrics["complexity_rating"] == "medium" and metrics["functions"] > 0:
+            return "Medium complexity code -- consider extracting helpers to reduce nesting and improve readability."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Flag cortex responses that contain high-complexity code."""
+        response = event.get("data", {}).get("response", "")
+        if "```" in response or any(p in response for p in ("def ", "class ", "function ")):
+            metrics = self.measure_complexity(response)
+            if metrics["complexity_rating"] == "high":
+                return (
+                    f"Cortex response contains high-complexity code "
+                    f"({metrics['branches']} branches) -- refactoring recommended."
+                )
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route refactored code to arbiter for quality review and axiom for test generation."""
+        parts = [
+            "arbiter: review refactored code for correctness and style before committing",
+            "axiom: generate test stubs for extracted functions to maintain coverage",
+        ]
+        return "\n".join(parts)

@@ -81,3 +81,41 @@ nexus allow atlas
 ```
 
 Trust scores survive `nexus deny` / `nexus allow` cycles — revoking and re-enabling a module does not erase its history. To fully reset a module's trust, delete its record from `aegis.db`.
+
+## Graduated Sovereignty for Agents
+
+Agents take earned autonomy further with **graduated sovereignty** -- five discrete trust tiers that unlock progressively more capable behavior as an agent proves itself reliable.
+
+```
+Trust Score    Tier          Unlocked Behavior
+───────────    ──────────    ──────────────────────────────────────
+  0-24         SKILL         User invokes explicitly. No initiative.
+ 25-49         ADVISOR       Suggests actions when relevant context detected.
+ 50-74         MONITOR       Proactively watches Pulse events, reports findings.
+ 75-99         AUTONOMOUS    Acts within defined boundaries without asking.
+  100          SOVEREIGN     Coordinates with other agents independently.
+```
+
+Every agent implements four tier methods:
+
+| Method | Trust Level | Purpose |
+|--------|------------|---------|
+| `analyze()` | All | Core logic. Runs at every trust level. |
+| `suggest()` | ADVISOR+ | Proactive suggestions appended to analysis results. |
+| `monitor()` | MONITOR+ | Background event watching via Pulse subscriptions. |
+| `coordinate()` | SOVEREIGN | Cross-agent routing for combined analysis. |
+
+### How Tiers Unlock
+
+When Cortex routes a message to an agent, `AgentModule.handle()` checks the agent's current Aegis trust score and activates the appropriate tier methods:
+
+1. `analyze()` always runs -- this is the core agent logic
+2. If trust >= 25, `suggest()` runs and appends proactive suggestions
+3. If trust >= 75, the action is logged to Chronicle as an autonomous event
+4. If trust >= 100 and the agent has `coordination_targets`, `coordinate()` routes results to other agents
+
+At MONITOR+ trust, agents also subscribe to Pulse events listed in their `watch_events` attribute. When those events fire, the agent's `monitor()` method runs in the background, and findings are published back to Pulse.
+
+### Trust is Always Revocable
+
+A single negative outcome can drop an agent's trust below a tier threshold, immediately revoking that tier's capabilities. An agent at AUTONOMOUS (trust 80) that causes an error might drop to ADVISOR (trust 35) -- it can still suggest, but it can no longer act independently. This is automatic, enforced by Aegis on every call, and logged permanently by Chronicle.

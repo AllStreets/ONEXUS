@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -62,10 +62,13 @@ _VULNERABILITY_PATTERNS: list[tuple[str, str, str, str]] = [
 ]
 
 
-class VexModule(NexusModule):
+class VexModule(AgentModule):
     name = "vex"
     description = "Static code vulnerability scanner — identifies OWASP Top 10 and security anti-patterns"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["remedy", "arbiter"]
 
     def __init__(self):
         self._scan_history: list[dict[str, Any]] = []
@@ -103,7 +106,7 @@ class VexModule(NexusModule):
             counts[f.severity] = counts.get(f.severity, 0) + 1
         return counts
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -168,3 +171,33 @@ class VexModule(NexusModule):
             lines.append(f"  {llm_findings[:1000]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest a security scan when code patterns are present."""
+        code_indicators = ("def ", "class ", "import ", "=>", "function ", "eval(", "exec(", "SELECT ")
+        if any(indicator in message for indicator in code_indicators):
+            return "Code detected -- run a security scan to check for OWASP Top 10 vulnerabilities."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Flag cortex responses that contain code snippets for scanning."""
+        response = event.get("data", {}).get("response", "")
+        code_block = "```" in response or any(
+            p in response for p in ("def ", "class ", "import ", "eval(", "exec(", "SELECT ")
+        )
+        if code_block:
+            findings = self.scan(response)
+            high = sum(1 for f in findings if f.severity == "HIGH")
+            if high > 0:
+                return f"Cortex response contains code with {high} HIGH-severity finding(s) -- review recommended."
+            if findings:
+                return f"Cortex response contains code with {len(findings)} potential issue(s) flagged."
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route findings to remedy for fix suggestions and arbiter for code review."""
+        parts: list[str] = []
+        if "HIGH" in analysis_result:
+            parts.append("remedy: escalate high-severity findings for targeted fix suggestions")
+        parts.append("arbiter: cross-check security findings against code quality and logic review")
+        return "\n".join(parts) if parts else ""

@@ -1,7 +1,7 @@
 # tests/modules/test_ledger.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.ledger import LedgerModule, Transaction
+from nexus.agents.ledger import LedgerModule, Transaction
 
 
 @pytest.fixture

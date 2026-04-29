@@ -1,7 +1,7 @@
 # tests/modules/test_kindle.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.kindle import KindleModule, ContentPiece
+from nexus.agents.kindle import KindleModule, ContentPiece
 
 
 @pytest.fixture

@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -66,10 +66,13 @@ _SKILL_TEMPLATES: dict[str, dict[str, Any]] = {
 }
 
 
-class CompassModule(NexusModule):
+class CompassModule(AgentModule):
     name = "compass"
     description = "Learning roadmap generator -- creates personalized study plans with milestones and resources"
     version = "0.1.0"
+
+    watch_events: list[str] = ["skill.gap_detected", "learning.request"]
+    coordination_targets: list[str] = ["thesis", "mnemonic"]
 
     def __init__(self):
         self._roadmaps: list[Roadmap] = []
@@ -123,7 +126,7 @@ class CompassModule(NexusModule):
         ]
         return Roadmap(skill=skill, level=level, total_weeks=12, milestones=milestones)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -187,3 +190,86 @@ class CompassModule(NexusModule):
             lines.append("")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # AgentModule tier methods
+    # ------------------------------------------------------------------
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest a learning path when a skill gap is detected in the message."""
+        msg_lower = message.lower()
+        gap_signals = [
+            "don't know", "don't understand", "struggling with", "never learned",
+            "need to learn", "how do i", "where do i start", "skill gap",
+            "weak in", "unfamiliar with",
+        ]
+        matched = [s for s in gap_signals if s in msg_lower]
+        if matched:
+            skill = self.detect_skill(message)
+            level = self.detect_level(message)
+            return (
+                f"Detected a possible skill gap around '{skill}' ({level} level). "
+                "Compass can generate a structured roadmap with milestones and checkpoints."
+            )
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for skill gap detections and explicit learning requests."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "skill.gap_detected":
+            skill = payload.get("skill", "unknown")
+            user = payload.get("user", "user")
+            return (
+                f"Skill gap detected for {user}: '{skill}'. "
+                "Compass can generate a personalized learning roadmap."
+            )
+
+        if topic == "learning.request":
+            skill = payload.get("skill", "unknown")
+            level = payload.get("level", "beginner")
+            return (
+                f"Learning request received: {skill} ({level}). "
+                "Compass will build a milestone-based roadmap."
+            )
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route to thesis for academic resources or mnemonic for storing progress."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        parts: list[str] = []
+
+        # Ask thesis for relevant academic papers and research context
+        skill_line = next(
+            (line for line in analysis_result.split("\n") if "Roadmap:" in line), ""
+        )
+        skill_hint = skill_line.replace("[Compass] Learning Roadmap:", "").strip() or "the skill"
+        try:
+            thesis_result = await cortex.route(
+                "thesis",
+                f"Find academic papers and research relevant to learning {skill_hint}.",
+                context,
+            )
+            if thesis_result:
+                parts.append(f"[thesis] {thesis_result}")
+        except Exception:
+            pass
+
+        # Store the roadmap and progress baseline in mnemonic
+        try:
+            mem_result = await cortex.route(
+                "mnemonic",
+                f"Store learning roadmap and progress baseline:\n{analysis_result}",
+                context,
+            )
+            if mem_result:
+                parts.append(f"[mnemonic] {mem_result}")
+        except Exception:
+            pass
+
+        return "\n".join(parts)

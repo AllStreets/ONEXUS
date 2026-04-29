@@ -12,7 +12,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -25,10 +25,13 @@ class PaperNote:
     tags: list[str]
 
 
-class ThesisModule(NexusModule):
+class ThesisModule(AgentModule):
     name = "thesis"
     description = "Academic paper analyzer — extracts claims, methodology, limitations, and generates literature review notes"
     version = "0.1.0"
+
+    watch_events: list[str] = ["paper.uploaded", "research.query"]
+    coordination_targets: list[str] = ["kindle", "compass"]
 
     def __init__(self):
         self._papers: list[PaperNote] = []
@@ -132,7 +135,7 @@ class ThesisModule(NexusModule):
 
         return "\n".join(lines)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -253,3 +256,82 @@ class ThesisModule(NexusModule):
             lines.append("  Run 'compare papers' or 'literature review' for cross-paper analysis.")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # AgentModule tier methods
+    # ------------------------------------------------------------------
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest a literature review when enough papers have been collected."""
+        paper_count = len(self._papers)
+        if paper_count >= 3:
+            gaps = self.find_gaps()
+            gap_hint = f" {len(gaps)} potential research gap(s) detected." if gaps else ""
+            return (
+                f"{paper_count} papers in the collection.{gap_hint} "
+                "Run 'literature review' or 'compare papers' for a cross-paper synthesis."
+            )
+        if paper_count == 2:
+            return (
+                "2 papers collected. Add one more and Thesis can generate a comparative "
+                "literature review with gap analysis."
+            )
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for new papers being uploaded or research queries arriving."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "paper.uploaded":
+            title = payload.get("title", "untitled")
+            source = payload.get("source", "unknown")
+            return (
+                f"New paper uploaded: '{title}' from {source}. "
+                "Thesis can analyze claims, methodology, and limitations."
+            )
+
+        if topic == "research.query":
+            query = payload.get("query", "")
+            if query:
+                return (
+                    f"Research query received: '{query[:80]}'. "
+                    "Thesis can scan the paper collection for relevant findings."
+                )
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route findings to kindle for writeup or compass for learning paths."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        parts: list[str] = []
+
+        # Send to kindle for a polished literature review write-up
+        try:
+            kindle_result = await cortex.route(
+                "kindle",
+                f"Expand these academic findings into a polished literature review section:\n{analysis_result}",
+                context,
+            )
+            if kindle_result:
+                parts.append(f"[kindle] {kindle_result}")
+        except Exception:
+            pass
+
+        # If gaps were identified, ask compass to build a learning path
+        if "gap" in analysis_result.lower() or "limitation" in analysis_result.lower():
+            try:
+                compass_result = await cortex.route(
+                    "compass",
+                    f"Build a learning path to address these research gaps:\n{analysis_result}",
+                    context,
+                )
+                if compass_result:
+                    parts.append(f"[compass] {compass_result}")
+            except Exception:
+                pass
+
+        return "\n".join(parts)

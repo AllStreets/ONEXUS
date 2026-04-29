@@ -1,7 +1,7 @@
 # tests/modules/test_mint.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.mint import MintModule, LineItem, Invoice
+from nexus.agents.mint import MintModule, LineItem, Invoice
 
 
 @pytest.fixture

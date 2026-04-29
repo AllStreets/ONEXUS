@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -59,10 +59,13 @@ _ELEMENT_EXPLANATIONS: dict[str, str] = {
 }
 
 
-class RuneModule(NexusModule):
+class RuneModule(AgentModule):
     name = "rune"
     description = "Regex builder -- constructs, explains, and tests regular expressions"
     version = "0.1.0"
+
+    watch_events: list[str] = []
+    coordination_targets: list[str] = []
 
     def __init__(self):
         self._history: list[RegexResult] = []
@@ -188,7 +191,7 @@ class RuneModule(NexusModule):
             return "explain"
         return "build"
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -298,3 +301,19 @@ class RuneModule(NexusModule):
                 pass
 
         return "[Rune] Describe what you want to match, or provide a pattern to explain."
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest building a regex when the message describes a text pattern to match."""
+        pattern_indicators = ("match", "extract", "parse", "find all", "validate", "pattern for", "regex for")
+        msg_lower = message.lower()
+        if any(indicator in msg_lower for indicator in pattern_indicators):
+            return "Text pattern described -- build a regex to match it precisely."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Rune has no background monitoring -- passive agent."""
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Rune is standalone -- no cross-agent coordination."""
+        return ""

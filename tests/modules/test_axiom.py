@@ -1,7 +1,7 @@
 # tests/modules/test_axiom.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.axiom import AxiomModule, FunctionSignature, GeneratedTest
+from nexus.agents.axiom import AxiomModule, FunctionSignature, GeneratedTest
 
 
 @pytest.fixture

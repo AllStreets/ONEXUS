@@ -1,7 +1,7 @@
 # tests/modules/test_remedy.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.remedy import RemedyModule
+from nexus.agents.remedy import RemedyModule
 
 
 @pytest.fixture

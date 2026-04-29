@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -47,10 +47,13 @@ _CRON_SPECIALS: dict[str, str] = {
 }
 
 
-class SentinelModule(NexusModule):
+class SentinelModule(AgentModule):
     name = "sentinel"
     description = "Scheduled task monitor -- tracks cron jobs, detects missed runs, alerts on failures"
     version = "0.1.0"
+
+    watch_events: list[str] = ["task.completed", "task.failed", "cron.missed"]
+    coordination_targets: list[str] = ["dispatch", "vigil"]
 
     def __init__(self):
         self._tasks: list[ScheduledTask] = []
@@ -164,7 +167,7 @@ class SentinelModule(NexusModule):
         self._reports.append(report)
         return report
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -258,6 +261,108 @@ class SentinelModule(NexusModule):
             try:
                 analysis = await llm.complete(prompt)
                 lines.append(f"\n  -- Diagnosis --\n  {analysis[:1000]}")
+            except Exception:
+                pass
+
+        return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest monitoring for untracked scheduled tasks detected in context."""
+        msg_lower = message.lower()
+        suggestions: list[str] = []
+
+        # Detect cron-adjacent keywords that haven't been registered
+        unregistered_hints = [
+            kw for kw in ("backup", "cleanup", "sync", "export", "import", "report", "digest", "sweep")
+            if kw in msg_lower
+        ]
+        registered_names = {t.name.lower() for t in self._tasks}
+        unregistered = [h for h in unregistered_hints if h not in registered_names]
+
+        if unregistered:
+            suggestions.append(
+                f"Detected potential scheduled operations ({', '.join(unregistered)}) "
+                "not registered with Sentinel. Add them via register_task() for missed-run detection."
+            )
+
+        if self._tasks:
+            problem_tasks = [t for t in self._tasks if t.status in ("failed", "missed", "late")]
+            if problem_tasks:
+                suggestions.append(
+                    f"{len(problem_tasks)} task(s) in degraded state "
+                    f"({', '.join(t.name for t in problem_tasks[:3])}). "
+                    "Review logs and consider adjusting schedules or alerting thresholds."
+                )
+
+        return " ".join(suggestions)
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for task completion, failure, and missed cron events."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+        task_name = payload.get("task") or payload.get("name", "unknown")
+
+        if topic == "task.completed":
+            duration = payload.get("duration_ms")
+            duration_str = f" in {duration}ms" if duration else ""
+            self.register_task(
+                name=task_name, schedule="",
+                last_run=payload.get("timestamp", ""),
+                status="ok",
+                duration_ms=int(duration) if duration else 0,
+            )
+            return f"Task '{task_name}' completed{duration_str}. Sentinel health record updated."
+
+        if topic == "task.failed":
+            error = payload.get("error") or payload.get("reason", "")
+            error_str = f": {error}" if error else ""
+            self.register_task(
+                name=task_name, schedule="",
+                last_run=payload.get("timestamp", ""),
+                status="failed",
+            )
+            return f"Task '{task_name}' FAILED{error_str}. Escalating for review."
+
+        if topic == "cron.missed":
+            schedule = payload.get("schedule", "")
+            schedule_str = f" (schedule: {schedule})" if schedule else ""
+            self.register_task(
+                name=task_name, schedule=schedule,
+                last_run="",
+                status="missed",
+            )
+            return f"Cron '{task_name}'{schedule_str} was MISSED. Sentinel flagged for alert routing."
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route failure alerts to dispatch and log analysis to vigil."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        lines: list[str] = []
+        result_lower = analysis_result.lower()
+        has_failures = any(kw in result_lower for kw in ("failed", "missed", "x ", ": failed", ": missed"))
+
+        if has_failures:
+            # Alert dispatch to notify stakeholders
+            try:
+                alert_msg = (
+                    f"TASK ALERT from Sentinel -- failures or missed runs detected.\n"
+                    f"{analysis_result[:500]}"
+                )
+                dispatch_result = await cortex.send("dispatch", alert_msg, context)
+                if dispatch_result:
+                    lines.append(f"[dispatch] {dispatch_result}")
+            except Exception:
+                pass
+
+            # Send to vigil for log correlation and pattern analysis
+            try:
+                vigil_result = await cortex.send("vigil", analysis_result, context)
+                if vigil_result:
+                    lines.append(f"[vigil] {vigil_result}")
             except Exception:
                 pass
 

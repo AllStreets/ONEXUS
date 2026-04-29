@@ -1,7 +1,7 @@
 # tests/modules/test_carve.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.carve import CarveModule, RefactorSuggestion
+from nexus.agents.carve import CarveModule, RefactorSuggestion
 
 
 @pytest.fixture

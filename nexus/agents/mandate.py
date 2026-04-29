@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -70,10 +70,13 @@ _FRAMEWORKS: dict[str, list[dict[str, str]]] = {
 }
 
 
-class MandateModule(NexusModule):
+class MandateModule(AgentModule):
     name = "mandate"
     description = "Compliance gap analysis -- generates checklists for GDPR, SOC2, HIPAA and identifies gaps"
     version = "0.1.0"
+
+    watch_events: list = []
+    coordination_targets: list = ["redline"]
 
     def __init__(self):
         self._analyses: list[GapAnalysis] = []
@@ -128,7 +131,7 @@ class MandateModule(NexusModule):
     def list_frameworks(self) -> list[str]:
         return list(_FRAMEWORKS.keys())
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -196,3 +199,24 @@ class MandateModule(NexusModule):
             lines.append(f"  {llm_analysis[:1000]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        keywords = ("privacy", "compliance", "regulation", "gdpr", "hipaa", "soc2", "pci", "audit")
+        if any(kw in message.lower() for kw in keywords):
+            return "Run mandate to assess compliance gaps against GDPR, SOC2, or HIPAA frameworks."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+        try:
+            redline_result = await cortex.route("redline", analysis_result, context)
+            if redline_result:
+                return f"[redline] {redline_result}"
+        except Exception:
+            pass
+        return ""

@@ -1,7 +1,7 @@
 # tests/modules/test_loom.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.loom import LoomModule, PipelineStep, Pipeline
+from nexus.agents.loom import LoomModule, PipelineStep, Pipeline
 
 
 @pytest.fixture

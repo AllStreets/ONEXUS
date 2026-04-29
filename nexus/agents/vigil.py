@@ -12,7 +12,7 @@ import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -33,10 +33,13 @@ class Anomaly:
     description: str
 
 
-class VigilModule(NexusModule):
+class VigilModule(AgentModule):
     name = "vigil"
     description = "Log analysis agent -- detects anomaly patterns, generates incident timelines, identifies root causes"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["gauge", "remedy"]
 
     def __init__(self):
         self._analyses: list[dict[str, Any]] = []
@@ -127,7 +130,7 @@ class VigilModule(NexusModule):
 
         return timeline
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -201,3 +204,33 @@ class VigilModule(NexusModule):
             lines.append(f"  {llm_analysis[:1000]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        if re.search(r'\b(error|warn|exception|traceback|stacktrace|log)\b', message, re.IGNORECASE):
+            return "Paste log output and Vigil will detect anomaly patterns and build an incident timeline."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        response = event.get("data", {}).get("response", "")
+        if re.search(r'\b(error|exception|warn|fail|traceback)\b', response, re.IGNORECASE):
+            return f"[Vigil] Error/warning pattern detected in cortex response: {response[:200]}"
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+        parts: list[str] = []
+        if "bottleneck" in analysis_result.lower() or "performance" in analysis_result.lower():
+            try:
+                gauge_result = await cortex.route("gauge", analysis_result, context)
+                parts.append(f"[gauge] {gauge_result[:500]}")
+            except Exception:
+                pass
+        if "error" in analysis_result.lower() or "anomaly" in analysis_result.lower():
+            try:
+                remedy_result = await cortex.route("remedy", analysis_result, context)
+                parts.append(f"[remedy] {remedy_result[:500]}")
+            except Exception:
+                pass
+        return "\n".join(parts)

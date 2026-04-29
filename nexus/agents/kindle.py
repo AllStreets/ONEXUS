@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -33,10 +33,13 @@ _TONES: dict[str, str] = {
 }
 
 
-class KindleModule(NexusModule):
+class KindleModule(AgentModule):
     name = "kindle"
     description = "Content expander -- transforms bullet points into polished blog posts, docs, reports, and emails"
     version = "0.1.0"
+
+    watch_events: list[str] = ["content.draft_ready", "scribe.finding"]
+    coordination_targets: list[str] = ["thesis", "scribe"]
 
     def __init__(self):
         self._pieces: list[ContentPiece] = []
@@ -93,7 +96,7 @@ class KindleModule(NexusModule):
                 return stripped
         return "Untitled"
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -165,3 +168,89 @@ class KindleModule(NexusModule):
         lines.append(f"\n{expanded[:3000]}")
 
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # AgentModule tier methods
+    # ------------------------------------------------------------------
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest tone or format improvements when draft content is detected."""
+        bullets = self.extract_bullets(message)
+        detected_tone = self.detect_tone(message)
+        detected_format = self.detect_format(message)
+
+        if bullets:
+            return (
+                f"Detected {len(bullets)} bullet point(s). Kindle can expand these into a "
+                f"polished {detected_format} with a {detected_tone} tone. "
+                "Specify a different tone (casual, technical, academic, marketing) or format "
+                "(blog, docs, report, email) to override."
+            )
+
+        # Plain prose -- offer a polish pass
+        word_count = len(message.split())
+        if word_count > 50:
+            return (
+                f"This draft is {word_count} words with a {detected_tone} tone. "
+                "Kindle can restructure and polish it into a publication-ready {detected_format}."
+            )
+
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for draft content or scribe findings that need expansion."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "content.draft_ready":
+            title = payload.get("title", "untitled")
+            fmt = payload.get("format", "document")
+            return f"Draft ready: '{title}' ({fmt}). Kindle can expand and polish this content."
+
+        if topic == "scribe.finding":
+            finding = payload.get("finding", "")
+            if finding:
+                return (
+                    "Scribe published new meeting findings. "
+                    "Kindle can expand the summary into a full report or email."
+                )
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route academic content to thesis; meeting-derived content back to scribe."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        parts: list[str] = []
+        result_lower = analysis_result.lower()
+
+        # Academic content -- hand off to thesis for citation and claim extraction
+        if any(kw in result_lower for kw in ("research", "paper", "study", "abstract",
+                                              "methodology", "findings", "hypothesis")):
+            try:
+                thesis_result = await cortex.route(
+                    "thesis",
+                    f"Analyze the academic content in this expanded piece:\n{analysis_result}",
+                    context,
+                )
+                if thesis_result:
+                    parts.append(f"[thesis] {thesis_result}")
+            except Exception:
+                pass
+
+        # Meeting-derived content -- offer condensed version back to scribe
+        if any(kw in result_lower for kw in ("meeting", "action item", "decision", "attendee")):
+            try:
+                scribe_result = await cortex.route(
+                    "scribe",
+                    f"Extract action items from this polished meeting report:\n{analysis_result}",
+                    context,
+                )
+                if scribe_result:
+                    parts.append(f"[scribe] {scribe_result}")
+            except Exception:
+                pass
+
+        return "\n".join(parts)

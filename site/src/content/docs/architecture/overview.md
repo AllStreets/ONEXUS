@@ -54,20 +54,24 @@ These constraints are architectural commitments, not guidelines:
 
 ## Module Tiers
 
-Modules are organized by capability tier. Tier assignment is documentation only — all modules use the same `NexusModule` interface.
+Intelligence modules use the `NexusModule` interface. Agents use the `AgentModule` interface, which extends `NexusModule` with graduated sovereignty -- five trust tiers that unlock progressively more capable behavior.
 
-| Tier | Modules |
-|------|---------|
-| Perception | Oracle, Sentry |
-| Intelligence | Atlas, Prism, Cipher |
-| Action | Wraith, Echo, Sigil, Herald, Weave |
-| Advanced | Specter, Serendipity, Forge |
-| Orchestration | Council, Autonomic |
-| Network | Collective, Legacy |
-| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism |
-| Agents | Scribe, Vex, Ledger, Arbiter, Thesis, Scaffold, Remedy, Compass, Tally, Redline, Carve, Vigil, Mandate, Flux, Kindle, Quarry, Bastion, Dispatch, Gauge, Mnemonic, Sentinel, Mint, Axiom, Loom, Rune |
-| Community | User-contributed modules via `community/modules/` |
-| Core | General |
+| Tier | Components | Interface |
+|------|-----------|-----------|
+| Perception | Oracle, Sentry | NexusModule |
+| Intelligence | Atlas, Prism, Cipher | NexusModule |
+| Action | Wraith, Echo, Sigil, Herald, Weave | NexusModule |
+| Advanced | Specter, Serendipity, Forge | NexusModule |
+| Orchestration | Council, Autonomic | NexusModule |
+| Network | Collective, Legacy | NexusModule |
+| Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism | NexusModule |
+| Agents (Code) | Vex, Arbiter, Carve, Remedy, Scaffold, Axiom, Rune | AgentModule |
+| Agents (Data) | Flux, Vigil, Gauge, Quarry, Loom | AgentModule |
+| Agents (Business) | Ledger, Tally, Mint, Redline, Mandate | AgentModule |
+| Agents (Content) | Scribe, Kindle, Thesis, Compass | AgentModule |
+| Agents (Ops) | Bastion, Dispatch, Sentinel, Mnemonic | AgentModule |
+| Community | User-contributed modules via `community/modules/` | NexusModule |
+| Core | General | NexusModule |
 
 ## Testing
 

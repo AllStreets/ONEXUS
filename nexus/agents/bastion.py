@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -30,10 +30,13 @@ _SENSITIVE_PATHS = ("admin", "internal", "debug", "test", "config", "env", "secr
 _SENSITIVE_PARAMS = ("password", "secret", "token", "key", "credential", "ssn", "credit_card")
 
 
-class BastionModule(NexusModule):
+class BastionModule(AgentModule):
     name = "bastion"
     description = "API security scanner -- analyzes endpoints, specs, and configs for vulnerabilities"
     version = "0.1.0"
+
+    watch_events: list[str] = ["api.spec_updated", "deploy.completed"]
+    coordination_targets: list[str] = ["vex", "dispatch"]
 
     def __init__(self):
         self._scans: list[dict[str, Any]] = []
@@ -175,7 +178,7 @@ class BastionModule(NexusModule):
         weights = {"critical": 20, "high": 10, "medium": 5, "low": 2, "info": 1}
         return sum(weights.get(f.severity, 0) for f in findings)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -242,5 +245,78 @@ class BastionModule(NexusModule):
 
         if llm_analysis:
             lines.append(f"\n  -- Deep Analysis --\n  {llm_analysis[:1000]}")
+
+        return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest a security scan when API changes are detected."""
+        msg_lower = message.lower()
+        if any(kw in msg_lower for kw in ("api", "endpoint", "spec", "openapi", "swagger", "route")):
+            endpoints = self.parse_endpoints(message)
+            if endpoints:
+                return (
+                    f"Detected {len(endpoints)} endpoint(s) in context. "
+                    "Run a full Bastion scan to surface auth gaps, BOLA risk, and transport issues "
+                    "before deploying."
+                )
+        if any(kw in msg_lower for kw in ("deploy", "release", "publish", "ship")):
+            return (
+                "A deployment event was detected. Consider running a Bastion API security scan "
+                "against the new surface area before traffic is promoted."
+            )
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for API spec updates or deployment events and flag for scanning."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "api.spec_updated":
+            spec_id = payload.get("spec_id") or payload.get("id", "unknown")
+            return (
+                f"API spec '{spec_id}' was updated. Bastion recommends an immediate security scan "
+                "to catch regressions in auth, transport, and input validation."
+            )
+        if topic == "deploy.completed":
+            service = payload.get("service") or payload.get("name", "unknown")
+            env = payload.get("environment") or payload.get("env", "")
+            env_str = f" to {env}" if env else ""
+            return (
+                f"Deployment of '{service}'{env_str} completed. "
+                "Bastion will scan the updated API surface for new vulnerabilities."
+            )
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route critical findings to vex for deeper analysis and dispatch for alerts."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        lines: list[str] = []
+
+        # Determine if there are critical/high findings worth escalating
+        has_critical = "[CRITICAL]" in analysis_result or "[HIGH]" in analysis_result
+
+        if has_critical:
+            # Forward to vex for deeper vulnerability analysis
+            try:
+                vex_result = await cortex.send("vex", analysis_result, context)
+                if vex_result:
+                    lines.append(f"[vex] {vex_result}")
+            except Exception:
+                pass
+
+            # Alert dispatch so notifications reach the right channels
+            try:
+                alert_msg = (
+                    f"SECURITY ALERT from Bastion -- critical/high findings detected.\n"
+                    f"{analysis_result[:500]}"
+                )
+                dispatch_result = await cortex.send("dispatch", alert_msg, context)
+                if dispatch_result:
+                    lines.append(f"[dispatch] {dispatch_result}")
+            except Exception:
+                pass
 
         return "\n".join(lines)

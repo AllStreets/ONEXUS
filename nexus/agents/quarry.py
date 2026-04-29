@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -34,10 +34,13 @@ _META_PATTERNS: dict[str, str] = {
 }
 
 
-class QuarryModule(NexusModule):
+class QuarryModule(AgentModule):
     name = "quarry"
     description = "Web data extraction -- scrapes and structures data from HTML, URLs, and web content"
     version = "0.1.0"
+
+    watch_events: list[str] = []
+    coordination_targets: list[str] = []
 
     def __init__(self):
         self._extractions: list[ExtractedData] = []
@@ -102,7 +105,7 @@ class QuarryModule(NexusModule):
                 tables.append(rows)
         return tables
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -198,3 +201,14 @@ class QuarryModule(NexusModule):
             lines.append(f"  {u}")
         lines.append("\nProvide the HTML content for full extraction.")
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        if self.extract_urls(message) or re.search(r'<[a-z][\s\S]*>', message, re.IGNORECASE):
+            return "Quarry can extract structured data (links, headings, tables, metadata) from that HTML or URL."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        return ""

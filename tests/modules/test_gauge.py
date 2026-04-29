@@ -1,7 +1,7 @@
 # tests/modules/test_gauge.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.gauge import GaugeModule, PerfMetric, Bottleneck
+from nexus.agents.gauge import GaugeModule, PerfMetric, Bottleneck
 
 
 @pytest.fixture

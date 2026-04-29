@@ -1,13 +1,13 @@
 ---
 title: "Agent Discovery"
-description: "Browse 25 narrow AI agents — find the right tool for any task"
+description: "Browse 25 graduated sovereignty agents -- task specialists that earn autonomy through demonstrated reliability"
 sidebar:
   order: 2
 ---
 
 ## Agent Discovery
 
-NEXUS ships with 25 narrow AI agents. Each agent solves a focused problem using pattern-based analysis (works without an LLM) and enhances with LLM when available. Every agent runs locally, requires no cloud services, and fits within the 8GB RAM floor.
+NEXUS ships with 25 agents built on the `AgentModule` base class. Each agent starts as a passive skill (trust 0) and earns autonomy through five trust tiers: SKILL, ADVISOR, MONITOR, AUTONOMOUS, and SOVEREIGN. Every agent works standalone using pattern-based analysis (no LLM required), enhances with LLM when available, runs locally, requires no cloud services, and fits within the 8GB RAM floor.
 
 ### By Category
 
@@ -63,29 +63,47 @@ NEXUS ships with 25 narrow AI agents. Each agent solves a focused problem using 
 
 ### How Agents Work
 
-Every agent follows the same pattern:
+Every agent follows the graduated sovereignty model:
 
 1. **Cortex routes** the message based on keyword matching
-2. **Pattern analysis** runs first (regex, rules, heuristics) -- no LLM needed
-3. **LLM enhancement** adds deeper analysis when a model is available
-4. **Results stored** in Engram for future reference
+2. **AgentModule checks trust** via Aegis to determine which tiers are active
+3. **`analyze()`** runs first (pattern-based, no LLM needed) -- this is the core logic
+4. **`suggest()`** appends proactive suggestions at ADVISOR+ trust (25+)
+5. **LLM enhancement** adds deeper analysis when a model is available
+6. **`monitor()`** watches Pulse events in the background at MONITOR+ trust (50+)
+7. **`coordinate()`** routes to other agents at SOVEREIGN trust (100)
+8. **Results stored** in Engram and logged to Chronicle
 
-Agents work standalone or together. Pipe output from one agent into another through Cortex.
+Trust is always revocable. One bad outcome and Aegis dials it back.
 
 ### Building Your Own Agent
 
 ```python
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
-class MyAgent(NexusModule):
+class MyAgent(AgentModule):
     name = "my_agent"
     description = "Does something useful"
     version = "0.1.0"
 
-    async def handle(self, message, context):
-        llm = context.get("llm")
-        # Your logic here
+    watch_events = ["relevant.topic"]
+    coordination_targets = ["other_agent"]
+
+    async def analyze(self, message, context):
+        """Core logic. Runs at every trust level."""
         return "[MyAgent] Result"
+
+    async def suggest(self, message, context):
+        """Proactive suggestions at ADVISOR+ trust."""
+        return "You might also want to..."
+
+    async def monitor(self, event, context):
+        """Background event watching at MONITOR+ trust."""
+        return "Detected something interesting"
+
+    async def coordinate(self, analysis_result, context):
+        """Cross-agent routing at SOVEREIGN trust."""
+        return ""
 ```
 
-See the [Building a Module](/NEXUS/guides/building-a-module/) guide for the full spec.
+See the [Earned Autonomy](/NEXUS/concepts/earned-autonomy/) page for how trust tiers work, and the [Building a Module](/NEXUS/guides/building-a-module/) guide for the full spec.

@@ -1,7 +1,7 @@
 # tests/modules/test_tally.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.tally import TallyModule
+from nexus.agents.tally import TallyModule
 
 
 @pytest.fixture

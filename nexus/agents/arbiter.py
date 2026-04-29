@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -23,10 +23,13 @@ class ReviewComment:
     suggestion: str = ""
 
 
-class ArbiterModule(NexusModule):
+class ArbiterModule(AgentModule):
     name = "arbiter"
     description = "Code review agent — analyzes diffs and source code for bugs, style issues, and security concerns"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["vex", "carve"]
 
     def __init__(self):
         self._review_history: list[dict[str, Any]] = []
@@ -127,7 +130,7 @@ class ArbiterModule(NexusModule):
 
         return comments
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -214,3 +217,34 @@ class ArbiterModule(NexusModule):
             lines.append(f"  {llm_review[:1500]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest a code review when a diff or code block is present."""
+        if message.strip().startswith("diff --git") or "@@" in message[:500]:
+            return "Diff detected -- run a code review to catch bugs and style issues before merging."
+        code_indicators = ("def ", "class ", "import ", "function ", "=>")
+        if any(indicator in message for indicator in code_indicators):
+            return "Code detected -- a review can surface bugs, API misuse, and performance issues."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Flag cortex responses that contain code or diffs for review."""
+        response = event.get("data", {}).get("response", "")
+        if "```" in response or "diff --git" in response or any(
+            p in response for p in ("def ", "class ", "function ")
+        ):
+            comments = self._detect_patterns(response)
+            if comments:
+                return (
+                    f"Cortex response contains code with {len(comments)} pattern issue(s) "
+                    f"({', '.join(sorted({c.severity for c in comments}))}) -- review suggested."
+                )
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route findings to vex for security depth-check and carve for complexity analysis."""
+        parts = [
+            "vex: run vulnerability scan on any code identified in this review",
+            "carve: measure complexity of flagged functions and suggest refactoring targets",
+        ]
+        return "\n".join(parts)

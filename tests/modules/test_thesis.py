@@ -1,7 +1,7 @@
 # tests/modules/test_thesis.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.thesis import ThesisModule, PaperNote
+from nexus.agents.thesis import ThesisModule, PaperNote
 
 
 @pytest.fixture

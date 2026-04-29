@@ -1,7 +1,7 @@
 # tests/modules/test_dispatch.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.dispatch import DispatchModule, Notification, RoutingRule
+from nexus.agents.dispatch import DispatchModule, Notification, RoutingRule
 
 
 @pytest.fixture

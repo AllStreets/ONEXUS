@@ -10,7 +10,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -26,10 +26,13 @@ _COMPLEX_PATTERNS = ["JOIN", "SUBQUERY", "UNION", "HAVING", "WINDOW", "CTE", "WI
 _MODERATE_PATTERNS = ["GROUP BY", "ORDER BY", "DISTINCT", "COUNT", "SUM", "AVG"]
 
 
-class FluxModule(NexusModule):
+class FluxModule(AgentModule):
     name = "flux"
     description = "Natural language to SQL -- converts questions about data into SQL queries"
     version = "0.1.0"
+
+    watch_events: list[str] = []
+    coordination_targets: list[str] = []
 
     def __init__(self):
         self._schemas: dict[str, list[str]] = {}
@@ -89,7 +92,7 @@ class FluxModule(NexusModule):
         tables = re.findall(r'(?:FROM|JOIN)\s+(\w+)', query, re.IGNORECASE)
         return list(dict.fromkeys(tables))
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -161,3 +164,15 @@ class FluxModule(NexusModule):
             lines.append(f"\n  Explanation: {explanation}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        msg_lower = message.lower()
+        if any(kw in msg_lower for kw in ("data", "table", "column", "database", "schema", "query", "select")):
+            return "Provide a schema or question about your data and Flux can generate a SQL query."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        return ""

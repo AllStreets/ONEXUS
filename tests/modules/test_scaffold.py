@@ -1,7 +1,7 @@
 # tests/modules/test_scaffold.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.scaffold import ScaffoldModule
+from nexus.agents.scaffold import ScaffoldModule
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 # tests/modules/test_quarry.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.quarry import QuarryModule
+from nexus.agents.quarry import QuarryModule
 
 
 @pytest.fixture

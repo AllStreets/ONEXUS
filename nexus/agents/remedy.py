@@ -12,7 +12,7 @@ Inspired by:
 import re
 from dataclasses import dataclass
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -98,10 +98,13 @@ _ERROR_PATTERNS: dict[str, dict[str, str]] = {
 }
 
 
-class RemedyModule(NexusModule):
+class RemedyModule(AgentModule):
     name = "remedy"
     description = "Error diagnosis agent -- analyzes stack traces, explains root causes, and suggests fixes"
     version = "0.1.0"
+
+    watch_events: list[str] = ["cortex.response"]
+    coordination_targets: list[str] = ["vex"]
 
     def __init__(self):
         self._diagnoses: list[ErrorDiagnosis] = []
@@ -170,7 +173,7 @@ class RemedyModule(NexusModule):
             suggestion=suggestion,
         )
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -249,3 +252,27 @@ class RemedyModule(NexusModule):
             lines.append(f"  {llm_analysis[:1000]}")
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest error diagnosis when error-like patterns are present."""
+        error_indicators = ("Traceback", "Error:", "Exception:", "raise ", "errno", "exit code")
+        if any(indicator in message for indicator in error_indicators):
+            return "Error pattern detected -- diagnose the stack trace to identify root cause and fix."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Flag cortex responses that contain error or traceback content."""
+        response = event.get("data", {}).get("response", "")
+        parsed = self.parse_traceback(response)
+        if parsed["error_type"]:
+            return (
+                f"Cortex response references {parsed['error_type']} "
+                f"at line {parsed['line_number']} -- diagnosis available."
+            )
+        if any(p in response for p in ("Traceback", "Error:", "Exception:", "exit code 1")):
+            return "Cortex response contains error output -- run remedy for root cause analysis."
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route error patterns to vex to check if the error indicates a security vulnerability."""
+        return "vex: scan error context for security implications (injection, deserialization, path traversal)"

@@ -1,7 +1,7 @@
 # tests/modules/test_sentinel.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.sentinel import SentinelModule, ScheduledTask
+from nexus.agents.sentinel import SentinelModule, ScheduledTask
 
 
 @pytest.fixture

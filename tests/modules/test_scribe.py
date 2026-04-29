@@ -1,7 +1,7 @@
 # tests/modules/test_scribe.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.scribe import ScribeModule
+from nexus.agents.scribe import ScribeModule
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ def test_extract_decisions(scribe):
 
 
 def test_store_and_list_records(scribe):
-    from nexus.modules.scribe import MeetingRecord
+    from nexus.agents.scribe import MeetingRecord
     record = MeetingRecord(
         summary="Test meeting",
         action_items=["Do thing"],

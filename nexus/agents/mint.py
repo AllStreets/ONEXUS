@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -47,10 +47,13 @@ _TAX_RATES: dict[str, float] = {
 }
 
 
-class MintModule(NexusModule):
+class MintModule(AgentModule):
     name = "mint"
     description = "Invoice generator -- creates invoices from line items with tax calculation and formatting"
     version = "0.1.0"
+
+    watch_events: list = []
+    coordination_targets: list = ["ledger"]
 
     def __init__(self):
         self._invoices: list[Invoice] = []
@@ -184,7 +187,7 @@ class MintModule(NexusModule):
 
         return "\n".join(lines)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -227,3 +230,24 @@ class MintModule(NexusModule):
         lines.append(formatted)
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        keywords = ("billing", "payment", "client", "invoice", "receipt", "charge", "quote")
+        if any(kw in message.lower() for kw in keywords):
+            return "Run mint to generate a formatted invoice with line items and tax calculation."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+        try:
+            ledger_result = await cortex.route("ledger", analysis_result, context)
+            if ledger_result:
+                return f"[ledger] {ledger_result}"
+        except Exception:
+            pass
+        return ""

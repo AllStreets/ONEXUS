@@ -79,7 +79,7 @@ If no keywords match, the message falls through to the **general** module.
 | **consciousness** | how are you, journal, self reflect, introspect, consciousness, emergent goals, unintended behavior, what are you doing, implicit goals |
 | **ethical_prism** | ethically, ethical, moral, ethics, right thing, should i morally |
 
-### Agents -- Code & Development
+### Graduated Sovereignty Agents -- Code & Development
 
 | Module | Keywords |
 |--------|----------|
@@ -91,7 +91,7 @@ If no keywords match, the message falls through to the **general** module.
 | **axiom** | test case, generate tests, unit test, test stub, edge case, test for |
 | **rune** | regex, regular expression, pattern match, regexp, pattern for, match string |
 
-### Agents -- Data & Analysis
+### Graduated Sovereignty Agents -- Data & Analysis
 
 | Module | Keywords |
 |--------|----------|
@@ -101,7 +101,7 @@ If no keywords match, the message falls through to the **general** module.
 | **quarry** | scrape, extract data, html, web page, crawl, parse html, web content |
 | **loom** | pipeline, etl, data flow, workflow, extract transform, data pipeline |
 
-### Agents -- Business & Finance
+### Graduated Sovereignty Agents -- Business & Finance
 
 | Module | Keywords |
 |--------|----------|
@@ -111,7 +111,7 @@ If no keywords match, the message falls through to the **general** module.
 | **redline** | contract, legal, agreement, clause, terms, nda, liability |
 | **mandate** | compliance, gdpr, soc2, hipaa, audit, regulatory, gap analysis |
 
-### Agents -- Content & Communication
+### Graduated Sovereignty Agents -- Content & Communication
 
 | Module | Keywords |
 |--------|----------|
@@ -120,7 +120,7 @@ If no keywords match, the message falls through to the **general** module.
 | **thesis** | paper, literature, academic, research paper, abstract, citation |
 | **compass** | learn, roadmap, study plan, curriculum, learning path, teach me |
 
-### Agents -- Infrastructure & Ops
+### Graduated Sovereignty Agents -- Infrastructure & Ops
 
 | Module | Keywords |
 |--------|----------|

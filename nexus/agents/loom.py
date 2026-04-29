@@ -12,7 +12,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -45,10 +45,13 @@ _OPERATION_KEYWORDS: dict[str, list[str]] = {
 }
 
 
-class LoomModule(NexusModule):
+class LoomModule(AgentModule):
     name = "loom"
     description = "Data pipeline builder -- defines ETL workflows with dependency resolution and validation"
     version = "0.1.0"
+
+    watch_events: list[str] = []
+    coordination_targets: list[str] = []
 
     def __init__(self):
         self._pipelines: list[Pipeline] = []
@@ -181,7 +184,7 @@ class LoomModule(NexusModule):
 
         return "\n".join(lines)
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -259,3 +262,17 @@ class LoomModule(NexusModule):
                 pass
 
         return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        if re.search(
+            r'\b(extract|transform|load|ingest|pipeline|etl|workflow|process|clean|normalize)\b',
+            message, re.IGNORECASE
+        ):
+            return "Describe your data processing steps as a numbered list and Loom will build an ETL pipeline."
+        return ""
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        return ""

@@ -1,7 +1,7 @@
 # tests/modules/test_rune.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.rune import RuneModule
+from nexus.agents.rune import RuneModule
 
 
 @pytest.fixture

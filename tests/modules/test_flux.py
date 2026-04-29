@@ -1,7 +1,7 @@
 # tests/modules/test_flux.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.flux import FluxModule, SQLResult
+from nexus.agents.flux import FluxModule, SQLResult
 
 
 @pytest.fixture

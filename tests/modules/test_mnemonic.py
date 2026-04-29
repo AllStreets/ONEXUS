@@ -1,7 +1,7 @@
 # tests/modules/test_mnemonic.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.mnemonic import MnemonicModule, KnowledgeEntry
+from nexus.agents.mnemonic import MnemonicModule, KnowledgeEntry
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 # tests/modules/test_mandate.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.mandate import MandateModule, Control, GapAnalysis
+from nexus.agents.mandate import MandateModule, Control, GapAnalysis
 
 
 @pytest.fixture

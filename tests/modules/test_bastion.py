@@ -1,7 +1,7 @@
 # tests/modules/test_bastion.py
 import pytest
 from unittest.mock import AsyncMock
-from nexus.modules.bastion import BastionModule, APIFinding
+from nexus.agents.bastion import BastionModule, APIFinding
 
 
 @pytest.fixture

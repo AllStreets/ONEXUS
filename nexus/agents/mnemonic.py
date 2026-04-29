@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -23,10 +23,13 @@ class KnowledgeEntry:
     source: str
 
 
-class MnemonicModule(NexusModule):
+class MnemonicModule(AgentModule):
     name = "mnemonic"
     description = "Knowledge base agent -- stores, indexes, and retrieves notes and knowledge fragments"
     version = "0.1.0"
+
+    watch_events: list[str] = ["knowledge.stored", "insight.generated"]
+    coordination_targets: list[str] = ["compass", "scribe"]
 
     def __init__(self):
         self._entries: list[KnowledgeEntry] = []
@@ -130,7 +133,7 @@ class MnemonicModule(NexusModule):
             return "store"
         return "search"
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -225,6 +228,95 @@ class MnemonicModule(NexusModule):
             try:
                 synthesis = await llm.complete(prompt)
                 lines.append(f"\n  -- Synthesis --\n  {synthesis[:800]}")
+            except Exception:
+                pass
+
+        return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest storing important findings when valuable information is detected."""
+        msg_lower = message.lower()
+        suggestions: list[str] = []
+
+        # Proactively suggest storing if message looks like a finding or insight
+        finding_signals = ("discovered", "found that", "turns out", "note:", "important:", "key insight",
+                           "tldr", "tl;dr", "summary:", "learned", "pro tip", "gotcha")
+        if any(sig in msg_lower for sig in finding_signals):
+            suggestions.append(
+                "This message looks like a valuable finding. "
+                "Use 'remember: ...' to store it in the knowledge base for future retrieval."
+            )
+
+        # Suggest indexing if knowledge base is growing without tags
+        if self._entries:
+            untagged = [e for e in self._entries if not e.tags]
+            if len(untagged) > 3:
+                suggestions.append(
+                    f"{len(untagged)} entries are untagged. "
+                    "Adding tags improves retrieval precision."
+                )
+
+        return " ".join(suggestions)
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for new knowledge and insight events and index them."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "knowledge.stored":
+            title = payload.get("title") or payload.get("name", "unknown")
+            content = payload.get("content") or payload.get("body", "")
+            source = payload.get("source", "pulse")
+            if title and content:
+                entry = self.store(title=title, content=content, source=source)
+                return (
+                    f"Indexed new knowledge entry '{title}' (ID: {entry.id}, "
+                    f"tags: {', '.join(entry.tags) if entry.tags else 'none'})."
+                )
+            return f"knowledge.stored event received for '{title}' but content was empty -- skipped."
+
+        if topic == "insight.generated":
+            insight = payload.get("insight") or payload.get("content", "")
+            agent = payload.get("agent") or payload.get("source", "unknown")
+            if insight:
+                title = f"Insight from {agent}"
+                entry = self.store(title=title, content=insight, source=agent)
+                return (
+                    f"Indexed insight from '{agent}' (ID: {entry.id}). "
+                    "Available for future retrieval."
+                )
+            return None
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route learning resources to compass and meeting notes to scribe."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        lines: list[str] = []
+        result_lower = analysis_result.lower()
+
+        # Learning resources, tutorials, documentation go to compass for navigation
+        learning_signals = ("tutorial", "guide", "documentation", "reference", "how to", "learn",
+                             "course", "resource", "reading", "book", "article")
+        if any(sig in result_lower for sig in learning_signals):
+            try:
+                compass_result = await cortex.send("compass", analysis_result, context)
+                if compass_result:
+                    lines.append(f"[compass] {compass_result}")
+            except Exception:
+                pass
+
+        # Meeting notes, decisions, action items go to scribe for transcription
+        meeting_signals = ("meeting", "standup", "decision", "action item", "notes:", "minutes",
+                            "discussed", "agreed", "follow-up", "recap")
+        if any(sig in result_lower for sig in meeting_signals):
+            try:
+                scribe_result = await cortex.send("scribe", analysis_result, context)
+                if scribe_result:
+                    lines.append(f"[scribe] {scribe_result}")
             except Exception:
                 pass
 

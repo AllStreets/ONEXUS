@@ -11,7 +11,7 @@ Inspired by:
 import re
 from dataclasses import dataclass, field
 from typing import Any
-from nexus.modules.base import NexusModule
+from nexus.agents.base import AgentModule, TrustTier
 
 
 @dataclass
@@ -42,10 +42,13 @@ _DEFAULT_RULES: list[dict[str, str]] = [
 ]
 
 
-class DispatchModule(NexusModule):
+class DispatchModule(AgentModule):
     name = "dispatch"
     description = "Multi-channel notification router -- routes alerts to email, slack, webhook, sms by priority"
     version = "0.1.0"
+
+    watch_events: list[str] = ["alert.triggered", "notification.queued"]
+    coordination_targets: list[str] = ["sentinel", "bastion"]
 
     def __init__(self):
         self._rules: list[RoutingRule] = [
@@ -144,7 +147,7 @@ class DispatchModule(NexusModule):
         self._sent.append(notification)
         return notification
 
-    async def handle(self, message: str, context: dict[str, Any]) -> str:
+    async def analyze(self, message: str, context: dict[str, Any]) -> str:
         llm = context.get("llm")
         engram = context.get("engram")
 
@@ -196,5 +199,83 @@ class DispatchModule(NexusModule):
             lines.append(f"\n  -- Formatted Message --\n  {llm_formatted[:1000]}")
         else:
             lines.append(f"\n  Body preview: {notification.body[:200]}")
+
+        return "\n".join(lines)
+
+    async def suggest(self, message: str, context: dict[str, Any]) -> str:
+        """Suggest routing improvements when patterns indicate suboptimal channel use."""
+        priority = self.detect_priority(message)
+        channel = self.detect_channel(message)
+        suggestions: list[str] = []
+
+        if priority == "critical" and channel not in ("email", "sms"):
+            suggestions.append(
+                f"Critical-priority message routed to '{channel}'. "
+                "Consider email or SMS for guaranteed delivery on P0 incidents."
+            )
+
+        routes = self.route(message)
+        if not routes:
+            suggestions.append(
+                "No routing rules matched this message. "
+                "Add a custom rule via add_rule() to cover this message pattern."
+            )
+        elif len(routes) > 3:
+            suggestions.append(
+                f"{len(routes)} routing rules matched. "
+                "Review rule overlap to avoid duplicate notifications."
+            )
+
+        return " ".join(suggestions)
+
+    async def monitor(self, event: dict[str, Any], context: dict[str, Any]) -> str | None:
+        """Watch for incoming alert and queued notification events and route them."""
+        topic = event.get("topic", "")
+        payload = event.get("payload", {})
+
+        if topic == "alert.triggered":
+            alert_id = payload.get("alert_id") or payload.get("id", "unknown")
+            severity = payload.get("severity") or payload.get("level", "unknown")
+            return (
+                f"Alert '{alert_id}' triggered (severity: {severity}). "
+                "Dispatch will route to appropriate channels based on priority rules."
+            )
+
+        if topic == "notification.queued":
+            notif_id = payload.get("notification_id") or payload.get("id", "unknown")
+            channel = payload.get("channel", "unknown")
+            return (
+                f"Notification '{notif_id}' queued for '{channel}'. "
+                "Dispatch processing queue."
+            )
+
+        return None
+
+    async def coordinate(self, analysis_result: str, context: dict[str, Any]) -> str:
+        """Route task failures to sentinel and security alerts to bastion."""
+        cortex = context.get("cortex")
+        if not cortex:
+            return ""
+
+        lines: list[str] = []
+        result_lower = analysis_result.lower()
+
+        # Task failure signals go to sentinel for monitoring
+        if any(kw in result_lower for kw in ("task", "job", "cron", "scheduled", "failed", "missed")):
+            try:
+                sentinel_result = await cortex.send("sentinel", analysis_result, context)
+                if sentinel_result:
+                    lines.append(f"[sentinel] {sentinel_result}")
+            except Exception:
+                pass
+
+        # Security alert signals go to bastion for deeper scanning
+        if any(kw in result_lower for kw in ("security", "vulnerability", "exploit", "breach", "auth")):
+            try:
+                bastion_result = await cortex.send("bastion", analysis_result, context)
+                if bastion_result:
+                    lines.append(f"[bastion] {bastion_result}")
+            except Exception:
+                pass
 
         return "\n".join(lines)
