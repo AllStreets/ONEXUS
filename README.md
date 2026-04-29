@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-484_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-31_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-804_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-51_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@ Most AI tools are wrappers around an API. You send text up, you get text back, s
 
 NEXUS is the opposite. It's a microkernel -- a small, stable core that loads specialized intelligence modules on demand. Everything runs locally. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8GB of RAM.
 
-Thirty-one components are built -- five kernel components, five perception/intelligence modules, five action-layer modules with graduated trust, three advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, two network-layer modules, eight differentiation modules that dream, argue, introspect, and stress-test the system from the inside, plus a community module ecosystem for unlimited third-party extensions. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
+Fifty-one components are built -- five kernel components, five perception/intelligence modules, five action-layer modules with graduated trust, three advanced intelligence modules, two orchestration modules for multi-agent deliberation and earned autonomy, two network-layer modules, eight differentiation modules that dream, argue, introspect, and stress-test the system from the inside, a community module ecosystem for unlimited third-party extensions, and twenty-five narrow AI agents that solve focused problems using pattern-based analysis with optional LLM enhancement. Every agent runs locally, requires no cloud services, and fits within the 8GB RAM floor. The architecture is designed so that a single developer can understand the entire system, and a single machine can run it.
 
 ---
 
@@ -98,13 +98,26 @@ Thirty-one components are built -- five kernel components, five perception/intel
   │  Messaging ······· Telegram, Discord two-way bridges   │
   │  Community ······· validated third-party modules       │
   └────────────────────────────────────────────────────────┘
+       │           │
+  ┌────V───────────V───────────────────────────────────────┐
+  │              NARROW AI AGENTS (25)                     │
+  │                                                        │
+  │  Code ············ Vex  Arbiter  Carve  Remedy         │
+  │                    Scaffold  Axiom  Rune               │
+  │  Data ············ Flux  Vigil  Gauge  Quarry  Loom    │
+  │  Business ········ Ledger  Tally  Mint  Redline        │
+  │                    Mandate                              │
+  │  Content ········· Scribe  Kindle  Thesis  Compass     │
+  │  Ops ············· Bastion  Dispatch  Sentinel         │
+  │                    Mnemonic                             │
+  └────────────────────────────────────────────────────────┘
 ```
 
 The kernel is five components, each with one job:
 
 | Component | Role | Storage |
 |-----------|------|---------|
-| **Cortex** | Keyword-scored routing to 26 modules, permission enforcement | -- |
+| **Cortex** | Keyword-scored routing to 51 modules, permission enforcement | -- |
 | **Engram** | Three-tier memory: working (ephemeral), episodic (FTS5), semantic (vector) | SQLite |
 | **Pulse** | Async pub/sub message bus with priority queuing and wildcards | In-memory |
 | **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
@@ -210,6 +223,60 @@ Set `NEXUS_TELEGRAM_TOKEN`, `NEXUS_TELEGRAM_CHAT_IDS`, `NEXUS_DISCORD_TOKEN`, `N
 
 Community modules live in `community/modules/<author>/<name>/` with a manifest, module code, tests, and README. See `community/CONTRIBUTING.md`.
 
+### Narrow AI Agents
+
+Twenty-five task-specialist agents. Each works standalone using pattern-based analysis (no LLM required) and enhances with LLM when available.
+
+#### Code & Development
+
+| Agent | What it does |
+|-------|-------------|
+| **Vex** | Scans code for 28 vulnerability patterns -- injection, XSS, credentials, deserialization |
+| **Arbiter** | Reviews code diffs and source for quality issues, style violations, anti-patterns |
+| **Carve** | Measures complexity, finds long functions, deep nesting, duplicate code |
+| **Remedy** | Diagnoses error messages and stack traces, suggests fixes for 17 common types |
+| **Scaffold** | Generates Python, FastAPI, CLI project boilerplate from templates |
+| **Axiom** | Generates test case stubs with edge cases from function signatures |
+| **Rune** | Builds, explains, and tests regex patterns from natural language descriptions |
+
+#### Data & Analysis
+
+| Agent | What it does |
+|-------|-------------|
+| **Flux** | Converts natural language questions into SQL queries with schema awareness |
+| **Vigil** | Parses log files, detects anomaly patterns, generates incident timelines |
+| **Gauge** | Analyzes performance metrics, identifies bottlenecks in latency/CPU/memory |
+| **Quarry** | Extracts structured data from HTML -- links, headings, tables, metadata |
+| **Loom** | Defines ETL pipelines with dependency resolution and topological ordering |
+
+#### Business & Finance
+
+| Agent | What it does |
+|-------|-------------|
+| **Ledger** | Categorizes bank transactions, generates spending summaries, flags anomalies |
+| **Tally** | Builds financial projections with revenue modeling and runway calculation |
+| **Mint** | Generates invoices from line items with tax calculation and formatting |
+| **Redline** | Scans contracts for 15 risky clause patterns and missing protections |
+| **Mandate** | Assesses compliance against GDPR, SOC2, HIPAA with gap analysis |
+
+#### Content & Communication
+
+| Agent | What it does |
+|-------|-------------|
+| **Scribe** | Summarizes meeting transcripts -- participants, action items, decisions |
+| **Kindle** | Expands bullet points into polished blog posts, docs, reports, emails |
+| **Thesis** | Analyzes academic papers -- claims, methodology, limitations, gaps |
+| **Compass** | Generates personalized learning roadmaps for programming languages |
+
+#### Infrastructure & Ops
+
+| Agent | What it does |
+|-------|-------------|
+| **Bastion** | Scans API endpoints for BOLA, auth gaps, mass assignment, OWASP risks |
+| **Dispatch** | Routes notifications to email, Slack, webhook, SMS by priority rules |
+| **Sentinel** | Monitors cron jobs, explains expressions, detects missed runs |
+| **Mnemonic** | Personal knowledge base with keyword search and auto-tagging |
+
 ---
 
 ## Module Roadmap
@@ -270,6 +337,33 @@ Community modules live in `community/modules/<author>/<name>/` with a manifest, 
     ├── Installer ······· install/uninstall + keyword wiring
     └── GitHub CI ······· PR validation + registry rebuild
 
+    NARROW AI AGENTS (Batch 8) ━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── Scribe ·········· meeting transcript summarizer
+    ├── Vex ············· static vulnerability scanner
+    ├── Ledger ·········· financial transaction categorizer
+    ├── Arbiter ········· AI code review agent
+    ├── Thesis ·········· academic paper analyzer
+    ├── Scaffold ········ project boilerplate generator
+    ├── Remedy ·········· error & stack trace diagnoser
+    ├── Compass ········· learning roadmap generator
+    ├── Tally ··········· financial projection builder
+    ├── Redline ········· contract risk analyzer
+    ├── Carve ··········· code refactoring assistant
+    ├── Vigil ··········· log analysis agent
+    ├── Mandate ········· compliance gap analyzer
+    ├── Flux ············ natural language to SQL
+    ├── Kindle ·········· content expansion agent
+    ├── Quarry ·········· web data extraction
+    ├── Bastion ········· API security scanner
+    ├── Dispatch ········ multi-channel notification router
+    ├── Gauge ··········· performance metrics analyzer
+    ├── Mnemonic ········ knowledge base agent
+    ├── Sentinel ········ scheduled task monitor
+    ├── Mint ············ invoice generator
+    ├── Axiom ··········· test case generator
+    ├── Loom ············ data pipeline builder
+    └── Rune ············ regex builder & explainer
+
     NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     └── Community site ·· documentation & module catalog
 ```
@@ -318,7 +412,7 @@ NEXUS was designed for machines people actually own.
 |-----|-------------|
 | **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
 | **16 GB** | Kernel + 10 modules, larger context windows |
-| **32 GB+** | All 31 modules, bigger models, concurrent agents |
+| **32 GB+** | All 51 modules, bigger models, concurrent agents |
 
 The inference layer supports multiple providers. Local models run via llama.cpp over HTTP. Cloud providers (OpenAI, Anthropic) are available when API keys are configured. The kernel routes to whichever provider you choose, with automatic fallback if one goes down.
 
@@ -360,7 +454,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-484 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
+804 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -416,7 +510,32 @@ nexus/
 │   ├── sandbox.py ······· hypothetical simulation
 │   ├── symbiosis.py ····· module pathway mapping
 │   ├── consciousness.py · self-reflective awareness
-│   └── ethical_prism.py · seven-framework ethical analysis
+│   ├── ethical_prism.py · seven-framework ethical analysis
+│   ├── scribe.py ········ meeting transcript summarizer
+│   ├── vex.py ··········· static vulnerability scanner
+│   ├── ledger.py ········ financial transaction categorizer
+│   ├── arbiter.py ······· AI code review agent
+│   ├── thesis.py ········ academic paper analyzer
+│   ├── scaffold.py ······ project boilerplate generator
+│   ├── remedy.py ········ error & stack trace diagnoser
+│   ├── compass.py ······· learning roadmap generator
+│   ├── tally.py ········· financial projection builder
+│   ├── redline.py ······· contract risk analyzer
+│   ├── carve.py ········· code refactoring assistant
+│   ├── vigil.py ········· log analysis agent
+│   ├── mandate.py ······· compliance gap analyzer
+│   ├── flux.py ·········· natural language to SQL
+│   ├── kindle.py ········ content expansion agent
+│   ├── quarry.py ········ web data extraction
+│   ├── bastion.py ······· API security scanner
+│   ├── dispatch.py ······ multi-channel notification router
+│   ├── gauge.py ········· performance metrics analyzer
+│   ├── mnemonic.py ······ knowledge base agent
+│   ├── sentinel.py ······ scheduled task monitor
+│   ├── mint.py ·········· invoice generator
+│   ├── axiom.py ········· test case generator
+│   ├── loom.py ·········· data pipeline builder
+│   └── rune.py ·········· regex builder & explainer
 └── community/
     ├── validator.py ····· module validation engine
     ├── registry.py ······ searchable module catalog
