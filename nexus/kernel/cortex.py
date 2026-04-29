@@ -49,6 +49,11 @@ class Cortex:
         "ledger": ["transaction", "bank statement", "spending", "budget", "categorize", "financial"],
         "arbiter": ["code review", "review this", "pull request", "diff", "review code", "pr review"],
         "thesis": ["paper", "literature", "academic", "research paper", "abstract", "citation"],
+        "scaffold": ["scaffold", "boilerplate", "project template", "generate project", "new project", "starter"],
+        "remedy": ["error", "traceback", "stack trace", "exception", "debug", "diagnose"],
+        "compass": ["learn", "roadmap", "study plan", "curriculum", "learning path", "teach me"],
+        "tally": ["projection", "runway", "forecast", "revenue model", "burn rate", "financial model"],
+        "redline": ["contract", "legal", "agreement", "clause", "terms", "nda", "liability"],
     }
 
     def __init__(
