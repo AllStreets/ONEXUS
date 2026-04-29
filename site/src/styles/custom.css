@@ -121,3 +121,9 @@ starlight-theme-select,
 .module-grid > * {
   margin: 0 !important;
 }
+
+/* Prevent table first-column word wrap (routing table module names) */
+.sl-markdown-content table td:first-child,
+.sl-markdown-content table th:first-child {
+  white-space: nowrap;
+}
