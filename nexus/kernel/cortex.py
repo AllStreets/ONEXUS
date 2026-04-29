@@ -59,6 +59,11 @@ class Cortex:
         "mandate": ["compliance", "gdpr", "soc2", "hipaa", "audit", "regulatory", "gap analysis"],
         "flux": ["sql", "query", "database", "table schema", "select from", "natural language sql"],
         "kindle": ["expand", "blog post", "polish", "content", "write up", "draft", "outline to prose"],
+        "quarry": ["scrape", "extract data", "html", "web page", "crawl", "parse html", "web content"],
+        "bastion": ["api security", "endpoint", "openapi", "swagger", "api scan", "rest api", "api audit"],
+        "dispatch": ["notify", "notification", "alert to", "send message", "slack", "email alert", "webhook"],
+        "gauge": ["performance", "latency", "throughput", "benchmark", "bottleneck", "response time", "metrics"],
+        "mnemonic": ["remember", "knowledge base", "recall", "notes", "store note", "look up", "retrieve"],
     }
 
     def __init__(
