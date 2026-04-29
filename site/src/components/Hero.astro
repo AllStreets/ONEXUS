@@ -2,6 +2,18 @@
 // No props — static hero section
 ---
 
+<nav class="nexus-nav">
+  <div class="nav-inner">
+    <a href="/NEXUS/getting-started/installation/" class="nav-link">Setup</a>
+    <a href="/NEXUS/architecture/overview/" class="nav-link">Architecture</a>
+    <a href="/NEXUS/concepts/design-philosophy/" class="nav-link">Concepts</a>
+    <a href="/NEXUS/guides/building-a-module/" class="nav-link">Guides</a>
+    <a href="/NEXUS/community/use-cases/" class="nav-link">Discover</a>
+    <a href="/NEXUS/community/hub/" class="nav-link">Community</a>
+    <a href="/NEXUS/reference/routing/" class="nav-link">Reference</a>
+  </div>
+</nav>
+
 <section class="nexus-hero">
   <div class="hero-bg"></div>
   <div class="hero-content">
@@ -57,6 +69,79 @@
 </section>
 
 <style>
+  /* Navigation bar */
+  .nexus-nav {
+    position: sticky;
+    top: var(--sl-nav-height, 3.5rem);
+    z-index: 10;
+    background: var(--nexus-bg-surface);
+    border-bottom: 1px solid var(--nexus-border);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .nav-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--nexus-text-secondary);
+    text-decoration: none;
+    padding: 0.7rem 1rem;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+    position: relative;
+  }
+
+  .nav-link:hover {
+    color: var(--nexus-accent-primary);
+    text-shadow: var(--nexus-glow-primary);
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 1rem;
+    right: 1rem;
+    height: 1px;
+    background: var(--nexus-accent-primary);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .nav-link:hover::after {
+    opacity: 1;
+  }
+
+  @media (max-width: 640px) {
+    .nav-inner {
+      justify-content: flex-start;
+      gap: 0;
+    }
+
+    .nav-link {
+      font-size: 0.72rem;
+      padding: 0.6rem 0.75rem;
+    }
+  }
+
   .nexus-hero {
     position: relative;
     min-height: 90vh;
