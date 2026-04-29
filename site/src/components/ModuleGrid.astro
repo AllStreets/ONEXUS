@@ -6,6 +6,7 @@ interface Module {
   description: string;
   tier: string;
   status?: string;
+  slug?: string;
 }
 
 const modules: Module[] = [
@@ -63,9 +64,36 @@ const modules: Module[] = [
   { name: 'Validator', description: 'Validates community module structure, manifest schema, file layout, and kernel import restrictions before installation.', tier: 'Community' },
   { name: 'Registry', description: 'JSON-backed module catalog with search by name, author, description, and keywords.', tier: 'Community' },
   { name: 'Installer', description: 'Installs and uninstalls community modules, registers routing keywords in Cortex automatically.', tier: 'Community' },
+
+  // Agents — Narrow AI task specialists
+  { name: 'Scribe', description: 'Meeting transcript summarizer — extracts participants, action items, decisions, and key topics.', tier: 'Agents', slug: 'scribe' },
+  { name: 'Vex', description: 'Static code vulnerability scanner — detects injection, credentials, XSS, and 28 vulnerability patterns.', tier: 'Agents', slug: 'vex' },
+  { name: 'Ledger', description: 'Financial transaction categorizer — parses bank statements, categorizes spending, flags anomalies.', tier: 'Agents', slug: 'ledger' },
+  { name: 'Arbiter', description: 'AI code review agent — analyzes diffs and source for quality issues, style violations, and patterns.', tier: 'Agents', slug: 'arbiter' },
+  { name: 'Thesis', description: 'Academic paper analyzer — extracts claims, methodology, limitations, and identifies research gaps.', tier: 'Agents', slug: 'thesis' },
+  { name: 'Scaffold', description: 'Project boilerplate generator — creates Python, FastAPI, and CLI starter projects from templates.', tier: 'Agents', slug: 'scaffold' },
+  { name: 'Remedy', description: 'Error and stack trace diagnoser — identifies error patterns and suggests fixes for 17 common types.', tier: 'Agents', slug: 'remedy' },
+  { name: 'Compass', description: 'Learning roadmap generator — builds personalized study plans for Python, Rust, JavaScript, and more.', tier: 'Agents', slug: 'compass' },
+  { name: 'Tally', description: 'Financial projection builder — models revenue, runway, break-even with best/base/worst scenarios.', tier: 'Agents', slug: 'tally' },
+  { name: 'Redline', description: 'Contract risk analyzer — scans agreements for 15 risky clause patterns and missing protections.', tier: 'Agents', slug: 'redline' },
+  { name: 'Carve', description: 'Code refactoring assistant — measures complexity, finds long functions, deep nesting, and duplication.', tier: 'Agents', slug: 'carve' },
+  { name: 'Vigil', description: 'Log analysis agent — parses log formats, detects anomaly patterns, generates incident timelines.', tier: 'Agents', slug: 'vigil' },
+  { name: 'Mandate', description: 'Compliance gap analyzer — generates GDPR, SOC2, HIPAA checklists and identifies control gaps.', tier: 'Agents', slug: 'mandate' },
+  { name: 'Flux', description: 'Natural language to SQL — converts questions into SQL queries with schema awareness and complexity scoring.', tier: 'Agents', slug: 'flux' },
+  { name: 'Kindle', description: 'Content expansion agent — transforms bullet points into polished blog posts, docs, reports, and emails.', tier: 'Agents', slug: 'kindle' },
+  { name: 'Quarry', description: 'Web data extraction — scrapes and structures data from HTML with link, heading, and table parsing.', tier: 'Agents', slug: 'quarry' },
+  { name: 'Bastion', description: 'API security scanner — analyzes endpoints for BOLA, auth gaps, mass assignment, and OWASP risks.', tier: 'Agents', slug: 'bastion' },
+  { name: 'Dispatch', description: 'Multi-channel notification router — routes alerts to email, Slack, webhook, SMS by priority rules.', tier: 'Agents', slug: 'dispatch' },
+  { name: 'Gauge', description: 'Performance metrics analyzer — identifies latency bottlenecks, CPU spikes, and memory issues.', tier: 'Agents', slug: 'gauge' },
+  { name: 'Mnemonic', description: 'Knowledge base agent — stores, indexes, and retrieves notes with keyword search and auto-tagging.', tier: 'Agents', slug: 'mnemonic' },
+  { name: 'Sentinel', description: 'Scheduled task monitor — tracks cron jobs, explains expressions, detects missed runs and failures.', tier: 'Agents', slug: 'sentinel' },
+  { name: 'Mint', description: 'Invoice generator — creates invoices from line items with tax calculation and multi-format output.', tier: 'Agents', slug: 'mint' },
+  { name: 'Axiom', description: 'Test case generator — analyzes function signatures and produces unit test stubs with edge cases.', tier: 'Agents', slug: 'axiom' },
+  { name: 'Loom', description: 'Data pipeline builder — defines ETL workflows with dependency resolution and topological ordering.', tier: 'Agents', slug: 'loom' },
+  { name: 'Rune', description: 'Regex builder and explainer — constructs, explains, and tests regular expressions from descriptions.', tier: 'Agents', slug: 'rune' },
 ];
 
-const tiers = ['Kernel', 'Perception', 'Intelligence', 'Action', 'Advanced Intelligence', 'Orchestration', 'Network', 'Differentiation', 'Infrastructure', 'Community'];
+const tiers = ['Kernel', 'Perception', 'Intelligence', 'Action', 'Advanced Intelligence', 'Orchestration', 'Network', 'Differentiation', 'Infrastructure', 'Community', 'Agents'];
 
 const tierColors: Record<string, string> = {
   'Kernel': '#00d4ff',
@@ -78,6 +106,7 @@ const tierColors: Record<string, string> = {
   'Differentiation': '#ff6b9d',
   'Infrastructure': '#fbbf24',
   'Community': '#34d399',
+  'Agents': '#00ffaa',
 };
 ---
 
@@ -89,14 +118,20 @@ const tierColors: Record<string, string> = {
       <div class="tier-section">
         <h3 class="tier-heading" style={`--tier-color: ${color};`}>{tier}</h3>
         <div class="module-grid">
-          {tierModules.map(mod => (
-            <ModuleCard
-              name={mod.name}
-              description={mod.description}
-              tier={mod.tier}
-              status={mod.status ?? 'BUILT'}
-            />
-          ))}
+          {tierModules.map(mod => {
+            const href = mod.slug
+              ? `/NEXUS/reference/modules/${mod.slug}/`
+              : `/NEXUS/reference/modules/${mod.name.toLowerCase().replace(/\s+/g, '-')}/`;
+            return (
+              <ModuleCard
+                name={mod.name}
+                description={mod.description}
+                tier={mod.tier}
+                status={mod.status ?? 'BUILT'}
+                href={href}
+              />
+            );
+          })}
         </div>
       </div>
     );

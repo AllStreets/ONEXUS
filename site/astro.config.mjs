@@ -39,7 +39,7 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: 'Getting Started',
+          label: 'Setup',
           items: [
             { label: 'Installation', slug: 'getting-started/installation' },
             { label: 'Quickstart', slug: 'getting-started/quickstart' },
@@ -72,7 +72,15 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Community',
+          items: [
+            { label: 'Community Hub', slug: 'community/hub' },
+            { label: 'Agent Discovery', slug: 'community/agents' },
+          ],
+        },
+        {
           label: 'Reference',
+          collapsed: true,
           items: [
             { label: 'Routing Table', slug: 'reference/routing' },
             {

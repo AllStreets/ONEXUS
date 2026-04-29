@@ -4,9 +4,10 @@ interface Props {
   description: string;
   tier: string;
   status?: string;
+  href?: string;
 }
 
-const { name, description, tier, status = 'BUILT' } = Astro.props;
+const { name, description, tier, status = 'BUILT', href } = Astro.props;
 
 const tierColors: Record<string, string> = {
   'Kernel': '#00d4ff',
@@ -19,19 +20,32 @@ const tierColors: Record<string, string> = {
   'Differentiation': '#ff6b9d',
   'Infrastructure': '#fbbf24',
   'Community': '#34d399',
+  'Agents': '#00ffaa',
 };
 
 const accentColor = tierColors[tier] ?? '#00d4ff';
+const Tag = href ? 'a' : 'div';
 ---
 
-<div class="module-card" style={`--card-accent: ${accentColor};`}>
-  <div class="card-header">
-    <span class="card-name">{name}</span>
-    <span class="card-status">{status}</span>
+{href ? (
+  <a class="module-card module-card--link" href={href} style={`--card-accent: ${accentColor};`}>
+    <div class="card-header">
+      <span class="card-name">{name}</span>
+      <span class="card-status">{status}</span>
+    </div>
+    <p class="card-description">{description}</p>
+    <span class="card-tier">{tier}</span>
+  </a>
+) : (
+  <div class="module-card" style={`--card-accent: ${accentColor};`}>
+    <div class="card-header">
+      <span class="card-name">{name}</span>
+      <span class="card-status">{status}</span>
+    </div>
+    <p class="card-description">{description}</p>
+    <span class="card-tier">{tier}</span>
   </div>
-  <p class="card-description">{description}</p>
-  <span class="card-tier">{tier}</span>
-</div>
+)}
 
 <style>
   .module-card {
@@ -43,7 +57,7 @@ const accentColor = tierColors[tier] ?? '#00d4ff';
     flex-direction: column;
     gap: 0.75rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    cursor: default;
+    cursor: pointer;
     min-width: 0;
     overflow: hidden;
   }
@@ -86,6 +100,15 @@ const accentColor = tierColors[tier] ?? '#00d4ff';
     color: var(--nexus-text-secondary);
     line-height: 1.55;
     margin: 0;
+  }
+
+  .module-card--link {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .module-card--link:hover {
+    text-shadow: none;
   }
 
   .card-tier {
