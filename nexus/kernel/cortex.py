@@ -44,6 +44,11 @@ class Cortex:
         "consciousness": ["how are you", "journal", "self reflect", "introspect", "consciousness",
                           "emergent goals", "unintended behavior", "what are you doing", "implicit goals"],
         "ethical_prism": ["ethically", "ethical", "moral", "ethics", "right thing", "should i morally"],
+        "scribe": ["meeting", "transcript", "minutes", "action items", "summarize meeting", "notes"],
+        "vex": ["vulnerability", "security scan", "owasp", "exploit", "code security", "sast"],
+        "ledger": ["transaction", "bank statement", "spending", "budget", "categorize", "financial"],
+        "arbiter": ["code review", "review this", "pull request", "diff", "review code", "pr review"],
+        "thesis": ["paper", "literature", "academic", "research paper", "abstract", "citation"],
     }
 
     def __init__(
