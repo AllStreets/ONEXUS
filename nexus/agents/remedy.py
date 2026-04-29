@@ -9,6 +9,8 @@ Inspired by:
   - FloridSleeves/LLMDebugger (MIT) — step-by-step runtime verification
   - VishApp/multiagent-debugger (MIT) — multi-agent error analysis
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any

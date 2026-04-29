@@ -1,6 +1,7 @@
 """
 Nexus CLI — entry point for the nexus command.
-Commands: run, status, forget, allow, deny, install, uninstall, community list, community search
+Commands: run, status, forget, allow, deny, install, uninstall,
+         community list, community search, create module, create agent, validate
 """
 import asyncio
 import os
@@ -108,8 +109,32 @@ def uninstall(module_name):
 
 @main.group()
 def community():
-    """Community module management."""
+    """Community module management and marketplace."""
     pass
+
+
+def _get_marketplace():
+    """Create a Marketplace instance for CLI commands."""
+    from nexus.community.marketplace import Marketplace
+    registry_path = Path(__file__).parent.parent / "community" / "registry.json"
+    data_dir = Path(__file__).parent.parent / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return Marketplace(registry_path, data_dir)
+
+
+def _render_stars(rating: float) -> str:
+    """Render a rating as a 5-character star string like '****-'."""
+    filled = int(round(rating))
+    return "*" * filled + "-" * (5 - filled)
+
+
+CATEGORY_LABELS = {
+    "code": "Code & Development",
+    "data": "Data & Analytics",
+    "business": "Business & Finance",
+    "content": "Content & Knowledge",
+    "infrastructure": "Infrastructure & Ops",
+}
 
 
 @community.command("list")
@@ -125,7 +150,7 @@ def community_list():
         return
 
     for mod in modules:
-        click.echo(f"  {mod['author']}/{mod['name']} v{mod['version']} — {mod['description']}")
+        click.echo(f"  {mod['author']}/{mod['name']} v{mod['version']} -- {mod['description']}")
 
 
 @community.command("search")
@@ -142,7 +167,277 @@ def community_search(query):
         return
 
     for mod in results:
-        click.echo(f"  {mod['author']}/{mod['name']} v{mod['version']} — {mod['description']}")
+        click.echo(f"  {mod['author']}/{mod['name']} v{mod['version']} -- {mod['description']}")
+
+
+@community.command("browse")
+@click.option("--category", "-c", type=click.Choice(["code", "data", "business", "content", "infrastructure"], case_sensitive=False), default=None, help="Filter by category")
+@click.option("--sort", "-s", type=click.Choice(["downloads", "rating", "newest", "trust"], case_sensitive=False), default="downloads", help="Sort order")
+@click.option("--type", "type_filter", type=click.Choice(["module", "agent"], case_sensitive=False), default=None, help="Filter by type")
+def community_browse(category, sort, type_filter):
+    """Browse the marketplace with filtering and sorting."""
+    mp = _get_marketplace()
+    entries = mp.browse(category=category, sort=sort, type_filter=type_filter)
+
+    if not entries:
+        click.echo("No packages found.")
+        return
+
+    # Group by category for display
+    if category:
+        label = CATEGORY_LABELS.get(category, category.title())
+        click.echo(f"  {label}")
+        click.echo(f"  {'─' * len(label)}")
+        for e in entries:
+            stars = _render_stars(e.rating)
+            rt = f"({e.rating:.1f})" if e.rating > 0 else "(--.-)"
+            click.echo(f"  {e.author}/{e.name} v{e.version:<12} [{e.type}] {stars} {rt}  {e.downloads:>3} downloads")
+            click.echo(f"    {e.description}")
+    else:
+        for e in entries:
+            stars = _render_stars(e.rating)
+            rt = f"({e.rating:.1f})" if e.rating > 0 else "(--.-)"
+            click.echo(f"  {e.author}/{e.name} v{e.version:<12} [{e.type}] {stars} {rt}  {e.downloads:>3} downloads")
+            click.echo(f"    {e.description}")
+
+
+@community.command("info")
+@click.argument("name")
+def community_info(name):
+    """Show detailed information about a package."""
+    mp = _get_marketplace()
+    entry = mp.get_details(name)
+
+    if entry is None:
+        click.echo(f"Package '{name}' not found.")
+        return
+
+    cat_label = CATEGORY_LABELS.get(entry.category, entry.category.title())
+    click.echo(f"  {entry.name.title()} v{entry.version}")
+    click.echo(f"  by {entry.author} | {entry.type} | {cat_label}")
+    click.echo("")
+    click.echo(f"  {entry.description}")
+    click.echo("")
+
+    stars = _render_stars(entry.rating)
+    if entry.rating_count > 0:
+        click.echo(f"  Rating: {stars} ({entry.rating:.1f} from {entry.rating_count} reviews)")
+    else:
+        click.echo(f"  Rating: ----- (no reviews yet)")
+    click.echo(f"  Downloads: {entry.downloads}")
+    if entry.trust_score is not None:
+        click.echo(f"  Trust Score: {entry.trust_score}")
+    click.echo(f"  License: {entry.license}")
+
+    if entry.watch_events:
+        click.echo("")
+        click.echo(f"  Watch Events: {', '.join(entry.watch_events)}")
+    if entry.coordination_targets:
+        click.echo(f"  Coordinates With: {', '.join(entry.coordination_targets)}")
+
+    if entry.keywords:
+        click.echo("")
+        click.echo(f"  Keywords: {', '.join(entry.keywords)}")
+
+    badges = mp.reputation.get_badges(entry)
+    if badges:
+        click.echo(f"  Badges: {', '.join(badges)}")
+
+
+@community.command("rate")
+@click.argument("name")
+@click.argument("score", type=int)
+@click.option("--review", "-r", default="", help="Optional review text")
+def community_rate(name, score, review):
+    """Rate a package (1-5 stars)."""
+    mp = _get_marketplace()
+    try:
+        mp.rate(name, score, review)
+        click.echo(f"Rated '{name}' with {score} stars.")
+    except ValueError as e:
+        click.echo(f"Error: {e}")
+
+
+@community.command("stats")
+def community_stats():
+    """Show marketplace statistics."""
+    mp = _get_marketplace()
+    stats = mp.get_stats()
+
+    click.echo("  Marketplace Statistics")
+    click.echo("  ─────────────────────")
+    click.echo(f"  Total packages:  {stats.total_packages}")
+    click.echo(f"  Modules:         {stats.total_modules}")
+    click.echo(f"  Agents:          {stats.total_agents}")
+    click.echo(f"  Total downloads: {stats.total_downloads}")
+    click.echo(f"  Authors:         {stats.total_authors}")
+    click.echo("")
+    click.echo("  Categories:")
+    for cat, count in sorted(stats.categories.items()):
+        label = CATEGORY_LABELS.get(cat, cat.title())
+        click.echo(f"    {label}: {count}")
+
+
+@main.group()
+def create():
+    """Scaffold a new community module or agent."""
+    pass
+
+
+@create.command("module")
+@click.argument("name")
+def create_module(name):
+    """Scaffold a new community module.
+
+    NAME is the module name (lowercase, underscores allowed).
+    """
+    from nexus.sdk.module_template import generate_module
+
+    author = click.prompt("Author (GitHub username)")
+    description = click.prompt("Description")
+    keywords_raw = click.prompt("Keywords (comma-separated)")
+    keywords = [k.strip() for k in keywords_raw.split(",") if k.strip()]
+
+    files = generate_module(
+        name=name,
+        description=description,
+        author=author,
+        keywords=keywords,
+    )
+
+    base_dir = Path(__file__).parent.parent / "community" / "modules" / author / name
+    base_dir.mkdir(parents=True, exist_ok=True)
+    (base_dir / "tests").mkdir(parents=True, exist_ok=True)
+
+    for filepath, content in files.items():
+        full_path = base_dir / filepath
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_text(content)
+
+    click.echo("")
+    click.echo(f"Created module '{name}' at community/modules/{author}/{name}/")
+    for filepath in sorted(files.keys()):
+        pad = " " * (20 - len(filepath))
+        if filepath == "module.py":
+            click.echo(f"  {filepath}{pad}- NexusModule subclass")
+        elif filepath == "manifest.json":
+            click.echo(f"  {filepath}{pad}- Module metadata")
+        elif filepath.startswith("tests/"):
+            test_count = content.count("def test_") if filepath == list(files.keys())[-1] else 4
+            click.echo(f"  {filepath}{pad}- {test_count} test stubs")
+        elif filepath == "README.md":
+            click.echo(f"  {filepath}{pad}- Usage documentation")
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo("  1. Implement handle() in module.py")
+    click.echo(f"  2. Run tests: pytest community/modules/{author}/{name}/tests/ -v")
+    click.echo("  3. Submit: git add . && git commit && open a PR")
+
+
+@create.command("agent")
+@click.argument("name")
+def create_agent(name):
+    """Scaffold a new community agent.
+
+    NAME is the agent name (lowercase, underscores allowed).
+    """
+    from nexus.sdk.agent_template import generate_agent
+
+    author = click.prompt("Author (GitHub username)")
+    description = click.prompt("Description")
+    keywords_raw = click.prompt("Keywords (comma-separated)")
+    keywords = [k.strip() for k in keywords_raw.split(",") if k.strip()]
+
+    watch_raw = click.prompt("Watch events (comma-separated, optional)", default="", show_default=False)
+    watch_events = [e.strip() for e in watch_raw.split(",") if e.strip()] if watch_raw else []
+
+    coord_raw = click.prompt("Coordination targets (comma-separated, optional)", default="", show_default=False)
+    coordination_targets = [t.strip() for t in coord_raw.split(",") if t.strip()] if coord_raw else []
+
+    files = generate_agent(
+        name=name,
+        description=description,
+        author=author,
+        keywords=keywords,
+        watch_events=watch_events,
+        coordination_targets=coordination_targets,
+    )
+
+    base_dir = Path(__file__).parent.parent / "community" / "agents" / author / name
+    base_dir.mkdir(parents=True, exist_ok=True)
+    (base_dir / "tests").mkdir(parents=True, exist_ok=True)
+
+    for filepath, content in files.items():
+        full_path = base_dir / filepath
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_text(content)
+
+    click.echo("")
+    click.echo(f"Created agent '{name}' at community/agents/{author}/{name}/")
+    for filepath in sorted(files.keys()):
+        pad = " " * (20 - len(filepath))
+        if filepath == "agent.py":
+            click.echo(f"  {filepath}{pad}- AgentModule subclass with 4 tier methods")
+        elif filepath == "manifest.json":
+            click.echo(f"  {filepath}{pad}- Agent metadata")
+        elif filepath.startswith("tests/"):
+            click.echo(f"  {filepath}{pad}- 6 test stubs")
+        elif filepath == "README.md":
+            click.echo(f"  {filepath}{pad}- Usage documentation with trust tiers")
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo("  1. Implement analyze() in agent.py (must work without LLM)")
+    click.echo("  2. Implement suggest(), monitor(), coordinate()")
+    click.echo(f"  3. Run tests: pytest community/agents/{author}/{name}/tests/ -v")
+    click.echo("  4. Submit: git add . && git commit && open a PR")
+
+
+@main.command("validate")
+@click.argument("path")
+def validate_package(path):
+    """Validate a community module or agent package."""
+    from nexus.sdk.validator import PackageValidator
+
+    validator = PackageValidator()
+
+    # Determine type from manifest if it exists
+    manifest_path = os.path.join(path, "manifest.json")
+    pkg_type = "module"
+    if os.path.isfile(manifest_path):
+        import json
+        try:
+            with open(manifest_path) as f:
+                data = json.load(f)
+            if data.get("type") == "agent":
+                pkg_type = "agent"
+        except Exception:
+            pass
+
+    click.echo(f"Validating {pkg_type} package...")
+
+    result = validator.validate(path)
+
+    # Report individual checks
+    checks = [
+        ("manifest.json", validator.check_manifest(path)),
+        ("code structure", validator.check_code(path)),
+        ("tests", validator.check_tests(path)),
+        ("README.md", validator.check_readme(path)),
+    ]
+
+    for label, errors in checks:
+        if errors:
+            for err in errors:
+                click.echo(f"  [FAIL] {err}")
+        else:
+            click.echo(f"  [OK] {label} is valid")
+
+    click.echo("")
+    if result.valid:
+        click.echo("Package is valid and ready for submission.")
+    else:
+        click.echo(f"Package has {len(result.errors)} error(s). Fix them before submitting.")
+        raise SystemExit(1)
 
 
 @main.command()
@@ -256,6 +551,70 @@ def run():
             await bridge_manager.stop()
 
     asyncio.run(session())
+
+
+@main.command()
+def tui():
+    """Start the Nexus interactive TUI (rich terminal dashboard)."""
+    from nexus.tui.app import launch_tui
+    cfg = NexusConfig()
+    launch_tui(cfg)
+
+
+@main.command()
+@click.option("--suite", type=click.Choice(["security", "code", "data", "all"], case_sensitive=False), default="all", help="Suite to run (default: all)")
+@click.option("--format", "fmt", type=click.Choice(["terminal", "markdown", "json"], case_sensitive=False), default="terminal", help="Output format")
+@click.option("--output", "output_file", type=click.Path(), default=None, help="Write report to file")
+def benchmark(suite, fmt, output_file):
+    """Run benchmark suites against NEXUS agents."""
+    from nexus.benchmarks.runner import BenchmarkRunner
+    from nexus.benchmarks.report import ReportGenerator
+
+    suites_to_run = []
+
+    if suite in ("security", "all"):
+        from nexus.benchmarks.suites.security import SECURITY_SUITE
+        suites_to_run.append(SECURITY_SUITE)
+    if suite in ("code", "all"):
+        from nexus.benchmarks.suites.code import CODE_SUITE
+        suites_to_run.append(CODE_SUITE)
+    if suite in ("data", "all"):
+        from nexus.benchmarks.suites.data import DATA_SUITE
+        suites_to_run.append(DATA_SUITE)
+
+    runner = BenchmarkRunner()
+    reporter = ReportGenerator()
+    all_results = []
+
+    async def _run():
+        for s in suites_to_run:
+            result = await runner.run_suite(s)
+            all_results.append(result)
+
+    asyncio.run(_run())
+
+    # Generate output
+    parts = []
+    for result in all_results:
+        if fmt == "terminal":
+            parts.append(reporter.to_terminal(result))
+        elif fmt == "markdown":
+            parts.append(reporter.to_markdown(result))
+        elif fmt == "json":
+            parts.append(reporter.to_json(result))
+        parts.append("")
+
+    if fmt == "terminal" and len(all_results) > 1:
+        parts.append(reporter.to_summary(all_results))
+
+    report = "\n".join(parts)
+
+    if output_file:
+        with open(output_file, "w") as f:
+            f.write(report)
+        click.echo(f"Report written to {output_file}")
+    else:
+        click.echo(report)
 
 
 if __name__ == "__main__":

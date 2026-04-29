@@ -8,6 +8,8 @@ Inspired by:
   - MaLeLabTs/RegexGenerator (MIT) -- example-based regex generation
   - aloisdg/awesome-regex -- curated regex resources collection
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
 from typing import Any

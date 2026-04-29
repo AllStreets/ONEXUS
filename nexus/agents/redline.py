@@ -11,6 +11,8 @@ Inspired by:
 
 Not legal advice. First-pass triage to flag issues for human review.
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any

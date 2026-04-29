@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-804_Passing-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-51_Built-blue?style=for-the-badge" alt="Modules"/>
+  <img src="https://img.shields.io/badge/NEXUS-v0.1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>&nbsp;<img src="https://img.shields.io/badge/Tests-1300+-green?style=for-the-badge" alt="Tests"/>&nbsp;<img src="https://img.shields.io/badge/Modules-51_Built-blue?style=for-the-badge" alt="Modules"/>
 </p>
 
 <p align="center">
@@ -103,6 +103,22 @@ This is not prompt chaining, not tool use, not a wrapper around someone else's A
   │  Multi-Provider ·· OpenAI, Anthropic, local fallback   │
   │  Messaging ······· Telegram, Discord two-way bridges   │
   │  Community ······· validated third-party modules       │
+  └────────────────────────────────────────────────────────┘
+       │           │
+  ┌────V───────────V───────────────────────────────────────┐
+  │              PLATFORM SERVICES                         │
+  │                                                        │
+  │  API Server ······ REST + WebSocket (FastAPI)          │
+  │  MCP Server ······ every module as an MCP tool         │
+  │  Dashboard ······· real-time dark-themed web UI        │
+  │  Terminal UI ····· Rich split-pane TUI                 │
+  │  Workflow Engine · DAG pipelines (YAML + Python)       │
+  │  Time-Travel ····· Chronicle replay + snapshots        │
+  │  Federation ······ peer-to-peer NEXUS mesh             │
+  │  Multi-Modal ····· image, audio, document pipelines    │
+  │  Benchmarks ······ automated accuracy testing          │
+  │  Plugin SDK ······ nexus create + validator            │
+  │  Marketplace ····· reputation + ratings + discovery    │
   └────────────────────────────────────────────────────────┘
        │           │
   ┌────V───────────V───────────────────────────────────────┐
@@ -372,6 +388,19 @@ Twenty-five task-specialist agents built on the AgentModule base class. Each sta
     ├── Loom ············ data pipeline builder
     └── Rune ············ regex builder & explainer
 
+    PLATFORM SERVICES (Batch 9) ━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
+    ├── API Server ······ REST + WebSocket (FastAPI)
+    ├── Dashboard ······· real-time dark-themed web UI
+    ├── Terminal UI ····· Rich split-pane TUI
+    ├── MCP Server ······ every module as an MCP tool
+    ├── Workflow Engine · DAG pipelines (YAML + Python)
+    ├── Time-Travel ····· Chronicle replay + snapshots
+    ├── Federation ······ peer-to-peer NEXUS mesh
+    ├── Multi-Modal ····· image, audio, document pipelines
+    ├── Benchmarks ······ automated accuracy testing (51 cases)
+    ├── Plugin SDK ······ nexus create + validator
+    └── Marketplace ····· reputation + ratings + discovery
+
     NEXUS SITE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ██████████ BUILT
     └── Community site ·· documentation & module catalog
 ```
@@ -401,14 +430,24 @@ nexus run
 | Command | What it does |
 |---------|-------------|
 | `nexus run` | Start an interactive session |
+| `nexus tui` | Launch the Rich terminal UI |
+| `nexus serve` | Start the REST/WebSocket API server |
 | `nexus status` | Show system state -- DB, model, port |
 | `nexus allow <module>` | Grant a module permission to operate |
 | `nexus deny <module>` | Revoke a module's permission |
 | `nexus forget --yes` | Erase all data (GDPR Art. 17) |
+| `nexus benchmark` | Run agent accuracy benchmarks |
+| `nexus create module <name>` | Scaffold a new module |
+| `nexus create agent <name>` | Scaffold a new agent |
+| `nexus validate <path>` | Validate a module/agent package |
 | `nexus install <author/module>` | Install a community module |
 | `nexus uninstall <module>` | Uninstall a community module |
 | `nexus community list` | List available community modules |
 | `nexus community search <query>` | Search community modules |
+| `nexus community browse` | Browse the marketplace |
+| `nexus community info <name>` | Package details and ratings |
+| `nexus community rate <name> <n>` | Rate a package (1-5) |
+| `nexus community stats` | Marketplace statistics |
 
 ---
 
@@ -471,6 +510,56 @@ Trust tiers unlock progressively: SKILL (0) -- ADVISOR (25) -- MONITOR (50) -- A
 
 ---
 
+## Platform Services
+
+Eleven systems that turn NEXUS from a CLI tool into infrastructure.
+
+### API Server
+
+`nexus serve` starts a FastAPI server exposing the full kernel over REST + WebSocket. Every kernel operation has an endpoint: message routing, module management, memory queries, trust scoring, Chronicle audit, and real-time Pulse event streaming over WebSocket. CORS-enabled for dashboard access.
+
+### Live Dashboard
+
+A dark-themed real-time web dashboard at `/dashboard`. Trust gauges with animated SVG arcs and glow effects, live Pulse event stream over WebSocket, Chronicle audit timeline, module status panel, and an interactive message console. Glassmorphism cards, cyan/purple accents, JetBrains Mono typography. No React, no npm, no build step -- pure vanilla HTML/CSS/JS.
+
+### Terminal UI
+
+`nexus tui` launches a Rich-based split-pane terminal interface. Four quadrants: active modules with colored trust bars, conversation history, live Pulse events, and Chronicle entries. Dark theme with the same color system as the dashboard. An alternative to the basic `nexus run` prompt.
+
+### MCP Server
+
+Every NEXUS module and agent exposed as an MCP tool. Connect Claude Desktop, Cursor, VS Code, or any MCP client and NEXUS becomes the backend brain. Twelve tools (`nexus_message`, `nexus_route`, `nexus_memory_store`, `nexus_memory_query`, `nexus_trust_check`, and more), four resources (`nexus://modules`, `nexus://agents`, `nexus://trust`, `nexus://config`), and three built-in prompts.
+
+### Workflow Engine
+
+DAG-based pipelines that chain modules and agents into multi-step workflows. Define in YAML or Python. Steps reference outputs of dependencies via `{step_name.output}`, support conditional execution, three error policies (stop/skip/continue), and timeout enforcement. Four built-in workflows: `security_scan`, `code_review`, `data_pipeline`, `incident_response`. Full Chronicle logging and Pulse events at every step.
+
+### Time-Travel Replay
+
+Pick any point in NEXUS history and reconstruct the exact system state: which modules were active, what trust scores were, how messages were routed, what memory was accessed. Snapshot diffs compare two points in time. Session replay reconstructs full conversations. Trust history shows every score change with tier transitions highlighted. All powered by Chronicle's existing audit data -- stores nothing new.
+
+### Federation
+
+NEXUS-to-NEXUS peer communication. Instances discover each other (manual URL or local network scan), exchange capability listings, and route requests across the mesh. HMAC-SHA256 request signing, per-peer rate limiting, peer trust independent from module trust. All outbound data logged to Chronicle. Disabled by default -- opt-in via `NEXUS_FEDERATION_ENABLED=true`.
+
+### Multi-Modal Input
+
+Image, audio, and document processing pipelines that convert non-text inputs into text representations for module routing. PNG/JPEG header parsing, WAV/FLAC metadata extraction, CSV/JSON/HTML/PDF text extraction -- all using stdlib only (no external dependencies). LLM-enhanced when a vision or speech model is available. `MultiModalCortex` bridges processing with Cortex routing.
+
+### Benchmarks
+
+Automated accuracy testing across 51 benchmark cases covering 10 agents. Three suites (security, code, data) measure pattern detection accuracy, response time (`time.perf_counter()`), and memory usage (`tracemalloc`). Reports in terminal, Markdown, or JSON. `nexus benchmark --suite security --format markdown`.
+
+### Plugin SDK
+
+`nexus create module <name>` and `nexus create agent <name>` generate complete file structures: code with proper base class, manifest.json, test stubs, README. `nexus validate <path>` catches missing files, wrong base class, kernel imports, insufficient tests. Zero-friction path from idea to submittable PR.
+
+### Agent Marketplace
+
+Enhanced community registry with reputation scores, download tracking, star ratings, trending detection, and recommendations. Browse by category, sort by downloads/rating/trust, search with filters. `nexus community browse --category code --sort downloads`. Reputation calculated from weighted formula: 40% rating, 30% downloads, 20% trust score, 10% freshness. Badges: verified, popular, trusted, top-rated, new.
+
+---
+
 ## Hardware
 
 NEXUS was designed for machines people actually own.
@@ -496,16 +585,22 @@ The inference layer supports multiple providers. Local models run via llama.cpp 
   ║  sqlite-vec ··········· vector similarity                  ║
   ║  smolagents ··········· agent orchestration                ║
   ║  Click ················ CLI interface                      ║
+  ║  Rich ················· terminal UI + formatting           ║
   ║  OpenTelemetry ········ structured telemetry               ║
   ║  asyncio ·············· phantom agent lifecycle            ║
+  ╠════════════════════════════════════════════════════════════╣
+  ║  FastAPI ·············· REST + WebSocket API server        ║
+  ║  Pydantic ············· request/response validation        ║
+  ║  uvicorn ·············· ASGI server                        ║
   ╠════════════════════════════════════════════════════════════╣
   ║  OpenAI SDK ··········· cloud inference (GPT-4o, etc.)     ║
   ║  Anthropic SDK ········ cloud inference (Claude, etc.)     ║
   ║  python-telegram-bot ·· Telegram bridge                    ║
   ║  discord.py ··········· Discord bridge                     ║
   ╠════════════════════════════════════════════════════════════╣
-  ║  MCP ·················· local module protocol              ║
+  ║  MCP SDK ·············· Model Context Protocol server      ║
   ║  Google A2A ··········· inter-agent protocol               ║
+  ║  HMAC-SHA256 ·········· federation request signing         ║
   ╠════════════════════════════════════════════════════════════╣
   ║  Local: Qwen 3 · DeepSeek · Phi · Gemma (Apache 2.0)       ║
   ║  Cloud: GPT-4o · Claude · any OpenAI/Anthropic-compat.     ║
@@ -521,7 +616,7 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-804 tests. Under four seconds. No network, no mocks of external services, no flaky anything.
+1300+ tests across 119 test files. No network, no mocks of external services, no flaky anything.
 
 ---
 
@@ -605,10 +700,80 @@ nexus/
 │   ├── dispatch.py ······ multi-channel notification router
 │   ├── sentinel.py ······ scheduled task monitor
 │   └── mnemonic.py ······ knowledge base agent
-└── community/
-    ├── validator.py ····· module validation engine
-    ├── registry.py ······ searchable module catalog
-    └── installer.py ····· install/uninstall manager
+├── api/
+│   ├── server.py ········ FastAPI app factory
+│   ├── models.py ········ Pydantic request/response types
+│   └── routes/
+│       ├── messages.py ·· message routing endpoints
+│       ├── modules.py ··· module management
+│       ├── memory.py ···· Engram access
+│       ├── chronicle.py · audit log queries
+│       ├── trust.py ····· Aegis trust endpoints
+│       ├── events.py ···· WebSocket Pulse streaming
+│       ├── system.py ···· status + health checks
+│       ├── dashboard.py · static file serving
+│       ├── replay.py ···· time-travel endpoints
+│       ├── federation.py  federation endpoints
+│       ├── marketplace.py marketplace endpoints
+│       └── multimodal.py  file processing endpoints
+├── dashboard/
+│   ├── index.html ······· single-page application
+│   ├── styles.css ······· dark theme + glassmorphism
+│   ├── app.js ··········· 6 live components
+│   └── icons.js ········· 18 inline SVG icons
+├── tui/
+│   ├── app.py ··········· Rich Layout + Live display
+│   ├── panels.py ········ 5 panel renderers
+│   ├── theme.py ········· color system + trust bars
+│   └── input_handler.py · keyboard input + history
+├── mcp/
+│   ├── server.py ········ MCP server + stdio transport
+│   ├── tools.py ········· 12 MCP tool handlers
+│   ├── resources.py ····· 4 MCP resources
+│   └── prompts.py ······· 3 MCP prompts
+├── workflow/
+│   ├── engine.py ········ DAG executor (topological sort)
+│   ├── models.py ········ Workflow + Step + Result types
+│   ├── parser.py ········ YAML workflow loader + validator
+│   ├── conditions.py ···· safe condition evaluator
+│   └── builtins.py ······ 4 pre-built workflows
+├── replay/
+│   ├── engine.py ········ snapshot reconstruction + diffs
+│   ├── models.py ········ Timeline + Snapshot + Session types
+│   └── formatter.py ····· terminal + API output formatting
+├── federation/
+│   ├── protocol.py ······ handshake + routing + heartbeat
+│   ├── peer.py ·········· peer registry + discovery
+│   ├── discovery.py ····· network scanning + manual add
+│   ├── security.py ······ HMAC signing + rate limiting
+│   └── models.py ········ Peer + Request + Response types
+├── multimodal/
+│   ├── processor.py ····· auto-detect + dispatch
+│   ├── image.py ········· PNG/JPEG header parsing
+│   ├── audio.py ········· WAV/FLAC metadata extraction
+│   ├── document.py ······ CSV/JSON/HTML/PDF text extraction
+│   ├── integration.py ··· MultiModalCortex bridge
+│   └── models.py ········ ProcessedInput + result types
+├── benchmarks/
+│   ├── runner.py ········ async benchmark executor
+│   ├── report.py ········ terminal/markdown/JSON reports
+│   ├── models.py ········ Case + Result + Suite types
+│   └── suites/
+│       ├── security.py ·· 20 cases (Vex, Redline, Mandate)
+│       ├── code.py ······ 17 cases (Carve, Arbiter, Rune, Remedy)
+│       └── data.py ······ 14 cases (Flux, Vigil, Gauge)
+├── sdk/
+│   ├── module_template.py module scaffolding generator
+│   ├── agent_template.py  agent scaffolding generator
+│   └── validator.py ····· package validation engine
+├── community/
+│   ├── validator.py ····· module validation engine
+│   ├── registry.py ······ searchable module catalog
+│   ├── installer.py ····· install/uninstall manager
+│   ├── marketplace.py ··· browse + search + trending
+│   ├── reputation.py ···· weighted scoring + badges
+│   └── models.py ········ MarketplaceEntry + stats types
+└── ...
 ```
 
 ---

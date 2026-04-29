@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <style>
+    /* Critical inline: prevent flash of unstyled content */
+    html { background: #0a0a0f; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">
+        <span id="header-icon"></span>
+        <span>NEXUS</span>
+      </div>
+      <span style="color:var(--text-muted);font-size:11px;font-family:var(--mono)">DASHBOARD</span>
+    </div>
+    <div class="header-right" id="status-bar">
+      <div class="status-pill unknown"><span class="dot"></span>loading</div>
+    </div>
+  </header>
+
+  <!-- ── Main Three-Column Panels ────────────────────────────────────── -->
+  <div class="main-panels">
+
+    <!-- Module List (left) -->
+    <div class="panel" id="module-list">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span id="icon-modules"></span>
+          MODULES
+        </div>
+      </div>
+      <div class="module-search">
+        <div class="module-search-wrap">
+          <span class="search-icon" id="icon-search"></span>
+          <input type="text" placeholder="Filter modules..." spellcheck="false" />
+        </div>
+      </div>
+      <div class="module-controls">
+        <button data-sort="trust" class="active">by trust</button>
+        <button data-sort="alpha">A-Z</button>
+        <span style="width:1px;height:14px;background:var(--border);margin:0 4px"></span>
+        <button data-category="kernel">kernel</button>
+        <button data-category="intelligence">intel</button>
+        <button data-category="agent">agent</button>
+      </div>
+      <div class="panel-body"></div>
+    </div>
+
+    <!-- Trust Gauges (center) -->
+    <div class="panel" id="trust-gauges">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span id="icon-trust"></span>
+          TRUST GAUGES
+        </div>
+      </div>
+      <div class="panel-body"></div>
+    </div>
+
+    <!-- Pulse Event Stream (right) -->
+    <div class="panel" id="pulse-stream">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span id="icon-pulse"></span>
+          PULSE STREAM
+        </div>
+        <div class="pulse-connection disconnected">
+          <span class="dot"></span>offline
+        </div>
+      </div>
+      <div class="panel-body"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Chronicle Timeline ──────────────────────────────────────────── -->
+  <div class="chronicle-panel" id="chronicle">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span id="icon-chronicle"></span>
+        CHRONICLE
+      </div>
+      <div class="chronicle-filters">
+        <button data-filter="all" class="active">all</button>
+        <button data-filter="server_start">start</button>
+        <button data-filter="server_stop">stop</button>
+        <button data-filter="trust_adjusted">trust</button>
+        <button data-filter="module_allowed">allow</button>
+        <button data-filter="module_denied">deny</button>
+        <button data-filter="message_processed">msg</button>
+      </div>
+    </div>
+    <div class="timeline-wrap">
+      <div class="timeline-track">
+        <div class="timeline-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Message Console ─────────────────────────────────────────────── -->
+  <div class="console-panel" id="console">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span id="icon-terminal"></span>
+        CONSOLE
+      </div>
+    </div>
+    <div class="console-output"></div>
+    <div class="console-input-row">
+      <span class="console-prompt">&gt;</span>
+      <input type="text" placeholder="Send a message through Cortex..." spellcheck="false" autocomplete="off" />
+      <button class="console-send-btn" id="console-send-icon">
+        <!-- send icon injected by JS -->
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script src="/dashboard/icons.js"></script>
+<script src="/dashboard/app.js"></script>
+<script>
+  // Inject icons into header slots
+  document.getElementById('header-icon').innerHTML = icon('nexus', 20);
+  document.getElementById('icon-modules').innerHTML = icon('module', 14);
+  document.getElementById('icon-search').innerHTML = icon('search', 13);
+  document.getElementById('icon-trust').innerHTML = icon('trust', 14);
+  document.getElementById('icon-pulse').innerHTML = icon('pulse', 14);
+  document.getElementById('icon-chronicle').innerHTML = icon('chronicle', 14);
+  document.getElementById('icon-terminal').innerHTML = icon('terminal', 14);
+  document.getElementById('console-send-icon').innerHTML = icon('send', 15);
+</script>
+
+</body>
+</html>

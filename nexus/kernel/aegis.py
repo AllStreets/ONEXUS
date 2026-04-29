@@ -3,6 +3,8 @@ Aegis — trust and permissions engine for Nexus.
 Batch 1: binary allow/deny per module.
 Batch 3 upgrades to graduated 0-100 trust with outcome-based adjustment.
 """
+from __future__ import annotations
+
 import sqlite3
 from typing import Any
 

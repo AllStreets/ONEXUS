@@ -8,6 +8,8 @@ Inspired by:
   - plasma-umass/scalene (Apache 2.0) -- Python CPU/memory/GPU profiler
   - locustio/locust (MIT) -- load testing framework
 """
+from __future__ import annotations
+
 import re
 from collections import defaultdict
 from dataclasses import dataclass

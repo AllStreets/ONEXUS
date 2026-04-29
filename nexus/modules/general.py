@@ -3,6 +3,8 @@ General — the built-in default module.
 Handles any user message by forwarding to the LLM with a system prompt.
 Falls back to a static response when no LLM is available.
 """
+from __future__ import annotations
+
 from typing import Any
 from nexus.modules.base import NexusModule
 

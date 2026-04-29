@@ -28,6 +28,22 @@ by default, logged when enabled. The smallest useful configuration fits in
 
 <div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
 
+## Platform Services
+
+Beyond the kernel, NEXUS ships with a full platform layer:
+
+- **API Server** -- REST + WebSocket endpoints for every kernel operation (FastAPI)
+- **Live Dashboard** -- dark-themed real-time web UI with trust gauges, Pulse streaming, Chronicle timeline
+- **Terminal UI** -- Rich split-pane TUI as an alternative to the basic CLI
+- **MCP Server** -- every module and agent exposed as MCP tools for Claude, Cursor, VS Code
+- **Workflow Engine** -- DAG pipelines chaining modules/agents, defined in YAML or Python
+- **Time-Travel Replay** -- reconstruct system state at any point in history from Chronicle data
+- **Federation** -- peer-to-peer NEXUS mesh with capability exchange and cross-instance routing
+- **Multi-Modal** -- image, audio, and document processing pipelines (stdlib only, LLM-enhanced)
+- **Benchmarks** -- 51 automated accuracy tests across 10 agents
+- **Plugin SDK** -- `nexus create module/agent` scaffolding + `nexus validate` package checker
+- **Marketplace** -- reputation scores, ratings, trending, recommendations for community packages
+
 ## Build Your Own
 
 NEXUS has two extensibility paths. **Modules** are persistent intelligence components -- extend `NexusModule`, implement `handle()`, register keywords in Cortex. **Agents** are task specialists with graduated sovereignty -- extend `AgentModule`, implement four tier methods, and earn autonomy through demonstrated reliability.
@@ -35,7 +51,7 @@ NEXUS has two extensibility paths. **Modules** are persistent intelligence compo
 - [Build a Module](/NEXUS/guides/building-a-module/) -- five steps from file creation to a running module
 - [Build an Agent](/NEXUS/guides/building-an-agent/) -- graduated sovereignty with five trust tiers
 
-Submit a PR and it's available to every NEXUS user. See [CONTRIBUTING.md](https://github.com/AllStreets/NEXUS/blob/main/community/CONTRIBUTING.md) on GitHub for the full spec.
+Or scaffold instantly: `nexus create module my_thing` / `nexus create agent my_scanner`. Submit a PR and it's available to every NEXUS user. See [CONTRIBUTING.md](https://github.com/AllStreets/NEXUS/blob/main/community/CONTRIBUTING.md) on GitHub for the full spec.
 
 ## Hardware Requirements
 

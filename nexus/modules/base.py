@@ -2,6 +2,8 @@
 Base class for all Nexus modules.
 Every module must declare name, description, version, and implement handle().
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -14,9 +16,22 @@ class NexusModule(ABC):
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # Skip check for abstract subclasses
+        # Skip check for abstract subclasses and intermediate base classes
         if getattr(cls, "__abstractmethods__", None):
             return
+        # Skip intermediate base classes that define their own abstract-like
+        # methods (e.g. AgentModule) -- they raise NotImplementedError in a
+        # method that concrete subclasses must override.
+        for method_name in ("analyze", "handle"):
+            method = getattr(cls, method_name, None)
+            if method is not None:
+                import inspect
+                try:
+                    src = inspect.getsource(method)
+                    if "raise NotImplementedError" in src and "must implement" in src:
+                        return
+                except (OSError, TypeError):
+                    pass
         for attr in ("name", "description", "version"):
             if not hasattr(cls, attr) or not getattr(cls, attr):
                 raise TypeError(f"Module {cls.__name__} must define '{attr}'")

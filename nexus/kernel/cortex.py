@@ -3,6 +3,8 @@ Cortex — the Nexus router and orchestrator.
 Receives user input, selects the appropriate module, enforces permissions,
 logs to Chronicle, and stores interactions in Engram.
 """
+from __future__ import annotations
+
 from typing import Any
 from nexus.kernel.engram import Engram
 from nexus.kernel.chronicle import Chronicle

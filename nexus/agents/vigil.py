@@ -8,6 +8,8 @@ Inspired by:
   - stratosphereips/llm-log-analyzer (MIT) — local LLM log analysis
   - trawick/stacktraces.py (MIT) — Python stack trace analysis tools
 """
+from __future__ import annotations
+
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field

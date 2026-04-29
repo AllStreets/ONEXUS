@@ -1,11 +1,30 @@
 """
-ModuleRegistry — reads, queries, and manages the community module registry.
+ModuleRegistry -- reads, queries, and manages the community module registry.
 Registry data lives in community/registry.json.
 """
+from __future__ import annotations
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+
+# Default values for fields added by the marketplace extension.
+_FIELD_DEFAULTS: dict[str, Any] = {
+    "type": "module",
+    "category": "",
+    "keywords": [],
+    "license": "Apache-2.0",
+    "trust_score": None,
+    "downloads": 0,
+    "rating": 0.0,
+    "rating_count": 0,
+    "watch_events": [],
+    "coordination_targets": [],
+    "created_at": "",
+    "updated_at": "",
+}
 
 
 class ModuleRegistry:
@@ -21,13 +40,20 @@ class ModuleRegistry:
     def _save(self) -> None:
         self._path.write_text(json.dumps(self._data, indent=2))
 
+    def _normalize(self, mod: dict[str, Any]) -> dict[str, Any]:
+        """Fill in default values for any missing marketplace fields."""
+        for key, default in _FIELD_DEFAULTS.items():
+            if key not in mod:
+                mod[key] = default if not isinstance(default, list) else list(default)
+        return mod
+
     def list_all(self) -> list[dict[str, Any]]:
-        return list(self._data["modules"])
+        return [self._normalize(dict(m)) for m in self._data["modules"]]
 
     def get(self, name: str) -> dict[str, Any] | None:
         for mod in self._data["modules"]:
             if mod["name"] == name:
-                return mod
+                return self._normalize(dict(mod))
         return None
 
     def search(self, query: str) -> list[dict[str, Any]]:
@@ -37,8 +63,9 @@ class ModuleRegistry:
             if (q in mod["name"].lower()
                     or q in mod.get("author", "").lower()
                     or q in mod.get("description", "").lower()
-                    or any(q in kw.lower() for kw in mod.get("keywords", []))):
-                results.append(mod)
+                    or any(q in kw.lower() for kw in mod.get("keywords", []))
+                    or q in mod.get("category", "").lower()):
+                results.append(self._normalize(dict(mod)))
         return results
 
     def add(self, module_info: dict[str, Any]) -> None:

@@ -8,6 +8,8 @@ Inspired by:
   - semgrep/semgrep (LGPL 2.1) — multi-language semantic code analysis
   - OWASP/ASST (Apache 2.0) — OWASP security scanning toolkit
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any

@@ -8,6 +8,8 @@ Inspired by:
   - scanapi/scanapi (MIT) -- automated API integration testing
   - cerberauth/vulnapi (MIT) -- API security vulnerability scanner
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any

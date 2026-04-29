@@ -8,6 +8,8 @@ Inspired by:
   - CIS Benchmarks (CC BY-NC-SA 4.0) -- control frameworks
   - NIST Cybersecurity Framework (public domain)
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
 from typing import Any

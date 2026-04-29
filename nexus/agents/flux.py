@@ -7,6 +7,8 @@ Inspired by:
   - NumbersStation/NSText2SQL — text-to-SQL benchmarks
   - Spider benchmark (CC BY-SA 4.0) — text-to-SQL evaluation dataset
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any

@@ -8,6 +8,8 @@ Inspired by:
   - jedi (MIT) — Python static analysis and autocompletion
   - sourcery.ai patterns — automated Python refactoring patterns
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any

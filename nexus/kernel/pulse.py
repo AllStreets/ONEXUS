@@ -2,6 +2,8 @@
 Pulse — the Nexus message bus.
 Async in-process pub/sub with priority queuing and wildcard topics.
 """
+from __future__ import annotations
+
 import asyncio
 import fnmatch
 import uuid

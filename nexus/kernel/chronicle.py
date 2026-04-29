@@ -2,6 +2,8 @@
 Chronicle — immutable audit trail for every Nexus action.
 SQLite-backed, queryable, exportable for compliance.
 """
+from __future__ import annotations
+
 import json
 import sqlite3
 import uuid

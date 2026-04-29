@@ -8,6 +8,8 @@ Inspired by:
   - Nikita-Filonov/ai-review (MIT) — multi-platform code review with Ollama
   - coderabbitai/ai-pr-reviewer (MIT) — PR summarizer with chat capabilities
 """
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from typing import Any
