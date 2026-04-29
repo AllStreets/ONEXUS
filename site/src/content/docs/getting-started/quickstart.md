@@ -99,3 +99,13 @@ nexus forget --yes
 ```
 
 This clears Engram (all three tiers) but leaves the audit trail in Chronicle and trust scores in Aegis intact.
+
+## Build Your Own
+
+NEXUS has two extensibility paths:
+
+- **[Build a Module](/NEXUS/guides/building-a-module/)** -- persistent intelligence components (perception, reasoning, memory). Extend `NexusModule`, implement `handle()`, register keywords in Cortex.
+
+- **[Build an Agent](/NEXUS/guides/building-an-agent/)** -- task specialists with graduated sovereignty. Extend `AgentModule`, implement `analyze()` + `suggest()` + `monitor()` + `coordinate()`. Agents start at trust 0 and earn autonomy through demonstrated reliability.
+
+Both paths get full access to the kernel: Engram (memory), Chronicle (audit), Aegis (trust), Pulse (events), and LLM (inference).

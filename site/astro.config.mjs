@@ -64,9 +64,15 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Build',
+          items: [
+            { label: 'Build a Module', slug: 'guides/building-a-module' },
+            { label: 'Build an Agent', slug: 'guides/building-an-agent' },
+          ],
+        },
+        {
           label: 'Guides',
           items: [
-            { label: 'Building a Module', slug: 'guides/building-a-module' },
             { label: 'Connecting an LLM', slug: 'guides/connecting-an-llm' },
             { label: 'Agent Workflows', slug: 'guides/agent-workflows' },
             { label: 'Running Tests', slug: 'guides/running-tests' },

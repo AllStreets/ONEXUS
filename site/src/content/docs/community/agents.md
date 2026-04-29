@@ -106,4 +106,4 @@ class MyAgent(AgentModule):
         return ""
 ```
 
-See the [Earned Autonomy](/NEXUS/concepts/earned-autonomy/) page for how trust tiers work, and the [Building a Module](/NEXUS/guides/building-a-module/) guide for the full spec.
+See the [Earned Autonomy](/NEXUS/concepts/earned-autonomy/) page for how trust tiers work, the [Build an Agent](/NEXUS/guides/building-an-agent/) guide for the full agent spec, or the [Build a Module](/NEXUS/guides/building-a-module/) guide for persistent intelligence components.

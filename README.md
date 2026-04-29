@@ -412,6 +412,65 @@ nexus run
 
 ---
 
+## Build Your Own
+
+NEXUS has two extensibility paths -- modules and agents. Both get full kernel access (memory, audit, trust, events, inference). Both use keyword routing through Cortex. The difference is how they earn autonomy.
+
+### Build a Module
+
+Modules are persistent intelligence components. Extend `NexusModule`, implement `handle()`, register routing keywords in Cortex.
+
+```python
+from nexus.modules.base import NexusModule
+
+class SummarizerModule(NexusModule):
+    name = "summarizer"
+    description = "Summarizes text using the local LLM."
+    version = "1.0.0"
+
+    async def handle(self, message: str, context: dict) -> str:
+        prompt = f"Summarize concisely:\n\n{message}"
+        return await context["llm"].complete(prompt)
+```
+
+Five steps: create the file, register keywords, write tests, run tests, `nexus allow summarizer`. Full guide: [Build a Module](https://allstreets.github.io/NEXUS/guides/building-a-module/).
+
+### Build an Agent
+
+Agents are task specialists with graduated sovereignty. Extend `AgentModule`, implement four tier methods. Agents start at trust 0 and earn autonomy through demonstrated reliability.
+
+```python
+from nexus.agents.base import AgentModule, TrustTier
+
+class ScannerAgent(AgentModule):
+    name = "scanner"
+    description = "Scans directories for file patterns."
+    version = "0.1.0"
+
+    watch_events = ["filesystem.changed"]
+    coordination_targets = ["vigil", "vex"]
+
+    async def analyze(self, message, context):
+        """Core logic. Runs at every trust level."""
+        return f"[scanner] Scanning: {message}"
+
+    async def suggest(self, message, context):
+        """Proactive suggestions at ADVISOR+ trust (25+)."""
+        return "Consider filtering by file extension."
+
+    async def monitor(self, event, context):
+        """Background event watching at MONITOR+ trust (50+)."""
+        return "Detected file change activity"
+
+    async def coordinate(self, result, context):
+        """Cross-agent routing at SOVEREIGN trust (100)."""
+        return ""
+```
+
+Trust tiers unlock progressively: SKILL (0) -- ADVISOR (25) -- MONITOR (50) -- AUTONOMOUS (75) -- SOVEREIGN (100). Trust is always revocable. Full guide: [Build an Agent](https://allstreets.github.io/NEXUS/guides/building-an-agent/).
+
+---
+
 ## Hardware
 
 NEXUS was designed for machines people actually own.
