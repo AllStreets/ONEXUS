@@ -773,7 +773,27 @@ nexus/
 │   ├── marketplace.py ··· browse + search + trending
 │   ├── reputation.py ···· weighted scoring + badges
 │   └── models.py ········ MarketplaceEntry + stats types
-└── ...
+community/
+├── modules/ ············· community module submissions
+├── agents/ ·············· community agent submissions
+├── registry.json ········ module/agent catalog (25 seeded)
+└── CONTRIBUTING.md ······ submission guide (modules + agents)
+site/
+└── src/content/docs/ ···· Astro + Starlight documentation (82 pages)
+tests/
+├── kernel/ ·············· kernel component tests
+├── modules/ ············· module tests
+├── agents/ ·············· agent tests
+├── api/ ················· API server tests
+├── mcp/ ················· MCP server tests
+├── workflow/ ············ workflow engine tests
+├── replay/ ·············· time-travel tests
+├── federation/ ·········· federation tests
+├── multimodal/ ·········· multi-modal tests
+├── benchmarks/ ·········· benchmark framework tests
+├── sdk/ ················· plugin SDK tests
+├── tui/ ················· terminal UI tests
+└── community/ ··········· marketplace + registry tests
 ```
 
 ---
