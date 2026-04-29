@@ -1,13 +1,13 @@
 ---
 title: Modules
-description: NexusModule base class, lifecycle hooks, context object, and how all 26 modules are structured.
+description: NexusModule base class, lifecycle hooks, context object, and how all 51 modules are structured.
 sidebar:
   order: 3
 ---
 
 ## NexusModule Base Class
 
-Every module in NEXUS — all 29 of them — is a subclass of `NexusModule`. The interface is minimal by design.
+Every module in NEXUS — all 51 of them — is a subclass of `NexusModule`. The interface is minimal by design.
 
 ```python
 from nexus.module import NexusModule
@@ -76,7 +76,7 @@ These modules require no manual data entry. They build their internal stores pas
 
 ## Module Tiers
 
-The 26 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
+The 51 modules are grouped by functional tier. All use the same `NexusModule` interface regardless of tier.
 
 | Tier | Modules | Role |
 |------|---------|------|
@@ -87,6 +87,7 @@ The 26 modules are grouped by functional tier. All use the same `NexusModule` in
 | Orchestration | Council, Autonomic | Multi-agent deliberation, earned autonomous action |
 | Network | Collective, Legacy | Federated learning (`--network`), knowledge crystallization |
 | Differentiation | Dream Loop, Adversarial, Tripwire, Provenance, Sandbox, Symbiosis, Consciousness, Ethical Prism | Self-reflection, stress-testing, ethical analysis, pattern discovery |
+| Agents | Scribe, Vex, Ledger, Arbiter, Thesis, Scaffold, Remedy, Compass, Tally, Redline, Carve, Vigil, Mandate, Flux, Kindle, Quarry, Bastion, Dispatch, Gauge, Mnemonic, Sentinel, Mint, Axiom, Loom, Rune | 25 narrow AI task specialists -- pattern-based + LLM-enhanced |
 | Community | User-contributed | Third-party modules via `community/modules/` |
 | Core | General | Catch-all fallback for unrouted messages |
 
@@ -130,4 +131,4 @@ _MODULE_KEYWORDS = {
 }
 ```
 
-See [Building a Module](/guides/building-a-module/) for the full step-by-step guide including tests.
+See [Building a Module](/NEXUS/guides/building-a-module/) for the full step-by-step guide including tests.

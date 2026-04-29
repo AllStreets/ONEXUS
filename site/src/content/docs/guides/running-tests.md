@@ -1,6 +1,6 @@
 ---
 title: Running Tests
-description: Run the 484-test NEXUS suite, target specific tests, and write tests for new modules.
+description: Run the 804-test NEXUS suite, target specific tests, and write tests for new modules.
 sidebar:
   order: 3
 ---
@@ -14,7 +14,7 @@ pytest tests/ -v
 Expected output ends with:
 
 ```
-484 passed in X.XXs
+804 passed in X.XXs
 ```
 
 No running LLM is required. All LLM calls are mocked in the test suite.
@@ -65,7 +65,32 @@ tests/
 │   ├── test_sandbox.py
 │   ├── test_symbiosis.py
 │   ├── test_consciousness.py
-│   └── test_ethical_prism.py
+│   ├── test_ethical_prism.py
+│   ├── test_scribe.py
+│   ├── test_vex.py
+│   ├── test_ledger.py
+│   ├── test_arbiter.py
+│   ├── test_thesis.py
+│   ├── test_scaffold.py
+│   ├── test_remedy.py
+│   ├── test_compass.py
+│   ├── test_tally.py
+│   ├── test_redline.py
+│   ├── test_carve.py
+│   ├── test_vigil.py
+│   ├── test_mandate.py
+│   ├── test_flux.py
+│   ├── test_kindle.py
+│   ├── test_quarry.py
+│   ├── test_bastion.py
+│   ├── test_dispatch.py
+│   ├── test_gauge.py
+│   ├── test_mnemonic.py
+│   ├── test_sentinel.py
+│   ├── test_mint.py
+│   ├── test_axiom.py
+│   ├── test_loom.py
+│   └── test_rune.py
 ├── community/
 │   ├── test_validator.py
 │   ├── test_registry.py

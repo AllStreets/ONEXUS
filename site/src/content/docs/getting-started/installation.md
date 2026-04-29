@@ -19,7 +19,7 @@ No cloud accounts, API keys, or internet connection required after setup.
 ## Install from Source
 
 ```bash
-git clone https://github.com/your-org/nexus.git
+git clone https://github.com/AllStreets/NEXUS.git
 cd nexus
 pip install -e .
 ```
@@ -45,7 +45,7 @@ If the command is not found, ensure your Python scripts directory is on `$PATH`.
 
 ## Optional: Local LLM Setup
 
-NEXUS works without a language model for rule-based modules (Sentry, Chronicle queries, etc.), but the intelligence tier (Atlas, Prism, Cipher, Dreamweaver) requires an LLM accessible over HTTP.
+NEXUS works without a language model for rule-based modules (Sentry, Chronicle queries, agents, etc.), but the intelligence tier (Atlas, Prism, Cipher, Dream Loop) requires an LLM accessible over HTTP.
 
 The recommended backend is [llama.cpp](https://github.com/ggerganov/llama.cpp). Install it separately:
 
@@ -58,7 +58,7 @@ git clone https://github.com/ggerganov/llama.cpp
 cd llama.cpp && make
 ```
 
-Download a model (see [Configuration](/getting-started/configuration/) for the full model table), then start the server:
+Download a model (see [Configuration](/NEXUS/getting-started/configuration/) for the full model table), then start the server:
 
 ```bash
 llama-server \
