@@ -54,6 +54,11 @@ class Cortex:
         "compass": ["learn", "roadmap", "study plan", "curriculum", "learning path", "teach me"],
         "tally": ["projection", "runway", "forecast", "revenue model", "burn rate", "financial model"],
         "redline": ["contract", "legal", "agreement", "clause", "terms", "nda", "liability"],
+        "carve": ["refactor", "complexity", "extract function", "code smell", "nesting", "simplify code"],
+        "vigil": ["log analysis", "logs", "anomaly", "incident", "root cause", "log file", "timeline"],
+        "mandate": ["compliance", "gdpr", "soc2", "hipaa", "audit", "regulatory", "gap analysis"],
+        "flux": ["sql", "query", "database", "table schema", "select from", "natural language sql"],
+        "kindle": ["expand", "blog post", "polish", "content", "write up", "draft", "outline to prose"],
     }
 
     def __init__(
