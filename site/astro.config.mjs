@@ -76,7 +76,6 @@ export default defineConfig({
           label: 'Reference',
           collapsed: true,
           items: [
-            { label: 'Routing Table', slug: 'reference/routing' },
             {
               label: 'Kernel',
               autogenerate: { directory: 'reference/kernel' },

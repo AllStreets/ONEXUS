@@ -27,24 +27,15 @@ OUTPUT_DIR = REPO_ROOT / "site" / "src" / "content" / "docs" / "reference"
 # ---------------------------------------------------------------------------
 
 MODULE_TIER: dict[str, int] = {
-    "oracle": 1,
-    "sentry": 2,
-    "atlas": 3,
-    "prism": 4,
-    "cipher": 5,
-    "wraith": 6,
-    "echo": 7,
-    "sigil": 8,
-    "herald": 9,
-    "weave": 10,
-    "specter": 11,
-    "chronos": 12,
-    "dreamweaver": 13,
-    "serendipity": 14,
-    "forge": 15,
-    "collective": 16,
-    "legacy": 17,
-    "general": 0,
+    "council": 1,
+    "specter": 2,
+    "autonomic": 3,
+    "oracle": 4,
+    "wraith": 5,
+    "legacy": 6,
+    "consciousness": 7,
+    "sentry": 8,
+    "echo": 9,
 }
 
 KERNEL_ORDER: dict[str, int] = {
@@ -287,8 +278,8 @@ def _parse_str_list_dict(node: ast.expr) -> dict[str, list[str]]:
 # Rendering functions
 # ---------------------------------------------------------------------------
 
-def render_module_page(info: dict, keywords: list[str] | None = None) -> str:
-    """Render a Starlight Markdown page for a NEXUS module."""
+def render_module_page(info: dict) -> str:
+    """Render a Starlight Markdown page for an ONEXUS cognitive module."""
     name = info["name"]
     description = info["description"]
     version = info["version"]
@@ -332,16 +323,6 @@ def render_module_page(info: dict, keywords: list[str] | None = None) -> str:
     else:
         lines.append("General purpose module.")
     lines.append("")
-
-    # Routing keywords
-    if keywords:
-        lines.append("## Routing Keywords")
-        lines.append("")
-        lines.append("Cortex uses these keywords to route messages to this module:")
-        lines.append("")
-        for kw in keywords:
-            lines.append(f"- `{kw}`")
-        lines.append("")
 
     # Types / Dataclasses
     if dataclasses:
@@ -477,11 +458,11 @@ def main() -> None:
     modules_out.mkdir(parents=True, exist_ok=True)
     kernel_out.mkdir(parents=True, exist_ok=True)
 
-    # Extract Cortex keywords
-    cortex_src = (KERNEL_DIR / "cortex.py").read_text(encoding="utf-8")
-    all_keywords = extract_cortex_keywords(cortex_src)
+    # Clean old generated module docs before regenerating
+    for old_md in modules_out.glob("*.md"):
+        old_md.unlink()
 
-    # Generate module pages
+    # Generate module pages (9 cognitive modules only)
     skipped = {"__init__.py", "base.py"}
     for py_file in sorted(MODULES_DIR.glob("*.py")):
         if py_file.name in skipped:
@@ -489,11 +470,10 @@ def main() -> None:
         source = py_file.read_text(encoding="utf-8")
         info = extract_module_info(source, py_file.name)
         if info is None:
-            print(f"  [skip] {py_file.name} — no class found")
+            print(f"  [skip] {py_file.name} -- no class found")
             continue
         module_name = info["name"]
-        kws = all_keywords.get(module_name)
-        page = render_module_page(info, kws)
+        page = render_module_page(info)
         out_path = modules_out / f"{module_name}.md"
         out_path.write_text(page, encoding="utf-8")
         print(f"  [ok]   modules/{module_name}.md")
@@ -505,7 +485,7 @@ def main() -> None:
         source = py_file.read_text(encoding="utf-8")
         info = extract_module_info(source, py_file.name)
         if info is None:
-            print(f"  [skip] kernel/{py_file.name} — no class found")
+            print(f"  [skip] kernel/{py_file.name} -- no class found")
             continue
         comp_name = py_file.stem
         page = render_kernel_page(info)
@@ -513,11 +493,10 @@ def main() -> None:
         out_path.write_text(page, encoding="utf-8")
         print(f"  [ok]   kernel/{comp_name}.md")
 
-    # Generate routing page
-    routing_page = render_routing_page(all_keywords)
+    # Remove stale routing page (Cortex now uses semantic intent classification)
     routing_path = OUTPUT_DIR / "routing.md"
-    routing_path.write_text(routing_page, encoding="utf-8")
-    print(f"  [ok]   reference/routing.md")
+    if routing_path.exists():
+        routing_path.unlink()
 
     print(f"\nDone. Output: {OUTPUT_DIR}")
 
