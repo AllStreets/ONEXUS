@@ -1,4 +1,4 @@
-name: Deploy NEXUS Site
+name: Deploy ONEXUS Site
 
 on:
   push:
