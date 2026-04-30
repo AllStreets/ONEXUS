@@ -15,7 +15,7 @@ import Hero from '../../components/Hero.astro';
 
 ## 9 Cognitive Modules. One Kernel. Your Hardware.
 
-Five kernel components and nine cognitive modules form a digital brain that runs locally in a single SQLite database. No central server. No cloud dependencies. The kernel never touches the network. Two modules can optionally connect peer-to-peer -- blocked by default, logged when enabled. The smallest useful configuration fits in 8GB of RAM.
+Five kernel components and nine cognitive modules form a digital brain that runs locally in a single SQLite database. No central server. No cloud dependencies. The kernel never touches the network. Two modules can optionally connect peer-to-peer -- blocked by default, logged when enabled. The kernel is lightweight and model-agnostic -- connect any LLM provider at runtime.
 
 ### The Kernel
 
@@ -75,12 +75,13 @@ Modules earn autonomy through demonstrated reliability. Every interaction adjust
 
 Correct response: **+0.12**. Wrong response: **-0.22**. The asymmetry is intentional -- trust is hard to earn and easy to lose.
 
-## Hardware Requirements
+## Model-Agnostic Inference
 
-| RAM | What you get |
-|-----|-------------|
-| **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
-| **16 GB** | Kernel + all modules, larger context windows |
-| **32 GB+** | All modules, bigger models, concurrent sub-agents |
+| Provider | Setup |
+|----------|-------|
+| **Local (llama.cpp, Ollama, vLLM)** | Run any open-source model -- Qwen, DeepSeek, Phi, Llama, Gemma |
+| **OpenAI** | Set `NEXUS_OPENAI_KEY` or register at runtime via the API |
+| **Anthropic** | Set `NEXUS_ANTHROPIC_KEY` or register at runtime via the API |
+| **No model** | Kernel runs standalone -- connect a provider whenever you're ready |
 
 </div>

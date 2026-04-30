@@ -1,104 +1,144 @@
 ---
 title: Connecting an LLM
-description: Set up a local LLM with llama.cpp or Ollama, configure NEXUS to connect, and switch models.
+description: Connect NEXUS to a local open-source model, OpenAI, Anthropic, or any compatible provider.
 sidebar:
   order: 2
 ---
 
-## Default Setup: llama.cpp
+NEXUS is model-agnostic. The kernel runs without any model -- connect a provider when you need inference. Three paths: cloud API, local open-source model, or runtime registration.
 
-NEXUS connects to LLMs via the llama.cpp HTTP server API. This is the default and recommended path.
+## Option A: Cloud Providers
 
-### 1. Install llama.cpp
+The fastest way to get inference running. Set an env var and start the kernel.
+
+### OpenAI
 
 ```bash
-# macOS (Homebrew — includes llama-server binary)
-brew install llama.cpp
-
-# Linux — build from source
-git clone https://github.com/ggerganov/llama.cpp
-cd llama.cpp
-make -j$(nproc)
-# llama-server binary is at ./llama-server
+export NEXUS_OPENAI_KEY=sk-...
+export NEXUS_DEFAULT_PROVIDER=openai
+onexus run
 ```
 
-### 2. Download a Model
+Available models: `gpt-4o`, `gpt-4o-mini`, `o3`, `o3-mini`. Default: `gpt-4o-mini`. Override with `NEXUS_OPENAI_MODEL`.
 
-All recommended models are MIT or Apache 2.0 licensed. Download in GGUF format.
-
-| Model | Q4 Size | Min RAM | Notes |
-|-------|---------|---------|-------|
-| Qwen 3 8B | ~5 GB | 8 GB | Default recommendation |
-| Qwen 3 32B | ~20 GB | 24 GB | Best quality, large RAM |
-| DeepSeek-R1 7B | ~4.5 GB | 8 GB | Strong code generation |
-| Phi-4 Mini | ~2.5 GB | 6 GB | Fastest, lowest RAM |
+### Anthropic
 
 ```bash
-# Using huggingface-cli (pip install huggingface_hub)
+export NEXUS_ANTHROPIC_KEY=sk-ant-...
+export NEXUS_DEFAULT_PROVIDER=anthropic
+onexus run
+```
+
+Available models: `claude-opus-4-20250514`, `claude-sonnet-4-20250514`, `claude-haiku-4-5-20251001`. Default: `claude-sonnet-4-20250514`. Override with `NEXUS_ANTHROPIC_MODEL`.
+
+## Option B: Local Open-Source Models
+
+Run any model locally for full data sovereignty. NEXUS connects to any server exposing an OpenAI-compatible or llama.cpp HTTP API.
+
+### llama.cpp
+
+```bash
+# Install
+brew install llama.cpp  # macOS
+# or build from source: https://github.com/ggerganov/llama.cpp
+
+# Download a model (GGUF format)
 huggingface-cli download Qwen/Qwen3-8B-GGUF \
   qwen3-8b-instruct-q4_k_m.gguf \
   --local-dir ~/.local/share/nexus/models/
-```
 
-### 3. Start the Server
-
-```bash
+# Start the server
 llama-server \
   --model ~/.local/share/nexus/models/qwen3-8b-instruct-q4_k_m.gguf \
-  --port 8080 \
-  --ctx-size 8192 \
-  --threads 8
+  --port 8384 \
+  --ctx-size 8192
+
+# Start NEXUS (auto-connects to localhost:8384)
+onexus run
 ```
 
-Leave this running. NEXUS connects on startup. Start NEXUS in a separate terminal:
+### Ollama
 
 ```bash
-nexus run
-```
-
-## Environment Variable Overrides
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NEXUS_LLM_HOST` | `localhost` | Hostname or IP of the llama-server |
-| `NEXUS_LLM_PORT` | `8080` | Port llama-server is listening on |
-
-```bash
-# Example: model on a different port
-NEXUS_LLM_PORT=11434 nexus run
-
-# Example: model on a remote machine
-NEXUS_LLM_HOST=192.168.1.100 NEXUS_LLM_PORT=8080 nexus run
-```
-
-## Using Ollama
-
-Ollama exposes a compatible API at `localhost:11434`. NEXUS works with Ollama without any code changes.
-
-```bash
-# Install Ollama from https://ollama.com
+# Install from https://ollama.com
 ollama pull qwen3:8b
 ollama serve   # starts on port 11434
 
-# Run NEXUS against Ollama
-NEXUS_LLM_PORT=11434 nexus run
+# Point NEXUS at Ollama
+NEXUS_LLM_PORT=11434 onexus run
 ```
 
-Note: Ollama's API path differs slightly from llama.cpp's (`/api/generate` vs `/completion`). Verify the `LLMClient` in `nexus/kernel/llm.py` uses the correct endpoint for your backend.
+### vLLM
+
+```bash
+vllm serve Qwen/Qwen3-8B --port 8384
+onexus run
+```
+
+### Recommended Open-Source Models
+
+All MIT or Apache 2.0 licensed:
+
+| Model | Notes |
+|-------|-------|
+| Qwen 3 8B | Default recommendation -- good balance of speed and quality |
+| Qwen 3 32B | Complex reasoning, long-context tasks |
+| DeepSeek-R1 7B | Strong code generation and technical analysis |
+| Phi-4 Mini | Fast responses, lightweight |
+| Llama 3.1 8B | General purpose, well-rounded |
+| Gemma 2 9B | Strong multilingual support |
+
+## Option C: Runtime Registration
+
+Register providers while the kernel is already running. No restart required.
+
+```bash
+# Start the kernel with no model
+onexus serve
+
+# Register OpenAI at runtime
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "api_key": "sk-...", "model": "gpt-4o", "set_default": true}'
+
+# Register Anthropic at runtime
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "anthropic", "api_key": "sk-ant-...", "set_default": true}'
+
+# Register a local model server
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "local", "base_url": "http://localhost:11434", "set_default": true}'
+```
+
+### Provider Management
+
+```bash
+# List all providers and their health
+curl http://localhost:8000/api/providers
+
+# Switch default provider
+curl -X POST http://localhost:8000/api/providers/default/anthropic
+
+# Remove a provider
+curl -X DELETE http://localhost:8000/api/providers/openai
+```
+
+The provider router automatically falls back to the default if a requested provider is unhealthy.
 
 ## Remote Endpoints
 
-For running NEXUS on a low-resource machine while serving the model on a more powerful one:
+Serve the model on a different machine while NEXUS runs locally:
 
 ```bash
-# On the model server — bind to all interfaces
-llama-server \
-  --model ~/models/qwen3-32b-q4.gguf \
-  --host 0.0.0.0 \
-  --port 8080
+# On the model server
+llama-server --model qwen3-32b-q4.gguf --host 0.0.0.0 --port 8384
 
-# On the NEXUS machine
-NEXUS_LLM_HOST=model-server.local NEXUS_LLM_PORT=8080 nexus run
+# On the NEXUS machine -- register the remote server
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "local", "base_url": "http://model-server.local:8384", "set_default": true}'
 ```
 
 All other NEXUS behavior (memory, audit, trust) remains local. Only LLM inference is remote.
@@ -106,19 +146,13 @@ All other NEXUS behavior (memory, audit, trust) remains local. Only LLM inferenc
 ## Verifying the Connection
 
 ```bash
-nexus status
+onexus status
 ```
 
-A connected LLM shows:
+Or check provider health via the API:
 
-```
-llm  localhost:8080  qwen3-8b  (connected)
-```
-
-A disconnected or unreachable LLM shows:
-
-```
-llm  localhost:8080  (unreachable)
+```bash
+curl http://localhost:8000/api/providers
 ```
 
-Modules that call `context["llm"]` will fail gracefully with an error message if the LLM is unreachable. Modules that do not use the LLM (Oracle, Sentry, General) continue to function normally.
+Modules that require inference will fail gracefully with an error message if no provider is reachable. Modules that do not use the LLM (Oracle, Sentry) continue to function normally.

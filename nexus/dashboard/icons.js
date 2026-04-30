@@ -6,7 +6,7 @@ const ICONS = {
 
   agent: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="12" cy="8" r="1" fill="currentColor"/></svg>`,
 
-  trust: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg>`,
+  trust: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2"/></svg>`,
 
   pulse: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
 
@@ -42,5 +42,5 @@ const ICONS = {
 function icon(name, size = 16, className = '') {
   const svg = ICONS[name] || '';
   const cls = className ? ` class="${className}"` : '';
-  return `<span${cls} style="display:inline-flex;align-items:center;width:${size}px;height:${size}px">${svg}</span>`;
+  return `<span${cls} style="display:inline-flex;align-items:center;width:${size}px;height:${size}px;color:inherit">${svg}</span>`;
 }

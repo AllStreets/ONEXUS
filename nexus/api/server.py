@@ -32,6 +32,7 @@ from nexus.api.routes.trust import router as trust_router
 from nexus.api.routes.events import router as events_router
 from nexus.api.routes.system import router as system_router
 from nexus.api.routes.dashboard import router as dashboard_router
+from nexus.api.routes.providers import router as providers_router
 from nexus.api.routes.replay import router as replay_router
 from nexus.api.routes.federation import router as federation_router
 from nexus.api.routes.multimodal import router as multimodal_router
@@ -48,6 +49,8 @@ class KernelState:
         chronicle: Chronicle,
         aegis: Aegis,
         pulse: Pulse,
+        provider_router=None,
+        llm_client=None,
     ) -> None:
         self.config = config
         self.cortex = cortex
@@ -55,6 +58,8 @@ class KernelState:
         self.chronicle = chronicle
         self.aegis = aegis
         self.pulse = pulse
+        self.provider_router = provider_router
+        self.llm_client = llm_client
 
 
 def _init_kernel(config: NexusConfig) -> KernelState:
@@ -86,40 +91,45 @@ def _init_kernel(config: NexusConfig) -> KernelState:
         cortex.register_module(module)
         aegis.set_policy(module.name, allowed=True)
 
-    # Attempt to wire up LLM — graceful degradation if unavailable
-    try:
-        from nexus.inference.llm import LLMClient
-        from nexus.inference.router import ProviderRouter
-        from nexus.inference.local import LocalProvider
+    # Initialize provider router — always available, providers registered on demand
+    from nexus.inference.router import ProviderRouter
+    from nexus.inference.llm import LLMClient
+    from nexus.inference.local import LocalProvider
 
-        provider_router = ProviderRouter(default=config.default_provider)
-        local = LocalProvider(base_url=f"http://localhost:{config.llm_port}")
-        provider_router.register(local)
+    provider_router = ProviderRouter(default=config.default_provider)
 
-        if config.openai_api_key:
+    # Register local provider (always available as fallback)
+    local = LocalProvider(base_url=f"http://localhost:{config.llm_port}")
+    provider_router.register(local)
+
+    # Register cloud providers if configured via env
+    if config.openai_api_key:
+        try:
             from nexus.inference.openai_provider import OpenAIProvider
             provider_router.register(
                 OpenAIProvider(api_key=config.openai_api_key, model=config.openai_model)
             )
+        except Exception:
+            pass
 
-        if config.anthropic_api_key:
+    if config.anthropic_api_key:
+        try:
             from nexus.inference.anthropic_provider import AnthropicProvider
             provider_router.register(
                 AnthropicProvider(api_key=config.anthropic_api_key, model=config.anthropic_model)
             )
+        except Exception:
+            pass
 
-        llm_client = LLMClient(router=provider_router)
+    llm_client = LLMClient(router=provider_router)
 
-        async def _llm_handler(msg: str) -> str:
-            return await llm_client.chat(
-                system="You are Nexus, an autonomous intelligence operating system. Be helpful, precise, and concise.",
-                user=msg,
-            )
+    async def _llm_handler(msg: str) -> str:
+        return await llm_client.chat(
+            system="You are Nexus, an autonomous intelligence operating system. Be helpful, precise, and concise.",
+            user=msg,
+        )
 
-        cortex.set_llm(_llm_handler)
-    except Exception:
-        # LLM layer unavailable — kernel still works for routing/memory/trust
-        pass
+    cortex.set_llm(_llm_handler)
 
     return KernelState(
         config=config,
@@ -128,6 +138,8 @@ def _init_kernel(config: NexusConfig) -> KernelState:
         chronicle=chronicle,
         aegis=aegis,
         pulse=pulse,
+        provider_router=provider_router,
+        llm_client=llm_client,
     )
 
 
@@ -176,6 +188,7 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(events_router)
     app.include_router(system_router)
     app.include_router(dashboard_router)
+    app.include_router(providers_router)
     app.include_router(replay_router)
     app.include_router(federation_router)
     app.include_router(multimodal_router)

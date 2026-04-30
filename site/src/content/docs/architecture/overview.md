@@ -44,9 +44,9 @@ These constraints are architectural commitments, not guidelines:
 
 **Local-first.** The kernel never touches the network. No telemetry, no central server, no cloud dependency — architecturally enforced, not just policy. Two modules (Collective and Herald) can optionally connect peer-to-peer, but they are blocked by default and require explicit `nexus allow --network` consent. Even then, every outbound event is logged to Chronicle. There is no central server. Every machine owns its own data.
 
-**8 GB RAM floor.** The smallest supported model (Phi-4 Mini) fits comfortably in 6 GB. The kernel adds ~100 MB. Everything runs on a baseline consumer machine.
+**Lightweight kernel.** The kernel runs standalone without any LLM. Connect a model when you're ready — local open-source models via llama.cpp, Ollama, or vLLM, or cloud providers like OpenAI and Anthropic. Providers can be registered at runtime via the API.
 
-**Model-agnostic.** The kernel communicates with any LLM over the llama.cpp HTTP API. Swap models by pointing `NEXUS_LLM_HOST:NEXUS_LLM_PORT` at a different server. No code changes required.
+**Model-agnostic.** The kernel communicates with any LLM over a standard HTTP API. Swap models by changing the provider configuration — no code changes required. Use open-source models for full sovereignty, or cloud APIs for convenience.
 
 **Apache 2.0 throughout.** Every model recommended in the default configuration is MIT or Apache 2.0 licensed. NEXUS itself is Apache 2.0. It is legally redistributable in commercial products.
 

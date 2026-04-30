@@ -17,15 +17,15 @@ A modular AI operating system that runs entirely on your machine. Five kernel co
 
 **Do I need a GPU?**
 
-No. All inference runs on CPU via llama.cpp. A GPU accelerates inference but is not required. The 8GB RAM minimum assumes CPU-only operation.
+No. The kernel is pure Python and SQLite -- no GPU required. If you run a local open-source model, a GPU accelerates inference but is not required (llama.cpp runs on CPU). You can also use cloud providers (OpenAI, Anthropic) and skip local models entirely.
 
 **Do I need an internet connection?**
 
-Only for the initial setup (cloning the repo, downloading a model). After that, NEXUS runs fully offline. Two modules (Collective and Herald) can optionally connect peer-to-peer, but they're blocked by default.
+Only for the initial setup (cloning the repo). After that, NEXUS runs fully offline with a local model. Cloud providers require internet. Two modules can optionally connect peer-to-peer, but they're blocked by default.
 
 **What models does NEXUS support?**
 
-Any GGUF model served over the llama.cpp HTTP API. Recommended: Qwen 3 8B (default), DeepSeek-R1 7B, Phi-4 Mini. Cloud providers (OpenAI, Anthropic) are also supported when API keys are configured.
+Any model. Local open-source models via llama.cpp, Ollama, or vLLM (Qwen, DeepSeek, Phi, Llama, Gemma). Cloud providers: OpenAI (GPT-4o, o3) and Anthropic (Claude Opus, Sonnet, Haiku). Providers can be registered at runtime via the API -- no restart required.
 
 **Can I use NEXUS without any LLM at all?**
 

@@ -85,18 +85,22 @@ export NEXUS_LLM_PORT=8384
 nexus run
 ```
 
-**`Model too large for available memory`**
+**`Model too large for available memory`** (local models only)
 
-The GGUF model doesn't fit in RAM. Options:
+If using a local GGUF model that doesn't fit:
 
 - Use a smaller quantization: Q4_K_M instead of Q8
-- Use a smaller model: Phi-4 Mini (~2.5 GB) instead of Qwen 3 8B (~5 GB)
-- Close other applications to free RAM
+- Use a smaller model: Phi-4 Mini instead of Qwen 3 8B
 - Reduce context size: `--ctx-size 4096` instead of 8192
+- Switch to a cloud provider (OpenAI/Anthropic) to avoid local model requirements entirely
 
-**Agents work but intelligence modules return errors**
+**Cognitive modules return errors but rule-based modules work**
 
-The 25 narrow AI agents work without any LLM (pattern-based analysis). Intelligence modules (Atlas, Prism, Cipher) and differentiation modules require an LLM. If you see errors from these modules, check that llama-server is running and accessible.
+Cognitive modules (Council, Specter, Oracle, etc.) require an LLM. Rule-based modules (Sentry, Oracle trigger rules) work without one. Check that a provider is registered and healthy:
+
+```bash
+curl http://localhost:8000/api/providers
+```
 
 ---
 

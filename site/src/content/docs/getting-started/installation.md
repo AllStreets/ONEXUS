@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install NEXUS from source on any Python 3.11+ system with 8GB RAM.
+description: Install NEXUS from source on any Python 3.11+ system.
 sidebar:
   order: 1
 ---
@@ -10,17 +10,16 @@ sidebar:
 | Requirement | Minimum |
 |-------------|---------|
 | Python | 3.11 or later |
-| RAM | 8 GB (16 GB recommended for larger models) |
-| Disk | 500 MB for NEXUS + model storage (4–20 GB per model) |
-| GPU | Not required — all inference runs on CPU |
+| Disk | 500 MB for NEXUS core |
+| GPU | Not required |
 
-No cloud accounts, API keys, or internet connection required after setup.
+No cloud accounts, API keys, or internet connection required after setup. The kernel runs standalone -- connect a model provider whenever you're ready.
 
 ## Install from Source
 
 ```bash
-git clone https://github.com/AllStreets/NEXUS.git
-cd nexus
+git clone https://github.com/AllStreets/ONEXUS.git
+cd ONEXUS
 pip install -e .
 ```
 
@@ -29,7 +28,7 @@ The editable install (`-e`) means changes to the source are immediately reflecte
 ## Verify Installation
 
 ```bash
-nexus status
+onexus status
 ```
 
 Expected output:
@@ -43,42 +42,60 @@ data     ~/.local/share/nexus/
 
 If the command is not found, ensure your Python scripts directory is on `$PATH`. For pipx installs or virtual environments, activate the environment first.
 
-## Optional: Local LLM Setup
+## Optional: Connect a Model
 
-NEXUS works without a language model for rule-based modules (Sentry, Chronicle queries, agents, etc.), but the intelligence tier (Atlas, Prism, Cipher, Dream Loop) requires an LLM accessible over HTTP.
+NEXUS works without a language model for rule-based modules (Sentry, Chronicle queries, agents, etc.), but the cognitive modules (Council, Specter, Oracle, etc.) require an LLM.
 
-The recommended backend is [llama.cpp](https://github.com/ggerganov/llama.cpp). Install it separately:
+Three options:
 
-```bash
-# macOS (Homebrew)
-brew install llama.cpp
+### Option A: Cloud Provider (fastest setup)
 
-# or build from source
-git clone https://github.com/ggerganov/llama.cpp
-cd llama.cpp && make
-```
-
-Download a model (see [Configuration](/NEXUS/getting-started/configuration/) for the full model table), then start the server:
+Set an environment variable and go:
 
 ```bash
-llama-server \
-  --model ~/.local/share/nexus/models/qwen3-8b-q4.gguf \
-  --port 8080 \
-  --ctx-size 8192
+# OpenAI
+export NEXUS_OPENAI_KEY=sk-...
+export NEXUS_DEFAULT_PROVIDER=openai
+
+# Anthropic
+export NEXUS_ANTHROPIC_KEY=sk-ant-...
+export NEXUS_DEFAULT_PROVIDER=anthropic
 ```
 
-NEXUS auto-connects to `localhost:8080` by default. Override with `NEXUS_LLM_HOST` and `NEXUS_LLM_PORT`.
+Or register at runtime via the API after the kernel is already running:
+
+```bash
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "api_key": "sk-...", "set_default": true}'
+```
+
+### Option B: Local Open-Source Model
+
+Run any model locally via [llama.cpp](https://github.com/ggerganov/llama.cpp), [Ollama](https://ollama.com), or [vLLM](https://github.com/vllm-project/vllm):
+
+```bash
+# llama.cpp
+llama-server --model qwen3-8b-q4.gguf --port 8384 --ctx-size 8192
+
+# Ollama
+ollama serve  # then: ollama run qwen3:8b
+```
+
+NEXUS auto-connects to `localhost:8384` by default. Override with `NEXUS_LLM_PORT`.
+
+### Option C: No Model
+
+Start the kernel without any model. Memory, trust, audit, and event routing all work. Connect a provider later when you need inference.
 
 ## Data Directory
 
-NEXUS stores all runtime data — memory databases, audit logs, trust scores — in a single directory following the XDG Base Directory spec:
+NEXUS stores all runtime data -- memory databases, audit logs, trust scores -- in a single directory following the XDG Base Directory spec:
 
 ```
 ~/.local/share/nexus/
-├── engram.db        # working, episodic, and semantic memory
-├── chronicle.db     # immutable audit log
-├── aegis.db         # trust scores per module
-└── models/          # GGUF model files (optional)
++-- nexus.db         # memory, audit log, trust scores (single SQLite)
++-- models/          # local model files (optional)
 ```
 
 To relocate this directory, set `NEXUS_DATA_DIR` before first run.

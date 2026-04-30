@@ -50,12 +50,15 @@ async def health_check(request: Request) -> HealthCheckResponse:
     except Exception:
         pass
 
-    # Check LLM availability
+    # Check LLM availability — any registered provider healthy = LLM available
     llm_ok: bool | None = None
     try:
-        from nexus.inference.local import LocalProvider
-        provider = LocalProvider(base_url=f"http://localhost:{kernel.config.llm_port}")
-        llm_ok = await provider.health()
+        router = kernel.provider_router
+        if router is not None:
+            health_map = await router.health()
+            llm_ok = any(health_map.values()) if health_map else False
+        else:
+            llm_ok = False
     except Exception:
         llm_ok = False
 

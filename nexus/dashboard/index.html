@@ -4,38 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NEXUS Dashboard</title>
-  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="stylesheet" href="styles.css">
   <style>
     /* Critical inline: prevent flash of unstyled content */
-    html { background: #0a0a0f; }
+    html { background: #06060c; }
   </style>
 </head>
 <body>
 
 <div id="app">
 
-  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <!-- Header -->
   <header class="header">
     <div class="header-left">
       <div class="header-logo">
         <span id="header-icon"></span>
         <span>NEXUS</span>
       </div>
-      <span style="color:var(--text-muted);font-size:11px;font-family:var(--mono)">DASHBOARD</span>
+      <span class="header-label">DASHBOARD</span>
     </div>
     <div class="header-right" id="status-bar">
       <div class="status-pill unknown"><span class="dot"></span>loading</div>
     </div>
   </header>
 
-  <!-- ── Main Three-Column Panels ────────────────────────────────────── -->
+  <!-- Main Three-Column Panels -->
   <div class="main-panels">
 
     <!-- Module List (left) -->
     <div class="panel" id="module-list">
       <div class="panel-header">
         <div class="panel-title">
-          <span id="icon-modules"></span>
+          <span class="icon-wrap" id="icon-modules"></span>
           MODULES
         </div>
       </div>
@@ -48,7 +48,7 @@
       <div class="module-controls">
         <button data-sort="trust" class="active">by trust</button>
         <button data-sort="alpha">A-Z</button>
-        <span style="width:1px;height:14px;background:var(--border);margin:0 4px"></span>
+        <span class="divider"></span>
         <button data-category="kernel">kernel</button>
         <button data-category="intelligence">intel</button>
         <button data-category="agent">agent</button>
@@ -60,7 +60,7 @@
     <div class="panel" id="trust-gauges">
       <div class="panel-header">
         <div class="panel-title">
-          <span id="icon-trust"></span>
+          <span class="icon-wrap" id="icon-trust"></span>
           TRUST GAUGES
         </div>
       </div>
@@ -71,7 +71,7 @@
     <div class="panel" id="pulse-stream">
       <div class="panel-header">
         <div class="panel-title">
-          <span id="icon-pulse"></span>
+          <span class="icon-wrap" id="icon-pulse"></span>
           PULSE STREAM
         </div>
         <div class="pulse-connection disconnected">
@@ -83,11 +83,11 @@
 
   </div>
 
-  <!-- ── Chronicle Timeline ──────────────────────────────────────────── -->
+  <!-- Chronicle Timeline -->
   <div class="chronicle-panel" id="chronicle">
     <div class="panel-header">
       <div class="panel-title">
-        <span id="icon-chronicle"></span>
+        <span class="icon-wrap" id="icon-chronicle"></span>
         CHRONICLE
       </div>
       <div class="chronicle-filters">
@@ -107,11 +107,11 @@
     </div>
   </div>
 
-  <!-- ── Message Console ─────────────────────────────────────────────── -->
+  <!-- Message Console -->
   <div class="console-panel" id="console">
     <div class="panel-header">
       <div class="panel-title">
-        <span id="icon-terminal"></span>
+        <span class="icon-wrap" id="icon-terminal"></span>
         CONSOLE
       </div>
     </div>
@@ -127,11 +127,11 @@
 
 </div>
 
-<script src="/dashboard/icons.js"></script>
-<script src="/dashboard/app.js"></script>
+<script src="icons.js"></script>
+<script src="app.js"></script>
 <script>
   // Inject icons into header slots
-  document.getElementById('header-icon').innerHTML = icon('nexus', 20);
+  document.getElementById('header-icon').innerHTML = icon('nexus', 22);
   document.getElementById('icon-modules').innerHTML = icon('module', 14);
   document.getElementById('icon-search').innerHTML = icon('search', 13);
   document.getElementById('icon-trust').innerHTML = icon('trust', 14);

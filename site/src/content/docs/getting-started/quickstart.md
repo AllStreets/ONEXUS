@@ -18,20 +18,25 @@ NEXUS ready. Type a message or 'help'.
 >
 ```
 
-## Start with a Local LLM
+## Connect a Model (Optional)
 
-If you have llama-server installed, start it first:
+The kernel runs without a model. Connect one when you need inference:
 
 ```bash
-llama-server \
-  --model ~/.local/share/nexus/models/qwen3-8b-q4.gguf \
-  --port 8384 \
-  --ctx-size 8192 &
+# Cloud provider (fastest setup)
+export NEXUS_OPENAI_KEY=sk-...
+export NEXUS_DEFAULT_PROVIDER=openai
+onexus run
 
-nexus run
+# Or local open-source model
+llama-server --model qwen3-8b-q4.gguf --port 8384 &
+onexus run
+
+# Or register at runtime after startup
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "anthropic", "api_key": "sk-ant-...", "set_default": true}'
 ```
-
-NEXUS detects the running server and enables LLM-backed modules automatically.
 
 ## Enable Modules
 
@@ -45,7 +50,7 @@ nexus allow oracle
 nexus allow oracle atlas prism
 ```
 
-Modules start with a trust score of 50/100 from Aegis. Trust increases as the module produces useful outcomes and decreases on failures or policy violations.
+Modules start with a trust score of 0.0 from Aegis. Trust increases (+0.12) as the module produces correct outcomes and decreases (-0.22) on failures -- the asymmetry is intentional.
 
 To revoke a module:
 

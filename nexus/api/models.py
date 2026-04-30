@@ -160,3 +160,52 @@ class SystemConfigResponse(BaseModel):
     anthropic_configured: bool
     telegram_configured: bool
     discord_configured: bool
+
+
+# ── Provider management ────────────────────────────────────────────────────
+
+class RegisterProviderRequest(BaseModel):
+    provider: str = Field(
+        ...,
+        description="Provider type: 'openai', 'anthropic', or 'local'",
+    )
+    api_key: Optional[str] = Field(
+        None,
+        description="API key (required for openai/anthropic)",
+    )
+    model: Optional[str] = Field(
+        None,
+        description="Model name (e.g. 'gpt-4o', 'claude-sonnet-4-20250514', 'qwen3-8b-q4_k_m')",
+    )
+    base_url: Optional[str] = Field(
+        None,
+        description="Base URL for local provider (default: http://localhost:8384)",
+    )
+    set_default: bool = Field(
+        False,
+        description="Set this provider as the default for inference",
+    )
+
+
+class ProviderInfoResponse(BaseModel):
+    name: str
+    healthy: bool
+    is_default: bool
+
+
+class ProviderListResponse(BaseModel):
+    providers: list[ProviderInfoResponse]
+    default: str
+
+
+class RegisterProviderResponse(BaseModel):
+    provider: str
+    registered: bool
+    is_default: bool
+    message: str
+
+
+class RemoveProviderResponse(BaseModel):
+    provider: str
+    removed: bool
+    message: str

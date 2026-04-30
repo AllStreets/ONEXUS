@@ -99,4 +99,4 @@ Every agent credits the open source projects that inspired it.
 - Chronicle -- immutable append-only audit trail (SQLite WAL)
 - Aegis -- graduated trust engine (0-100) with outcome-based adjustment
 
-804 tests. Apache 2.0 licensed. 8 GB RAM minimum.
+804 tests. Apache 2.0 licensed.

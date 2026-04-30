@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/ONEXUS-v0.2.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>&nbsp;<img src="https://img.shields.io/badge/RAM-8GB_Min-yellow?style=for-the-badge" alt="RAM"/>
+  <img src="https://img.shields.io/badge/ONEXUS-v0.2.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 
 Most AI tools are wrappers around an API. You send text up, you get text back, someone else stores your data.
 
-ONEXUS is the opposite. It is a microkernel -- a small, stable core that loads specialized cognitive modules on demand. Everything runs local. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The smallest useful configuration fits in 8 GB of RAM.
+ONEXUS is the opposite. It is a microkernel -- a small, stable core that loads specialized cognitive modules on demand. Everything runs local. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The kernel is lightweight and model-agnostic -- connect any LLM provider at runtime, or run fully offline with a local model.
 
 Five kernel components form the nervous system. Nine cognitive modules form the brain. Each module does something fundamentally different -- deliberation, adversarial analysis, pattern detection, self-reflection, behavioral modeling. They communicate through an event bus, earn trust through demonstrated reliability, and are accountable to an immutable audit trail.
 
@@ -120,12 +120,13 @@ git clone https://github.com/AllStreets/ONEXUS.git
 cd ONEXUS
 pip install -e .
 
-# Run (offline mode -- no GPU required)
+# Start the kernel -- no model download required
 onexus run
 
-# With a local LLM for full capability
-llama-server -m models/qwen3-8b-q4_k_m.gguf -c 4096 --port 8384
-onexus run
+# Connect a model when you're ready:
+#   Option A: local open-source model via llama.cpp, Ollama, or vLLM
+#   Option B: set NEXUS_OPENAI_KEY or NEXUS_ANTHROPIC_KEY
+#   Option C: register a provider at runtime via the API
 ```
 
 ---
@@ -200,17 +201,27 @@ ONEXUS-to-ONEXUS peer communication. Instances discover each other, exchange cap
 
 Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to configure. Local provider is always available as fallback.
 
----
+Providers can also be registered at runtime via the API — start the kernel bare and connect a model whenever you're ready:
 
-## Hardware
+```bash
+# Start with no model
+onexus serve
 
-ONEXUS was designed for machines people actually own.
+# Later, connect OpenAI
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "api_key": "sk-...", "model": "gpt-4o", "set_default": true}'
 
-| RAM | What you get |
-|-----|-------------|
-| **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
-| **16 GB** | Kernel + all modules, larger context windows |
-| **32 GB+** | All modules, bigger models, concurrent sub-agents |
+# Or connect Anthropic
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "anthropic", "api_key": "sk-ant-...", "model": "claude-sonnet-4-20250514", "set_default": true}'
+
+# Or point to a local model (llama.cpp, Ollama, vLLM)
+curl -X POST http://localhost:8000/api/providers \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "local", "base_url": "http://localhost:11434", "set_default": true}'
+```
 
 ---
 
@@ -281,7 +292,7 @@ tests/ ................... test suite
 
 **Immutable audit.** Chronicle logs every routing decision, every permission check, every module response, every trust adjustment, and every outbound data event. You can always answer: *what happened, when, and why?*
 
-**Model-agnostic.** Qwen, DeepSeek, Phi, Gemma -- anything served over HTTP works. Cloud providers available when configured. No vendor lock-in. No API keys required for local operation.
+**Model-agnostic.** Qwen, DeepSeek, Phi, Llama, Gemma -- any open-source model served over HTTP works. Cloud providers (OpenAI, Anthropic) available when configured. Providers can be registered and switched at runtime. No vendor lock-in.
 
 **Compounding value.** Through behavioral fingerprinting (Echo), knowledge crystallization (Legacy), and long-term memory (Engram), ONEXUS becomes more valuable over months and years. It does not reset between sessions.
 
