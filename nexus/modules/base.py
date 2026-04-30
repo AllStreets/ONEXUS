@@ -19,8 +19,7 @@ class NexusModule(ABC):
         # Skip check for abstract subclasses and intermediate base classes
         if getattr(cls, "__abstractmethods__", None):
             return
-        # Skip intermediate base classes that define their own abstract-like
-        # methods (e.g. AgentModule) -- they raise NotImplementedError in a
+        # Skip intermediate base classes that raise NotImplementedError in a
         # method that concrete subclasses must override.
         for method_name in ("analyze", "handle"):
             method = getattr(cls, method_name, None)

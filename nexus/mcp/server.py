@@ -1,7 +1,7 @@
 """
-NEXUS MCP Server -- Model Context Protocol interface.
+ONEXUS MCP Server -- Model Context Protocol interface.
 
-Exposes NEXUS modules, agents, and kernel operations as MCP tools
+Exposes ONEXUS cognitive modules and kernel operations as MCP tools
 so any compliant client (Claude Desktop, Cursor, VS Code, etc.)
 can connect and use NEXUS as a tool provider.
 
@@ -98,82 +98,31 @@ def _build_kernel(config: NexusConfig | None = None) -> dict[str, Any]:
 
 
 def _register_modules(cortex: Cortex, aegis: Aegis) -> None:
-    """Discover and register all built-in modules and agents.
+    """Register all 9 cognitive modules.
 
-    Each module/agent class is imported and instantiated. Failures are
-    logged but do not prevent the server from starting.
+    Each module class is imported and instantiated. Failures are logged
+    but do not prevent the server from starting.
     """
-    # -- Modules --
     _module_classes: list[tuple[str, str]] = [
-        ("nexus.modules.general", "GeneralModule"),
-        ("nexus.modules.oracle", "OracleModule"),
-        ("nexus.modules.sentry", "SentryModule"),
-        ("nexus.modules.atlas", "AtlasModule"),
-        ("nexus.modules.cipher", "CipherModule"),
-        ("nexus.modules.prism", "PrismModule"),
-        ("nexus.modules.wraith", "WraithModule"),
-        ("nexus.modules.echo", "EchoModule"),
-        ("nexus.modules.herald", "HeraldModule"),
-        ("nexus.modules.weave", "WeaveModule"),
-        ("nexus.modules.sigil", "SigilModule"),
-        ("nexus.modules.specter", "SpecterModule"),
-        ("nexus.modules.serendipity", "SerendipityModule"),
-        ("nexus.modules.forge", "ForgeModule"),
-        ("nexus.modules.collective", "CollectiveModule"),
-        ("nexus.modules.legacy", "LegacyModule"),
         ("nexus.modules.council", "CouncilModule"),
+        ("nexus.modules.specter", "SpecterModule"),
         ("nexus.modules.autonomic", "AutonomicModule"),
-        ("nexus.modules.dream_loop", "DreamLoopModule"),
-        ("nexus.modules.adversarial", "AdversarialModule"),
-        ("nexus.modules.tripwire", "TripwireModule"),
-        ("nexus.modules.provenance", "ProvenanceModule"),
-        ("nexus.modules.sandbox", "SandboxModule"),
-        ("nexus.modules.symbiosis", "SymbiosisModule"),
+        ("nexus.modules.oracle", "OracleModule"),
+        ("nexus.modules.wraith", "WraithModule"),
+        ("nexus.modules.legacy", "LegacyModule"),
         ("nexus.modules.consciousness", "ConsciousnessModule"),
-        ("nexus.modules.ethical_prism", "EthicalPrismModule"),
+        ("nexus.modules.sentry", "SentryModule"),
+        ("nexus.modules.echo", "EchoModule"),
     ]
 
-    # -- Agents --
-    _agent_classes: list[tuple[str, str]] = [
-        ("nexus.agents.scribe", "ScribeAgent"),
-        ("nexus.agents.vex", "VexAgent"),
-        ("nexus.agents.ledger", "LedgerAgent"),
-        ("nexus.agents.arbiter", "ArbiterAgent"),
-        ("nexus.agents.thesis", "ThesisAgent"),
-        ("nexus.agents.scaffold", "ScaffoldAgent"),
-        ("nexus.agents.remedy", "RemedyAgent"),
-        ("nexus.agents.compass", "CompassAgent"),
-        ("nexus.agents.tally", "TallyAgent"),
-        ("nexus.agents.redline", "RedlineAgent"),
-        ("nexus.agents.carve", "CarveAgent"),
-        ("nexus.agents.vigil", "VigilAgent"),
-        ("nexus.agents.mandate", "MandateAgent"),
-        ("nexus.agents.flux", "FluxAgent"),
-        ("nexus.agents.kindle", "KindleAgent"),
-        ("nexus.agents.quarry", "QuarryAgent"),
-        ("nexus.agents.bastion", "BastionAgent"),
-        ("nexus.agents.dispatch", "DispatchAgent"),
-        ("nexus.agents.gauge", "GaugeAgent"),
-        ("nexus.agents.mnemonic", "MnemonicAgent"),
-        ("nexus.agents.sentinel", "SentinelAgent"),
-        ("nexus.agents.mint", "MintAgent"),
-        ("nexus.agents.axiom", "AxiomAgent"),
-        ("nexus.agents.loom", "LoomAgent"),
-        ("nexus.agents.rune", "RuneAgent"),
-    ]
-
-    for module_path, class_name in _module_classes + _agent_classes:
+    for module_path, class_name in _module_classes:
         try:
             import importlib
             mod = importlib.import_module(module_path)
             cls = getattr(mod, class_name)
             instance = cls()
             cortex.register_module(instance)
-            # Ensure a policy row exists so Aegis can track it
-            if not aegis.is_allowed(instance.name, "handle"):
-                # Default: modules start allowed, trust 50
-                aegis.set_policy(instance.name, allowed=True)
-                aegis.adjust_trust(instance.name, 50, "initial registration")
+            aegis.set_policy(instance.name, allowed=True)
         except Exception as exc:
             logger.warning("Failed to register %s.%s: %s", module_path, class_name, exc)
 

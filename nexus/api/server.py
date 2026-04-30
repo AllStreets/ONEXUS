@@ -14,7 +14,15 @@ from nexus.kernel.chronicle import Chronicle
 from nexus.kernel.aegis import Aegis
 from nexus.kernel.pulse import Pulse
 from nexus.kernel.cortex import Cortex
-from nexus.modules.general import GeneralModule
+from nexus.modules.council import CouncilModule
+from nexus.modules.specter import SpecterModule
+from nexus.modules.autonomic import AutonomicModule
+from nexus.modules.oracle import OracleModule
+from nexus.modules.wraith import WraithModule
+from nexus.modules.legacy import LegacyModule
+from nexus.modules.consciousness import ConsciousnessModule
+from nexus.modules.sentry import SentryModule
+from nexus.modules.echo import EchoModule
 
 from nexus.api.routes.messages import router as messages_router
 from nexus.api.routes.modules import router as modules_router
@@ -71,10 +79,13 @@ def _init_kernel(config: NexusConfig) -> KernelState:
         config=config,
     )
 
-    # Register the general module by default
-    general = GeneralModule()
-    cortex.register_module(general)
-    aegis.set_policy("general", allowed=True)
+    # Register all cognitive modules
+    for ModuleClass in [CouncilModule, SpecterModule, AutonomicModule,
+                        OracleModule, WraithModule, LegacyModule,
+                        ConsciousnessModule, SentryModule, EchoModule]:
+        module = ModuleClass()
+        cortex.register_module(module)
+        aegis.set_policy(module.name, allowed=True)
 
     # Attempt to wire up LLM — graceful degradation if unavailable
     try:
@@ -139,9 +150,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
         kernel.chronicle.log("api", "server_stop", {})
 
     app = FastAPI(
-        title="NEXUS API",
+        title="ONEXUS API",
         version=__version__,
-        description="REST + WebSocket API for the NEXUS autonomous intelligence operating system",
+        description="REST + WebSocket API for the ONEXUS cognitive operating system",
         lifespan=lifespan,
     )
 

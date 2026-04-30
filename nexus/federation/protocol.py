@@ -364,12 +364,20 @@ class FederationProtocol:
             return False
 
     async def handle_heartbeat(self, payload: dict) -> dict:
-        """Handle an incoming heartbeat from a peer."""
+        """Handle an incoming heartbeat or disconnect from a peer."""
         peer_id = payload.get("peer_id", "")
-        if peer_id and peer_id in self.registry.peers:
-            self.registry.update_heartbeat(peer_id)
-            return {"status": "ok", "peer_id": self.instance_id}
-        return {"status": "unknown_peer", "peer_id": self.instance_id}
+        msg_type = payload.get("type", "heartbeat")
+
+        if not peer_id or peer_id not in self.registry.peers:
+            return {"status": "unknown_peer", "peer_id": self.instance_id}
+
+        if msg_type == "disconnect":
+            self.registry.mark_disconnected(peer_id)
+            self.security.log_federation_event("peer_disconnected", peer_id, {})
+            return {"status": "disconnected", "peer_id": self.instance_id}
+
+        self.registry.update_heartbeat(peer_id)
+        return {"status": "ok", "peer_id": self.instance_id}
 
     async def disconnect_peer(self, peer_id: str) -> None:
         """Gracefully disconnect from a peer."""

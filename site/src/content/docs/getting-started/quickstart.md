@@ -25,7 +25,7 @@ If you have llama-server installed, start it first:
 ```bash
 llama-server \
   --model ~/.local/share/nexus/models/qwen3-8b-q4.gguf \
-  --port 8080 \
+  --port 8384 \
   --ctx-size 8192 &
 
 nexus run
@@ -64,7 +64,7 @@ NEXUS  running
 kernel   cortex  engram  pulse  chronicle  aegis
 modules  oracle [trust: 52]  atlas [trust: 50]
 data     ~/.local/share/nexus/
-llm      localhost:8080  qwen3-8b
+llm      localhost:8384  qwen3-8b
 ```
 
 ## First Interaction

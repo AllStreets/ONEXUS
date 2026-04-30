@@ -1,12 +1,13 @@
 """
-Aegis — trust and permissions engine for Nexus.
-Batch 1: binary allow/deny per module.
-Batch 3 upgrades to graduated 0-100 trust with outcome-based adjustment.
+Aegis -- trust and permissions engine for Nexus.
+Graduated 0.0-1.0 floating-point trust with asymmetric outcome adjustment.
+Trust tiers: OBSERVER, ADVISOR, MONITOR, EXECUTOR, AUTONOMOUS.
 """
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 
 class PermissionDenied(Exception):
@@ -16,9 +17,51 @@ class PermissionDenied(Exception):
         super().__init__(f"Permission denied: {module} cannot perform {action}")
 
 
+class TrustTier:
+    OBSERVER = "OBSERVER"
+    ADVISOR = "ADVISOR"
+    MONITOR = "MONITOR"
+    EXECUTOR = "EXECUTOR"
+    AUTONOMOUS = "AUTONOMOUS"
+
+    _THRESHOLDS = {
+        OBSERVER: 0.0,
+        ADVISOR: 0.25,
+        MONITOR: 0.50,
+        EXECUTOR: 0.75,
+        AUTONOMOUS: 1.0,
+    }
+
+    @classmethod
+    def from_score(cls, score: float) -> str:
+        if score >= 1.0:
+            return cls.AUTONOMOUS
+        if score >= 0.75:
+            return cls.EXECUTOR
+        if score >= 0.50:
+            return cls.MONITOR
+        if score >= 0.25:
+            return cls.ADVISOR
+        return cls.OBSERVER
+
+    @classmethod
+    def threshold(cls, tier_name: str) -> float:
+        if tier_name not in cls._THRESHOLDS:
+            raise ValueError(f"Unknown tier: {tier_name}")
+        return cls._THRESHOLDS[tier_name]
+
+
+# Adjustment deltas
+_REWARD = 0.12
+_PENALTY = -0.22
+
+
 class Aegis:
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, chronicle: Optional[Any] = None):
         self._db_path = db_path
+        self._chronicle = chronicle
+
+    # -- internal helpers --------------------------------------------------
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self._db_path)
@@ -27,133 +70,200 @@ class Aegis:
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _now(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _log_chronicle(self, event: str, data: dict[str, Any]) -> None:
+        if self._chronicle is None:
+            return
+        try:
+            self._chronicle.log(event, data)
+        except Exception:
+            pass  # chronicle failure must never block trust operations
+
+    # -- schema ------------------------------------------------------------
+
     def init_db(self) -> None:
         conn = self._conn()
         conn.execute("""
             CREATE TABLE IF NOT EXISTS aegis_policies (
-                module          TEXT PRIMARY KEY,
+                module_name     TEXT PRIMARY KEY,
+                trust_score     REAL NOT NULL DEFAULT 0.0,
                 allowed         INTEGER NOT NULL DEFAULT 0,
-                trust           INTEGER NOT NULL DEFAULT 0,
                 network_allowed INTEGER NOT NULL DEFAULT 0
             )
         """)
-        # Migrate: add network_allowed column if missing (existing DBs)
-        try:
-            conn.execute("SELECT network_allowed FROM aegis_policies LIMIT 1")
-        except Exception:
-            conn.execute("ALTER TABLE aegis_policies ADD COLUMN network_allowed INTEGER NOT NULL DEFAULT 0")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS aegis_trust_history (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                module_name TEXT NOT NULL,
+                old_score   REAL NOT NULL,
+                new_score   REAL NOT NULL,
+                delta       REAL NOT NULL,
+                reason      TEXT NOT NULL,
+                timestamp   TEXT NOT NULL
+            )
+        """)
         conn.commit()
         conn.close()
 
-    def set_policy(self, module: str, allowed: bool, network: bool = False) -> None:
+    # -- policy management -------------------------------------------------
+
+    def set_policy(self, module: str, allowed: bool = True, network: bool = False) -> None:
         conn = self._conn()
         conn.execute("""
-            INSERT INTO aegis_policies (module, allowed, network_allowed) VALUES (?, ?, ?)
-            ON CONFLICT(module) DO UPDATE SET
+            INSERT INTO aegis_policies (module_name, allowed, network_allowed)
+            VALUES (?, ?, ?)
+            ON CONFLICT(module_name) DO UPDATE SET
                 allowed = excluded.allowed,
                 network_allowed = excluded.network_allowed
         """, (module, int(allowed), int(network)))
         conn.commit()
         conn.close()
 
-    def is_allowed(self, module: str, action: str) -> bool:
-        conn = self._conn()
-        row = conn.execute("SELECT allowed FROM aegis_policies WHERE module = ?", (module,)).fetchone()
-        conn.close()
-        if row is None:
-            return False
-        return bool(row["allowed"])
-
     def check(self, module: str, action: str) -> None:
-        if not self.is_allowed(module, action):
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT allowed FROM aegis_policies WHERE module_name = ?", (module,)
+        ).fetchone()
+        conn.close()
+        if row is None or not bool(row["allowed"]):
             raise PermissionDenied(module, action)
 
     def is_network_allowed(self, module: str) -> bool:
         conn = self._conn()
         row = conn.execute(
-            "SELECT network_allowed FROM aegis_policies WHERE module = ?", (module,)
+            "SELECT network_allowed FROM aegis_policies WHERE module_name = ?", (module,)
         ).fetchone()
         conn.close()
         if row is None:
             return False
         return bool(row["network_allowed"])
 
-    def check_network(self, module: str) -> None:
-        if not self.is_network_allowed(module):
-            raise PermissionDenied(module, "network")
+    # -- trust scoring -----------------------------------------------------
 
-    def list_policies(self) -> list[dict[str, Any]]:
+    def _ensure_module(self, conn: sqlite3.Connection, module: str) -> None:
+        """Ensure a row exists for the module with defaults."""
+        conn.execute("""
+            INSERT OR IGNORE INTO aegis_policies (module_name) VALUES (?)
+        """, (module,))
+
+    def _record_history(self, conn: sqlite3.Connection, module: str,
+                        old: float, new: float, delta: float, reason: str) -> None:
+        ts = self._now()
+        conn.execute("""
+            INSERT INTO aegis_trust_history (module_name, old_score, new_score, delta, reason, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (module, old, new, delta, reason, ts))
+        self._log_chronicle("aegis.trust_change", {
+            "module": module,
+            "old_score": old,
+            "new_score": new,
+            "delta": delta,
+            "reason": reason,
+            "tier": TrustTier.from_score(new),
+            "timestamp": ts,
+        })
+
+    def record_outcome(self, module: str, success: bool) -> float:
+        """Adjust trust based on outcome. Returns the new score."""
+        delta = _REWARD if success else _PENALTY
+        reason = "positive_outcome" if success else "negative_outcome"
+
         conn = self._conn()
-        rows = conn.execute("SELECT module, allowed, trust, network_allowed FROM aegis_policies").fetchall()
+        self._ensure_module(conn, module)
+        row = conn.execute(
+            "SELECT trust_score FROM aegis_policies WHERE module_name = ?", (module,)
+        ).fetchone()
+        old_score = float(row["trust_score"])
+        new_score = max(0.0, min(1.0, old_score + delta))
+
+        conn.execute(
+            "UPDATE aegis_policies SET trust_score = ? WHERE module_name = ?",
+            (new_score, module),
+        )
+        self._record_history(conn, module, old_score, new_score, delta, reason)
+        conn.commit()
+        conn.close()
+        return new_score
+
+    def get_trust(self, module: str) -> float:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT trust_score FROM aegis_policies WHERE module_name = ?", (module,)
+        ).fetchone()
+        conn.close()
+        return float(row["trust_score"]) if row else 0.0
+
+    def get_tier(self, module: str) -> str:
+        return TrustTier.from_score(self.get_trust(module))
+
+    def revoke(self, module: str) -> None:
+        """Immediately set trust to 0.0 and log the revocation."""
+        conn = self._conn()
+        self._ensure_module(conn, module)
+        row = conn.execute(
+            "SELECT trust_score FROM aegis_policies WHERE module_name = ?", (module,)
+        ).fetchone()
+        old_score = float(row["trust_score"])
+
+        conn.execute(
+            "UPDATE aegis_policies SET trust_score = 0.0 WHERE module_name = ?", (module,)
+        )
+        self._record_history(conn, module, old_score, 0.0, -old_score, "revoked")
+        conn.commit()
+        conn.close()
+
+    def get_trust_history(self, module: str, limit: int = 100) -> list[dict[str, Any]]:
+        conn = self._conn()
+        rows = conn.execute("""
+            SELECT old_score, new_score, delta, reason, timestamp
+            FROM aegis_trust_history
+            WHERE module_name = ?
+            ORDER BY id ASC
+            LIMIT ?
+        """, (module, limit)).fetchall()
         conn.close()
         return [
             {
-                "module": r["module"],
-                "allowed": bool(r["allowed"]),
-                "trust": r["trust"],
-                "network_allowed": bool(r["network_allowed"]),
+                "old_score": r["old_score"],
+                "new_score": r["new_score"],
+                "delta": r["delta"],
+                "reason": r["reason"],
+                "timestamp": r["timestamp"],
             }
             for r in rows
         ]
 
-    def get_trust(self, module: str) -> int:
-        conn = self._conn()
-        row = conn.execute("SELECT trust FROM aegis_policies WHERE module = ?", (module,)).fetchone()
-        conn.close()
-        return int(row["trust"]) if row else 0
+    # -- tier-based capability checks --------------------------------------
 
-    def adjust_trust(self, module: str, delta: int, reason: str) -> int:
-        conn = self._conn()
-        row = conn.execute("SELECT trust FROM aegis_policies WHERE module = ?", (module,)).fetchone()
-        if row is None:
-            conn.close()
-            return 0
-        new_trust = max(0, min(100, int(row["trust"]) + delta))
-        conn.execute("UPDATE aegis_policies SET trust = ? WHERE module = ?", (new_trust, module))
-        conn.commit()
-        conn.close()
-        self._log_trust_change(module, delta, new_trust, reason)
-        return new_trust
+    def can_suggest(self, module: str) -> bool:
+        return self.get_trust(module) >= 0.25
 
-    def check_trust(self, module: str, required_trust: int) -> bool:
-        return self.get_trust(module) >= required_trust
+    def can_monitor(self, module: str) -> bool:
+        return self.get_trust(module) >= 0.50
 
-    def _log_trust_change(self, module: str, delta: int, new_trust: int, reason: str) -> None:
-        conn = self._conn()
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS aegis_trust_log (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                module    TEXT NOT NULL,
-                delta     INTEGER NOT NULL,
-                new_trust INTEGER NOT NULL,
-                reason    TEXT NOT NULL
-            )
-        """)
-        from datetime import datetime, timezone
-        ts = datetime.now(timezone.utc).isoformat()
-        conn.execute(
-            "INSERT INTO aegis_trust_log (timestamp, module, delta, new_trust, reason) VALUES (?, ?, ?, ?, ?)",
-            (ts, module, delta, new_trust, reason),
-        )
-        conn.commit()
-        conn.close()
+    def can_execute(self, module: str) -> bool:
+        return self.get_trust(module) >= 0.75
 
-    def trust_history(self, module: str, limit: int = 50) -> list[dict[str, Any]]:
+    def is_autonomous(self, module: str) -> bool:
+        return self.get_trust(module) == 1.0
+
+    # -- policy listing ----------------------------------------------------
+
+    def list_policies(self) -> list[dict[str, Any]]:
         conn = self._conn()
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS aegis_trust_log (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                module    TEXT NOT NULL,
-                delta     INTEGER NOT NULL,
-                new_trust INTEGER NOT NULL,
-                reason    TEXT NOT NULL
-            )
-        """)
         rows = conn.execute(
-            "SELECT timestamp, delta, new_trust, reason FROM aegis_trust_log WHERE module = ? ORDER BY id ASC LIMIT ?",
-            (module, limit),
+            "SELECT module_name, trust_score, allowed, network_allowed FROM aegis_policies"
         ).fetchall()
         conn.close()
-        return [{"timestamp": r["timestamp"], "delta": r["delta"], "new_trust": r["new_trust"], "reason": r["reason"]} for r in rows]
+        return [
+            {
+                "module": r["module_name"],
+                "trust_score": r["trust_score"],
+                "tier": TrustTier.from_score(r["trust_score"]),
+                "allowed": bool(r["allowed"]),
+                "network_allowed": bool(r["network_allowed"]),
+            }
+            for r in rows
+        ]

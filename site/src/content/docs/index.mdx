@@ -1,6 +1,6 @@
 ---
-title: NEXUS
-description: Neural Executive for Unified Superintelligence
+title: ONEXUS
+description: Open-Source Neural Executive for Unified Superintelligence
 template: splash
 hero:
   title: ' '
@@ -8,57 +8,79 @@ hero:
 ---
 
 import Hero from '../../components/Hero.astro';
-import ModuleGrid from '../../components/ModuleGrid.astro';
 
 <Hero />
 
 <div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
 
-## 51 Modules. One Kernel. Your Hardware.
+## 9 Cognitive Modules. One Kernel. Your Hardware.
 
-Five kernel components, twenty-six intelligence modules, twenty-five narrow AI agents, no central server.
-The kernel never touches the network. Everything runs locally in a single
-SQLite database. Two modules can optionally connect peer-to-peer -- blocked
-by default, logged when enabled. The smallest useful configuration fits in
-8GB of RAM.
+Five kernel components and nine cognitive modules form a digital brain that runs locally in a single SQLite database. No central server. No cloud dependencies. The kernel never touches the network. Two modules can optionally connect peer-to-peer -- blocked by default, logged when enabled. The smallest useful configuration fits in 8GB of RAM.
+
+### The Kernel
+
+The nervous system. Five components that every module depends on:
+
+| Component | Role |
+|-----------|------|
+| **Cortex** | Semantic intent router -- classifies what you need and dispatches to the right module |
+| **Engram** | Three-tier memory -- episodic (events), semantic (knowledge), procedural (skills) |
+| **Chronicle** | Immutable audit trail -- every action, every decision, fully traceable |
+| **Aegis** | Trust engine -- modules earn autonomy through demonstrated reliability (+0.12/-0.22) |
+| **Pulse** | Event bus -- real-time pub/sub between all modules |
+
+### The Modules
+
+The brain's regions. Each one does something fundamentally different:
+
+| Module | What It Does |
+|--------|-------------|
+| **Council** | Multi-perspective deliberation -- ethics, negotiation, simulation, synthesis, verification |
+| **Specter** | Adversarial analysis -- red-teaming, stress testing, counter-arguments, failure mode detection |
+| **Autonomic** | Earned autonomy -- learns routines, proposes actions, acts within earned trust boundaries |
+| **Oracle** | Anticipatory pattern detection -- trigger rules, threat radar, early warning |
+| **Wraith** | Sub-agent spawner -- ephemeral parallel workers with death clocks |
+| **Legacy** | Knowledge crystallization -- distills experience into frameworks, playbooks, heuristics |
+| **Consciousness** | Self-reflection -- journaling, pattern discovery, contradiction detection, reasoning traces |
+| **Sentry** | Cognitive regulation -- monitors focus, fatigue, flow state, cognitive load |
+| **Echo** | User modeling -- behavioral fingerprinting, social graph, relationship health |
 
 </div>
-
-<ModuleGrid />
 
 <div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
 
 ## Platform Services
 
-Beyond the kernel, NEXUS ships with a full platform layer:
+Beyond the kernel, ONEXUS ships with a full platform layer:
 
 - **API Server** -- REST + WebSocket endpoints for every kernel operation (FastAPI)
 - **Live Dashboard** -- dark-themed real-time web UI with trust gauges, Pulse streaming, Chronicle timeline
 - **Terminal UI** -- Rich split-pane TUI as an alternative to the basic CLI
-- **MCP Server** -- every module and agent exposed as MCP tools for Claude, Cursor, VS Code
-- **Workflow Engine** -- DAG pipelines chaining modules/agents, defined in YAML or Python
+- **MCP Server** -- every module exposed as MCP tools for Claude, Cursor, VS Code
+- **Workflow Engine** -- DAG pipelines chaining modules, defined in YAML or Python
 - **Time-Travel Replay** -- reconstruct system state at any point in history from Chronicle data
-- **Federation** -- peer-to-peer NEXUS mesh with capability exchange and cross-instance routing
-- **Multi-Modal** -- image, audio, and document processing pipelines (stdlib only, LLM-enhanced)
-- **Benchmarks** -- 51 automated accuracy tests across 10 agents
-- **Plugin SDK** -- `nexus create module/agent` scaffolding + `nexus validate` package checker
-- **Marketplace** -- reputation scores, ratings, trending, recommendations for community packages
+- **Federation** -- peer-to-peer ONEXUS mesh with capability exchange and cross-instance routing
 
-## Build Your Own
+## Trust System
 
-NEXUS has two extensibility paths. **Modules** are persistent intelligence components -- extend `NexusModule`, implement `handle()`, register keywords in Cortex. **Agents** are task specialists with graduated sovereignty -- extend `AgentModule`, implement four tier methods, and earn autonomy through demonstrated reliability.
+Modules earn autonomy through demonstrated reliability. Every interaction adjusts trust:
 
-- [Build a Module](/NEXUS/guides/building-a-module/) -- five steps from file creation to a running module
-- [Build an Agent](/NEXUS/guides/building-an-agent/) -- graduated sovereignty with five trust tiers
+| Trust Score | Tier | What It Means |
+|-------------|------|---------------|
+| 0.00 - 0.24 | OBSERVER | Module only responds when explicitly invoked |
+| 0.25 - 0.49 | ADVISOR | Can suggest actions proactively |
+| 0.50 - 0.74 | MONITOR | Can watch events and surface findings |
+| 0.75 - 0.99 | EXECUTOR | Can act, but substantive work needs user authorization |
+| 1.00 | AUTONOMOUS | Full autonomy -- revocable instantly, never decays |
 
-Or scaffold instantly: `nexus create module my_thing` / `nexus create agent my_scanner`. Submit a PR and it's available to every NEXUS user. See [CONTRIBUTING.md](https://github.com/AllStreets/NEXUS/blob/main/community/CONTRIBUTING.md) on GitHub for the full spec.
+Correct response: **+0.12**. Wrong response: **-0.22**. The asymmetry is intentional -- trust is hard to earn and easy to lose.
 
 ## Hardware Requirements
 
 | RAM | What you get |
 |-----|-------------|
 | **8 GB** | Kernel + 3 modules, Qwen 3 8B Q4_K_M (~4.5 GB model) |
-| **16 GB** | Kernel + 10 modules, larger context windows |
-| **32 GB+** | All 51 modules, bigger models, concurrent agents |
+| **16 GB** | Kernel + all modules, larger context windows |
+| **32 GB+** | All modules, bigger models, concurrent sub-agents |
 
 </div>

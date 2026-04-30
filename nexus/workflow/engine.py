@@ -82,6 +82,7 @@ class WorkflowEngine:
 
         overall_success = True
         halted = False
+        skip_descendants: set[str] = set()  # steps to skip due to upstream "skip" policy
 
         for step_name in execution_order:
             step = workflow.get_step(step_name)
@@ -97,6 +98,32 @@ class WorkflowEngine:
                     error="Workflow halted by prior step failure",
                     skipped=True,
                 )
+                continue
+
+            # Skip steps whose upstream dependency failed with "skip" policy
+            if step_name in skip_descendants:
+                step_results[step_name] = StepResult(
+                    step_name=step_name,
+                    module=step.module,
+                    output="",
+                    success=True,
+                    duration=0.0,
+                    skipped=True,
+                )
+                # Propagate skip to this step's own dependents
+                for other in workflow.steps:
+                    if step_name in other.depends_on:
+                        skip_descendants.add(other.name)
+                self._chronicle.log("workflow", "step.skipped", {
+                    "workflow": workflow.name,
+                    "step": step_name,
+                    "reason": "upstream dependency failed with skip policy",
+                })
+                await self._publish_event("workflow.step.completed", {
+                    "workflow": workflow.name,
+                    "step": step_name,
+                    "skipped": True,
+                })
                 continue
 
             # Evaluate condition
@@ -166,10 +193,10 @@ class WorkflowEngine:
                 if step.on_failure == "stop":
                     halted = True
                 elif step.on_failure == "skip":
-                    # Mark downstream dependents as skipped (handled implicitly
-                    # via condition checks -- dependents that reference this
-                    # step's success will see False).
-                    pass
+                    # Mark all downstream dependents for skipping
+                    for other in workflow.steps:
+                        if step_name in other.depends_on:
+                            skip_descendants.add(other.name)
                 # "continue" -- just keep going
 
         total_duration = time.monotonic() - t0

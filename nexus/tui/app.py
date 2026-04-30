@@ -1,7 +1,7 @@
 """
-NEXUS TUI -- Rich terminal UI with split-pane layout.
+ONEXUS TUI -- Rich terminal UI with split-pane layout.
 
-An enhanced alternative to the plain CLI ``nexus run`` command.
+An enhanced alternative to the plain CLI ``onexus run`` command.
 Uses Rich Live display with a four-quadrant layout:
   top-left:     module list + trust bars
   top-right:    conversation panel
@@ -28,7 +28,15 @@ from nexus.kernel.chronicle import Chronicle
 from nexus.kernel.aegis import Aegis
 from nexus.kernel.pulse import Pulse, Message
 from nexus.kernel.cortex import Cortex
-from nexus.modules.general import GeneralModule
+from nexus.modules.council import CouncilModule
+from nexus.modules.specter import SpecterModule
+from nexus.modules.autonomic import AutonomicModule
+from nexus.modules.oracle import OracleModule
+from nexus.modules.wraith import WraithModule
+from nexus.modules.legacy import LegacyModule
+from nexus.modules.consciousness import ConsciousnessModule
+from nexus.modules.sentry import SentryModule
+from nexus.modules.echo import EchoModule
 from nexus.inference.llm import LLMClient
 from nexus.inference.router import ProviderRouter
 from nexus.inference.local import LocalProvider
@@ -45,7 +53,7 @@ from nexus.tui.input_handler import InputHandler
 
 
 class NexusTUI:
-    """Rich terminal UI for NEXUS with split-pane layout."""
+    """Rich terminal UI for ONEXUS with split-pane layout."""
 
     def __init__(self, config: NexusConfig) -> None:
         self._config = config
@@ -53,11 +61,11 @@ class NexusTUI:
         self._start_time = time.monotonic()
 
         # Kernel components
-        self._engram = Engram(config.db_path)
+        self._engram = Engram(str(config.db_path))
         self._engram.init_db()
-        self._chronicle = Chronicle(config.db_path)
+        self._chronicle = Chronicle(str(config.db_path))
         self._chronicle.init_db()
-        self._aegis = Aegis(config.db_path)
+        self._aegis = Aegis(str(config.db_path))
         self._aegis.init_db()
         self._pulse = Pulse()
 
@@ -69,10 +77,13 @@ class NexusTUI:
             config=config,
         )
 
-        # Register default module
-        general = GeneralModule()
-        self._cortex.register_module(general)
-        self._aegis.set_policy("general", allowed=True)
+        # Register all cognitive modules
+        for ModuleClass in [CouncilModule, SpecterModule, AutonomicModule,
+                            OracleModule, WraithModule, LegacyModule,
+                            ConsciousnessModule, SentryModule, EchoModule]:
+            module = ModuleClass()
+            self._cortex.register_module(module)
+            self._aegis.set_policy(module.name, allowed=True)
 
         # LLM setup
         self._llm_status = "offline"

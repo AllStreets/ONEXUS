@@ -1,5 +1,5 @@
 """
-Tool definitions and handlers for the NEXUS MCP server.
+Tool definitions and handlers for the ONEXUS MCP server.
 
 Exposes kernel operations, module routing, memory, trust scoring,
 and audit log queries as MCP tools that any compliant client can invoke.

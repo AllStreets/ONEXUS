@@ -3,11 +3,11 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://allstreets.github.io',
-  base: '/NEXUS',
+  base: '/ONEXUS',
   integrations: [
     starlight({
-      title: 'NEXUS',
-      description: 'Neural Executive for Unified Superintelligence',
+      title: 'ONEXUS',
+      description: 'Open-Source Neural Executive for Unified Superintelligence',
       customCss: ['./src/styles/custom.css'],
       favicon: '/favicon.svg',
       head: [
@@ -35,7 +35,7 @@ export default defineConfig({
         },
       ],
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/AllStreets/NEXUS' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/AllStreets/ONEXUS' },
       ],
       sidebar: [
         {
@@ -64,36 +64,12 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Build',
-          items: [
-            { label: 'Build a Module', slug: 'guides/building-a-module' },
-            { label: 'Build an Agent', slug: 'guides/building-an-agent' },
-          ],
-        },
-        {
           label: 'Guides',
           items: [
+            { label: 'Build a Module', slug: 'guides/building-a-module' },
             { label: 'Connecting an LLM', slug: 'guides/connecting-an-llm' },
-            { label: 'Agent Workflows', slug: 'guides/agent-workflows' },
             { label: 'Running Tests', slug: 'guides/running-tests' },
             { label: 'Troubleshooting', slug: 'guides/troubleshooting' },
-          ],
-        },
-        {
-          label: 'Discover',
-          items: [
-            { label: 'Use Cases', slug: 'community/use-cases' },
-            { label: 'Agent Discovery', slug: 'community/agents' },
-            { label: 'Comparisons', slug: 'community/comparisons' },
-          ],
-        },
-        {
-          label: 'Community',
-          items: [
-            { label: 'Community Hub', slug: 'community/hub' },
-            { label: 'FAQ', slug: 'community/faq' },
-            { label: 'Changelog', slug: 'community/changelog' },
-            { label: 'Roadmap', slug: 'community/roadmap' },
           ],
         },
         {
