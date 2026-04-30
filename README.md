@@ -56,12 +56,27 @@ This is not prompt chaining. Not tool use. Not a wrapper around someone else's A
  |          | |          | |       | |      | |      |
  | Council  | | Specter  | |Oracle | |Consc.| | Echo |
  | Autonomic| |          | |Sentry | |Legacy| |      |
- +----------+ +----------+ +-------+ +------+ +------+
-                               |
-                         +-----+-----+
-                         |  ACTION   |
-                         |  Wraith   |
-                         +-----------+
+ +-----+----+ +-----+----+ +---+---+ +---+--+ +---+--+
+       |            |          |         |        |
+       +------+-----+----+----+----+----+--------+
+              |          |         |
+        +-----+-----+ +-+---+ +---+-------+
+        |  ACTION   | | MCP | | CATALOG   |
+        |  Wraith   | |bridge| | reader   |
+        +-----------+ +--+--+ +-----+-----+
+                         |          |
+      +==================|==========|==================+
+      |            ONEXUS-AGENTS CATALOG               |
+      |                  |          |                   |
+      |    +-------------+    +----+-------+           |
+      |    | adapters/   |    | catalog/   |           |
+      |    | mcp.json    |    | <category>/|           |
+      |    | per agent   |    | agent.json |           |
+      |    +-------------+    +------------+           |
+      |                                                |
+      |    40 categories -- top 100 per category       |
+      |    Nightly crawl -- GitHub + Hugging Face      |
+      +================================================+
 ```
 
 ### The Kernel
