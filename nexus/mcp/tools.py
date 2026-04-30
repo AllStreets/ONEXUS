@@ -125,7 +125,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "nexus_trust_check",
-        "description": "Check the Aegis trust score (0-100) for a module or agent.",
+        "description": "Check the Aegis trust score (0.0-1.0) for a module.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -138,28 +138,24 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "nexus_trust_adjust",
+        "name": "nexus_trust_record",
         "description": (
-            "Adjust the Aegis trust score for a module/agent. "
-            "Positive delta increases trust, negative decreases."
+            "Record an outcome for a module. "
+            "Success adds +0.12 trust, failure subtracts -0.22 (asymmetric)."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "module": {
                     "type": "string",
-                    "description": "Name of the module or agent.",
+                    "description": "Name of the module.",
                 },
-                "delta": {
-                    "type": "integer",
-                    "description": "Trust adjustment (-100 to +100).",
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "Reason for the trust adjustment.",
+                "success": {
+                    "type": "boolean",
+                    "description": "Whether the module's response was correct/useful.",
                 },
             },
-            "required": ["module", "delta", "reason"],
+            "required": ["module", "success"],
         },
     },
     {
@@ -275,6 +271,70 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["steps"],
         },
     },
+    {
+        "name": "nexus_agents_browse",
+        "description": (
+            "Browse the ONEXUS-Agents catalog. "
+            "Lists available open-source agents by category and composite score. "
+            "Requires NEXUS_AGENTS_CATALOG to be set."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "description": "Filter by category slug (e.g. 'coding', 'browser-automation').",
+                },
+                "runnable_only": {
+                    "type": "boolean",
+                    "description": "Only show agents with MCP adapters (default false).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (default 20).",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "nexus_agents_search",
+        "description": (
+            "Search the ONEXUS-Agents catalog by keyword. "
+            "Matches against name, tagline, tags, and category."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (default 20).",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "nexus_agents_info",
+        "description": (
+            "Get detailed info about a specific agent from the catalog, "
+            "including its MCP adapter descriptor if runnable."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "slug": {
+                    "type": "string",
+                    "description": "Agent slug (e.g. 'aider', 'browser-use').",
+                },
+            },
+            "required": ["slug"],
+        },
+    },
 ]
 
 
@@ -316,13 +376,16 @@ class ToolHandlers:
             "nexus_memory_store": self._handle_memory_store,
             "nexus_memory_query": self._handle_memory_query,
             "nexus_trust_check": self._handle_trust_check,
-            "nexus_trust_adjust": self._handle_trust_adjust,
+            "nexus_trust_record": self._handle_trust_record,
             "nexus_chronicle_query": self._handle_chronicle_query,
             "nexus_modules_list": self._handle_modules_list,
             "nexus_module_allow": self._handle_module_allow,
             "nexus_module_deny": self._handle_module_deny,
             "nexus_status": self._handle_status,
             "nexus_workflow_run": self._handle_workflow_run,
+            "nexus_agents_browse": self._handle_agents_browse,
+            "nexus_agents_search": self._handle_agents_search,
+            "nexus_agents_info": self._handle_agents_info,
         }
 
     async def call(self, tool_name: str, arguments: dict[str, Any]) -> list[dict[str, Any]]:
@@ -461,61 +524,56 @@ class ToolHandlers:
         if aegis is None:
             return "Error: Aegis is not initialised."
         trust = aegis.get_trust(module_name)
-        allowed = aegis.is_allowed(module_name, "handle")
+        tier = aegis.get_tier(module_name)
         network = aegis.is_network_allowed(module_name)
 
-        # Determine trust tier label
-        tier_label = "skill"
-        if trust >= 100:
-            tier_label = "sovereign"
-        elif trust >= 75:
-            tier_label = "autonomous"
-        elif trust >= 50:
-            tier_label = "monitor"
-        elif trust >= 25:
-            tier_label = "advisor"
+        # Check if allowed via policy
+        from nexus.kernel.aegis import PermissionDenied
+        try:
+            aegis.check(module_name, "handle")
+            allowed = True
+        except PermissionDenied:
+            allowed = False
 
         return json.dumps({
             "module": module_name,
             "trust": trust,
-            "tier": tier_label,
+            "tier": tier,
             "allowed": allowed,
             "network_allowed": network,
         })
 
-    async def _handle_trust_adjust(self, args: dict[str, Any]) -> str:
+    async def _handle_trust_record(self, args: dict[str, Any]) -> str:
         module_name = args.get("module")
-        delta = args.get("delta")
-        reason = args.get("reason")
+        success = args.get("success")
         if not module_name:
             return "Error: 'module' is required."
-        if delta is None:
-            return "Error: 'delta' is required."
-        if not reason:
-            return "Error: 'reason' is required."
-        if not isinstance(delta, int) or delta < -100 or delta > 100:
-            return "Error: 'delta' must be an integer between -100 and 100."
+        if success is None:
+            return "Error: 'success' is required."
 
         aegis = self._ctx.get("aegis")
         if aegis is None:
             return "Error: Aegis is not initialised."
-        new_trust = aegis.adjust_trust(module_name, delta, reason)
+        new_trust = aegis.record_outcome(module_name, bool(success))
+        tier = aegis.get_tier(module_name)
+        delta = 0.12 if success else -0.22
 
         # Log the adjustment
         chronicle = self._ctx.get("chronicle")
         if chronicle:
-            chronicle.log("mcp", "trust_adjust", {
+            chronicle.log("mcp", "trust_record", {
                 "module": module_name,
+                "success": success,
                 "delta": delta,
                 "new_trust": new_trust,
-                "reason": reason,
             })
 
         return json.dumps({
             "module": module_name,
+            "success": success,
             "delta": delta,
             "new_trust": new_trust,
-            "reason": reason,
+            "tier": tier,
         })
 
     async def _handle_chronicle_query(self, args: dict[str, Any]) -> str:
@@ -544,8 +602,14 @@ class ToolHandlers:
                 "requires_network": getattr(mod, "requires_network", False),
             }
             if aegis:
+                from nexus.kernel.aegis import PermissionDenied as _PD
                 entry["trust"] = aegis.get_trust(name)
-                entry["allowed"] = aegis.is_allowed(name, "handle")
+                entry["tier"] = aegis.get_tier(name)
+                try:
+                    aegis.check(name, "handle")
+                    entry["allowed"] = True
+                except _PD:
+                    entry["allowed"] = False
                 entry["network_allowed"] = aegis.is_network_allowed(name)
             modules.append(entry)
         return json.dumps({"count": len(modules), "modules": modules})
@@ -687,3 +751,124 @@ class ToolHandlers:
             })
 
         return json.dumps({"steps_completed": len(results), "results": results})
+
+    # ------------------------------------------------------------------
+    # Agent catalog handlers
+    # ------------------------------------------------------------------
+
+    def _get_catalog(self):
+        """Lazily load the AgentCatalog if configured."""
+        if not hasattr(self, "_catalog"):
+            config = self._ctx.get("config")
+            catalog_path = getattr(config, "agents_catalog_path", None) if config else None
+            if not catalog_path:
+                self._catalog = None
+            else:
+                try:
+                    from nexus.agents.catalog import AgentCatalog
+                    self._catalog = AgentCatalog(catalog_path)
+                except Exception:
+                    self._catalog = None
+        return self._catalog
+
+    async def _handle_agents_browse(self, args: dict[str, Any]) -> str:
+        catalog = self._get_catalog()
+        if catalog is None:
+            return json.dumps({
+                "error": "Agent catalog not configured. Set NEXUS_AGENTS_CATALOG to the path of a cloned ONEXUS-Agents repo."
+            })
+        category = args.get("category")
+        runnable_only = args.get("runnable_only", False)
+        limit = args.get("limit", 20)
+        agents = catalog.list_agents(category=category, runnable_only=runnable_only)[:limit]
+        return json.dumps({
+            "count": len(agents),
+            "categories": catalog.categories() if not category else [category],
+            "agents": [
+                {
+                    "slug": a.slug,
+                    "name": a.name,
+                    "tagline": a.tagline,
+                    "category": a.category,
+                    "composite_score": a.composite_score,
+                    "rank": a.rank_in_category,
+                    "runnable": a.runnable,
+                    "stars": a.stars,
+                    "license": a.license,
+                }
+                for a in agents
+            ],
+        })
+
+    async def _handle_agents_search(self, args: dict[str, Any]) -> str:
+        catalog = self._get_catalog()
+        if catalog is None:
+            return json.dumps({
+                "error": "Agent catalog not configured. Set NEXUS_AGENTS_CATALOG to the path of a cloned ONEXUS-Agents repo."
+            })
+        query = args.get("query", "")
+        if not query:
+            return json.dumps({"error": "'query' is required."})
+        limit = args.get("limit", 20)
+        results = catalog.search(query, limit=limit)
+        return json.dumps({
+            "query": query,
+            "count": len(results),
+            "results": [
+                {
+                    "slug": a.slug,
+                    "name": a.name,
+                    "tagline": a.tagline,
+                    "category": a.category,
+                    "composite_score": a.composite_score,
+                    "runnable": a.runnable,
+                    "stars": a.stars,
+                }
+                for a in results
+            ],
+        })
+
+    async def _handle_agents_info(self, args: dict[str, Any]) -> str:
+        catalog = self._get_catalog()
+        if catalog is None:
+            return json.dumps({
+                "error": "Agent catalog not configured. Set NEXUS_AGENTS_CATALOG to the path of a cloned ONEXUS-Agents repo."
+            })
+        slug = args.get("slug", "")
+        if not slug:
+            return json.dumps({"error": "'slug' is required."})
+        agent = catalog.get_agent(slug)
+        if agent is None:
+            return json.dumps({"error": f"Agent '{slug}' not found in catalog."})
+
+        info: dict[str, Any] = {
+            "slug": agent.slug,
+            "name": agent.name,
+            "tagline": agent.tagline,
+            "category": agent.category,
+            "tags": agent.tags,
+            "license": agent.license,
+            "runnable": agent.runnable,
+            "composite_score": agent.composite_score,
+            "rank_in_category": agent.rank_in_category,
+            "source_github": agent.source_github,
+            "source_huggingface": agent.source_huggingface,
+            "homepage": agent.homepage,
+            "stars": agent.stars,
+            "downloads_30d": agent.downloads_30d,
+        }
+
+        if agent.runnable:
+            adapter = catalog.load_adapter(agent)
+            if adapter:
+                info["adapter"] = {
+                    "transport": adapter.transport,
+                    "command": adapter.command,
+                    "args": adapter.args,
+                    "env_keys": list(adapter.env.keys()),
+                    "capabilities": adapter.capabilities,
+                    "trust_floor": adapter.trust_floor,
+                    "default_tier": adapter.default_tier,
+                }
+
+        return json.dumps(info)

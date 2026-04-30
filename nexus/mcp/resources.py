@@ -117,19 +117,8 @@ class ResourceHandlers:
                 "coordination_targets": getattr(mod, "coordination_targets", []),
             }
             if aegis:
-                trust = aegis.get_trust(name)
-                entry["trust"] = trust
-                # Compute tier label
-                if trust >= 100:
-                    entry["tier"] = "sovereign"
-                elif trust >= 75:
-                    entry["tier"] = "autonomous"
-                elif trust >= 50:
-                    entry["tier"] = "monitor"
-                elif trust >= 25:
-                    entry["tier"] = "advisor"
-                else:
-                    entry["tier"] = "skill"
+                entry["trust"] = aegis.get_trust(name)
+                entry["tier"] = aegis.get_tier(name)
             agents.append(entry)
         return json.dumps({"count": len(agents), "agents": agents})
 

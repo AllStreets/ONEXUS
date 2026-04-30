@@ -80,7 +80,9 @@ def _with_agent(kernel_ctx):
     agent.coordination_targets = ["other_agent"]
     kernel_ctx["cortex"].register_module(agent)
     kernel_ctx["aegis"].set_policy("test_agent", allowed=True, network=True)
-    kernel_ctx["aegis"].adjust_trust("test_agent", 80, "test setup")
+    # Build trust to ~0.84 (7 successes: 7 * 0.12 = 0.84)
+    for _ in range(7):
+        kernel_ctx["aegis"].record_outcome("test_agent", True)
     return agent
 
 
@@ -147,8 +149,8 @@ class TestAgentsResource:
         assert result["count"] == 1
         agent = result["agents"][0]
         assert agent["name"] == "test_agent"
-        assert agent["trust"] == 80
-        assert agent["tier"] == "autonomous"
+        assert 0.8 <= agent["trust"] <= 0.85  # 7 * 0.12 = 0.84
+        assert agent["tier"] == "EXECUTOR"
         assert agent["watch_events"] == ["cortex.response"]
         assert agent["coordination_targets"] == ["other_agent"]
 

@@ -67,6 +67,7 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Build a Module', slug: 'guides/building-a-module' },
+            { label: 'Deploying Agents', slug: 'guides/deploying-agents' },
             { label: 'Connecting an LLM', slug: 'guides/connecting-an-llm' },
             { label: 'Running Tests', slug: 'guides/running-tests' },
             { label: 'Troubleshooting', slug: 'guides/troubleshooting' },

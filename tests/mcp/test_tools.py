@@ -74,7 +74,9 @@ def _register_mock_module(kernel_ctx):
 
     aegis = kernel_ctx["aegis"]
     aegis.set_policy("test_mod", allowed=True)
-    aegis.adjust_trust("test_mod", 50, "test setup")
+    # Build trust to ~0.48 (4 successes: 4 * 0.12 = 0.48)
+    for _ in range(4):
+        aegis.record_outcome("test_mod", True)
     return mod
 
 
@@ -96,7 +98,9 @@ def _register_mock_agent(kernel_ctx):
 
     aegis = kernel_ctx["aegis"]
     aegis.set_policy("test_agent", allowed=True)
-    aegis.adjust_trust("test_agent", 60, "test setup")
+    # Build trust to ~0.60 (5 successes: 5 * 0.12 = 0.60)
+    for _ in range(5):
+        aegis.record_outcome("test_agent", True)
     return agent
 
 
@@ -107,7 +111,7 @@ def _register_mock_agent(kernel_ctx):
 class TestToolDefinitions:
     def test_definitions_are_non_empty(self):
         defs = get_tool_definitions()
-        assert len(defs) == 12
+        assert len(defs) == 15
 
     def test_all_definitions_have_required_keys(self):
         for defn in get_tool_definitions():
@@ -316,9 +320,9 @@ class TestTrust:
         result = await handlers.call("nexus_trust_check", {"module": "test_mod"})
         data = json.loads(result[0]["text"])
         assert data["module"] == "test_mod"
-        assert data["trust"] == 50
+        assert 0.4 <= data["trust"] <= 0.5  # 4 successes * 0.12 = 0.48
         assert data["allowed"] is True
-        assert data["tier"] == "monitor"
+        assert data["tier"] == "ADVISOR"
 
     @pytest.mark.asyncio
     async def test_trust_check_missing_module(self, handlers):
@@ -326,28 +330,29 @@ class TestTrust:
         assert "Error" in result[0]["text"]
 
     @pytest.mark.asyncio
-    async def test_trust_adjust(self, handlers, kernel_ctx, _register_mock_module):
-        result = await handlers.call("nexus_trust_adjust", {
+    async def test_trust_record_success(self, handlers, kernel_ctx, _register_mock_module):
+        result = await handlers.call("nexus_trust_record", {
             "module": "test_mod",
-            "delta": 10,
-            "reason": "good behavior",
+            "success": True,
         })
         data = json.loads(result[0]["text"])
-        assert data["new_trust"] == 60
-        assert data["delta"] == 10
+        assert data["delta"] == 0.12
+        assert data["success"] is True
+        assert data["new_trust"] > 0.48  # was ~0.48, now +0.12
 
     @pytest.mark.asyncio
-    async def test_trust_adjust_missing_fields(self, handlers):
-        result = await handlers.call("nexus_trust_adjust", {"module": "x"})
-        assert "Error" in result[0]["text"]
-
-    @pytest.mark.asyncio
-    async def test_trust_adjust_invalid_delta(self, handlers):
-        result = await handlers.call("nexus_trust_adjust", {
-            "module": "x",
-            "delta": 200,
-            "reason": "too much",
+    async def test_trust_record_failure(self, handlers, kernel_ctx, _register_mock_module):
+        result = await handlers.call("nexus_trust_record", {
+            "module": "test_mod",
+            "success": False,
         })
+        data = json.loads(result[0]["text"])
+        assert data["delta"] == -0.22
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_trust_record_missing_fields(self, handlers):
+        result = await handlers.call("nexus_trust_record", {"module": "x"})
         assert "Error" in result[0]["text"]
 
     @pytest.mark.asyncio
@@ -428,7 +433,8 @@ class TestModuleAllowDeny:
         result = await handlers.call("nexus_module_allow", {"module": "some_mod"})
         data = json.loads(result[0]["text"])
         assert data["allowed"] is True
-        assert kernel_ctx["aegis"].is_allowed("some_mod", "handle")
+        # Verify via check() -- no exception means allowed
+        kernel_ctx["aegis"].check("some_mod", "handle")
 
     @pytest.mark.asyncio
     async def test_allow_with_network(self, handlers, kernel_ctx):
@@ -446,7 +452,9 @@ class TestModuleAllowDeny:
         result = await handlers.call("nexus_module_deny", {"module": "deny_mod"})
         data = json.loads(result[0]["text"])
         assert data["allowed"] is False
-        assert not kernel_ctx["aegis"].is_allowed("deny_mod", "handle")
+        # Verify via check() -- should raise PermissionDenied
+        with pytest.raises(PermissionDenied):
+            kernel_ctx["aegis"].check("deny_mod", "handle")
 
     @pytest.mark.asyncio
     async def test_allow_missing_module(self, handlers):

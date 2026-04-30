@@ -44,9 +44,9 @@ class TestBuildKernel:
         modules = cortex.list_modules()
         assert len(modules) > 0
 
-    def test_general_module_registered(self, tmp_config):
+    def test_council_module_registered(self, tmp_config):
         ctx = _build_kernel(tmp_config)
-        assert "general" in ctx["cortex"].list_modules()
+        assert "council" in ctx["cortex"].list_modules()
 
     def test_chronicle_logs_init(self, tmp_config):
         ctx = _build_kernel(tmp_config)
@@ -65,12 +65,13 @@ class TestBuildKernel:
 # ---------------------------------------------------------------------------
 
 class TestRegisterModules:
-    def test_registers_general(self, tmp_config):
+    def test_registers_council(self, tmp_config):
         ctx = _build_kernel(tmp_config)
         cortex = ctx["cortex"]
         aegis = ctx["aegis"]
-        assert "general" in cortex.list_modules()
-        assert aegis.is_allowed("general", "handle")
+        assert "council" in cortex.list_modules()
+        # Verify allowed via check() -- no exception means allowed
+        aegis.check("council", "handle")
 
     def test_failed_imports_dont_crash(self, tmp_config):
         """Even if a module import fails, the server should still start."""
@@ -97,8 +98,8 @@ class TestRegisterModules:
 # ---------------------------------------------------------------------------
 
 class TestCatalogueCompleteness:
-    def test_twelve_tools_defined(self):
-        assert len(get_tool_definitions()) == 12
+    def test_fifteen_tools_defined(self):
+        assert len(get_tool_definitions()) == 15
 
     def test_four_resources_defined(self):
         assert len(get_resource_definitions()) == 4
@@ -131,11 +132,11 @@ class TestPromptHandlers:
             "code": "print('hello')",
             "language": "python",
         })
-        assert len(messages) == 3  # vex + arbiter + carve
+        assert len(messages) == 3  # specter + council + oracle
         texts = [m["content"]["text"] for m in messages]
-        assert any("vex" in t.lower() for t in texts)
-        assert any("arbiter" in t.lower() for t in texts)
-        assert any("carve" in t.lower() for t in texts)
+        assert any("specter" in t.lower() for t in texts)
+        assert any("council" in t.lower() for t in texts)
+        assert any("oracle" in t.lower() for t in texts)
 
     @pytest.mark.asyncio
     async def test_analyze_code_security_only(self, prompt_handlers):
@@ -144,7 +145,7 @@ class TestPromptHandlers:
             "focus": "security",
         })
         assert len(messages) == 1
-        assert "vex" in messages[0]["content"]["text"].lower()
+        assert "specter" in messages[0]["content"]["text"].lower()
 
     @pytest.mark.asyncio
     async def test_analyze_code_missing_code(self, prompt_handlers):
@@ -156,10 +157,9 @@ class TestPromptHandlers:
         messages = await prompt_handlers.get_prompt("security_scan", {
             "target": "GET /api/users?id=1",
         })
-        assert len(messages) == 2  # vex + bastion
+        assert len(messages) == 2  # specter (code) + specter (api)
         texts = [m["content"]["text"] for m in messages]
-        assert any("vex" in t.lower() for t in texts)
-        assert any("bastion" in t.lower() for t in texts)
+        assert all("specter" in t.lower() for t in texts)
 
     @pytest.mark.asyncio
     async def test_security_scan_code_only(self, prompt_handlers):
@@ -168,7 +168,7 @@ class TestPromptHandlers:
             "scan_type": "code",
         })
         assert len(messages) == 1
-        assert "vex" in messages[0]["content"]["text"].lower()
+        assert "specter" in messages[0]["content"]["text"].lower()
 
     @pytest.mark.asyncio
     async def test_summarize_default(self, prompt_handlers):
@@ -176,7 +176,7 @@ class TestPromptHandlers:
             "content": "Long text here...",
         })
         assert len(messages) == 1
-        assert "scribe" in messages[0]["content"]["text"].lower()
+        assert "legacy" in messages[0]["content"]["text"].lower()
 
     @pytest.mark.asyncio
     async def test_summarize_expand(self, prompt_handlers):
@@ -184,7 +184,7 @@ class TestPromptHandlers:
             "content": "Brief notes",
             "mode": "expand",
         })
-        assert "kindle" in messages[0]["content"]["text"].lower()
+        assert "council" in messages[0]["content"]["text"].lower()
 
     @pytest.mark.asyncio
     async def test_summarize_polish(self, prompt_handlers):
@@ -192,7 +192,7 @@ class TestPromptHandlers:
             "content": "Draft text",
             "mode": "polish",
         })
-        assert "kindle" in messages[0]["content"]["text"].lower()
+        assert "council" in messages[0]["content"]["text"].lower()
 
     @pytest.mark.asyncio
     async def test_unknown_prompt(self, prompt_handlers):

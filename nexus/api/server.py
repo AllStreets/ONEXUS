@@ -33,7 +33,6 @@ from nexus.api.routes.events import router as events_router
 from nexus.api.routes.system import router as system_router
 from nexus.api.routes.dashboard import router as dashboard_router
 from nexus.api.routes.replay import router as replay_router
-from nexus.api.routes.marketplace import router as marketplace_router
 from nexus.api.routes.federation import router as federation_router
 from nexus.api.routes.multimodal import router as multimodal_router
 
@@ -178,7 +177,6 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(system_router)
     app.include_router(dashboard_router)
     app.include_router(replay_router)
-    app.include_router(marketplace_router)
     app.include_router(federation_router)
     app.include_router(multimodal_router)
 

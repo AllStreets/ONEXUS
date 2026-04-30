@@ -17,8 +17,8 @@ PROMPT_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "analyze_code",
         "description": (
-            "Perform a multi-agent code analysis. Routes to Vex (security), "
-            "Arbiter (code review), and Carve (refactoring) in sequence."
+            "Perform a multi-module code analysis. Routes to Specter (adversarial/security), "
+            "Council (multi-perspective review), and Oracle (pattern detection) in sequence."
         ),
         "arguments": [
             {
@@ -41,8 +41,8 @@ PROMPT_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "security_scan",
         "description": (
-            "Run a security-focused scan. Routes to Vex (code vulnerabilities) "
-            "and Bastion (API security analysis)."
+            "Run a security-focused scan. Routes to Specter (adversarial analysis) "
+            "for vulnerability detection and stress testing."
         ),
         "arguments": [
             {
@@ -60,9 +60,9 @@ PROMPT_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "summarize",
         "description": (
-            "Summarise or expand content using NEXUS writing agents. "
-            "Routes to Scribe (meeting notes / summaries) and "
-            "Kindle (content expansion / polish)."
+            "Summarise or expand content using ONEXUS cognitive modules. "
+            "Routes to Legacy (knowledge crystallization) for distillation "
+            "and Council (multi-perspective synthesis) for expansion."
         ),
         "arguments": [
             {
@@ -133,30 +133,30 @@ class PromptHandlers:
         language = args.get("language", "unknown")
         focus = args.get("focus", "all")
 
-        agents_to_use: list[tuple[str, str]] = []
+        modules_to_use: list[tuple[str, str]] = []
         if focus in ("security", "all"):
-            agents_to_use.append((
-                "vex",
+            modules_to_use.append((
+                "specter",
                 f"Scan this {language} code for security vulnerabilities:\n\n```{language}\n{code}\n```",
             ))
         if focus in ("quality", "all"):
-            agents_to_use.append((
-                "arbiter",
+            modules_to_use.append((
+                "council",
                 f"Review this {language} code for quality and best practices:\n\n```{language}\n{code}\n```",
             ))
         if focus in ("refactor", "all"):
-            agents_to_use.append((
-                "carve",
-                f"Analyse this {language} code for refactoring opportunities:\n\n```{language}\n{code}\n```",
+            modules_to_use.append((
+                "oracle",
+                f"Analyse this {language} code for patterns and refactoring opportunities:\n\n```{language}\n{code}\n```",
             ))
 
         messages: list[dict[str, Any]] = []
-        for agent_name, prompt_text in agents_to_use:
+        for module_name, prompt_text in modules_to_use:
             messages.append({
                 "role": "user",
                 "content": {
                     "type": "text",
-                    "text": f"[Route to {agent_name}] {prompt_text}",
+                    "text": f"[Route to {module_name}] {prompt_text}",
                 },
             })
         return messages
@@ -174,7 +174,7 @@ class PromptHandlers:
                 "role": "user",
                 "content": {
                     "type": "text",
-                    "text": f"[Route to vex] Scan for security vulnerabilities:\n\n{target}",
+                    "text": f"[Route to specter] Scan for security vulnerabilities:\n\n{target}",
                 },
             })
 
@@ -183,7 +183,7 @@ class PromptHandlers:
                 "role": "user",
                 "content": {
                     "type": "text",
-                    "text": f"[Route to bastion] Analyse API security:\n\n{target}",
+                    "text": f"[Route to specter] Analyse API security:\n\n{target}",
                 },
             })
 
@@ -201,7 +201,7 @@ class PromptHandlers:
                 "role": "user",
                 "content": {
                     "type": "text",
-                    "text": f"[Route to kindle] Expand this content into polished prose:\n\n{content}",
+                    "text": f"[Route to council] Expand this content into polished prose using multi-perspective synthesis:\n\n{content}",
                 },
             }]
 
@@ -210,7 +210,7 @@ class PromptHandlers:
                 "role": "user",
                 "content": {
                     "type": "text",
-                    "text": f"[Route to kindle] Polish and improve this writing:\n\n{content}",
+                    "text": f"[Route to council] Polish and improve this writing:\n\n{content}",
                 },
             }]
 
@@ -219,6 +219,6 @@ class PromptHandlers:
             "role": "user",
             "content": {
                 "type": "text",
-                "text": f"[Route to scribe] Summarise the following content:\n\n{content}",
+                "text": f"[Route to legacy] Distill the following content into a concise summary:\n\n{content}",
             },
         }]

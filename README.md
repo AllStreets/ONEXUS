@@ -238,6 +238,8 @@ nexus/
 |   +-- consciousness.py . self-reflection
 |   +-- sentry.py ........ cognitive regulation
 |   +-- echo.py .......... behavioral fingerprinting + social graph
++-- agents/
+|   +-- catalog.py ....... ONEXUS-Agents catalog reader
 +-- inference/
 |   +-- provider.py ...... InferenceProvider ABC
 |   +-- local.py ......... llama.cpp HTTP client
@@ -290,6 +292,36 @@ tests/ ................... test suite
 Looking for task-specific agents (code analysis, data pipelines, financial modeling, content generation)? Those live in a separate curated registry:
 
 **[ONEXUS Agents](https://github.com/AllStreets/ONEXUS-Agents)** -- a community hub where developers submit, review, and share task agents that plug into the ONEXUS kernel.
+
+### Deploying Agents into ONEXUS
+
+Clone the catalog and point ONEXUS at it:
+
+```bash
+git clone https://github.com/AllStreets/ONEXUS-Agents.git
+export NEXUS_AGENTS_CATALOG=/path/to/ONEXUS-Agents
+onexus run
+```
+
+ONEXUS reads the catalog at startup. When Cortex routes a task that matches a catalogued agent's category, it can dispatch via the agent's MCP adapter. Three MCP tools expose the catalog:
+
+| Tool | What it does |
+|------|-------------|
+| `nexus_agents_browse` | List agents by category, filter to runnable-only |
+| `nexus_agents_search` | Keyword search across names, tags, categories |
+| `nexus_agents_info` | Full metadata + MCP adapter descriptor for a specific agent |
+
+Runnable agents declare an `adapter_ref` pointing to an MCP server descriptor under `adapters/<name>/mcp.json`. The descriptor specifies transport, command, env keys, capabilities, and a trust floor -- the minimum Aegis trust score required before dispatch.
+
+### Building an Agent for ONEXUS
+
+1. Write the agent (any language, any framework).
+2. Wrap it in an MCP server (stdio or SSE transport).
+3. Add a catalog entry to `ONEXUS-Agents/catalog/<category>/<slug>.json`.
+4. Add an adapter descriptor to `ONEXUS-Agents/adapters/<slug>/mcp.json`.
+5. Open a PR. CI validates the schema. An admin reviews and merges.
+
+The nightly pipeline re-scores every agent. Community submissions become first-class members of the ranking pool the next night after merge.
 
 ---
 
