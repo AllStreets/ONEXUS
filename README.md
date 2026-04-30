@@ -40,9 +40,9 @@ This is not prompt chaining. Not tool use. Not a wrapper around someone else's A
  |                    |  CORTEX   |                    |
  |                    | (router)  |                    |
  |                    +-----+-----+                    |
- |      +------+------+----+----+------+------+        |
- |      |      |      |         |      |      |        |
- |   +--+---+--+---+--+------+--+---+--+---+--+--+     |
+ |      +--------+----+-----+---+----+-------+         |
+ |      |        |    |         |    |       |         |
+ |   +--+---+ +--+--+ +---------+ +--+--+ +--+--+      |
  |   |ENGRAM| |PULSE| |CHRONICLE| |AEGIS| | LLM |      |
  |   |(mem) | |(bus)| | (audit) | |(trs)| |(inf)|      |
  |   +------+ +-----+ +---------+ +-----+ +-----+      |
@@ -58,25 +58,25 @@ This is not prompt chaining. Not tool use. Not a wrapper around someone else's A
  | Autonomic| |          | |Sentry | |Legacy| |      |
  +-----+----+ +-----+----+ +---+---+ +---+--+ +---+--+
        |            |          |         |        |
-       +------+-----+----+----+----+----+--------+
-              |          |         |
-        +-----+-----+ +-+---+ +---+-------+
-        |  ACTION   | | MCP | | CATALOG   |
-        |  Wraith   | |bridge| | reader   |
-        +-----------+ +--+--+ +-----+-----+
-                         |          |
-      +==================|==========|==================+
-      |            ONEXUS-AGENTS CATALOG               |
-      |                  |          |                   |
-      |    +-------------+    +----+-------+           |
-      |    | adapters/   |    | catalog/   |           |
-      |    | mcp.json    |    | <category>/|           |
-      |    | per agent   |    | agent.json |           |
-      |    +-------------+    +------------+           |
-      |                                                |
-      |    40 categories -- top 100 per category       |
-      |    Nightly crawl -- GitHub + Hugging Face      |
-      +================================================+
+       +------+-----+-----+----+------+--+--------+
+              |           |           |
+         +---------+  +-------+  +---------+
+         | ACTION  |  |  MCP  |  | CATALOG |
+         | Wraith  |  |bridge |  | reader  |
+         +----+----+  +---+---+  +----+----+
+                          |           |
+      +===================|===========|==========+
+      |           ONEXUS-AGENTS CATALOG          |
+      |                   |           |          |
+      |    +--------------+    +------+------+   |
+      |    | adapters/    |    | catalog/    |   |
+      |    | mcp.json     |    | <category>/ |   |
+      |    | per agent    |    | agent.json  |   |
+      |    +--------------+    +-------------+   |
+      |                                          |
+      |    40 categories -- top 100 per category |
+      |    Nightly crawl -- GitHub + Hugging Face|
+      +==========================================+
 ```
 
 ### The Kernel
