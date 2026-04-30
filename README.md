@@ -50,18 +50,18 @@ This is not prompt chaining. Not tool use. Not a wrapper around someone else's A
  |   Trust: 0.00 -- 0.25 -- 0.50 -- 0.75 -- 1.00       |
  |   +0.12 correct / -0.22 wrong / asymmetric          |
  +=====================================================+
-      |          |          |         |        |
- +----+-----+ +--+-------+ +---+---+ +--+---+ +--+---+
+       |            |          |         |        |
+ +-----+----+ +-----+----+ +---+---+ +---+--+ +---+--+
  |DELIBERATE| | DEFENSE  | |PATTERN| | SELF | |MODEL |
  |          | |          | |       | |      | |      |
  | Council  | | Specter  | |Oracle | |Consc.| | Echo |
  | Autonomic| |          | |Sentry | |Legacy| |      |
  +----------+ +----------+ +-------+ +------+ +------+
-                                |
-                          +-----+-----+
-                          |  ACTION   |
-                          |  Wraith   |
-                          +-----------+
+                               |
+                         +-----+-----+
+                         |  ACTION   |
+                         |  Wraith   |
+                         +-----------+
 ```
 
 ### The Kernel
