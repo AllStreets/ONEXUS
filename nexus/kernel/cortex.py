@@ -159,6 +159,23 @@ _INTENT_DEFS: list[dict[str, Any]] = [
         ],
     },
     {
+        "name": "SUMMON",
+        "module": "agents",
+        "description": "Browse, search, and summon runnable agents from the ONEXUS-Agents catalog",
+        "patterns": [
+            r"\bsummon\b", r"\blaunch\s+agent\b", r"\bstart\s+agent\b",
+            r"\bstop\s+agent\b", r"\bdismiss\s+agent\b", r"\bkill\s+agent\b",
+            r"\binvoke\s+agent\b", r"\blist\s+agents?\b", r"\bagent\s+catalog\b",
+            r"\brunning\s+agents?\b", r"\bonexus[- ]?agents?\b",
+            r"\bsearch\s+agents?\b", r"\bfind\s+agent\b",
+        ],
+        "semantic_signals": [
+            "summon", "launch agent", "start agent", "stop agent",
+            "list agents", "running agents", "agent catalog",
+            "find agent", "search agents", "invoke agent",
+        ],
+    },
+    {
         "name": "CRYSTALLIZE",
         "module": "legacy",
         "description": "Knowledge crystallization, playbook extraction, heuristic distillation",
@@ -449,6 +466,7 @@ class Cortex:
             "chronicle": self._chronicle,
             "aegis": self._aegis,
             "pulse": self._pulse,
+            "cortex": self,
         }
 
     # -- intent selection --------------------------------------------------
@@ -588,8 +606,7 @@ class Cortex:
             self._aegis.record_outcome(target, False)
             return f"[Nexus] Module '{target}' encountered an error and could not complete your request."
 
-        # 8. Record successful outcome with Aegis
-        self._aegis.record_outcome(target, True)
+        # 8. Trust adjustment deferred -- applied via user feedback (accept/reject)
 
         # 9. Record routing decision in classifier history
         self._classifier.record_routing(target)

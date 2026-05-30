@@ -79,3 +79,73 @@ async def test_phantom_auto_cleanup(wraith):
 async def test_wraith_handle(wraith):
     result = await wraith.handle("status", {"llm": None})
     assert "wraith" in result.lower() or "phantom" in result.lower()
+
+
+class _FakeAegis:
+    def __init__(self, tier="ADVISOR"):
+        self._tier = tier
+
+    def get_tier(self, _name):
+        return self._tier
+
+
+class _FakeCortex:
+    def __init__(self, response="routed"):
+        self.calls = []
+        self.response = response
+
+    async def process(self, message):
+        self.calls.append(message)
+        return self.response
+
+
+@pytest.mark.asyncio
+async def test_handle_spawn_routes_through_cortex(wraith):
+    cortex = _FakeCortex(response="cortex says hi")
+    ctx = {"cortex": cortex, "aegis": _FakeAegis("MONITOR"), "llm": None}
+
+    out = await wraith.handle("spawn research acme corp", ctx)
+    assert "Phantom" in out and "spawned" in out
+    assert "MONITOR" in out and "120" in out  # MONITOR -> 120s
+
+    phantoms = wraith.list_phantoms()
+    assert len(phantoms) == 1
+    pid = phantoms[0].id
+
+    await wraith.wait(pid, timeout=2)
+    assert cortex.calls == ["research acme corp"]
+
+    result = await wraith.handle(f"results {pid}", ctx)
+    assert "completed" in result and "cortex says hi" in result
+
+
+@pytest.mark.asyncio
+async def test_handle_spawn_with_duration_override(wraith):
+    cortex = _FakeCortex(response="ok")
+    ctx = {"cortex": cortex, "aegis": _FakeAegis("ADVISOR"), "llm": None}
+
+    out = await wraith.handle("spawn analyze logs for 5 minutes", ctx)
+    assert "300" in out  # 5 min == 300s overrides ADVISOR default 30s
+
+    phantom = wraith.list_phantoms()[0]
+    assert phantom.mission == "analyze logs"
+    assert phantom.timeout_seconds == 300
+
+
+@pytest.mark.asyncio
+async def test_handle_kill(wraith):
+    async def slow(_m):
+        await asyncio.sleep(10)
+        return "x"
+
+    phantom = await wraith.spawn("slow", slow, timeout_seconds=5)
+    out = await wraith.handle(f"kill {phantom.id}", {"llm": None})
+    assert "Killed" in out
+    await wraith.wait(phantom.id, timeout=1)
+    assert wraith.get_phantom(phantom.id).status == PhantomStatus.CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_handle_results_unknown_id(wraith):
+    out = await wraith.handle("results deadbeef", {"llm": None})
+    assert "No phantom" in out

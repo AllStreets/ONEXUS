@@ -36,6 +36,7 @@ from nexus.api.routes.providers import router as providers_router
 from nexus.api.routes.replay import router as replay_router
 from nexus.api.routes.federation import router as federation_router
 from nexus.api.routes.multimodal import router as multimodal_router
+from nexus.api.routes.agents import router as agents_router
 
 
 class KernelState:
@@ -83,13 +84,20 @@ def _init_kernel(config: NexusConfig) -> KernelState:
         config=config,
     )
 
+    # Register kernel component policies in Aegis (trust tracking)
+    # Kernel components start at EXECUTOR tier (0.80) -- core infrastructure
+    for kernel_name in ["cortex", "engram", "chronicle", "aegis", "pulse"]:
+        aegis.set_policy(kernel_name, allowed=True, network=False, initial_trust=0.80)
+
     # Register all cognitive modules
+    # Modules start at ADVISOR tier (0.30) -- above the 0.25 routing floor
+    # so they can be routed to immediately and earn their way up
     for ModuleClass in [CouncilModule, SpecterModule, AutonomicModule,
                         OracleModule, WraithModule, LegacyModule,
                         ConsciousnessModule, SentryModule, EchoModule]:
         module = ModuleClass()
         cortex.register_module(module)
-        aegis.set_policy(module.name, allowed=True)
+        aegis.set_policy(module.name, allowed=True, initial_trust=0.30)
 
     # Initialize provider router — always available, providers registered on demand
     from nexus.inference.router import ProviderRouter
@@ -170,6 +178,54 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     # Store kernel state on the app for access in route handlers
     app.state.kernel = kernel
 
+    # Initialize agent catalog + launcher. The dispatcher module is always
+    # registered so 'list agents' / 'summon X' route correctly even when the
+    # catalog directory is unreadable; the dispatcher reports the reason
+    # instead of falling through to the council fallback.
+    from nexus.agents.launcher import AgentLauncher
+    from nexus.modules.agent_dispatcher import AgentDispatcherModule
+
+    catalog = None
+    launcher = None
+    unavailable_reason: str | None = None
+
+    _catalog_path = config.agents_catalog_path
+    if not _catalog_path:
+        import pathlib
+        _sibling = pathlib.Path(__file__).resolve().parents[2].parent / "ONEXUS-Agents"
+        if _sibling.is_dir():
+            _catalog_path = str(_sibling)
+
+    if _catalog_path:
+        try:
+            from nexus.agents.catalog import AgentCatalog
+            catalog = AgentCatalog(_catalog_path)
+            for agent in catalog.list_agents(runnable_only=True):
+                kernel.aegis.set_policy(
+                    f"agent.{agent.slug}", allowed=True,
+                    initial_trust=0.30,
+                )
+            launcher = AgentLauncher(catalog=catalog, kernel=kernel)
+        except Exception as exc:
+            import logging as _log
+            _log.getLogger("nexus.api").warning("Agent catalog unavailable: %s", exc)
+            unavailable_reason = f"{type(exc).__name__}: {exc}"
+            catalog = None
+            launcher = None
+    else:
+        unavailable_reason = "ONEXUS-Agents directory not found alongside NEXUS."
+
+    app.state.agent_catalog = catalog
+    app.state.agent_launcher = launcher
+
+    dispatcher = AgentDispatcherModule(
+        catalog=catalog,
+        launcher=launcher,
+        unavailable_reason=unavailable_reason,
+    )
+    kernel.cortex.register_module(dispatcher)
+    kernel.aegis.set_policy(dispatcher.name, allowed=True, initial_trust=0.30)
+
     # CORS middleware for dashboard access
     app.add_middleware(
         CORSMiddleware,
@@ -192,6 +248,7 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(replay_router)
     app.include_router(federation_router)
     app.include_router(multimodal_router)
+    app.include_router(agents_router)
 
     # Initialize federation if enabled via environment
     import os
@@ -246,3 +303,6 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             pass
 
     return app
+
+
+app = create_app()

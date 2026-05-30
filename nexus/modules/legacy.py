@@ -289,6 +289,11 @@ class LegacyModule(NexusModule):
         lines.append(f"\n## Raw Framework\n\n{artifact.content}")
         return "\n".join(lines)
 
+    _CRYSTALLIZE_TRIGGERS = (
+        "lesson", "learned", "playbook", "distill", "crystallize",
+        "framework", "wisdom", "knowledge", "patterns", "heuristic",
+    )
+
     async def handle(self, message: str, context: dict[str, Any]) -> str:
         if not self._decisions:
             return "[Legacy] No decisions recorded yet. Record decisions to build knowledge artifacts."
@@ -306,9 +311,23 @@ class LegacyModule(NexusModule):
             artifact = self.crystallize(target_domain)
             return f"[Legacy] {artifact.content}"
 
+        # Crystallize across all domains when the user asks for lessons/playbooks
+        # without naming a specific domain.
+        if any(t in lower for t in self._CRYSTALLIZE_TRIGGERS):
+            sections = [
+                f"[Legacy] Crystallized across {len(domains)} domain(s) "
+                f"({self.decision_count()} decisions total).",
+            ]
+            for d in domains:
+                artifact = self.crystallize(d)
+                sections.append("")
+                sections.append(artifact.content)
+            return "\n".join(sections)
+
         lines = [f"[Legacy] Knowledge base: {self.decision_count()} decisions across {len(domains)} domains"]
         for d in domains:
             count = sum(1 for dec in self._decisions if dec.domain == d)
             patterns = self.extract_patterns(d)
             lines.append(f"  {d}: {count} decisions, {len(patterns)} patterns extracted")
+        lines.append("  Tip: ask for 'lessons' or 'playbook' to see decision content.")
         return "\n".join(lines)
