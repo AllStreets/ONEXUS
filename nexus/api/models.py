@@ -12,7 +12,7 @@ class MessageRequest(BaseModel):
 
 
 class TrustAdjustRequest(BaseModel):
-    delta: int = Field(..., ge=-100, le=100, description="Trust score adjustment")
+    delta: float = Field(..., ge=-1.0, le=1.0, description="Trust score adjustment (-1.0 to 1.0)")
     reason: str = Field(..., min_length=1, description="Reason for adjustment")
 
 
@@ -35,7 +35,7 @@ class ModuleInfo(BaseModel):
     version: str
     requires_network: bool
     allowed: bool
-    trust: int
+    trust: float
     network_allowed: bool
 
 
@@ -94,7 +94,7 @@ class ChronicleStatsResponse(BaseModel):
 
 class TrustScoreResponse(BaseModel):
     module: str
-    trust: int
+    trust: float
     allowed: bool
     network_allowed: bool
 
@@ -105,14 +105,14 @@ class TrustAllResponse(BaseModel):
 
 class TrustHistoryEntry(BaseModel):
     timestamp: str
-    delta: int
-    new_trust: int
+    delta: float
+    new_trust: float
     reason: str
 
 
 class TrustDetailResponse(BaseModel):
     module: str
-    trust: int
+    trust: float
     allowed: bool
     network_allowed: bool
     history: list[TrustHistoryEntry]
@@ -120,9 +120,21 @@ class TrustDetailResponse(BaseModel):
 
 class TrustAdjustResponse(BaseModel):
     module: str
-    new_trust: int
-    delta: int
+    new_trust: float
+    delta: float
     reason: str
+
+
+class FeedbackRequest(BaseModel):
+    module: str = Field(..., description="Module that produced the response")
+    accepted: bool = Field(..., description="True = good response (+trust), False = bad response (-trust)")
+
+
+class FeedbackResponse(BaseModel):
+    module: str
+    accepted: bool
+    new_trust: float
+    delta: float
 
 
 class TopicListResponse(BaseModel):

@@ -26,7 +26,7 @@ async def get_all_trust(request: Request) -> TrustAllResponse:
     scores = [
         TrustScoreResponse(
             module=p["module"],
-            trust=p["trust"],
+            trust=p["trust_score"],
             allowed=p["allowed"],
             network_allowed=p["network_allowed"],
         )

@@ -77,7 +77,7 @@ class Aegis:
         if self._chronicle is None:
             return
         try:
-            self._chronicle.log(event, data)
+            self._chronicle.log("aegis", event, data)
         except Exception:
             pass  # chronicle failure must never block trust operations
 
@@ -109,15 +109,25 @@ class Aegis:
 
     # -- policy management -------------------------------------------------
 
-    def set_policy(self, module: str, allowed: bool = True, network: bool = False) -> None:
+    def set_policy(self, module: str, allowed: bool = True, network: bool = False,
+                   initial_trust: float | None = None) -> None:
         conn = self._conn()
-        conn.execute("""
-            INSERT INTO aegis_policies (module_name, allowed, network_allowed)
-            VALUES (?, ?, ?)
-            ON CONFLICT(module_name) DO UPDATE SET
-                allowed = excluded.allowed,
-                network_allowed = excluded.network_allowed
-        """, (module, int(allowed), int(network)))
+        if initial_trust is not None:
+            conn.execute("""
+                INSERT INTO aegis_policies (module_name, trust_score, allowed, network_allowed)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(module_name) DO UPDATE SET
+                    allowed = excluded.allowed,
+                    network_allowed = excluded.network_allowed
+            """, (module, initial_trust, int(allowed), int(network)))
+        else:
+            conn.execute("""
+                INSERT INTO aegis_policies (module_name, allowed, network_allowed)
+                VALUES (?, ?, ?)
+                ON CONFLICT(module_name) DO UPDATE SET
+                    allowed = excluded.allowed,
+                    network_allowed = excluded.network_allowed
+            """, (module, int(allowed), int(network)))
         conn.commit()
         conn.close()
 

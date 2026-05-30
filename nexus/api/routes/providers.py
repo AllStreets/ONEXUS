@@ -136,13 +136,15 @@ async def remove_provider(
     if name not in router_._providers:
         raise HTTPException(status_code=404, detail=f"Provider '{name}' not registered")
 
-    if name == router_._default:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot remove '{name}' — it is the current default. Switch default first.",
-        )
-
+    was_default = (name == router_._default)
     del router_._providers[name]
+
+    # If we removed the default, pick another or clear it
+    if was_default:
+        if router_._providers:
+            router_._default = next(iter(router_._providers))
+        else:
+            router_._default = None
 
     kernel.chronicle.log("providers", "provider_removed", {"provider": name})
 

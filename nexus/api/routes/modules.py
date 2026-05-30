@@ -31,21 +31,63 @@ def _build_module_info(kernel, name: str) -> ModuleInfo:
         version=module.version,
         requires_network=module.requires_network,
         allowed=policy.get("allowed", False),
-        trust=policy.get("trust", 0),
+        trust=policy.get("trust_score", 0),
         network_allowed=policy.get("network_allowed", False),
     )
+
+
+_KERNEL_COMPONENTS = {
+    "cortex": ("Message routing and orchestration engine", "1.0.0"),
+    "engram": ("Persistent memory and vector storage", "1.0.0"),
+    "chronicle": ("Structured event logging and audit trail", "1.0.0"),
+    "aegis": ("Trust scoring and permissions engine", "1.0.0"),
+    "pulse": ("Real-time event bus and pub/sub system", "1.0.0"),
+}
 
 
 @router.get("", response_model=ModuleListResponse)
 async def list_modules(request: Request) -> ModuleListResponse:
     """List all registered modules with status and trust."""
     kernel = _get_kernel(request)
+    policies = {p["module"]: p for p in kernel.aegis.list_policies()}
     modules = []
+
+    # Kernel components
+    for name, (desc, ver) in _KERNEL_COMPONENTS.items():
+        policy = policies.get(name, {})
+        modules.append(ModuleInfo(
+            name=name,
+            description=desc,
+            version=ver,
+            requires_network=False,
+            allowed=policy.get("allowed", True),
+            trust=policy.get("trust_score", 0),
+            network_allowed=policy.get("network_allowed", False),
+        ))
+
+    # Cognitive modules
     for name in kernel.cortex.list_modules():
         try:
             modules.append(_build_module_info(kernel, name))
         except HTTPException:
             continue
+
+    # Runnable agents from catalog
+    catalog = getattr(request.app.state, "agent_catalog", None)
+    if catalog:
+        for agent in catalog.list_agents(runnable_only=True):
+            agent_key = f"agent.{agent.slug}"
+            policy = policies.get(agent_key, {})
+            modules.append(ModuleInfo(
+                name=agent_key,
+                description=agent.tagline[:80] if agent.tagline else agent.name,
+                version="mcp",
+                requires_network=True,
+                allowed=policy.get("allowed", True),
+                trust=policy.get("trust_score", 0),
+                network_allowed=policy.get("network_allowed", False),
+            ))
+
     return ModuleListResponse(modules=modules, count=len(modules))
 
 

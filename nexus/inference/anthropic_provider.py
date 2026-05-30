@@ -11,6 +11,7 @@ class AnthropicProvider(InferenceProvider):
     name = "anthropic"
 
     def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
+        self._api_key = api_key
         self._client = Anthropic(api_key=api_key)
         self._model = model
 
@@ -40,11 +41,20 @@ class AnthropicProvider(InferenceProvider):
 
     async def health(self) -> bool:
         try:
-            self._client.messages.create(
+            # Count tokens is free and confirms the API key works
+            self._client.messages.count_tokens(
                 model=self._model,
                 messages=[{"role": "user", "content": "ping"}],
-                max_tokens=1,
             )
             return True
         except Exception:
-            return False
+            try:
+                # Fallback: minimal completion if count_tokens unavailable
+                self._client.messages.create(
+                    model=self._model,
+                    messages=[{"role": "user", "content": "hi"}],
+                    max_tokens=1,
+                )
+                return True
+            except Exception:
+                return False

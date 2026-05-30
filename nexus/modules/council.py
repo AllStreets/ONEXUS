@@ -300,10 +300,18 @@ class CouncilModule(NexusModule):
     # -------------------------------------------------------------------
 
     async def on_load(self, context: dict[str, Any] | None = None) -> None:
-        if context and "pulse" in context:
-            self._sub_id = context["pulse"].subscribe(
-                "cortex.response", self._on_response
-            )
+        if context:
+            # Get access to sibling modules for deliberation
+            cortex = context.get("cortex")
+            if cortex:
+                self._modules = {
+                    name: mod for name, mod in cortex._modules.items()
+                    if name != self.name
+                }
+            if "pulse" in context:
+                self._sub_id = context["pulse"].subscribe(
+                    "cortex.response", self._on_response
+                )
 
     async def on_unload(self, context: dict[str, Any] | None = None) -> None:
         if self._sub_id and context and "pulse" in context:
@@ -1080,6 +1088,24 @@ class CouncilModule(NexusModule):
 
         # Standard deliberation
         result = await self.deliberate(message, context)
+
+        # If deliberation had no participants, use LLM directly
+        if not result.participants and result.confidence == 0.0:
+            llm = context.get("llm")
+            if llm:
+                prompt = (
+                    "You are Council, a multi-perspective deliberation engine. "
+                    "Analyze the following question from multiple angles -- consider "
+                    "pros and cons, risks, trade-offs, and stakeholder perspectives. "
+                    "Provide a clear recommendation with reasoning.\n\n"
+                    f"Question: {message}"
+                )
+                try:
+                    response = await llm(prompt)
+                    return f"[Council] Direct analysis (LLM):\n\n{response}"
+                except Exception:
+                    pass
+
         lines = [
             f"[Council] Deliberation complete ({result.rounds} rounds, {len(result.participants)} participants)",
             f"Participants: {', '.join(result.participants)}",
