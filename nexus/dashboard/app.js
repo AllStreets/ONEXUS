@@ -137,20 +137,32 @@ const StatusBar = {
         <span class="dot"></span>
         ${h.status || 'unknown'}
       </div>
-      <div class="status-pill ${dbClass}">
+      <div class="status-pill ${dbClass} llm-clickable" id="db-pill" title="View database info">
+        <span class="dot"></span>
         ${icon('database', 12)}
         DB
       </div>
-      <div class="status-pill ${llmClass}">
-        ${icon('cpu', 12)}
+      <div class="status-pill ${llmClass} llm-clickable" id="llm-pill" title="Manage LLM providers">
+        <span class="dot"></span>
+        ${icon('llm', 12)}
         LLM
       </div>
-      ${s.modules_loaded != null ? `<div class="status-pill">
-        ${icon('module', 12)}
+      ${s.modules_loaded != null ? `<div class="status-pill healthy">
+        <span class="dot"></span>
         ${s.modules_loaded}
       </div>` : ''}
       ${s.version ? `<div class="status-pill">v${s.version}</div>` : ''}
     `;
+
+    // Wire pill clicks
+    const dbPill = document.getElementById('db-pill');
+    if (dbPill) {
+      dbPill.addEventListener('click', () => DatabaseManager.open());
+    }
+    const llmPill = document.getElementById('llm-pill');
+    if (llmPill) {
+      llmPill.addEventListener('click', () => ProviderManager.open());
+    }
   },
 };
 
@@ -231,8 +243,10 @@ const ModuleList = {
 
   guessCategory(m) {
     const n = m.name.toLowerCase();
-    if (n.includes('agent') || n.includes('bot'))   return 'agent';
-    if (n.includes('kernel') || n.includes('core') || n.includes('cortex') || n.includes('engram') || n.includes('aegis') || n.includes('pulse') || n.includes('chronicle')) return 'kernel';
+    const kernelNames = ['cortex', 'engram', 'aegis', 'pulse', 'chronicle'];
+    if (kernelNames.includes(n)) return 'kernel';
+    if (n.startsWith('agent.')) return 'agent';
+    if (n.includes('agent') || n.includes('bot')) return 'agent';
     return 'intelligence';
   },
 
@@ -246,10 +260,12 @@ const ModuleList = {
     this.bodyEl.innerHTML = list.map(m => {
       const sel = this.selected === m.name ? ' selected' : '';
       const displayTrust = formatTrust(m.trust);
+      const displayName = m.name.startsWith('agent.') ? m.name.slice(6) : m.name;
+      const isAgent = m.name.startsWith('agent.');
       return `<div class="module-item fade-enter${sel}" data-name="${m.name}">
         <span class="module-status-dot ${m.allowed ? 'allowed' : 'denied'}"></span>
         <div class="module-info">
-          <div class="module-name">${m.name}</div>
+          <div class="module-name">${displayName}${isAgent ? ' <span class="mcp-tag">MCP</span>' : ''}</div>
           <div class="module-desc">${truncate(m.description, 40)}</div>
         </div>
         <span class="module-trust-badge ${trustClass(m.trust)}">${displayTrust}</span>
@@ -334,9 +350,12 @@ const TrustGauges = {
       const color = trustColor(s.trust);
       const hl = this.highlighted === s.module ? ' highlighted' : '';
       const glow = glowClass(s.trust);
-      return `<div class="gauge-card ${glow}${hl}" data-module="${s.module}">
+      const isAgent = s.module.startsWith('agent.');
+      const label = isAgent ? s.module.slice(6) : s.module;
+      const builtin = isAgent ? '' : ' builtin';
+      return `<div class="gauge-card ${glow}${hl}${builtin}" data-module="${s.module}">
         ${this.buildGaugeSVG(s.trust, color)}
-        <div class="gauge-label">${s.module}</div>
+        <div class="gauge-label">${label}</div>
       </div>`;
     }).join('')}</div>`;
 
@@ -433,6 +452,7 @@ const PulseStream = {
 
     const el = document.createElement('div');
     el.className = 'pulse-event';
+    el.style.cursor = 'pointer';
     const tc = topicClass(data.topic);
     const payload = data.payload ? truncate(JSON.stringify(data.payload), 80) : '';
 
@@ -445,8 +465,46 @@ const PulseStream = {
       ${payload ? `<div class="pulse-payload">${payload}</div>` : ''}
     `;
 
+    el.addEventListener('click', () => this.showDetail(data));
+
     this.bodyEl.appendChild(el);
     this.bodyEl.scrollTop = this.bodyEl.scrollHeight;
+  },
+
+  showDetail(data) {
+    // Remove existing popup if any
+    const existing = document.getElementById('pulse-detail-popup');
+    if (existing) existing.remove();
+
+    const payloadStr = data.payload
+      ? JSON.stringify(data.payload, null, 2)
+      : 'No payload';
+
+    const popup = document.createElement('div');
+    popup.id = 'pulse-detail-popup';
+    popup.className = 'pulse-detail-overlay';
+    popup.innerHTML = `
+      <div class="pulse-detail-modal">
+        <div class="pulse-detail-header">
+          <span class="pulse-topic ${topicClass(data.topic)}">${data.topic || 'unknown'}</span>
+          <button class="modal-close" id="pulse-detail-close">${icon('x', 18)}</button>
+        </div>
+        <div class="pulse-detail-rows">
+          <div class="pulse-detail-row"><span class="pulse-detail-label">source</span><span>${data.source || '--'}</span></div>
+          <div class="pulse-detail-row"><span class="pulse-detail-label">time</span><span>${data._receivedAt ? new Date(data._receivedAt).toLocaleString() : '--'}</span></div>
+          ${data.id ? `<div class="pulse-detail-row"><span class="pulse-detail-label">id</span><span>${data.id}</span></div>` : ''}
+        </div>
+        <div class="pulse-detail-payload-label">payload</div>
+        <pre class="pulse-detail-payload">${payloadStr}</pre>
+      </div>
+    `;
+
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) popup.remove();
+    });
+    popup.querySelector('#pulse-detail-close').addEventListener('click', () => popup.remove());
+
+    document.getElementById('app').appendChild(popup);
   },
 };
 
@@ -492,9 +550,19 @@ const ChronicleTimeline = {
     }
   },
 
+  _categoryMap: {
+    start:  ['server_start', 'provider_registered', 'agent_launched'],
+    stop:   ['server_stop', 'provider_removed', 'agent_stopped'],
+    trust:  ['trust_adjusted', 'user_feedback', 'aegis.trust_change'],
+    allow:  ['module_allowed', 'route', 'response'],
+    deny:   ['module_denied', 'permission_denied', 'network_denied'],
+    msg:    ['route', 'response', 'module_error', 'user_feedback'],
+  },
+
   getFiltered() {
     if (!this.filter) return this.entries;
-    return this.entries.filter(e => e.action === this.filter);
+    const actions = this._categoryMap[this.filter] || [this.filter];
+    return this.entries.filter(e => actions.includes(e.action));
   },
 
   render() {
@@ -508,12 +576,24 @@ const ChronicleTimeline = {
 
     this.trackEl.innerHTML = `<div class="timeline-line"></div>${sorted.map(e => {
       const dotClass = 'type-' + (e.action || '').replace(/\s+/g, '_');
-      const payloadStr = e.payload ? truncate(JSON.stringify(e.payload), 60) : '';
+      const payload = e.payload || {};
+      const hasPayload = Object.keys(payload).length > 0;
+      // Build a human-readable detail line from payload
+      let detail = '';
+      if (hasPayload) {
+        if (payload.module) detail = payload.module;
+        else if (payload.target) detail = payload.target;
+        else if (payload.provider) detail = payload.provider;
+        if (payload.message_preview) detail += ': ' + truncate(payload.message_preview, 40);
+        else if (payload.reason) detail += ': ' + truncate(payload.reason, 40);
+        else if (payload.response_preview) detail += ': ' + truncate(payload.response_preview, 40);
+        if (!detail) detail = truncate(JSON.stringify(payload), 50);
+      }
       return `<div class="timeline-node">
         <div class="timeline-tooltip">
           <div class="timeline-tooltip-source">${e.source}</div>
           <div class="timeline-tooltip-action">${e.action}</div>
-          ${payloadStr ? `<div class="timeline-tooltip-detail">${payloadStr}</div>` : ''}
+          ${detail ? `<div class="timeline-tooltip-detail">${detail}</div>` : ''}
           <div class="timeline-tooltip-time">${formatTime(e.timestamp)}</div>
         </div>
         <div class="timeline-dot ${dotClass}"></div>
@@ -570,12 +650,23 @@ const MessageConsole = {
     this.inputEl.value = this.history[this.historyIndex];
   },
 
+  _scrollToLatest(div) {
+    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+    requestAnimationFrame(() => {
+      const rect = div.getBoundingClientRect();
+      const viewportH = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.bottom > viewportH || rect.top < 0) {
+        div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+  },
+
   addSystemLine(text) {
     const div = document.createElement('div');
     div.className = 'console-line system';
     div.textContent = text;
     this.outputEl.appendChild(div);
-    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+    this._scrollToLatest(div);
   },
 
   addInputLine(text) {
@@ -583,15 +674,67 @@ const MessageConsole = {
     div.className = 'console-line input';
     div.textContent = text;
     this.outputEl.appendChild(div);
-    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+    this._scrollToLatest(div);
   },
 
   addOutputLine(text, module) {
     const div = document.createElement('div');
     div.className = 'console-line output';
-    div.innerHTML = (module ? `<span class="module-tag">[${module}]</span>` : '') + text;
+
+    const content = (module ? `<span class="module-tag">[${module}]</span>` : '') + text;
+
+    if (module) {
+      // Check current trust to decide whether to show feedback dots
+      const trust = this._getModuleTrust(module);
+      const showFeedback = trust < 1.0;
+
+      div.innerHTML = `
+        <div class="console-response-content">${content}</div>
+        ${showFeedback ? `<div class="console-feedback" data-module="${module}">
+          <button class="feedback-dot accept" title="+0.12 trust"></button>
+          <button class="feedback-dot reject" title="-0.22 trust"></button>
+        </div>` : ''}
+      `;
+
+      if (showFeedback) {
+        const acceptBtn = div.querySelector('.feedback-dot.accept');
+        const rejectBtn = div.querySelector('.feedback-dot.reject');
+        const feedbackEl = div.querySelector('.console-feedback');
+
+        acceptBtn.addEventListener('click', () => {
+          this.sendFeedback(module, true);
+          feedbackEl.innerHTML = '<span class="feedback-done accepted">+0.12</span>';
+        });
+
+        rejectBtn.addEventListener('click', () => {
+          this.sendFeedback(module, false);
+          feedbackEl.innerHTML = '<span class="feedback-done rejected">-0.22</span>';
+        });
+      }
+    } else {
+      div.innerHTML = content;
+    }
+
     this.outputEl.appendChild(div);
-    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+    this._scrollToLatest(div);
+  },
+
+  _getModuleTrust(moduleName) {
+    // Pull from TrustGauges cached data if available
+    if (TrustGauges.scores) {
+      const entry = TrustGauges.scores.find(s => s.module === moduleName);
+      if (entry) return entry.trust;
+    }
+    return 0.3; // default
+  },
+
+  async sendFeedback(module, accepted) {
+    const data = await apiFetch('/api/messages/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ module, accepted }),
+    });
+    // Refresh trust gauges after feedback
+    if (data) TrustGauges.fetch();
   },
 
   addErrorLine(text) {
@@ -599,7 +742,7 @@ const MessageConsole = {
     div.className = 'console-line error';
     div.textContent = text;
     this.outputEl.appendChild(div);
-    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+    this._scrollToLatest(div);
   },
 
   showTyping() {
@@ -608,7 +751,7 @@ const MessageConsole = {
     div.id = 'typing-indicator';
     div.innerHTML = 'processing<span class="typing-dots"></span>';
     this.outputEl.appendChild(div);
-    this.outputEl.scrollTop = this.outputEl.scrollHeight;
+    this._scrollToLatest(div);
   },
 
   hideTyping() {
@@ -624,6 +767,15 @@ const MessageConsole = {
     this.historyIndex = this.history.length;
     this.inputEl.value = '';
     this.addInputLine(msg);
+
+    // Handle local commands
+    const revokeMatch = msg.match(/^revoke\s+trust:\s*(.+)$/i);
+    if (revokeMatch) {
+      const moduleName = revokeMatch[1].trim().toLowerCase();
+      await this.revokeTrust(moduleName);
+      return;
+    }
+
     this.sending = true;
     this.sendBtn.disabled = true;
     this.showTyping();
@@ -650,6 +802,333 @@ const MessageConsole = {
       this.inputEl.focus();
     }
   },
+
+  async revokeTrust(moduleName) {
+    // Get current trust to calculate delta needed to reach 0.30
+    const trustData = await apiFetch('/api/trust');
+    if (!trustData) {
+      this.addErrorLine('Failed to fetch trust data');
+      return;
+    }
+    const entry = trustData.scores.find(s => s.module === moduleName);
+    if (!entry) {
+      this.addErrorLine(`Module '${moduleName}' not found`);
+      return;
+    }
+
+    const currentTrust = entry.trust;
+    const targetTrust = 0.30;
+    if (currentTrust <= targetTrust) {
+      this.addSystemLine(`[aegis] ${moduleName} trust is already at ${currentTrust.toFixed(2)} (at or below 0.30)`);
+      return;
+    }
+
+    const delta = targetTrust - currentTrust;
+    const data = await apiFetch(`/api/trust/${moduleName}/adjust`, {
+      method: 'POST',
+      body: JSON.stringify({ delta, reason: 'trust revoked by operator' }),
+    });
+
+    if (data) {
+      this.addSystemLine(`[aegis] ${moduleName} trust revoked: ${currentTrust.toFixed(2)} -> ${data.new_trust.toFixed(2)} (ADVISOR tier)`);
+      TrustGauges.fetch();
+    } else {
+      this.addErrorLine(`Failed to revoke trust for ${moduleName}`);
+    }
+  },
+};
+
+// ── Database Manager ────────────────────────────────────────────────────
+
+const DatabaseManager = {
+  modalEl: null,
+  infoEl: null,
+
+  init() {
+    this.modalEl = document.getElementById('db-modal');
+    this.infoEl = document.getElementById('db-info');
+
+    document.getElementById('db-modal-close').addEventListener('click', () => this.close());
+    this.modalEl.addEventListener('click', (e) => {
+      if (e.target === this.modalEl) this.close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.modalEl.classList.contains('open')) this.close();
+    });
+  },
+
+  open() {
+    this.modalEl.classList.add('open');
+    this.infoEl.innerHTML = '<div class="provider-status loading">Loading database info...</div>';
+    this.fetch();
+  },
+
+  close() {
+    this.modalEl.classList.remove('open');
+  },
+
+  async fetch() {
+    const data = await apiFetch('/api/system/db');
+    if (!data) {
+      this.infoEl.innerHTML = '<div class="provider-status error">Failed to load database info</div>';
+      return;
+    }
+    this.render(data);
+  },
+
+  formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  },
+
+  render(data) {
+    const tables = data.tables || {};
+    const tableNames = Object.keys(tables);
+    const totalRows = Object.values(tables).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+
+    let html = `
+      <div class="db-stats">
+        <div class="db-stat-card">
+          <div class="db-stat-value">${tableNames.length}</div>
+          <div class="db-stat-label">tables</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-value">${totalRows.toLocaleString()}</div>
+          <div class="db-stat-label">rows</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-value">${this.formatSize(data.size_bytes || 0)}</div>
+          <div class="db-stat-label">size</div>
+        </div>
+      </div>
+      <div class="db-path">${data.path || 'unknown'}</div>
+      <div class="provider-list-title" style="margin-top:18px">Tables</div>
+    `;
+
+    for (const [name, count] of Object.entries(tables)) {
+      html += `<div class="provider-card">
+        <span class="provider-dot healthy"></span>
+        <div class="provider-card-info">
+          <div class="provider-card-name">${name}</div>
+        </div>
+        <span class="module-trust-badge trust-cyan">${count >= 0 ? count.toLocaleString() : '?'}</span>
+      </div>`;
+    }
+
+    this.infoEl.innerHTML = html;
+  },
+};
+
+// ── Provider Manager ────────────────────────────────────────────────────
+
+const ProviderManager = {
+  modalEl: null,
+  listEl: null,
+  statusEl: null,
+  submitBtn: null,
+  selectedType: 'anthropic',
+  providers: [],
+
+  init() {
+    this.modalEl = document.getElementById('provider-modal');
+    this.listEl = document.getElementById('provider-list');
+    this.statusEl = document.getElementById('provider-status');
+    this.submitBtn = document.getElementById('provider-submit');
+
+    // Close button
+    document.getElementById('provider-modal-close').addEventListener('click', () => this.close());
+
+    // Overlay click to close
+    this.modalEl.addEventListener('click', (e) => {
+      if (e.target === this.modalEl) this.close();
+    });
+
+    // Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.modalEl.classList.contains('open')) this.close();
+    });
+
+    // Type selector
+    this.modalEl.querySelectorAll('.provider-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.selectedType = btn.dataset.type;
+        this.modalEl.querySelectorAll('.provider-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.updateFormFields();
+      });
+    });
+
+    // Submit
+    this.submitBtn.addEventListener('click', () => this.submit());
+
+    // Enter key in inputs
+    this.modalEl.querySelectorAll('.provider-fields input[type="text"], .provider-fields input[type="password"]').forEach(inp => {
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.submit();
+      });
+    });
+
+    this.updateFormFields();
+  },
+
+  open() {
+    this.modalEl.classList.add('open');
+    this.statusEl.textContent = '';
+    this.statusEl.className = 'provider-status';
+    this.fetchProviders();
+    // Focus API key field
+    setTimeout(() => {
+      const keyInput = document.getElementById('provider-api-key');
+      if (keyInput && keyInput.offsetParent !== null) keyInput.focus();
+    }, 100);
+  },
+
+  close() {
+    this.modalEl.classList.remove('open');
+  },
+
+  updateFormFields() {
+    const apiKeyField = document.getElementById('field-api-key');
+    const modelField = document.getElementById('field-model');
+    const baseUrlField = document.getElementById('field-base-url');
+    const modelInput = document.getElementById('provider-model');
+
+    if (this.selectedType === 'local') {
+      apiKeyField.style.display = 'none';
+      baseUrlField.style.display = '';
+      modelInput.placeholder = 'model name (optional)';
+    } else {
+      apiKeyField.style.display = '';
+      baseUrlField.style.display = 'none';
+      if (this.selectedType === 'anthropic') {
+        modelInput.placeholder = 'claude-sonnet-4-20250514';
+      } else {
+        modelInput.placeholder = 'gpt-4o-mini';
+      }
+    }
+  },
+
+  async fetchProviders() {
+    const data = await apiFetch('/api/providers');
+    if (data && data.providers) {
+      this.providers = data.providers;
+      this.renderList(data.default);
+    }
+  },
+
+  renderList(defaultName) {
+    if (!this.providers.length) {
+      this.listEl.innerHTML = '';
+      return;
+    }
+
+    const html = `<div class="provider-list-title">Registered Providers</div>` +
+      this.providers.map(p => {
+        const dotClass = p.healthy ? 'healthy' : 'unhealthy';
+        const isDefault = p.is_default;
+        return `<div class="provider-card" data-name="${p.name}">
+          <span class="provider-dot ${dotClass}"></span>
+          <div class="provider-card-info">
+            <div class="provider-card-name">${p.name}</div>
+            <div class="provider-card-meta">${p.healthy ? 'connected' : 'unreachable'}</div>
+          </div>
+          ${isDefault ? `<span class="provider-default-badge">default</span>` : `
+            <button class="provider-action-btn set-default" data-name="${p.name}" title="Set as default">${icon('star', 15)}</button>
+          `}
+          <button class="provider-action-btn remove" data-name="${p.name}" title="Remove">${icon('trash', 15)}</button>
+        </div>`;
+      }).join('');
+
+    this.listEl.innerHTML = html;
+
+    // Bind actions
+    this.listEl.querySelectorAll('.set-default').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.setDefault(btn.dataset.name);
+      });
+    });
+
+    this.listEl.querySelectorAll('.remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.removeProvider(btn.dataset.name);
+      });
+    });
+  },
+
+  async submit() {
+    const apiKey = document.getElementById('provider-api-key').value.trim();
+    const model = document.getElementById('provider-model').value.trim();
+    const baseUrl = document.getElementById('provider-base-url').value.trim();
+    const setDefault = document.getElementById('provider-set-default').checked;
+
+    if (this.selectedType !== 'local' && !apiKey) {
+      this.setStatus('API key is required', 'error');
+      return;
+    }
+
+    this.submitBtn.disabled = true;
+    this.setStatus('Connecting...', 'loading');
+
+    const body = {
+      provider: this.selectedType,
+      set_default: setDefault,
+    };
+    if (apiKey) body.api_key = apiKey;
+    if (model) body.model = model;
+    if (baseUrl) body.base_url = baseUrl;
+
+    try {
+      const res = await fetch(API_BASE + '/api/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        this.setStatus(data.detail || 'Registration failed', 'error');
+        return;
+      }
+
+      this.setStatus(data.message || 'Provider connected', 'success');
+      document.getElementById('provider-api-key').value = '';
+      document.getElementById('provider-model').value = '';
+      document.getElementById('provider-base-url').value = '';
+
+      // Refresh provider list and status bar
+      this.fetchProviders();
+      StatusBar.fetch();
+    } catch (err) {
+      this.setStatus('Connection error: ' + err.message, 'error');
+    } finally {
+      this.submitBtn.disabled = false;
+    }
+  },
+
+  async setDefault(name) {
+    const res = await fetch(API_BASE + `/api/providers/default/${name}`, { method: 'POST' });
+    if (res.ok) {
+      this.fetchProviders();
+      StatusBar.fetch();
+    }
+  },
+
+  async removeProvider(name) {
+    const res = await fetch(API_BASE + `/api/providers/${name}`, { method: 'DELETE' });
+    if (res.ok) {
+      this.fetchProviders();
+      StatusBar.fetch();
+    }
+  },
+
+  setStatus(msg, cls) {
+    this.statusEl.textContent = msg;
+    this.statusEl.className = 'provider-status ' + (cls || '');
+  },
 };
 
 // ── Initialize ───────────────────────────────────────────────────────────
@@ -661,4 +1140,6 @@ document.addEventListener('DOMContentLoaded', () => {
   PulseStream.init();
   ChronicleTimeline.init();
   MessageConsole.init();
+  DatabaseManager.init();
+  ProviderManager.init();
 });

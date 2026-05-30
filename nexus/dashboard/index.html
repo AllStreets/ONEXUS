@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NEXUS Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/dashboard/styles.css">
   <style>
     /* Critical inline: prevent flash of unstyled content */
     html { background: #06060c; }
@@ -19,7 +19,7 @@
     <div class="header-left">
       <div class="header-logo">
         <span id="header-icon"></span>
-        <span>NEXUS</span>
+        <span>ONEXUS</span>
       </div>
       <span class="header-label">DASHBOARD</span>
     </div>
@@ -92,17 +92,86 @@
       </div>
       <div class="chronicle-filters">
         <button data-filter="all" class="active">all</button>
-        <button data-filter="server_start">start</button>
-        <button data-filter="server_stop">stop</button>
-        <button data-filter="trust_adjusted">trust</button>
-        <button data-filter="module_allowed">allow</button>
-        <button data-filter="module_denied">deny</button>
-        <button data-filter="message_processed">msg</button>
+        <button data-filter="start">start</button>
+        <button data-filter="stop">stop</button>
+        <button data-filter="trust">trust</button>
+        <button data-filter="allow">allow</button>
+        <button data-filter="deny">deny</button>
+        <button data-filter="msg">msg</button>
       </div>
     </div>
     <div class="timeline-wrap">
       <div class="timeline-track">
         <div class="timeline-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Database Modal -->
+  <div class="modal-overlay" id="db-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="icon-wrap" id="icon-db-modal"></span>
+          DATABASE
+        </div>
+        <button class="modal-close" id="db-modal-close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="db-info"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Provider Modal -->
+  <div class="modal-overlay" id="provider-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="icon-wrap" id="icon-llm"></span>
+          LLM PROVIDERS
+        </div>
+        <button class="modal-close" id="provider-modal-close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Registered providers list -->
+        <div class="provider-list" id="provider-list"></div>
+        <!-- Registration form -->
+        <div class="provider-form">
+          <div class="provider-form-title">Connect Provider</div>
+          <div class="provider-type-selector">
+            <button class="provider-type-btn active" data-type="anthropic">Anthropic</button>
+            <button class="provider-type-btn" data-type="openai">OpenAI</button>
+            <button class="provider-type-btn" data-type="local">Local</button>
+          </div>
+          <div class="provider-fields">
+            <div class="field-group" id="field-api-key">
+              <label>API Key</label>
+              <div class="field-input-wrap">
+                <span class="field-icon" id="icon-key-field"></span>
+                <input type="password" id="provider-api-key" placeholder="sk-..." spellcheck="false" autocomplete="off" />
+              </div>
+            </div>
+            <div class="field-group" id="field-model">
+              <label>Model <span class="field-optional">optional</span></label>
+              <input type="text" id="provider-model" placeholder="claude-sonnet-4-20250514" spellcheck="false" autocomplete="off" />
+            </div>
+            <div class="field-group" id="field-base-url" style="display:none">
+              <label>Base URL <span class="field-optional">optional</span></label>
+              <input type="text" id="provider-base-url" placeholder="http://localhost:8384" spellcheck="false" autocomplete="off" />
+            </div>
+            <div class="field-row">
+              <label class="field-checkbox">
+                <input type="checkbox" id="provider-set-default" checked />
+                <span>Set as default provider</span>
+              </label>
+            </div>
+          </div>
+          <button class="provider-submit-btn" id="provider-submit">
+            Connect Provider
+          </button>
+          <div class="provider-status" id="provider-status"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -127,8 +196,8 @@
 
 </div>
 
-<script src="icons.js"></script>
-<script src="app.js"></script>
+<script src="/dashboard/icons.js"></script>
+<script src="/dashboard/app.js"></script>
 <script>
   // Inject icons into header slots
   document.getElementById('header-icon').innerHTML = icon('nexus', 22);
@@ -139,6 +208,11 @@
   document.getElementById('icon-chronicle').innerHTML = icon('chronicle', 14);
   document.getElementById('icon-terminal').innerHTML = icon('terminal', 14);
   document.getElementById('console-send-icon').innerHTML = icon('send', 15);
+  document.getElementById('icon-db-modal').innerHTML = icon('database', 16);
+  document.getElementById('db-modal-close').innerHTML = icon('x', 18);
+  document.getElementById('icon-llm').innerHTML = icon('llm', 16);
+  document.getElementById('provider-modal-close').innerHTML = icon('x', 18);
+  document.getElementById('icon-key-field').innerHTML = icon('key', 14);
 </script>
 
 </body>
