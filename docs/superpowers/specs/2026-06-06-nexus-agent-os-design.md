@@ -276,9 +276,15 @@ Exactly **one workspace is active at a time.** Switching workspaces:
    - External agents: `SIGCONT` (or `Popen` if first launch).
    - `InProcessAgent` built-ins: clear the `paused` flag.
 3. Loads the workspace's mood, routing pins, permission grants into the active session.
-4. Animates the Aurora atmosphere to the new home tone (1.2s ease).
+4. Animates the Aurora atmosphere to the new home tone via a 1.2 s ease transition.
 
-### 7.5 Templates
+### 7.5 Resource footprint
+- External MCP agents cost ~30–60 MB resident each (process memory while SIGSTOP'd; no CPU).
+- `InProcessAgent` built-ins share the main NEXUS process; their incremental cost is negligible.
+- Typical configuration: 5 workspaces × ~3 external residents per workspace = ~750 MB process memory across the system.
+- A configurable per-machine cap on simultaneous external residents (`NEXUS_MAX_RESIDENT_AGENTS`, default 24) prevents runaway memory; reaching the cap pauses the least-recently-used external agent.
+
+### 7.6 Templates
 Six templates ship in the box (`nexus/templates/`):
 
 | Template | Tone | Roster (initial residents) | Routing pins | Mood bias |
@@ -290,7 +296,7 @@ Six templates ship in the box (`nexus/templates/`):
 | Personal | Amber | echo, sentry | (none) | (none) |
 | Blank | (user picks) | (empty) | (none) | (none) |
 
-### 7.6 Export
+### 7.7 Export
 `workspace.json` and `pins.json` are exportable as a single `template.json` (the user clicks "Export as template" in workspace settings). The export contains *structure only* — never memory, conversation, or grants. Templates can be shared, imported on another machine, or submitted to the catalog as community templates (post-v1).
 
 ## 8. Routing
@@ -396,10 +402,11 @@ Defaults to off because most agents need broader filesystem and process access t
 ## 10. Visual Identity and Design System
 
 ### 10.1 Core principles
-- **Bespoke icons only. Never emojis.** Custom-drawn SVG at three sizes (14, 22, 44 px) for every glyph.
+- **Bespoke icons only. Never emojis.** Custom-drawn SVG at three sizes (14, 22, 44 px) for every glyph. This rule applies to *every* surface — the 6 still-to-design built-in glyphs (wraith, oracle, autonomic, legacy, consciousness, sentry) must also be hand-drawn geometric SVG; no third-party icon-set fallback is acceptable.
+- **One design language across all four surfaces.** Conversational, Cockpit, Spatial, and Settings share the same Aurora atmosphere, kernel mark, identity-disc-with-trust-ring treatment, glass-card surfaces, and type system. Only data density and panel composition change between surfaces; the visual language is unified.
 - **Aurora-led atmosphere.** Each workspace renders a gradient mesh that shifts with system state (Section 11). Mesh is blurred 55–70 px; opacity capped to keep text contrast AAA.
-- **Film grain underlay.** A 12-bit fractal-noise SVG overlay (10% alpha, overlay blend) prevents the CSS-perfect "AI dashboard" look.
-- **The kernel mark.** A small breathing orb — a radial gradient `#fbf7ff → #c9b8ff → #5a4ac4` with a 4.5s pulse animation — appears anywhere NEXUS is "alive": top-left of workspaces, inside the conversational input, at the start of system messages. This is the OS's signature element.
+- **Film grain underlay.** A fractal-noise SVG overlay (~10% alpha, overlay blend) sits over the mesh to prevent the CSS-perfect "AI dashboard" look.
+- **The kernel mark.** A small breathing orb — a radial gradient `#fbf7ff → #c9b8ff → #5a4ac4` with a 4.5 s pulse animation — appears anywhere NEXUS is "alive": top-left of workspaces, inside the conversational input, at the start of system messages, in the Cockpit header. This is the OS's signature element.
 
 ### 10.2 Typography
 - **Display & UI body:** Inter Display + Inter (with `letter-spacing: -0.005em` for body, `-0.02em` for display).
@@ -500,18 +507,19 @@ Three columns: workspaces + agent roster on the left, the conversation in the ce
 When Cortex confidence is medium (0.55–0.84), the chooser panel surfaces inline above the input — never as a modal.
 
 ### 12.2 Cockpit (observability, ⌘\`)
-Slides up over the conversational surface. Signal aesthetic (faint grid, gentle scanline, oscilloscope traces) layered over the workspace's current Aurora mood. Six panels:
-1. **Pulse waveform** — live, three traces (cortex.route / aegis.check / chronicle), 60-second rolling window.
+Slides up over the conversational surface. Signal aesthetic (faint grid, gentle scanline, oscilloscope traces) layered over the workspace's current Aurora mood. Six panels in a 4-column grid:
+1. **Pulse waveform** (spans 2 rows) — live, three traces (cortex.route / aegis.check / chronicle), 60-second rolling window.
 2. **Resident agents** — name, identity disc, memory cost, current trust.
 3. **Trust gradient · 24h** — per-agent sparklines.
-4. **Last route · concierge synthesis** — the full routing trace for the most recent message; expandable.
-5. **Chronicle live tail** — colour-coded by source module; ⌘L pins it to live-tail mode.
-6. **Network gateway** + **Engram partition stats**.
+4. **Last route · concierge synthesis** (spans 2 columns) — the full routing trace for the most recent message; reads from Chronicle so the per-turn latency cost is zero.
+5. **Chronicle live tail** (spans 2 columns) — colour-coded by source module; ⌘L pins it to live-tail mode.
+6. **Network gateway** — active outbound requests through `aegis.network()`.
+7. **Engram partition stats** — working / episodic / semantic tier sizes for this workspace.
 
-Tapping anywhere outside dismisses. The Aurora atmosphere underneath was always there.
+Dismiss by pressing ⌘\` again, pressing Esc, or clicking the conversational area visible around the panel's edges. The Aurora atmosphere underneath was always there; the Cockpit was layered over it.
 
 ### 12.3 Spatial (catalog browse)
-The full Catalog grid. Each card: bespoke identity mark inside an identity disc, name, one-line tagline, status (resident · sleeping · installed · installable), trust score, install button when not yet installed. Filter strip at the top by category. Search opens a Spotlight-style overlay. System agents (the migrated 9) appear alongside third-party agents — both have an identity mark, a trust ring, an action button. System agents carry a small "system · ships with NEXUS" badge.
+The full Catalog grid. Each card: the bespoke identity mark inside an identity disc with the trust ring drawn *around* the disc (Section 10.4), agent name, one-line tagline, status indicator (resident · sleeping · installed · installable, signalled by both colour and word — green dot for resident, dim grey for sleeping, install-CTA for installable), trust score in monospace, and an install button when not yet installed. Header shows total counts ("847 in the catalog · 14 installed · 3 resident in this workspace"). Filter strip below by category. Search opens a Spotlight-style overlay. System agents (the migrated 9) appear alongside third-party agents in the same grid, with the same visual language — both have an identity mark, a trust ring, an action button. System agents carry a small "system · ships with NEXUS" badge underneath the tagline. There is no separate "system" section; unification is real.
 
 ### 12.4 Settings
 Tabbed panels:
