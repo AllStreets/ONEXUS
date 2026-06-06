@@ -92,3 +92,24 @@ def test_trust_floor_bounded():
     d["trust"]["floor"] = 1.5
     with pytest.raises(ValidationError):
         Manifest.model_validate(d)
+
+
+def test_schema_export_is_valid_json_schema():
+    """The exported JSON Schema must parse and reject the same invalid manifests."""
+    import json as _json
+    import jsonschema  # standard test-time dep (pytest brings it transitively)
+    from nexus.agents._schema_export import export_schema
+    from pathlib import Path
+
+    schema_path = Path("nexus/schemas/manifest.v1.json")
+    schema = _json.loads(schema_path.read_text())
+    jsonschema.Draft202012Validator.check_schema(schema)
+
+    # Valid manifest passes
+    jsonschema.validate(_valid_manifest_dict(), schema)
+
+    # Bad slug fails
+    bad = _valid_manifest_dict()
+    bad["slug"] = "Bad Slug"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(bad, schema)

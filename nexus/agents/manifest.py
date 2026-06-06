@@ -138,7 +138,7 @@ class Manifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     manifest_version: Literal[1]
-    slug: str
+    slug: str = Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")
     name: str
     tagline: str = ""
     version: str
