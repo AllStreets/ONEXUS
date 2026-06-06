@@ -6,8 +6,25 @@ Trust tiers: OBSERVER, ADVISOR, MONITOR, EXECUTOR, AUTONOMOUS.
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Optional
+
+from nexus.agents.manifest import Manifest, PermissionClass
+
+
+class Verdict(str, Enum):
+    ALLOW = "ALLOW"
+    PROMPT = "PROMPT"
+    DENY = "DENY"
+
+
+@dataclass(frozen=True)
+class CapabilityDecision:
+    verdict: Verdict
+    reason: str
+    permission_class: PermissionClass | None = None
 
 
 class PermissionDenied(Exception):
@@ -209,7 +226,12 @@ class Aegis:
         return TrustTier.from_score(self.get_trust(module))
 
     def revoke(self, module: str) -> None:
-        """Immediately set trust to 0.0 and log the revocation."""
+        """Immediately set trust to 0.0 and log the revocation.
+
+        Note: this bypasses ``set_trust`` and therefore does NOT trigger
+        the trust-collapse grant cleanup. If you want both trust reset
+        AND grant revocation, call ``set_trust(module, 0.0)`` instead.
+        """
         conn = self._conn()
         self._ensure_module(conn, module)
         row = conn.execute(
@@ -258,6 +280,188 @@ class Aegis:
 
     def is_autonomous(self, module: str) -> bool:
         return self.get_trust(module) == 1.0
+
+    # ── manifest registry ────────────────────────────────────────────────
+
+    def register_manifest(self, manifest: Manifest) -> None:
+        """Register an agent's manifest so check_capability can read it."""
+        if not hasattr(self, "_manifests"):
+            self._manifests: dict[str, Manifest] = {}
+        self._manifests[manifest.slug] = manifest
+        # Seed trust at the manifest's floor if not set yet
+        if self.get_trust(manifest.slug) == 0.0 and manifest.trust.floor > 0:
+            self.set_trust(manifest.slug, manifest.trust.floor)
+
+    def get_manifest(self, slug: str) -> Manifest | None:
+        return getattr(self, "_manifests", {}).get(slug)
+
+    # ── grant storage (in-memory for Phase 1; SQLite in Phase 3) ────────
+
+    def _grants_table(self) -> dict[tuple[str, str | None], set[str]]:
+        if not hasattr(self, "_grants"):
+            self._grants: dict[tuple[str, str | None], set[str]] = {}
+        return self._grants
+
+    def grant(
+        self,
+        agent_slug: str,
+        capability: str,
+        workspace_id: str | None = None,
+    ) -> None:
+        """Record an explicit user grant. workspace_id=None means global."""
+        table = self._grants_table()
+        key = (agent_slug, workspace_id)
+        table.setdefault(key, set()).add(capability)
+        self._log_chronicle("permission_granted", {
+            "agent": agent_slug,
+            "capability": capability,
+            "workspace_id": workspace_id,
+        })
+
+    def revoke_grant(
+        self,
+        agent_slug: str,
+        capability: str | None = None,
+        workspace_id: str | None = None,
+    ) -> None:
+        """Revoke one capability or, if capability is None, all grants for this agent in this scope.
+
+        Renamed from `revoke` to avoid colliding with the existing one-arg
+        `revoke(module)` which resets trust to 0.0.
+        """
+        table = self._grants_table()
+        key = (agent_slug, workspace_id)
+        if capability is None:
+            table.pop(key, None)
+        elif key in table:
+            table[key].discard(capability)
+        self._log_chronicle("permission_revoked", {
+            "agent": agent_slug,
+            "capability": capability,
+            "workspace_id": workspace_id,
+        })
+
+    def _has_grant(self, agent_slug: str, capability: str, workspace_id: str | None) -> bool:
+        table = self._grants_table()
+        if capability in table.get((agent_slug, workspace_id), set()):
+            return True
+        # Also check the global scope (workspace_id=None)
+        if workspace_id is not None and capability in table.get((agent_slug, None), set()):
+            return True
+        return False
+
+    # ── direct trust setter + collapse revocation ───────────────────────
+
+    def set_trust(self, agent_slug: str, score: float) -> None:
+        """Set an agent's trust score directly (admin/testing). Clamped to [0,1].
+
+        If the new score falls below 0.50, all in-memory grants for the
+        agent are revoked and a `trust_collapse` event is logged.
+        """
+        score = max(0.0, min(1.0, score))
+        conn = self._conn()
+        self._ensure_module(conn, agent_slug)
+        row = conn.execute(
+            "SELECT trust_score FROM aegis_policies WHERE module_name = ?",
+            (agent_slug,),
+        ).fetchone()
+        old_score = float(row["trust_score"])
+        conn.execute(
+            "UPDATE aegis_policies SET trust_score = ? WHERE module_name = ?",
+            (score, agent_slug),
+        )
+        self._record_history(
+            conn, agent_slug, old_score, score, score - old_score, "set_trust",
+        )
+        conn.commit()
+        conn.close()
+
+        # Trust collapse: revoke every grant
+        if score < 0.50:
+            table = self._grants_table()
+            removed: list[tuple[str, str | None, str]] = []
+            for (agent, ws), caps in list(table.items()):
+                if agent != agent_slug:
+                    continue
+                for cap in list(caps):
+                    caps.discard(cap)
+                    removed.append((agent, ws, cap))
+                if not caps:
+                    table.pop((agent, ws), None)
+            if removed:
+                self._log_chronicle("trust_collapse", {
+                    "agent": agent_slug,
+                    "score": score,
+                    "revoked": [
+                        {"capability": c, "workspace_id": ws} for _, ws, c in removed
+                    ],
+                })
+
+    # ── the arbiter ─────────────────────────────────────────────────────
+
+    def check_capability(
+        self,
+        agent_slug: str,
+        capability: str,
+        workspace_id: str | None = None,
+    ) -> CapabilityDecision:
+        """Decide whether `agent_slug` may use `capability` in `workspace_id`.
+
+        Algorithm:
+          1. Find the manifest. No manifest → DENY.
+          2. Find which class the manifest declares this capability under.
+             Not declared → DENY (undeclared).
+          3. Routine → always ALLOW.
+          4. If user has an explicit grant for this scope → ALLOW.
+          5. Notable + trust ≥ 0.75 (EXECUTOR) → ALLOW (auto-grant).
+          6. Privileged → never auto-grant; PROMPT (effectively requires Settings).
+          7. Otherwise → PROMPT.
+        """
+        manifest = self.get_manifest(agent_slug)
+        if manifest is None:
+            return CapabilityDecision(
+                Verdict.DENY,
+                f"no manifest registered for agent {agent_slug!r}",
+            )
+
+        cls = manifest.declares(capability)
+        if cls is None:
+            return CapabilityDecision(
+                Verdict.DENY,
+                f"capability {capability!r} undeclared in manifest",
+            )
+
+        # Routine — silent forever
+        if cls is PermissionClass.ROUTINE:
+            return CapabilityDecision(Verdict.ALLOW, "routine", cls)
+
+        # Explicit grant trumps everything below
+        if self._has_grant(agent_slug, capability, workspace_id):
+            return CapabilityDecision(Verdict.ALLOW, "explicit grant", cls)
+
+        trust = self.get_trust(agent_slug)
+
+        # Trust-gated auto-grant for Notable
+        if cls is PermissionClass.NOTABLE and trust >= 0.75:
+            return CapabilityDecision(
+                Verdict.ALLOW,
+                f"executor tier auto-grant (trust={trust:.2f})",
+                cls,
+            )
+
+        # Privileged — never granted from a check
+        if cls is PermissionClass.PRIVILEGED:
+            return CapabilityDecision(
+                Verdict.PROMPT,
+                "privileged capabilities require Settings → Security",
+                cls,
+            )
+
+        return CapabilityDecision(
+            Verdict.PROMPT,
+            f"{cls.value.lower()} capability requires user approval",
+            cls,
+        )
 
     # -- policy listing ----------------------------------------------------
 
