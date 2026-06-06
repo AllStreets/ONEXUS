@@ -16,3 +16,4 @@ node_modules/
 *.gguf
 models/
 .superpowers/
+.worktrees/
