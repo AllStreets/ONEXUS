@@ -500,5 +500,131 @@ def mcp():
     asyncio.run(server.run_stdio())
 
 
+@main.group()
+def workspace():
+    """Manage ONEXUS workspaces."""
+    pass
+
+
+def _workspace_root(cfg: NexusConfig):
+    """Return (and create) the workspaces root directory."""
+    from pathlib import Path
+    root = cfg.data_dir / "workspaces"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+@workspace.command("list")
+def workspace_list():
+    """List all workspaces."""
+    from nexus.workspaces.manager import WorkspaceManager
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+    workspaces = mgr.list()
+    active_id = mgr.active_id()
+
+    if not workspaces:
+        click.echo("No workspaces yet. Create one with: onexus workspace create --name <name>")
+        return
+
+    for ws in workspaces:
+        marker = " *" if ws.workspace_id == active_id else ""
+        click.echo(f"  {ws.workspace_id:<30} {ws.tone.value:<10} {ws.name}{marker}")
+
+
+@workspace.command("create")
+@click.option("--name", required=True, help="Display name for the workspace.")
+@click.option("--id", "workspace_id", default=None, help="Kebab-case ID (auto-generated if omitted).")
+@click.option("--tone", default="INDIGO",
+              type=click.Choice(["INDIGO", "MAGENTA", "SAGE", "PLUM", "AMBER"], case_sensitive=False),
+              help="Home tone.")
+@click.option("--template", default=None,
+              type=click.Choice(["coding", "design", "research", "writing", "personal", "blank"],
+                                case_sensitive=False),
+              help="Start from a built-in template.")
+def workspace_create(name, workspace_id, tone, template):
+    """Create a new workspace."""
+    import re
+    from nexus.workspaces.manager import WorkspaceManager
+
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+
+    # Auto-generate ID from name if not provided
+    if workspace_id is None:
+        workspace_id = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40]
+        if not workspace_id:
+            workspace_id = "workspace"
+
+    if template:
+        from nexus.workspaces.templates import apply_template
+        try:
+            ws = apply_template(
+                template,
+                workspace_id=workspace_id,
+                name=name,
+                manager=mgr,
+                tone_override=tone.upper(),
+            )
+        except FileExistsError:
+            click.echo(f"Error: workspace '{workspace_id}' already exists.")
+            raise SystemExit(1)
+        except KeyError as e:
+            click.echo(f"Error: {e}")
+            raise SystemExit(1)
+    else:
+        try:
+            ws = mgr.create(name=name, workspace_id=workspace_id, tone=tone.upper())
+        except FileExistsError:
+            click.echo(f"Error: workspace '{workspace_id}' already exists.")
+            raise SystemExit(1)
+
+    click.echo(f"Created workspace '{workspace_id}' ({ws.tone.value}) — {ws.name}")
+
+
+@workspace.command("switch")
+@click.argument("workspace_id")
+def workspace_switch(workspace_id):
+    """Switch the active workspace."""
+    from nexus.workspaces.manager import WorkspaceManager
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+    try:
+        mgr.set_active(workspace_id)
+        ws = mgr.get(workspace_id)
+        click.echo(f"Switched to workspace '{workspace_id}' — {ws.name} ({ws.tone.value})")
+    except KeyError:
+        click.echo(f"Error: workspace '{workspace_id}' not found.")
+        raise SystemExit(1)
+
+
+@workspace.command("destroy")
+@click.argument("workspace_id")
+@click.option("--yes", is_flag=True, help="Skip confirmation.")
+def workspace_destroy(workspace_id, yes):
+    """Permanently delete a workspace and all its data."""
+    from nexus.workspaces.manager import WorkspaceManager
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+
+    ws = mgr.get(workspace_id)
+    if ws is None:
+        click.echo(f"Error: workspace '{workspace_id}' not found.")
+        raise SystemExit(1)
+
+    if not yes:
+        click.confirm(
+            f"Permanently delete workspace '{workspace_id}' ({ws.name})? This cannot be undone.",
+            abort=True,
+        )
+
+    try:
+        mgr.destroy(workspace_id)
+        click.echo(f"Workspace '{workspace_id}' destroyed.")
+    except KeyError:
+        click.echo(f"Error: workspace '{workspace_id}' not found.")
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     main()
