@@ -163,6 +163,33 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
         # Startup: initialize modules
         await kernel.cortex.initialize_modules()
         kernel.chronicle.log("api", "server_start", {"version": __version__})
+
+        # Wire kernel Pulse events into the mood engine so /api/mood/current
+        # reflects live kernel state (Phase 5 T10).
+        from nexus.workspaces.mood import MoodSignals as _MoodSignals
+
+        signals = getattr(app.state, "mood_signals", None) or _MoodSignals()
+        app.state.mood_signals = signals
+
+        async def _on_cortex_route(msg):
+            _signals = app.state.mood_signals
+            target = (msg.payload or {}).get("target")
+            if target:
+                import dataclasses
+                updated = dataclasses.replace(_signals, active_agent=target)
+                app.state.mood_signals = updated
+
+        async def _on_trust_change(msg):
+            _signals = app.state.mood_signals
+            score = (msg.payload or {}).get("new_score")
+            if score is not None and score < 0.5:
+                import dataclasses
+                updated = dataclasses.replace(_signals, trust_collapsed=True)
+                app.state.mood_signals = updated
+
+        kernel.pulse.subscribe("cortex.route", _on_cortex_route)
+        kernel.pulse.subscribe("aegis.trust_change", _on_trust_change)
+
         yield
         # Shutdown: drain event bus, log shutdown
         await kernel.pulse.drain()
