@@ -191,3 +191,69 @@ single-surface module.
 
 Cross-reference:
 `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md`.
+
+---
+
+## Phase 2 — Built-in Migration
+
+All 10 built-in modules (the 9 cognitive modules + `agent_dispatcher`)
+now ship with v1 manifests. Cortex's `IntentClassifier` reads intents
+from a `BuiltinRegistry` (`nexus.agents.registry.BuiltinRegistry`) at
+construction time, falling back to the legacy `_INTENT_DEFS` only when
+the registry build fails.
+
+### How a new built-in module joins the registry
+
+1. Add `manifest()` classmethod to the module class:
+
+   ```python
+   class MyBuiltin(NexusModule):
+       name = "my-builtin"
+       description = "..."
+       version = "0.1.0"
+
+       @classmethod
+       def manifest(cls):
+           from nexus.agents.manifest import Manifest
+           return Manifest.model_validate({...})
+
+       async def handle(self, message, context):
+           ...
+   ```
+
+2. Add the module class to `default_builtin_registry()` in
+   `nexus/kernel/cortex.py`.
+
+3. Done. Cortex picks up the new intents automatically; Aegis sees the
+   manifest after `cortex.register_builtin_manifests()` runs at boot.
+
+### Trust floors per built-in (current)
+
+| Slug | Floor | Tier |
+|---|---|---|
+| council | 0.50 | MONITOR |
+| legacy | 0.50 | MONITOR |
+| echo | 0.50 | MONITOR |
+| oracle | 0.40 | ADVISOR |
+| specter | 0.40 | ADVISOR |
+| consciousness | 0.40 | ADVISOR |
+| sentry | 0.40 | ADVISOR |
+| wraith | 0.35 | ADVISOR |
+| autonomic | 0.30 | ADVISOR |
+| agents | 0.30 | ADVISOR |
+
+These are the trust scores Aegis seeds for each built-in on first
+registration. They can be raised by `record_outcome(success=True)` or
+lowered by `record_outcome(success=False)` over time, exactly like
+catalog agents.
+
+### Non-Routine capabilities declared by built-ins
+
+| Slug | Notable | Privileged |
+|---|---|---|
+| autonomic | `process.spawn` | — |
+| wraith | `process.spawn` | — |
+| agents | `process.spawn`, `inter_agent.call.*` | — |
+| echo | — | `engram.read.global` |
+
+Every other built-in is Routine-only.
