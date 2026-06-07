@@ -133,6 +133,15 @@ class Aegis:
                 timestamp   TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS aegis_grants (
+                agent_slug   TEXT NOT NULL,
+                capability   TEXT NOT NULL,
+                workspace_id TEXT,
+                granted_at   TEXT NOT NULL,
+                PRIMARY KEY (agent_slug, capability, workspace_id)
+            )
+        """)
         conn.commit()
         conn.close()
 
@@ -307,12 +316,7 @@ class Aegis:
     def get_manifest(self, slug: str) -> Manifest | None:
         return getattr(self, "_manifests", {}).get(slug)
 
-    # ── grant storage (in-memory for Phase 1; SQLite in Phase 3) ────────
-
-    def _grants_table(self) -> dict[tuple[str, str | None], set[str]]:
-        if not hasattr(self, "_grants"):
-            self._grants: dict[tuple[str, str | None], set[str]] = {}
-        return self._grants
+    # ── grant storage (SQLite-backed, aegis_grants table) ────────────────
 
     def grant(
         self,
@@ -321,9 +325,14 @@ class Aegis:
         workspace_id: str | None = None,
     ) -> None:
         """Record an explicit user grant. workspace_id=None means global."""
-        table = self._grants_table()
-        key = (agent_slug, workspace_id)
-        table.setdefault(key, set()).add(capability)
+        conn = self._conn()
+        conn.execute(
+            "INSERT OR REPLACE INTO aegis_grants "
+            "(agent_slug, capability, workspace_id, granted_at) VALUES (?, ?, ?, ?)",
+            (agent_slug, capability, workspace_id, self._now()),
+        )
+        conn.commit()
+        conn.close()
         self._log_chronicle("permission_granted", {
             "agent": agent_slug,
             "capability": capability,
@@ -341,12 +350,21 @@ class Aegis:
         Renamed from `revoke` to avoid colliding with the existing one-arg
         `revoke(module)` which resets trust to 0.0.
         """
-        table = self._grants_table()
-        key = (agent_slug, workspace_id)
+        conn = self._conn()
         if capability is None:
-            table.pop(key, None)
-        elif key in table:
-            table[key].discard(capability)
+            conn.execute(
+                "DELETE FROM aegis_grants WHERE agent_slug = ? AND "
+                "((workspace_id IS NULL AND ? IS NULL) OR workspace_id = ?)",
+                (agent_slug, workspace_id, workspace_id),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM aegis_grants WHERE agent_slug = ? AND capability = ? AND "
+                "((workspace_id IS NULL AND ? IS NULL) OR workspace_id = ?)",
+                (agent_slug, capability, workspace_id, workspace_id),
+            )
+        conn.commit()
+        conn.close()
         self._log_chronicle("permission_revoked", {
             "agent": agent_slug,
             "capability": capability,
@@ -354,13 +372,14 @@ class Aegis:
         })
 
     def _has_grant(self, agent_slug: str, capability: str, workspace_id: str | None) -> bool:
-        table = self._grants_table()
-        if capability in table.get((agent_slug, workspace_id), set()):
-            return True
-        # Also check the global scope (workspace_id=None)
-        if workspace_id is not None and capability in table.get((agent_slug, None), set()):
-            return True
-        return False
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT 1 FROM aegis_grants WHERE agent_slug = ? AND capability = ? AND "
+            "(workspace_id = ? OR workspace_id IS NULL) LIMIT 1",
+            (agent_slug, capability, workspace_id),
+        ).fetchone()
+        conn.close()
+        return row is not None
 
     # ── direct trust setter + collapse revocation ───────────────────────
 
@@ -390,22 +409,21 @@ class Aegis:
 
         # Trust collapse: revoke every grant
         if score < 0.50:
-            table = self._grants_table()
-            removed: list[tuple[str, str | None, str]] = []
-            for (agent, ws), caps in list(table.items()):
-                if agent != agent_slug:
-                    continue
-                for cap in list(caps):
-                    caps.discard(cap)
-                    removed.append((agent, ws, cap))
-                if not caps:
-                    table.pop((agent, ws), None)
+            conn = self._conn()
+            removed = conn.execute(
+                "SELECT capability, workspace_id FROM aegis_grants WHERE agent_slug = ?",
+                (agent_slug,),
+            ).fetchall()
+            conn.execute("DELETE FROM aegis_grants WHERE agent_slug = ?", (agent_slug,))
+            conn.commit()
+            conn.close()
             if removed:
                 self._log_chronicle("trust_collapse", {
                     "agent": agent_slug,
                     "score": score,
                     "revoked": [
-                        {"capability": c, "workspace_id": ws} for _, ws, c in removed
+                        {"capability": r["capability"], "workspace_id": r["workspace_id"]}
+                        for r in removed
                     ],
                 })
 
