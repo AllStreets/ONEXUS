@@ -251,13 +251,45 @@ class IntentClassifier:
     structural analysis, and routing context to rank intents.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, intents: list[Intent] | None = None) -> None:
         self._intents: list[Intent] = []
         self._routing_history: deque[str] = deque(maxlen=5)
-        self._load_intents()
+        if intents is not None:
+            self._intents = list(intents)
+        else:
+            # Phase 2: default to loading from the built-in registry.
+            try:
+                registry = default_builtin_registry()
+                self._intents = self._intents_from_registry(registry)
+            except Exception:
+                # Fallback to the legacy hardcoded defs if registry boot fails
+                # (e.g., when an existing test instantiates without all modules importable).
+                self._load_intents_legacy()
 
-    def _load_intents(self) -> None:
-        """Build Intent objects from the canonical definitions."""
+    @classmethod
+    def from_registry(cls, registry) -> "IntentClassifier":
+        instance = cls.__new__(cls)
+        instance._intents = instance._intents_from_registry(registry)
+        instance._routing_history = deque(maxlen=5)
+        return instance
+
+    # ── intent construction ──────────────────────────────────────────────
+
+    def _intents_from_registry(self, registry) -> list[Intent]:
+        out: list[Intent] = []
+        for manifest in registry.manifests():
+            for intent_decl in manifest.intents:
+                out.append(Intent(
+                    name=intent_decl.name,
+                    module=manifest.slug,
+                    description=manifest.tagline,
+                    patterns=_compile(intent_decl.patterns),
+                    semantic_signals=list(intent_decl.semantic_signals),
+                ))
+        return out
+
+    def _load_intents_legacy(self) -> None:
+        """Fallback: build from the hardcoded `_INTENT_DEFS` (preserved during Phase 2)."""
         for defn in _INTENT_DEFS:
             self._intents.append(Intent(
                 name=defn["name"],
@@ -404,6 +436,32 @@ class IntentClassifier:
     def record_routing(self, module: str) -> None:
         """Record a routing decision for context-aware follow-up detection."""
         self._routing_history.append(module)
+
+
+def default_builtin_registry():
+    """Build the registry of the 10 built-in NexusModule classes.
+
+    Lazy imports — these modules import the kernel transitively, so
+    a module-level import here would create a circular dependency at
+    `import nexus.kernel.cortex` time.
+    """
+    from nexus.agents.registry import BuiltinRegistry
+    from nexus.modules.council import CouncilModule
+    from nexus.modules.specter import SpecterModule
+    from nexus.modules.autonomic import AutonomicModule
+    from nexus.modules.oracle import OracleModule
+    from nexus.modules.wraith import WraithModule
+    from nexus.modules.legacy import LegacyModule
+    from nexus.modules.consciousness import ConsciousnessModule
+    from nexus.modules.sentry import SentryModule
+    from nexus.modules.echo import EchoModule
+    from nexus.modules.agent_dispatcher import AgentDispatcherModule
+
+    return BuiltinRegistry.from_modules([
+        CouncilModule, SpecterModule, AutonomicModule, OracleModule,
+        WraithModule, LegacyModule, ConsciousnessModule, SentryModule,
+        EchoModule, AgentDispatcherModule,
+    ])
 
 
 # ---------------------------------------------------------------------------
