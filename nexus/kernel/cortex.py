@@ -18,6 +18,13 @@ from nexus.kernel.pulse import Pulse, Message
 from nexus.modules.base import NexusModule
 from nexus.config import NexusConfig
 
+# Lazy import — WorkspaceConfig lives in workspaces layer (above the kernel).
+# We use TYPE_CHECKING + string annotation to avoid the circular import at
+# module load time.  The actual object is only used at runtime inside methods.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from nexus.workspaces.config import WorkspaceConfig
+
 
 # ---------------------------------------------------------------------------
 # Intent classification primitives
@@ -491,8 +498,29 @@ class Cortex:
         self._modules: dict[str, NexusModule] = {}
         self._llm = None
         self._classifier = IntentClassifier()
+        # Active workspace routing pins — set via set_workspace_config().
+        # List of (intent_name_or_None, category_or_None, agent_slug).
+        self._workspace_pins: list[tuple[str | None, str | None, str]] = []
 
     # -- public API (preserved) --------------------------------------------
+
+    def set_workspace_config(self, config: "WorkspaceConfig | None") -> None:
+        """Load (or clear) routing pins from the active workspace config.
+
+        Called by the workspace switcher when a workspace is activated or
+        deactivated.  Passing ``None`` clears all pins.
+
+        The pins are consulted in :meth:`_select_module` *before* the
+        semantic scoring engine, so a pin bypasses Cortex's intent
+        classifier for the specified intents / categories.
+        """
+        if config is None:
+            self._workspace_pins = []
+            return
+        self._workspace_pins = [
+            (pin.intent, pin.category, pin.agent)
+            for pin in config.routing_pins
+        ]
 
     def set_llm(self, llm_fn) -> None:
         """Set the LLM inference function used by modules and fallback classification."""
@@ -558,6 +586,19 @@ class Cortex:
 
         # 1. Classify intent
         scored = self._classifier.classify(message)
+
+        # 1a. Workspace pin resolution — highest priority after classification.
+        #     If the top-ranked intent matches a workspace pin, route directly.
+        if self._workspace_pins and scored:
+            top_intent = scored[0]
+            for pin_intent, pin_category, pin_agent in self._workspace_pins:
+                if pin_intent is not None and pin_intent == top_intent.name:
+                    if pin_agent in self._modules:
+                        return pin_agent, scored
+                # Category pins apply when the top intent's module matches category.
+                if pin_category is not None and pin_category == top_intent.module:
+                    if pin_agent in self._modules:
+                        return pin_agent, scored
 
         # 2. Check for explicit module invocation by name
         msg_lower = message.lower()
