@@ -210,3 +210,40 @@
 .nx-cockpit-tail-row { opacity: 0.7; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nx-cockpit-stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; opacity: 0.75; }
 .nx-cockpit-stat-val { color: #88d4ff; font-family: var(--nx-font-mono); }
+
+/* ── Spatial catalog grid ─────────────────────────────────────────────────── */
+.nx-spatial {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+.nx-spatial-header {
+  display: flex; align-items: end; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.nx-spatial-card {
+  background: var(--nx-card-bg);
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-card-radius);
+  padding: 18px;
+}
+.nx-spatial-card .name { font-size: 14.5px; font-weight: 500; margin-top: 12px; }
+.nx-spatial-card .tagline { font-size: 12px; opacity: 0.62; margin-top: 3px; line-height: 1.4; }
+.nx-spatial-card .status {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px;
+  font-family: var(--nx-font-mono);
+  opacity: 0.7;
+}
+.nx-spatial-card .status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--nx-routine);
+  box-shadow: 0 0 6px var(--nx-routine);
+}
+.nx-spatial-card .status-dot.sleeping { background: rgba(255,255,255,0.25); box-shadow: none; }
+.nx-spatial-card .badge-system {
+  font-size: 9.5px; opacity: 0.4; margin-left: auto;
+  font-family: var(--nx-font-mono);
+}

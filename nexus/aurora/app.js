@@ -285,12 +285,59 @@ async function refreshRecent() {
   } catch {}
 }
 
+// ── Spatial catalog grid ─────────────────────────────────────────────────
+
+async function renderSpatial() {
+  const v = document.getElementById("nx-view");
+  v.innerHTML = `<div class="nx-empty nx-dim">Loading agents…</div>`;
+  let body;
+  try {
+    const r = await fetch("/api/spatial/agents");
+    body = await r.json();
+  } catch {
+    v.innerHTML = `<div class="nx-empty nx-dim">Failed to load agents.</div>`;
+    return;
+  }
+  const agents = body.agents || [];
+  v.innerHTML = `
+    <header class="nx-spatial-header">
+      <div>
+        <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
+        <div class="nx-display" style="font-size:30px">Agents</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} known</div>
+      </div>
+    </header>
+    <div class="nx-spatial" id="nx-spatial-grid">
+      ${agents.map(a => renderSpatialCard(a)).join("") || `<div class="nx-empty nx-dim">no agents registered yet</div>`}
+    </div>`;
+}
+
+function renderSpatialCard(a) {
+  const trust = a.trust != null ? a.trust.toFixed(2) : "—";
+  const tier = a.tier || "OBSERVER";
+  const dotClass = tier === "OBSERVER" ? "sleeping" : "";
+  return `
+    <div class="nx-spatial-card" data-slug="${a.slug}">
+      ${agentDisc(a.slug, { size: 48, trust: a.trust })}
+      <div class="name">${escapeHtml(a.name)} ${a.system ? `<span class="badge-system">system</span>` : ""}</div>
+      <div class="tagline">${escapeHtml(a.tagline || "")}</div>
+      <div class="status">
+        <span class="status-dot ${dotClass}"></span>
+        ${tier.toLowerCase()} · ${trust}
+      </div>
+    </div>`;
+}
+
 // ── Router ───────────────────────────────────────────────────────────────
 async function route(hash) {
   await loadWorkspaces();
   const v = document.getElementById("nx-view");
   if (!hash || hash === "#" || hash === "#/" || hash === "#/workspaces") {
     renderSwitcher();
+    return;
+  }
+  if (hash === "#/spatial") {
+    renderSpatial();
     return;
   }
   if (hash.startsWith("#/conversation/")) {
@@ -507,6 +554,9 @@ document.getElementById("nx-workspaces-btn").addEventListener("click", () => {
   loadWorkspaces().then(renderSwitcher);
 });
 document.getElementById("nx-cockpit-btn").addEventListener("click", toggleCockpit);
+document.getElementById("nx-spatial-btn").addEventListener("click", () => {
+  location.hash = "#/spatial";
+});
 
 // ── Keybinds ─────────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
