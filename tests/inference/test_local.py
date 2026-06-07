@@ -44,34 +44,36 @@ def test_local_provider_chatml_with_history():
 
 
 @pytest.mark.asyncio
-async def test_local_provider_infer_calls_endpoint():
+async def test_local_provider_infer_calls_endpoint(respx_mock):
+    """Phase 6: LocalProvider uses httpx (via KernelHttpClient or direct).
+    This test mocks httpx and verifies the prompt format passed in the request body.
+    """
+    import httpx as _httpx
+    captured_request = {}
+    def _capture(request):
+        captured_request["body"] = json.loads(request.content)
+        return _httpx.Response(200, json={"content": "response text"})
+    respx_mock.post("http://localhost:8384/completion").mock(side_effect=_capture)
+
     provider = LocalProvider(base_url="http://localhost:8384")
     messages = [{"role": "user", "content": "test"}]
-
-    mock_response = MagicMock()
-    mock_response.read.return_value = json.dumps({"content": "response text"}).encode()
-    mock_response.status = 200
-    mock_response.__enter__ = lambda s: s
-    mock_response.__exit__ = MagicMock(return_value=False)
-
-    with patch("urllib.request.urlopen", return_value=mock_response) as mock_urlopen:
-        result = await provider.infer(messages)
-        assert result == "response text"
-        mock_urlopen.assert_called_once()
-        call_args = mock_urlopen.call_args
-        req = call_args[0][0]
-        body = json.loads(req.data)
-        assert "<|im_start|>user" in body["prompt"]
+    result = await provider.infer(messages)
+    assert result == "response text"
+    assert "<|im_start|>user" in captured_request["body"]["prompt"]
 
 
 @pytest.mark.asyncio
-async def test_local_provider_infer_error_returns_message():
+async def test_local_provider_infer_error_raises(respx_mock):
+    """Phase 6: connection errors propagate as httpx exceptions (the old behaviour
+    swallowed them into a string return; we changed to raise so callers can decide
+    what to do with the failure mode)."""
+    import httpx as _httpx
+    respx_mock.post("http://localhost:99999/completion").mock(
+        side_effect=_httpx.ConnectError("refused")
+    )
     provider = LocalProvider(base_url="http://localhost:99999")
-    messages = [{"role": "user", "content": "test"}]
-
-    with patch("urllib.request.urlopen", side_effect=Exception("Connection refused")):
-        result = await provider.infer(messages)
-        assert "[Inference error:" in result
+    with pytest.raises(_httpx.ConnectError):
+        await provider.infer([{"role": "user", "content": "test"}])
 
 
 def test_local_provider_health_returns_false_on_failure():
