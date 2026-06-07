@@ -250,6 +250,11 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(multimodal_router)
     app.include_router(agents_router)
 
+    from nexus.api.routes.permissions import router as permissions_router
+    from nexus.api.routes.installer import router as installer_router
+    app.include_router(permissions_router)
+    app.include_router(installer_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):
