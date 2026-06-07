@@ -80,6 +80,45 @@ class OracleModule(NexusModule):
     )
     version = "1.0.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "oracle",
+            "name": "oracle",
+            "tagline": "Anticipatory pattern detection: trigger rules, threats, early warnings.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "monitoring",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:oracle",
+                                  "gradient": ["#a8e8ff", "#346b9c"]}},
+            "intents": [{
+                "name": "ANTICIPATE",
+                "patterns": [
+                    r"\bpredict\w*\b", r"\banticipat\w*\b", r"\btrigger\b", r"\balert\b",
+                    r"\bmonitor\b", r"\bscan\b", r"\bpattern\s+(detect|scan)\w*\b",
+                    r"\bwatch\s+for\b", r"\bearly\s+warning\b", r"\bthreat\s+detect\w*\b",
+                    r"\boracle\b", r"\bforecast\b", r"\btrend\b",
+                ],
+                "semantic_signals": [
+                    "predict", "anticipate", "trigger", "alert", "monitor",
+                    "scan for patterns", "watch for", "early warning", "threat detection",
+                    "forecast", "trend analysis", "what's coming",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {"Routine": ["engram.read.workspace"], "Notable": [],
+                             "Sensitive": [], "Privileged": []},
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.40, "default_tier": "ADVISOR"},
+        })
+
     def __init__(self):
         self._rules: list[TriggerRule] = []
         self._threats: dict[str, Threat] = {}
