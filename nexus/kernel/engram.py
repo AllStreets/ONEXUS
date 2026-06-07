@@ -186,3 +186,26 @@ class Engram:
     def init_db(self) -> None:
         self.episodic.init_db()
         self.semantic.init_db()
+
+    def partition(self, workspace_root: Path) -> "Engram":
+        """Return a new Engram scoped to *workspace_root*/engram/.
+
+        The returned instance has its own episodic and semantic stores
+        isolated under the workspace's directory — cross-workspace reads
+        require the ``engram.read.global`` capability.
+
+        Parameters
+        ----------
+        workspace_root:
+            The workspace directory (e.g. ``~/.nexus/workspaces/my-id/``).
+            The ``engram/`` sub-directory is created automatically.
+        """
+        engram_dir = Path(workspace_root) / "engram"
+        engram_dir.mkdir(parents=True, exist_ok=True)
+        # Each workspace gets its own DB file so episodic / semantic are
+        # fully isolated.  Working memory is always transient — a fresh
+        # WorkingMemory is fine for each partition.
+        db_path = engram_dir / "episodic.sqlite"
+        child = Engram(db_path)
+        child.init_db()
+        return child
