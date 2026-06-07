@@ -52,6 +52,45 @@ class LegacyModule(NexusModule):
     description = "Knowledge crystallization -- distills decisions into transferable wisdom"
     version = "0.1.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "legacy",
+            "name": "legacy",
+            "tagline": "Knowledge crystallization: playbooks, heuristics, distilled wisdom.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "knowledge",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:legacy",
+                                  "gradient": ["#ffd680", "#9c6a1a"]}},
+            "intents": [{
+                "name": "CRYSTALLIZE",
+                "patterns": [
+                    r"\bcrystallize\b", r"\bdistill\b", r"\bplaybook\b", r"\bframework\b",
+                    r"\bheuristic\b", r"\bwhat\s+have\s+i\s+learned\b",
+                    r"\bpattern\s+extract\w*\b", r"\bwisdom\b", r"\blegacy\b",
+                    r"\blesson\w*\s+learned\b", r"\bknowledge\s+base\b",
+                ],
+                "semantic_signals": [
+                    "distill knowledge", "playbook", "what have I learned", "framework",
+                    "heuristics", "crystallize", "lessons learned", "codify knowledge",
+                    "extract patterns", "wisdom", "build a guide from experience",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {"Routine": ["engram.read.workspace"], "Notable": [],
+                             "Sensitive": [], "Privileged": []},
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.50, "default_tier": "MONITOR"},
+        })
+
     _DECISION_MODULES = frozenset({"council", "ethical_prism", "autonomic"})
 
     def __init__(self):

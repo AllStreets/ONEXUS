@@ -36,6 +36,45 @@ class SentryModule(NexusModule):
     description = "Cognitive load model — tracks user focus, fatigue, stress, and flow"
     version = "0.1.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "sentry",
+            "name": "sentry",
+            "tagline": "Cognitive regulation: focus, fatigue, stress, flow state.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "monitoring",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:sentry",
+                                  "gradient": ["#ffb878", "#8c4218"]}},
+            "intents": [{
+                "name": "REGULATE",
+                "patterns": [
+                    r"\bcognitive\b", r"\bfocus\b", r"\bfatigue\b", r"\bstress\b",
+                    r"\bflow\s+state\b", r"\benergy\b", r"\btired\b",
+                    r"\bhow\s+am\s+i\s+doing\b", r"\bmental\s+state\b",
+                    r"\bsentry\b", r"\bworkload\b", r"\bburn-?out\b",
+                ],
+                "semantic_signals": [
+                    "cognitive state", "focus", "fatigue", "stress level",
+                    "flow state", "energy", "how am I doing", "mental state",
+                    "workload", "burnout", "am I overloaded",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {"Routine": ["engram.read.workspace"], "Notable": [],
+                             "Sensitive": [], "Privileged": []},
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.40, "default_tier": "ADVISOR"},
+        })
+
     # Activity-window for frequency calculation (seconds).
     _FREQUENCY_WINDOW_S = 60.0
     # Calibration: messages-per-window that maps to frequency 1.0

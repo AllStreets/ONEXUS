@@ -71,6 +71,49 @@ class WraithModule(NexusModule):
     description = "Phantom agent spawner — ephemeral micro-agents with death clocks"
     version = "0.1.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "wraith",
+            "name": "wraith",
+            "tagline": "Ephemeral sub-agent spawner with death clocks.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "orchestration",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:wraith",
+                                  "gradient": ["#9affc8", "#2a6a4e"]}},
+            "intents": [{
+                "name": "SPAWN",
+                "patterns": [
+                    r"\bspawn\b", r"\bparallel\s+task\b", r"\bsimultaneous(ly)?\b",
+                    r"\bmulti-?task\b", r"\bbackground\s+(work|task|job)\b",
+                    r"\bresearch\s+\w+\s+and\s+\w+\b", r"\bwraith\b",
+                    r"\bsub-?agent\b", r"\bfork\b",
+                ],
+                "semantic_signals": [
+                    "spawn", "parallel tasks", "research X and Y simultaneously",
+                    "multi-task", "background work", "sub-agent", "fork off",
+                    "do both at once", "work on these in parallel",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {
+                    "Routine": ["engram.read.workspace"],
+                    "Notable": ["process.spawn"],
+                    "Sensitive": [],
+                    "Privileged": [],
+                },
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.35, "default_tier": "ADVISOR"},
+        })
+
     def __init__(self):
         self._phantoms: dict[str, Phantom] = {}
 
