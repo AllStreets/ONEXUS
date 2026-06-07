@@ -34,6 +34,15 @@ class PermissionDenied(Exception):
         super().__init__(f"Permission denied: {module} cannot perform {action}")
 
 
+def _is_within(child, parent) -> bool:
+    """True if child is parent or a descendant of parent."""
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 class TrustTier:
     OBSERVER = "OBSERVER"
     ADVISOR = "ADVISOR"
@@ -462,6 +471,53 @@ class Aegis:
             f"{cls.value.lower()} capability requires user approval",
             cls,
         )
+
+    # ── filesystem broker ───────────────────────────────────────────────
+
+    def fs(
+        self,
+        agent_slug: str,
+        path,
+        *,
+        mode: str = "r",
+        workspace_roots: list = None,
+        workspace_id: str | None = None,
+    ):
+        """Mediated file access for an agent.
+
+        Returns an open file handle (context manager) or raises
+        PermissionDenied. Logs every call to Chronicle.
+        """
+        from pathlib import Path
+
+        target = Path(path).resolve()
+        roots = [Path(r).resolve() for r in (workspace_roots or [])]
+
+        # 1. Containment: must be under at least one root
+        if not any(_is_within(target, r) for r in roots):
+            self._log_chronicle("fs_access_denied", {
+                "agent": agent_slug, "path": str(target),
+                "mode": mode, "reason": "outside_workspace_roots",
+                "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"fs:{mode}:{target}")
+
+        # 2. Capability — "x" is exclusive-create (write-like); "+" upgrades any mode to read+write.
+        cap = "fs.write.workspace" if any(c in mode for c in ("w", "a", "x", "+")) else "fs.read.workspace"
+        decision = self.check_capability(agent_slug, cap, workspace_id=workspace_id)
+        if decision.verdict.value != "ALLOW":
+            self._log_chronicle("fs_access_denied", {
+                "agent": agent_slug, "path": str(target),
+                "mode": mode, "reason": decision.reason,
+                "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"fs:{mode}:{target}")
+
+        self._log_chronicle("fs_access", {
+            "agent": agent_slug, "path": str(target),
+            "mode": mode, "workspace_id": workspace_id,
+        })
+        return open(target, mode)
 
     # -- policy listing ----------------------------------------------------
 
