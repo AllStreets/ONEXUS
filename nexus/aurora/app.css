@@ -1,0 +1,30 @@
+.nx-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  background: linear-gradient(to bottom, rgba(12,10,20,0.85), transparent);
+  backdrop-filter: blur(12px);
+}
+.nx-header-left, .nx-header-right { display: flex; align-items: center; gap: 10px; }
+
+.nx-kernel-mark {
+  filter: drop-shadow(0 0 4px rgba(168, 180, 255, 0.7))
+          drop-shadow(0 0 12px rgba(168, 180, 255, 0.35));
+  animation: nx-breath 4.5s ease-in-out infinite;
+}
+@keyframes nx-breath {
+  0%, 100% { opacity: 0.78; transform: scale(0.96); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+
+.nx-view {
+  position: relative; z-index: 1;
+  padding: 64px 24px 24px;
+  min-height: 100vh;
+}
+
+.nx-empty { padding: 40px; text-align: center; opacity: 0.6; }
+
+/* Overlay root for ⌘K, ⌘`, install review, first-use prompt */
+#nx-overlay-root { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
+#nx-overlay-root > * { pointer-events: auto; }
