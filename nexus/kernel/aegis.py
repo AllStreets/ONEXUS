@@ -6,10 +6,13 @@ Trust tiers: OBSERVER, ADVISOR, MONITOR, EXECUTOR, AUTONOMOUS.
 from __future__ import annotations
 
 import sqlite3
+import time
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from nexus.agents.manifest import Manifest, PermissionClass
 
@@ -518,6 +521,83 @@ class Aegis:
             "mode": mode, "workspace_id": workspace_id,
         })
         return open(target, mode)
+
+    # ── network gateway ─────────────────────────────────────────────────
+
+    DEFAULT_RATE_LIMIT_PER_MIN = 60
+
+    def set_rate_limit(self, agent_slug: str, per_minute: int) -> None:
+        if not hasattr(self, "_rate_limits"):
+            self._rate_limits: dict[str, int] = {}
+        self._rate_limits[agent_slug] = per_minute
+
+    def _rate_limit(self, agent_slug: str) -> int:
+        return getattr(self, "_rate_limits", {}).get(agent_slug, self.DEFAULT_RATE_LIMIT_PER_MIN)
+
+    def _request_log(self, agent_slug: str) -> deque:
+        if not hasattr(self, "_req_log"):
+            self._req_log: dict[str, deque] = {}
+        return self._req_log.setdefault(agent_slug, deque())
+
+    def _check_rate_limit(self, agent_slug: str) -> bool:
+        """Return True if a request is allowed; False if rate-limited."""
+        log = self._request_log(agent_slug)
+        now = time.monotonic()
+        cutoff = now - 60.0
+        while log and log[0] < cutoff:
+            log.popleft()
+        if len(log) >= self._rate_limit(agent_slug):
+            return False
+        log.append(now)
+        return True
+
+    async def network(
+        self,
+        agent_slug: str,
+        url: str,
+        *,
+        method: str = "GET",
+        workspace_id: str | None = None,
+        **httpx_kwargs,
+    ):
+        """Outbound HTTP for an agent. Returns an httpx.Response.
+
+        Raises PermissionDenied if the agent's manifest doesn't declare
+        the URL's domain, if the user hasn't granted it, if the agent
+        is over its rate limit, or if Aegis is otherwise denying.
+        """
+        import httpx as _httpx
+
+        domain = urlparse(url).hostname or ""
+        capability = f"network.outbound.{domain}"
+
+        decision = self.check_capability(agent_slug, capability, workspace_id=workspace_id)
+        if decision.verdict.value != "ALLOW":
+            self._log_chronicle("network_request_denied", {
+                "agent": agent_slug, "url": url, "method": method,
+                "reason": decision.reason, "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"network:{method}:{url}")
+
+        if not self._check_rate_limit(agent_slug):
+            self._log_chronicle("network_request_denied", {
+                "agent": agent_slug, "url": url, "method": method,
+                "reason": "rate_limit",
+                "limit_per_minute": self._rate_limit(agent_slug),
+                "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"network:rate_limit:{url}")
+
+        async with _httpx.AsyncClient() as client:
+            resp = await client.request(method, url, **httpx_kwargs)
+
+        self._log_chronicle("network_request", {
+            "agent": agent_slug, "url": url, "method": method,
+            "status": resp.status_code,
+            "bytes_in": len(resp.content),
+            "workspace_id": workspace_id,
+        })
+        return resp
 
     # -- policy listing ----------------------------------------------------
 
