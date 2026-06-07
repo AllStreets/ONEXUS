@@ -258,6 +258,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.aurora import router as aurora_router
     app.include_router(aurora_router)
 
+    from nexus.api.routes.mood import router as mood_router
+    app.include_router(mood_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):
