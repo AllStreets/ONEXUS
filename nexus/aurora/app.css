@@ -28,3 +28,51 @@
 /* Overlay root for ⌘K, ⌘`, install review, first-use prompt */
 #nx-overlay-root { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
 #nx-overlay-root > * { pointer-events: auto; }
+
+/* Workspaces switcher overlay */
+.nx-switcher-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(6, 4, 12, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 12vh;
+}
+.nx-switcher {
+  width: min(880px, 90vw);
+  padding: 28px 32px;
+}
+.nx-switcher h3 { margin: 0 0 18px; font-family: var(--nx-font-display); font-size: 18px; font-weight: 500; }
+.nx-switcher-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+}
+.nx-ws-tile {
+  position: relative; border-radius: var(--nx-radius-md); padding: 16px;
+  aspect-ratio: 5 / 4; color: #fff; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.nx-ws-tile:hover { transform: translateY(-2px); }
+.nx-ws-tile.nx-tone-indigo  { background: linear-gradient(135deg, var(--nx-tone-indigo-a),  var(--nx-tone-indigo-b)); }
+.nx-ws-tile.nx-tone-magenta { background: linear-gradient(135deg, var(--nx-tone-magenta-a), var(--nx-tone-magenta-b)); }
+.nx-ws-tile.nx-tone-sage    { background: linear-gradient(135deg, var(--nx-tone-sage-a),    var(--nx-tone-sage-b)); }
+.nx-ws-tile.nx-tone-plum    { background: linear-gradient(135deg, var(--nx-tone-plum-a),    var(--nx-tone-plum-b)); }
+.nx-ws-tile.nx-tone-amber   { background: linear-gradient(135deg, var(--nx-tone-amber-a),   var(--nx-tone-amber-b)); }
+.nx-ws-tile.active {
+  box-shadow: 0 0 0 2px var(--nx-notable), 0 0 24px -4px rgba(168,180,255,0.5);
+}
+.nx-ws-tile.new {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.42);
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  cursor: pointer;
+}
+.nx-ws-tile .tile-eyebrow { font-size: 9px; letter-spacing: 0.2em; opacity: 0.7; }
+.nx-ws-tile .tile-name { font-family: var(--nx-font-display); font-size: 17px; margin-top: 4px; }
+.nx-ws-tile .tile-footer {
+  position: absolute; left: 16px; right: 16px; bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px;
+}
+.nx-ws-tile .disc-stack { display: flex; }
+.nx-ws-tile .disc-stack > * + * { margin-left: -6px; }
