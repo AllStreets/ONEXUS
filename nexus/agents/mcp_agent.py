@@ -25,8 +25,16 @@ from nexus.agents.manifest import Manifest
 
 
 class MCPAgent:
-    def __init__(self, manifest: Manifest):
+    def __init__(
+        self,
+        manifest: Manifest,
+        *,
+        aegis=None,
+        inbox=None,
+    ):
         self._manifest = manifest
+        self._aegis = aegis
+        self._inbox = inbox
         self._session: ClientSession | None = None
         self._process: anyio.abc.Process | None = None
         self._paused = False
@@ -249,4 +257,8 @@ class MCPAgent:
             raise RuntimeError(
                 f"agent {self.slug!r} is not started; call start() first"
             )
+        from nexus.agents._gating import gate_tool_call
+        await gate_tool_call(
+            self.slug, self._manifest, tool_name, args, self._aegis, self._inbox,
+        )
         return await self._session.call_tool(tool_name, arguments=args)
