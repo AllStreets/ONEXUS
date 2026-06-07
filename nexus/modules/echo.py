@@ -118,6 +118,49 @@ class EchoModule(NexusModule):
     )
     version = "1.0.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "echo",
+            "name": "echo",
+            "tagline": "Behavioural fingerprinting and social graph — knows how you think.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "user-modeling",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:echo",
+                                  "gradient": ["#a8e8ff", "#346b9c"]}},
+            "intents": [{
+                "name": "PROFILE",
+                "patterns": [
+                    r"\bbehavioral\b", r"\bfingerprint\b", r"\bstyle\b.*\banalyz\w*\b",
+                    r"\bprofile\b", r"\bwriting\s+style\b", r"\bwho\s+is\b",
+                    r"\brelationship\b", r"\bsocial\s+graph\b", r"\bcontact\b",
+                    r"\buser\s+model\w*\b", r"\becho\b", r"\bpersonalit\w*\b",
+                ],
+                "semantic_signals": [
+                    "behavioral patterns", "fingerprint", "user profile", "writing style",
+                    "who is", "relationships", "social graph", "contacts",
+                    "user modeling", "personality", "how do I usually",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {
+                    "Routine": ["engram.read.workspace"],
+                    "Notable": [],
+                    "Sensitive": [],
+                    "Privileged": ["engram.read.global"],
+                },
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.50, "default_tier": "MONITOR"},
+        })
+
     def __init__(self):
         # Behavioral fingerprinting state
         self._profiles: dict[str, BehavioralProfile] = {}
