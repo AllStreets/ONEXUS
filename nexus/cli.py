@@ -626,5 +626,73 @@ def workspace_destroy(workspace_id, yes):
         raise SystemExit(1)
 
 
+@main.group()
+def agent():
+    """Manage installed agents."""
+    pass
+
+
+@agent.command("install")
+@click.argument("manifest_source")
+@click.option("--dry-run", is_flag=True, help="Show the install plan without persisting.")
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt.")
+def agent_install(manifest_source, dry_run, yes):
+    """Install a manifest from a local path or URL."""
+    from pathlib import Path
+    from nexus.agents.installer import plan_from_manifest_path, install_from_plan
+
+    cfg = NexusConfig()
+    src = Path(manifest_source)
+    if not src.exists():
+        click.echo(f"manifest not found: {manifest_source}", err=True)
+        raise SystemExit(1)
+
+    plan = plan_from_manifest_path(src)
+    click.echo(plan.short_summary())
+    if dry_run:
+        click.echo("(dry run — nothing was installed)")
+        return
+
+    if not yes:
+        if not click.confirm("install this agent?"):
+            return
+    target = install_from_plan(plan, cfg.data_dir)
+    click.echo(f"installed: {plan.slug} -> {target}")
+
+
+@agent.command("uninstall")
+@click.argument("slug")
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt.")
+def agent_uninstall(slug, yes):
+    """Remove an installed agent."""
+    from nexus.agents.installer import uninstall as _uninstall
+
+    if not yes:
+        if not click.confirm(f"uninstall {slug!r}? this removes all its data."):
+            return
+    cfg = NexusConfig()
+    if _uninstall(slug, cfg.data_dir):
+        click.echo(f"uninstalled: {slug}")
+    else:
+        click.echo(f"not installed: {slug}", err=True)
+        raise SystemExit(1)
+
+
+@agent.command("list")
+def agent_list():
+    """List installed agents."""
+    from nexus.agents.installer import installed_slugs, load_installed_manifest
+
+    cfg = NexusConfig()
+    slugs = installed_slugs(cfg.data_dir)
+    if not slugs:
+        click.echo("no installed agents")
+        return
+    for slug in slugs:
+        m = load_installed_manifest(slug, cfg.data_dir)
+        if m is not None:
+            click.echo(f"  {slug:24}  v{m.version}  [{m.publisher.handle}]")
+
+
 if __name__ == "__main__":
     main()
