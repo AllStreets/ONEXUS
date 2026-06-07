@@ -273,6 +273,51 @@ class CouncilModule(NexusModule):
     )
     version = "1.0.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "council",
+            "name": "council",
+            "tagline": "Four-lens deliberation: ethical, verification, lateral, synthesis.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus", "url": "https://github.com/AllStreets/ONEXUS"},
+            "category": "deliberation",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:council",
+                                  "gradient": ["#ffd2a0", "#c47a32"]}},
+            "intents": [{
+                "name": "DELIBERATE",
+                "patterns": [
+                    r"\bshould\s+i\b", r"\bpros\s+and\s+cons\b", r"\bweigh\b", r"\btrade-?off\b",
+                    r"\bdeliberat\w*\b", r"\bnegotiat\w*\b", r"\bethic(al|s)?\b", r"\bmoral(ly)?\b",
+                    r"\bright\s+thing\b", r"\bdecide\b", r"\bdecision\b", r"\bcouncil\b",
+                    r"\bwhat\s+if\b.*\bvs\b", r"\badvise\b", r"\bsimulat\w*\b",
+                    r"\bperspective\b", r"\bdebate\b", r"\bconsider\b",
+                ],
+                "semantic_signals": [
+                    "should i", "pros and cons", "what if", "weigh options", "ethical question",
+                    "negotiate", "decision", "deliberate", "multiple perspectives", "trade-off",
+                    "think through", "advise me", "help me decide", "is it right to",
+                    "simulation", "synthesis", "verification", "lateral thinking",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {
+                    "Routine": ["engram.read.workspace"],
+                    "Notable": [],
+                    "Sensitive": [],
+                    "Privileged": [],
+                },
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.50, "default_tier": "MONITOR"},
+        })
+
     def __init__(self, config: dict[str, Any] | None = None):
         self._config = {**_DEFAULT_CONFIG, **(config or {})}
         self._modules: dict[str, NexusModule] = {}
