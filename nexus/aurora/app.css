@@ -247,3 +247,36 @@
   font-size: 9.5px; opacity: 0.4; margin-left: auto;
   font-family: var(--nx-font-mono);
 }
+
+/* ── Settings surface ────────────────────────────────────────────────────── */
+.nx-settings-shell {
+  display: grid; grid-template-columns: 200px 1fr; gap: 24px;
+  margin-top: 12px;
+}
+.nx-settings-tabs {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.nx-settings-tabs button {
+  text-align: left; padding: 8px 12px; border-radius: 8px;
+  background: transparent; border: 0; color: inherit;
+  font: inherit; font-size: 13px; opacity: 0.7; cursor: pointer;
+}
+.nx-settings-tabs button:hover { opacity: 1; }
+.nx-settings-tabs button.active { background: rgba(255,255,255,0.06); opacity: 1; }
+.nx-settings-panel { padding: 22px 26px; }
+.nx-settings-panel h3 { margin: 0 0 12px; font-family: var(--nx-font-display); }
+
+/* ── First-use permission prompt (slides in from bottom-right) ───────────── */
+.nx-prompt-overlay {
+  position: fixed; right: 24px; bottom: 24px; z-index: 40;
+  max-width: 380px;
+}
+.nx-prompt-card { padding: 18px 20px; }
+
+/* ── Install review modal (full-screen) ──────────────────────────────────── */
+.nx-install-overlay {
+  position: fixed; inset: 0; z-index: 55;
+  background: rgba(6, 4, 12, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+}

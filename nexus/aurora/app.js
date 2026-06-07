@@ -328,6 +328,200 @@ function renderSpatialCard(a) {
     </div>`;
 }
 
+// ── Settings surface ─────────────────────────────────────────────────────
+
+async function renderSettings() {
+  const v = document.getElementById("nx-view");
+  v.innerHTML = `
+    <div class="nx-settings-shell">
+      <nav class="nx-settings-tabs" id="nx-settings-tabs">
+        <button data-tab="general" class="active">General</button>
+        <button data-tab="workspaces">Workspaces</button>
+        <button data-tab="agents">Agents</button>
+        <button data-tab="security">Security</button>
+        <button data-tab="providers">Providers</button>
+        <button data-tab="about">About</button>
+      </nav>
+      <section class="nx-settings-panel nx-card" id="nx-settings-panel"></section>
+    </div>`;
+  selectSettingsTab("general");
+  document.querySelectorAll("#nx-settings-tabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#nx-settings-tabs button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectSettingsTab(btn.dataset.tab);
+    });
+  });
+}
+
+function selectSettingsTab(tab) {
+  const panel = document.getElementById("nx-settings-panel");
+  if (!panel) return;
+  if (tab === "general") {
+    panel.innerHTML = `
+      <h3>General</h3>
+      <div class="nx-dim">Theme, mood preferences, accessibility toggles — v2.</div>
+      <div style="margin-top:14px">
+        <label style="display:flex;gap:10px;align-items:center;font-size:13px">
+          <input type="checkbox" id="nx-reduce-motion-toggle">
+          Reduce motion (also respects OS setting)
+        </label>
+      </div>`;
+  } else if (tab === "agents") {
+    panel.innerHTML = `
+      <h3>Agents</h3>
+      <button class="nx-pill" id="nx-install-from-file">Install from manifest…</button>
+      <div id="nx-installed-list" style="margin-top:18px"></div>`;
+    document.getElementById("nx-install-from-file").addEventListener("click", openInstallReview);
+    fetch("/api/spatial/agents").then(r => r.json()).then(b => {
+      const installed = b.agents.filter(a => !a.system);
+      document.getElementById("nx-installed-list").innerHTML = installed.length
+        ? installed.map(a => `<div style="padding:8px 0;border-bottom:1px solid var(--nx-hairline)">${escapeHtml(a.name)} <span class="nx-dim">v${a.version}</span></div>`).join("")
+        : `<div class="nx-dim">No installed agents yet.</div>`;
+    });
+  } else if (tab === "security") {
+    panel.innerHTML = `<h3>Security</h3><div class="nx-dim">Permission grants and trust history — v2.</div>`;
+  } else if (tab === "workspaces") {
+    panel.innerHTML = `<h3>Workspaces</h3><div class="nx-dim">Use ⌘K to manage workspaces.</div>`;
+  } else if (tab === "providers") {
+    panel.innerHTML = `<h3>Providers</h3><div class="nx-dim">LLM provider configuration — v2.</div>`;
+  } else if (tab === "about") {
+    panel.innerHTML = `<h3>About</h3>
+      <div class="nx-dim">NEXUS · the agent OS.</div>
+      <div class="nx-mono nx-softer" style="margin-top:10px">Aurora · Phase 5</div>`;
+  }
+}
+
+// ── Install review modal ──────────────────────────────────────────────────
+
+function openInstallReview() {
+  const root = document.getElementById("nx-overlay-root");
+  root.innerHTML = `
+    <div class="nx-install-overlay" id="nx-install-overlay">
+      <div class="nx-card" style="max-width:560px;width:90%;padding:22px 24px">
+        <h3 style="margin:0 0 12px">Install agent</h3>
+        <p class="nx-dim" style="font-size:12px">Paste a manifest.json to review the install plan.</p>
+        <textarea id="nx-install-text" class="nx-card" rows="10"
+          style="width:100%;padding:10px;font-family:var(--nx-font-mono);font-size:11px;color:inherit;background:transparent;border:1px solid var(--nx-card-border)"></textarea>
+        <div id="nx-install-plan" style="margin-top:14px"></div>
+        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="nx-pill" id="nx-install-cancel">Cancel</button>
+          <button class="nx-pill" id="nx-install-review-btn">Review plan</button>
+          <button class="nx-pill" id="nx-install-confirm" style="background:rgba(168,180,255,0.18);border-color:rgba(168,180,255,0.34);display:none">Install</button>
+        </div>
+      </div>
+    </div>`;
+  let lastManifest = null;
+  document.getElementById("nx-install-cancel").addEventListener("click", () => { root.innerHTML = ""; });
+  document.getElementById("nx-install-review-btn").addEventListener("click", async () => {
+    try {
+      lastManifest = JSON.parse(document.getElementById("nx-install-text").value);
+    } catch (err) {
+      document.getElementById("nx-install-plan").innerHTML = `<div style="color:var(--nx-privileged)">Invalid JSON: ${escapeHtml(err.message)}</div>`;
+      return;
+    }
+    const r = await fetch("/api/agents/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manifest: lastManifest, confirm: false }),
+    });
+    if (!r.ok) {
+      const err = await r.json();
+      document.getElementById("nx-install-plan").innerHTML = `<div style="color:var(--nx-privileged)">${escapeHtml(JSON.stringify(err))}</div>`;
+      return;
+    }
+    const body = await r.json();
+    document.getElementById("nx-install-plan").innerHTML = renderInstallPlan(body.plan);
+    document.getElementById("nx-install-confirm").style.display = "";
+  });
+  document.getElementById("nx-install-confirm").addEventListener("click", async () => {
+    if (!lastManifest) return;
+    const r = await fetch("/api/agents/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manifest: lastManifest, confirm: true }),
+    });
+    if (r.ok) {
+      root.innerHTML = `<div class="nx-install-overlay"><div class="nx-card" style="padding:20px 24px">Installed.</div></div>`;
+      setTimeout(() => { root.innerHTML = ""; }, 1200);
+    }
+  });
+}
+
+function renderInstallPlan(plan) {
+  const accent = { Routine: "var(--nx-routine)", Notable: "var(--nx-notable)", Sensitive: "var(--nx-sensitive)", Privileged: "var(--nx-privileged)" };
+  return `
+    <div style="font-size:13px;line-height:1.6">
+      <div><strong>${escapeHtml(plan.name)} v${plan.version}</strong> by ${escapeHtml(plan.publisher)} · ${escapeHtml(plan.license)}</div>
+      <div class="nx-dim" style="margin-top:4px">${escapeHtml(plan.tagline || "")}</div>
+      <div style="margin-top:12px">
+        ${plan.groups.filter(g => g.capabilities.length).map(g => `
+          <div style="margin-top:8px">
+            <span style="color:${accent[g.permission_class]||"#fff"};font-family:var(--nx-font-mono);font-size:11px">${g.permission_class}</span>
+            <span class="nx-dim" style="font-family:var(--nx-font-mono);font-size:11.5px">${g.capabilities.join(", ")}</span>
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+
+// ── First-use prompt polling ──────────────────────────────────────────────
+const _shownTickets = new Set();
+async function pollPermissions() {
+  try {
+    const r = await fetch("/api/permissions/pending");
+    if (!r.ok) return;
+    const body = await r.json();
+    const pending = body.pending || [];
+    if (pending.length === 0) {
+      _shownTickets.clear();
+      return;
+    }
+    const ticket = pending[0];
+    if (_shownTickets.has(ticket.id)) return;
+    _shownTickets.add(ticket.id);
+    renderPermissionPrompt(ticket);
+  } catch {}
+}
+setInterval(pollPermissions, 1500);
+
+function renderPermissionPrompt(t) {
+  const root = document.getElementById("nx-overlay-root");
+  // Don't replace install overlay if visible
+  if (document.getElementById("nx-install-overlay")) return;
+  const ws = t.workspace_id || "—";
+  root.insertAdjacentHTML("beforeend", `
+    <div class="nx-prompt-overlay" id="nx-prompt-${t.id}">
+      <div class="nx-prompt-card nx-card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          ${agentDisc(t.agent_slug, { size: 28 })}
+          <div>
+            <div style="font-size:13px;font-weight:500">${escapeHtml(t.agent_slug)} wants <span class="nx-mono" style="font-size:12px">${escapeHtml(t.capability)}</span></div>
+            <div class="nx-dim" style="font-size:11px;margin-top:2px">workspace · ${escapeHtml(ws)}</div>
+          </div>
+          <span class="nx-pc nx-pc-${t.permission_class.toLowerCase()}" style="margin-left:auto">${t.permission_class}</span>
+        </div>
+        <div class="nx-dim" style="font-size:12px;margin-bottom:12px">${escapeHtml(t.preview || "")}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="nx-pill" data-decision="allow_once">Allow once</button>
+          <button class="nx-pill" data-decision="allow_always_in_workspace">Always in <strong>${escapeHtml(ws)}</strong></button>
+          <button class="nx-pill" data-decision="allow_always_everywhere">Always for ${escapeHtml(t.agent_slug)}, everywhere</button>
+          <button class="nx-pill" data-decision="deny" style="background:rgba(248,100,120,0.12);border-color:rgba(248,100,120,0.34);color:#ffd0d4">Don't allow</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(`nx-prompt-${t.id}`);
+  el.querySelectorAll("button[data-decision]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await fetch("/api/permissions/decide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticket_id: t.id, decision: btn.dataset.decision }),
+      });
+      el.remove();
+    });
+  });
+}
+
 // ── Router ───────────────────────────────────────────────────────────────
 async function route(hash) {
   await loadWorkspaces();
@@ -338,6 +532,10 @@ async function route(hash) {
   }
   if (hash === "#/spatial") {
     renderSpatial();
+    return;
+  }
+  if (hash === "#/settings") {
+    renderSettings();
     return;
   }
   if (hash.startsWith("#/conversation/")) {
@@ -556,6 +754,9 @@ document.getElementById("nx-workspaces-btn").addEventListener("click", () => {
 document.getElementById("nx-cockpit-btn").addEventListener("click", toggleCockpit);
 document.getElementById("nx-spatial-btn").addEventListener("click", () => {
   location.hash = "#/spatial";
+});
+document.getElementById("nx-settings-btn").addEventListener("click", () => {
+  location.hash = "#/settings";
 });
 
 // ── Keybinds ─────────────────────────────────────────────────────────────
