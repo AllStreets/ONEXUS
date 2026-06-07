@@ -1,0 +1,125 @@
+/* NEXUS Aurora — design tokens
+ * Spec: docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §10–11
+ */
+:root {
+  /* base surface */
+  --nx-bg: #0c0a14;
+  --nx-text-high: #f0e9ff;
+  --nx-text-mid: #e8e4f0;
+  --nx-text-dim: rgba(232, 228, 240, 0.62);
+  --nx-text-softer: rgba(232, 228, 240, 0.42);
+  --nx-hairline: rgba(255, 255, 255, 0.07);
+
+  /* glass card */
+  --nx-card-bg: rgba(255, 255, 255, 0.05);
+  --nx-card-border: rgba(255, 255, 255, 0.08);
+  --nx-card-radius: 14px;
+  --nx-card-blur: 20px;
+  --nx-card-saturate: 140%;
+
+  /* permission class accents */
+  --nx-routine:    #9affb6; /* jewel green */
+  --nx-notable:    #a8b4ff; /* calm violet-blue */
+  --nx-sensitive:  #f8c460; /* warm amber */
+  --nx-privileged: #f86078; /* coral */
+
+  /* trust event temperatures */
+  --nx-trust-rising:   #f8c460; /* warm gold */
+  --nx-trust-falling:  #8cb8d4; /* cool steel */
+  --nx-trust-collapse: #f8643c; /* hot crimson */
+
+  /* workspace home tones (5 named) */
+  --nx-tone-indigo-a:  #5a6cd0;
+  --nx-tone-indigo-b:  #2c3a78;
+  --nx-tone-magenta-a: #c060a0;
+  --nx-tone-magenta-b: #5e2050;
+  --nx-tone-sage-a:    #88a888;
+  --nx-tone-sage-b:    #3e5840;
+  --nx-tone-plum-a:    #7e5ea0;
+  --nx-tone-plum-b:    #2c1c44;
+  --nx-tone-amber-a:   #e8a06c;
+  --nx-tone-amber-b:   #844820;
+
+  /* type */
+  --nx-font-display: "Inter Display", "SF Pro Display", -apple-system, system-ui, sans-serif;
+  --nx-font-ui:      "Inter", "SF Pro Text", -apple-system, system-ui, sans-serif;
+  --nx-font-mono:    "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* sizing */
+  --nx-radius-sm: 8px;
+  --nx-radius-md: 12px;
+  --nx-radius-lg: 16px;
+  --nx-pad-card: 18px;
+
+  /* eyebrow label */
+  --nx-eyebrow-size: 9.5px;
+  --nx-eyebrow-tracking: 0.22em;
+}
+
+/* reset minimal */
+* { box-sizing: border-box; }
+html { background: var(--nx-bg); color-scheme: dark; }
+body {
+  margin: 0;
+  background: var(--nx-bg);
+  color: var(--nx-text-mid);
+  font-family: var(--nx-font-ui);
+  letter-spacing: -0.005em;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+.nx-display { font-family: var(--nx-font-display); font-weight: 500; letter-spacing: -0.02em; }
+.nx-mono    { font-family: var(--nx-font-mono); font-feature-settings: "ss01", "ss02"; }
+.nx-eyebrow {
+  font-size: var(--nx-eyebrow-size);
+  letter-spacing: var(--nx-eyebrow-tracking);
+  text-transform: uppercase;
+  opacity: 0.55;
+  font-weight: 500;
+}
+.nx-dim    { opacity: 0.62; }
+.nx-softer { opacity: 0.42; }
+
+.nx-card {
+  background: var(--nx-card-bg);
+  backdrop-filter: blur(var(--nx-card-blur)) saturate(var(--nx-card-saturate));
+  -webkit-backdrop-filter: blur(var(--nx-card-blur)) saturate(var(--nx-card-saturate));
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-card-radius);
+}
+.nx-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--nx-card-bg);
+  border: 1px solid var(--nx-card-border);
+  font-size: 11px;
+}
+
+/* permission class pills */
+.nx-pc          { padding: 2px 9px; border-radius: 999px; font-size: 11px;
+                  display: inline-flex; align-items: center; gap: 5px; }
+.nx-pc::before  { content: ""; width: 7px; height: 7px; border-radius: 50%; }
+.nx-pc-routine   { background: rgba(154,255,182,0.10); color: #b8f4cc; border: 1px solid rgba(154,255,182,0.22); }
+.nx-pc-routine::before   { background: var(--nx-routine);   box-shadow: 0 0 6px var(--nx-routine); }
+.nx-pc-notable   { background: rgba(168,180,255,0.10); color: #c6cfff; border: 1px solid rgba(168,180,255,0.25); }
+.nx-pc-notable::before   { background: var(--nx-notable);   box-shadow: 0 0 6px var(--nx-notable); }
+.nx-pc-sensitive { background: rgba(248,196,96,0.10); color: #f8d480; border: 1px solid rgba(248,196,96,0.28); }
+.nx-pc-sensitive::before { background: var(--nx-sensitive); box-shadow: 0 0 6px var(--nx-sensitive); }
+.nx-pc-privileged{ background: rgba(248,100,120,0.10); color: #ffb8c0; border: 1px solid rgba(248,100,120,0.30); }
+.nx-pc-privileged::before{ background: var(--nx-privileged);box-shadow: 0 0 6px var(--nx-privileged); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* prefers-reduced-data → drop the mesh entirely */
+@media (prefers-reduced-data: reduce) {
+  .nx-mood { background-image: none !important; }
+  .nx-mood::before, .nx-mood::after { display: none !important; }
+}
