@@ -252,58 +252,109 @@ git commit -m "feat(workspaces): add WorkspaceConfig pydantic model with Routing
 
 ## Task 2 · WorkspaceManager
 
-*(details TBD)*
+**Status: DONE** — commit `160984e`
+
+`nexus/workspaces/manager.py` — CRUD + active pointer.
+Storage: `<root>/.active` + `<root>/<id>/workspace.json`.
+8 tests in `tests/workspaces/test_manager.py`.
 
 ---
 
 ## Task 3 · Engram.partition()
 
-*(details TBD)*
+**Status: DONE** — commit `3360c39`
+
+`Engram.partition(workspace_root)` added to `nexus/kernel/engram.py`.
+Creates `<ws_root>/engram/episodic.sqlite` — fully isolated per workspace.
+6 tests in `tests/workspaces/test_engram_partition.py`.
 
 ---
 
 ## Task 4 · SQLite-backed grants store
 
-*(details TBD)*
+**Status: DONE** — commit `cdc3877`
+
+`nexus/workspaces/grants.py` — `GrantsStore` with grant/revoke/has/list.
+Unique constraint on (agent_slug, capability, scope). Idempotent grant().
+11 tests in `tests/workspaces/test_grants.py`.
 
 ---
 
 ## Task 5 · Six built-in workspace templates
 
-*(details TBD)*
+**Status: DONE** — commit `c7c04af`
+
+`nexus/workspaces/templates.py` — `TEMPLATES` dict + `apply_template()`.
+Templates: coding/INDIGO, design/MAGENTA, research/SAGE, writing/PLUM,
+personal/AMBER, blank. 14 tests in `tests/workspaces/test_templates.py`.
 
 ---
 
 ## Task 6 · MoodEngine
 
-*(details TBD)*
+**Status: DONE** — commit `b71a87f`
+
+`nexus/workspaces/mood.py` — `MoodEngine.evaluate(MoodSignals) → MoodResult`.
+8 mood states (Alert > Watchful > Routing > Creative > Deliberating > Reflective
+> Deep Flow > Calm Focus). 3 trust overlays. Tone-to-CSS gradient hints.
+24 tests in `tests/workspaces/test_mood.py`.
 
 ---
 
 ## Task 7 · WorkspaceRuntime (process supervisor)
 
-*(details TBD)*
+**Status: DONE** — commit `0f3d3af`
+
+`nexus/workspaces/runtime.py` — `WorkspaceRuntime` with register_external/
+register_module, activate() SIGCONT/flag-clear, deactivate() SIGSTOP/flag-set,
+stop_all() terminate. 15 tests in `tests/workspaces/test_runtime.py`.
 
 ---
 
 ## Task 8 · Cortex pin resolution
 
-*(details TBD)*
+**Status: DONE** — commit `c39c55e`
+
+`Cortex.set_workspace_config(WorkspaceConfig)` loads routing pins.
+Pin check happens before semantic scoring; falls through if agent unloaded.
+7 tests in `tests/workspaces/test_cortex_pins.py`.
 
 ---
 
 ## Task 9 · CLI workspace commands
 
-*(details TBD)*
+**Status: DONE** — commit `c8c6978`
+
+`onexus workspace list/create/switch/destroy` added to `nexus/cli.py`.
+create supports --name/--id/--tone/--template. list marks active with *.
+11 CLI tests in `tests/workspaces/test_cli_workspace.py`.
 
 ---
 
 ## Task 10 · End-to-end smoke test
 
-*(details TBD)*
+**Status: DONE** — commit `1d57691`
+
+`tests/workspaces/test_e2e_smoke.py` — single test exercises all 8 subsystems:
+template → Engram partition → GrantsStore → Runtime pause/wake → Cortex pins
+→ MoodEngine → destroy. 1 test, all layers wired.
 
 ---
 
 ## Task 11 · Docs + tag phase-3
 
-*(details TBD)*
+**Status: DONE** — plan updated, phase-3 tag pushed.
+
+**Final test count:** 873 passing (784 baseline + 89 new workspace-layer tests).
+Zero regressions. 28 pre-existing failures unchanged (aegis attribute errors,
+legacy integration failures — unrelated to workspace layer).
+
+**New modules delivered:**
+- `nexus/workspaces/manager.py`
+- `nexus/workspaces/grants.py`
+- `nexus/workspaces/templates.py`
+- `nexus/workspaces/mood.py`
+- `nexus/workspaces/runtime.py`
+- `nexus/kernel/engram.py` (partition() added)
+- `nexus/kernel/cortex.py` (set_workspace_config() + pin resolution added)
+- `nexus/cli.py` (workspace group added)
