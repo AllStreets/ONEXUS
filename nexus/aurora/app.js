@@ -303,10 +303,210 @@ async function route(hash) {
 window.addEventListener("hashchange", () => route(location.hash));
 route(location.hash);
 
+// ── Cockpit overlay ──────────────────────────────────────────────────────
+
+/**
+ * toggleCockpit — open or close the Cockpit observability overlay (Cmd-`).
+ * Six panels: Pulse waveform · Residents · Trust gradient · Last route ·
+ * Chronicle tail · Network / Engram stats.
+ */
+async function toggleCockpit() {
+  const root = document.getElementById("nx-overlay-root");
+  // If already open, close it.
+  if (root.querySelector(".nx-cockpit-overlay")) {
+    closeOverlay();
+    return;
+  }
+
+  // Render loading shell immediately.
+  root.innerHTML = `
+    <div class="nx-cockpit-overlay" id="nx-cockpit-overlay">
+      <div class="nx-cockpit">
+        <div class="nx-cockpit-scan"></div>
+        <div class="nx-cockpit-header">
+          <span class="nx-cockpit-title">COCKPIT</span>
+          <button class="nx-cockpit-close" id="nx-cockpit-close">ESC</button>
+        </div>
+        <div class="nx-cockpit-grid" id="nx-cockpit-grid">
+          <div class="nx-cockpit-panel span2 row2" id="cp-pulse">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Pulse waveform</span>
+              <span class="nx-cockpit-panel-badge">60s</span>
+            </div>
+            <svg width="100%" height="80" id="cp-pulse-svg" viewBox="0 0 240 80" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="nx-cockpit-panel" id="cp-residents">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Residents</span>
+            </div>
+            <div id="cp-residents-body" class="nx-dim" style="font-size:11px">loading…</div>
+          </div>
+          <div class="nx-cockpit-panel" id="cp-trust">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Trust gradient</span>
+            </div>
+            <div id="cp-trust-body">loading…</div>
+          </div>
+          <div class="nx-cockpit-panel" id="cp-last-route">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Last route</span>
+            </div>
+            <div id="cp-last-route-body" class="nx-dim">—</div>
+          </div>
+          <div class="nx-cockpit-panel span2" id="cp-chronicle">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Chronicle tail</span>
+            </div>
+            <div id="cp-chronicle-body" class="nx-dim">loading…</div>
+          </div>
+          <div class="nx-cockpit-panel" id="cp-network">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Network · Engram</span>
+            </div>
+            <div id="cp-network-body" class="nx-dim">loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById("nx-cockpit-close").addEventListener("click", closeOverlay);
+  document.getElementById("nx-cockpit-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "nx-cockpit-overlay") closeOverlay();
+  });
+
+  // Fetch both in parallel.
+  const [snapRes, pulseRes] = await Promise.all([
+    fetch("/api/cockpit/snapshot").catch(() => null),
+    fetch("/api/cockpit/pulse-rate").catch(() => null),
+  ]);
+
+  const snap = snapRes && snapRes.ok ? await snapRes.json() : null;
+  const pulseData = pulseRes && pulseRes.ok ? await pulseRes.json() : null;
+
+  _renderPulse(pulseData);
+  _renderResidents(snap);
+  _renderTrust(snap);
+  _renderLastRoute(snap);
+  _renderChronicle(snap);
+  _renderNetwork(snap);
+}
+
+function _renderPulse(data) {
+  const svg = document.getElementById("cp-pulse-svg");
+  if (!svg || !data || !data.points || data.points.length === 0) return;
+  const pts = data.points;
+  const n = pts.length;
+  const W = 240, H = 80;
+  const maxChron = Math.max(1, ...pts.map(p => p.chronicle));
+  const maxCortex = Math.max(1, ...pts.map(p => p.cortex_route));
+  const maxAegis  = Math.max(1, ...pts.map(p => p.aegis_check));
+
+  function toPath(vals, maxVal) {
+    const step = W / (n - 1 || 1);
+    return vals.map((v, i) => {
+      const x = i * step;
+      const y = H - 8 - (v / maxVal) * (H - 16);
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+  }
+
+  svg.innerHTML = `
+    <path class="nx-cockpit-trace cyan"   d="${toPath(pts.map(p => p.chronicle),    maxChron)}"/>
+    <path class="nx-cockpit-trace violet" d="${toPath(pts.map(p => p.cortex_route), maxCortex)}"/>
+    <path class="nx-cockpit-trace amber"  d="${toPath(pts.map(p => p.aegis_check),  maxAegis)}"/>`;
+}
+
+function _renderResidents(snap) {
+  const el = document.getElementById("cp-residents-body");
+  if (!el) return;
+  const modules = snap && snap.residents ? snap.residents : [];
+  if (modules.length === 0) {
+    el.textContent = "(no data)";
+    return;
+  }
+  el.innerHTML = modules.map(m =>
+    `<div style="padding:2px 0;opacity:0.8">${escapeHtml(String(m))}</div>`
+  ).join("");
+}
+
+function _renderTrust(snap) {
+  const el = document.getElementById("cp-trust-body");
+  if (!el) return;
+  const policies = snap && snap.trust_gradient ? snap.trust_gradient : [];
+  if (policies.length === 0) {
+    el.innerHTML = `<span class="nx-dim">(no data)</span>`;
+    return;
+  }
+  const top = policies.slice(0, 6);
+  el.innerHTML = top.map(p => {
+    const trust = typeof p.trust_score === "number" ? p.trust_score : (p.trust || 0);
+    const pct = Math.round(trust * 100);
+    return `<div class="nx-cockpit-bar-row">
+      <span class="nx-cockpit-bar-label" title="${escapeHtml(p.module)}">${escapeHtml(p.module)}</span>
+      <div class="nx-cockpit-bar-track">
+        <div class="nx-cockpit-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <span style="opacity:0.5;font-size:10px;width:28px;text-align:right">${pct}</span>
+    </div>`;
+  }).join("");
+}
+
+function _renderLastRoute(snap) {
+  const el = document.getElementById("cp-last-route-body");
+  if (!el) return;
+  const route = snap && snap.last_route;
+  if (!route) {
+    el.textContent = "(no recent route)";
+    return;
+  }
+  const target = (route.payload || {}).target || "—";
+  const ts = (route.timestamp || "").slice(11, 19);
+  el.innerHTML = `
+    <div style="opacity:0.5;font-size:10px;margin-bottom:4px">${escapeHtml(ts)}</div>
+    <div style="color:#88d4ff">${escapeHtml(target)}</div>
+    <div style="opacity:0.5;font-size:10px;margin-top:4px">${escapeHtml(route.source || "")} · ${escapeHtml(route.action || "")}</div>`;
+}
+
+function _renderChronicle(snap) {
+  const el = document.getElementById("cp-chronicle-body");
+  if (!el) return;
+  const tail = snap && snap.chronicle_tail ? snap.chronicle_tail : [];
+  if (tail.length === 0) {
+    el.textContent = "(no data)";
+    return;
+  }
+  el.innerHTML = tail.slice(0, 8).map(ev => {
+    const ts = (ev.timestamp || "").slice(11, 19);
+    return `<div class="nx-cockpit-tail-row">
+      <span style="opacity:0.4;margin-right:8px">${escapeHtml(ts)}</span>
+      <span style="color:#c8a8ff">${escapeHtml(ev.source || "")}</span>
+      <span style="opacity:0.5;margin:0 4px">·</span>
+      <span>${escapeHtml(ev.action || "")}</span>
+    </div>`;
+  }).join("");
+}
+
+function _renderNetwork(snap) {
+  const el = document.getElementById("cp-network-body");
+  if (!el) return;
+  const stats = snap && snap.engram_stats ? snap.engram_stats : {};
+  const network = snap && snap.network ? snap.network : [];
+  el.innerHTML = `
+    <div class="nx-cockpit-stat-row">
+      <span>network gates</span>
+      <span class="nx-cockpit-stat-val">${network.length > 0 ? network.length : "—"}</span>
+    </div>
+    <div class="nx-cockpit-stat-row">
+      <span>engram partitions</span>
+      <span class="nx-cockpit-stat-val">${Object.keys(stats).length > 0 ? Object.keys(stats).length : "—"}</span>
+    </div>`;
+}
+
 // ── Header buttons ───────────────────────────────────────────────────────
 document.getElementById("nx-workspaces-btn").addEventListener("click", () => {
   loadWorkspaces().then(renderSwitcher);
 });
+document.getElementById("nx-cockpit-btn").addEventListener("click", toggleCockpit);
 
 // ── Keybinds ─────────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {

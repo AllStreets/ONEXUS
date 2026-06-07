@@ -261,6 +261,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.mood import router as mood_router
     app.include_router(mood_router)
 
+    from nexus.api.routes.cockpit import router as cockpit_router
+    app.include_router(cockpit_router)
+
     from nexus.api.routes.workspaces import router as workspaces_router
     app.include_router(workspaces_router)
 

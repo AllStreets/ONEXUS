@@ -111,3 +111,102 @@
 .nx-conv-roster-row {
   display: flex; align-items: center; padding: 5px 0; font-size: 12.5px;
 }
+
+/* ── Cockpit overlay — Signal aesthetic ──────────────────────────────────── */
+.nx-cockpit-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(6, 8, 12, 0.85);
+  backdrop-filter: blur(14px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6vh 5vw;
+  overflow: auto;
+}
+.nx-cockpit {
+  width: 100%; max-width: 1100px;
+  background-image:
+    linear-gradient(rgba(168,184,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,184,255,0.025) 1px, transparent 1px);
+  background-size: 18px 18px;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.nx-cockpit-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.nx-cockpit-title {
+  font-family: var(--nx-font-display); font-size: 15px; letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.nx-cockpit-close {
+  background: none; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: inherit; cursor: pointer;
+  font: inherit; font-size: 11px; opacity: 0.6; padding: 4px 10px;
+}
+.nx-cockpit-close:hover { opacity: 1; }
+/* Scanline sweep */
+.nx-cockpit-scan {
+  position: absolute; inset: 0; pointer-events: none; border-radius: 16px; overflow: hidden;
+}
+.nx-cockpit-scan::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(transparent 0%, rgba(168,200,255,0.04) 50%, transparent 100%);
+  background-size: 100% 6px;
+  animation: nx-scan 8s linear infinite;
+}
+@keyframes nx-scan { to { transform: translateY(100%); } }
+/* 4-column grid */
+.nx-cockpit-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr;
+  gap: 14px;
+}
+.nx-cockpit-panel {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: var(--nx-font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  min-height: 120px;
+}
+.nx-cockpit-panel.span2 { grid-column: span 2; }
+.nx-cockpit-panel.row2  { grid-row: span 2; }
+.nx-cockpit-panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.nx-cockpit-panel-label {
+  font-size: 9px; letter-spacing: 0.18em; opacity: 0.55; text-transform: uppercase;
+}
+.nx-cockpit-panel-badge {
+  font-size: 9px; opacity: 0.4; font-family: var(--nx-font-mono);
+}
+/* SVG trace colours */
+.nx-cockpit-trace { stroke-width: 1.2; fill: none; stroke-linecap: round; }
+.nx-cockpit-trace.cyan   { stroke: #88d4ff; }
+.nx-cockpit-trace.violet { stroke: #c8a8ff; opacity: 0.7; }
+.nx-cockpit-trace.amber  { stroke: #ffc080; opacity: 0.6; }
+/* Trust bar */
+.nx-cockpit-bar-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 5px; font-size: 11px;
+}
+.nx-cockpit-bar-label { width: 80px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.7; }
+.nx-cockpit-bar-track {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.07);
+  position: relative;
+}
+.nx-cockpit-bar-fill {
+  position: absolute; top: 0; left: 0; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, #8ab4ff, #c8a8ff);
+  transition: width 0.4s ease;
+}
+.nx-cockpit-tail-row { opacity: 0.7; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-cockpit-stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; opacity: 0.75; }
+.nx-cockpit-stat-val { color: #88d4ff; font-family: var(--nx-font-mono); }
