@@ -261,4 +261,6 @@ class MCPAgent:
         await gate_tool_call(
             self.slug, self._manifest, tool_name, args, self._aegis, self._inbox,
         )
-        return await self._session.call_tool(tool_name, arguments=args)
+        from nexus.context import as_agent
+        async with as_agent(self.slug):
+            return await self._session.call_tool(tool_name, arguments=args)

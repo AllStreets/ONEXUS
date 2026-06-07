@@ -58,22 +58,24 @@ class InProcessAgent:
         if self._aegis is not None:
             await self._gate(tool_name, args)
 
-        # Dispatch
-        if tool_name == "handle":
-            message = args.get("message", "")
-            context = args.get("context", {})
-            return await self._module.handle(message, context)
+        from nexus.context import as_agent
+        async with as_agent(self.slug):
+            # Dispatch
+            if tool_name == "handle":
+                message = args.get("message", "")
+                context = args.get("context", {})
+                return await self._module.handle(message, context)
 
-        # Future: dispatch to other declared tools by method name.
-        method = getattr(self._module, tool_name, None)
-        if method is None:
-            raise AttributeError(
-                f"agent {self.slug!r} declares tool {tool_name!r} but the "
-                f"module has no method by that name"
-            )
-        # Strip workspace_id from kwargs before forwarding to the module method
-        method_args = {k: v for k, v in args.items() if k != "workspace_id"}
-        return await method(**method_args)
+            # Future: dispatch to other declared tools by method name.
+            method = getattr(self._module, tool_name, None)
+            if method is None:
+                raise AttributeError(
+                    f"agent {self.slug!r} declares tool {tool_name!r} but the "
+                    f"module has no method by that name"
+                )
+            # Strip workspace_id from kwargs before forwarding to the module method
+            method_args = {k: v for k, v in args.items() if k != "workspace_id"}
+            return await method(**method_args)
 
     # ── gating ───────────────────────────────────────────────────────────────
 
