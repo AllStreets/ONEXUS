@@ -132,12 +132,170 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+// ── Conversation surface ─────────────────────────────────────────────────
+async function renderConversation(workspaceId) {
+  const v = document.getElementById("nx-view");
+  // Fetch workspace details
+  let ws = state.workspaces.find(w => w.workspace_id === workspaceId);
+  if (!ws) {
+    const r = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}`);
+    if (r.ok) ws = await r.json();
+  }
+  if (!ws) {
+    v.innerHTML = `<div class="nx-empty nx-dim">workspace not found: ${workspaceId}</div>`;
+    return;
+  }
+  v.innerHTML = `
+    <div class="nx-conv-grid">
+      <aside class="nx-conv-left">
+        <div class="nx-eyebrow" style="margin-bottom:10px">Workspaces</div>
+        <div id="nx-conv-ws-list"></div>
+        <div class="nx-eyebrow" style="margin:24px 0 10px">Roster</div>
+        <div id="nx-conv-roster"></div>
+      </aside>
+      <section class="nx-conv-center">
+        <header class="nx-conv-header">
+          <div class="nx-display" style="font-size:24px">${escapeHtml(ws.name)}</div>
+          <div class="nx-dim" style="font-size:12.5px;margin-top:4px">${ws.routing_pins ? ws.routing_pins.length : (ws.pins ? ws.pins.length : 0)} pins · ${ws.resident_agents.length} agents resident</div>
+        </header>
+        <div id="nx-conv-thread" class="nx-conv-thread"></div>
+        <form id="nx-conv-input" class="nx-conv-input">
+          <span class="nx-conv-kernel">${KERNEL_MARK(14)}</span>
+          <input id="nx-conv-text" placeholder="Ask anything, or @ to call a specific agent…">
+          <span class="nx-mono nx-softer">⌘K</span>
+        </form>
+      </section>
+      <aside class="nx-conv-right">
+        <div class="nx-eyebrow" style="margin-bottom:10px">Ambient</div>
+        <div class="nx-card" id="nx-conv-mood" style="padding:14px;margin-bottom:12px"></div>
+        <div class="nx-eyebrow" style="margin-bottom:10px">Recent</div>
+        <div id="nx-conv-recent" style="font-size:12px;line-height:1.6"></div>
+      </aside>
+    </div>`;
+
+  // Workspaces mini-list (left)
+  document.getElementById("nx-conv-ws-list").innerHTML = state.workspaces.map(w => `
+    <div class="nx-conv-ws ${w.workspace_id === workspaceId ? "active" : ""}"
+         data-id="${w.workspace_id}">${escapeHtml(w.name)}</div>
+  `).join("");
+  document.querySelectorAll(".nx-conv-ws").forEach(el => {
+    el.addEventListener("click", () => {
+      location.hash = `#/conversation/${el.dataset.id}`;
+    });
+  });
+
+  // Roster (left)
+  const roster = ws.resident_agents.map(slug => `
+    <div class="nx-conv-roster-row">
+      ${agentDisc(slug, { size: 22 })}
+      <span style="margin-left:8px">${slug}</span>
+    </div>
+  `).join("");
+  document.getElementById("nx-conv-roster").innerHTML = roster || `<span class="nx-softer">no agents resident</span>`;
+
+  // Mood card (right)
+  await refreshMoodCard();
+
+  // Recent chronicle (right)
+  await refreshRecent();
+
+  // Input
+  document.getElementById("nx-conv-input").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("nx-conv-text");
+    const message = input.value.trim();
+    if (!message) return;
+    appendMessage("you", message);
+    input.value = "";
+    try {
+      const r = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      if (r.ok) {
+        const body = await r.json();
+        appendMessage(body.module || "nexus", body.response, body);
+        await refreshRecent();
+      } else {
+        appendMessage("nexus", `(error ${r.status})`);
+      }
+    } catch (err) {
+      appendMessage("nexus", `(error: ${err.message})`);
+    }
+  });
+}
+
+function appendMessage(speaker, text, meta = null) {
+  const thread = document.getElementById("nx-conv-thread");
+  if (!thread) return;
+  if (speaker === "you") {
+    thread.insertAdjacentHTML("beforeend", `
+      <div class="nx-conv-turn nx-conv-user">
+        <div class="nx-eyebrow">You</div>
+        <div>${escapeHtml(text)}</div>
+      </div>`);
+  } else {
+    const trust = meta && meta.trust ? `· ${(meta.trust).toFixed(2)} trust` : "";
+    const score = meta && meta.score ? `· ${(meta.score).toFixed(2)} match` : "";
+    thread.insertAdjacentHTML("beforeend", `
+      <div class="nx-conv-turn nx-conv-agent">
+        <div class="nx-card" style="padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            ${agentDisc(speaker, { size: 28 })}
+            <div style="font-weight:500">${escapeHtml(speaker)}</div>
+            <div class="nx-mono nx-softer" style="font-size:10.5px">picked by cortex ${score} ${trust}</div>
+          </div>
+          <div style="font-size:13.5px;line-height:1.6">${escapeHtml(text)}</div>
+        </div>
+      </div>`);
+  }
+  thread.scrollTop = thread.scrollHeight;
+}
+
+async function refreshMoodCard() {
+  const el = document.getElementById("nx-conv-mood");
+  if (!el) return;
+  try {
+    const r = await fetch("/api/mood/current");
+    if (r.ok) {
+      const m = await r.json();
+      el.innerHTML = `
+        <div class="nx-eyebrow" style="margin-bottom:4px">Workspace mood</div>
+        <div class="nx-display" style="font-size:18px">${m.mood.replace(/_/g, " ")}</div>
+        <div class="nx-dim" style="font-size:11.5px;margin-top:6px">${escapeHtml(m.reason || "")}</div>`;
+    }
+  } catch {}
+}
+
+async function refreshRecent() {
+  const el = document.getElementById("nx-conv-recent");
+  if (!el) return;
+  try {
+    const r = await fetch("/api/chronicle/recent?source=cortex&action=route&limit=5");
+    if (r.ok) {
+      const body = await r.json();
+      const rows = (body.events || []).slice(0, 5).map(ev => {
+        const target = (ev.payload || {}).target || "—";
+        const ts = (ev.timestamp || "").slice(11, 16);
+        return `<div style="display:flex;gap:8px"><span class="nx-softer nx-mono" style="width:48px;flex:none">${ts}</span><span>routed to <strong>${escapeHtml(target)}</strong></span></div>`;
+      }).join("");
+      el.innerHTML = rows || `<span class="nx-softer">no recent routes</span>`;
+    }
+  } catch {}
+}
+
 // ── Router ───────────────────────────────────────────────────────────────
 async function route(hash) {
   await loadWorkspaces();
   const v = document.getElementById("nx-view");
   if (!hash || hash === "#" || hash === "#/" || hash === "#/workspaces") {
     renderSwitcher();
+    return;
+  }
+  if (hash.startsWith("#/conversation/")) {
+    const ws = hash.slice("#/conversation/".length);
+    renderConversation(ws);
     return;
   }
   v.innerHTML = `<div class="nx-empty nx-dim">surfaces in progress: ${escapeHtml(hash)}</div>`;

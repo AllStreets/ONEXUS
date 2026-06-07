@@ -76,3 +76,38 @@
 }
 .nx-ws-tile .disc-stack { display: flex; }
 .nx-ws-tile .disc-stack > * + * { margin-left: -6px; }
+
+/* ── Conversation surface ─────────────────────────────────────────────── */
+.nx-conv-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  gap: 32px;
+  min-height: calc(100vh - 64px);
+}
+.nx-conv-left, .nx-conv-right { padding-top: 8px; }
+.nx-conv-center { display: flex; flex-direction: column; min-height: 0; }
+.nx-conv-header { margin-bottom: 28px; }
+.nx-conv-thread { flex: 1; overflow-y: auto; padding-bottom: 18px; }
+.nx-conv-turn { margin-bottom: 18px; }
+.nx-conv-user { font-size: 15px; line-height: 1.55; }
+.nx-conv-agent { /* card-styled body */ }
+.nx-conv-input {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--nx-card-bg);
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-card-radius);
+  padding: 14px 18px;
+}
+.nx-conv-input input {
+  flex: 1; background: transparent; border: 0; outline: 0;
+  color: inherit; font: inherit; font-size: 14px;
+}
+.nx-conv-ws {
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 13px; cursor: pointer; opacity: 0.7;
+}
+.nx-conv-ws:hover { opacity: 1; }
+.nx-conv-ws.active { background: rgba(255,255,255,0.06); opacity: 1; }
+.nx-conv-roster-row {
+  display: flex; align-items: center; padding: 5px 0; font-size: 12.5px;
+}
