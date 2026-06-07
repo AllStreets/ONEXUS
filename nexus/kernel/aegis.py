@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
+import uuid
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -28,6 +29,78 @@ class CapabilityDecision:
     verdict: Verdict
     reason: str
     permission_class: PermissionClass | None = None
+
+
+class PermissionScope(str, Enum):
+    """The user's choice when answering a first-use prompt (spec §9.3)."""
+    ONCE = "once"
+    ALWAYS_IN_WORKSPACE = "always_in_workspace"
+    ALWAYS_EVERYWHERE = "always_everywhere"
+    NEVER = "never"
+
+
+class PermissionDecision(str, Enum):
+    """The shape the inbox returns once the user has decided."""
+    ALLOW_ONCE = "allow_once"
+    ALLOW_ALWAYS_IN_WORKSPACE = "allow_always_in_workspace"
+    ALLOW_ALWAYS_EVERYWHERE = "allow_always_everywhere"
+    DENY = "deny"
+
+
+@dataclass(frozen=True)
+class PermissionRequest:
+    agent_slug: str
+    capability: str
+    permission_class: str  # "Routine" / "Notable" / "Sensitive" / "Privileged"
+    workspace_id: str | None
+    preview: str = ""
+    target: str | None = None
+
+
+class _PendingTicket:
+    """One in-flight permission ask — pairs a request with the future that the asker is awaiting."""
+    __slots__ = ("id", "request", "future")
+
+    def __init__(self, request: PermissionRequest, future):
+        self.id = uuid.uuid4().hex[:12]
+        self.request = request
+        self.future = future
+
+
+@dataclass(frozen=True)
+class _PendingView:
+    """Public read-only view of a pending ticket (for surfaces)."""
+    id: str
+    request: PermissionRequest
+
+
+class PermissionInbox:
+    """Async mailbox: agents push requests; surfaces await/answer them."""
+
+    def __init__(self):
+        self._tickets: dict[str, _PendingTicket] = {}
+
+    async def ask(self, request: PermissionRequest) -> PermissionDecision:
+        """Push a request and suspend until the user answers."""
+        import asyncio
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        ticket = _PendingTicket(request, future)
+        self._tickets[ticket.id] = ticket
+        try:
+            return await future
+        finally:
+            self._tickets.pop(ticket.id, None)
+
+    def pending(self) -> list[_PendingView]:
+        return [_PendingView(t.id, t.request) for t in self._tickets.values()]
+
+    def answer(self, ticket_id: str, decision: PermissionDecision) -> None:
+        ticket = self._tickets.get(ticket_id)
+        if ticket is None:
+            raise KeyError(f"unknown permission ticket: {ticket_id!r}")
+        if not ticket.future.done():
+            ticket.future.set_result(decision)
 
 
 class PermissionDenied(Exception):
