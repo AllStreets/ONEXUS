@@ -145,6 +145,7 @@ def run():
         pulse=pulse,
         config=cfg,
     )
+    cortex.register_builtin_manifests()
 
     # Register cognitive modules
     from nexus.modules.council import CouncilModule
@@ -312,6 +313,7 @@ def workflow_run(name, variables):
     aegis.init_db()
     pulse = Pulse()
     cortex = Cortex(engram=engram, chronicle=chronicle, aegis=aegis, pulse=pulse, config=cfg)
+    cortex.register_builtin_manifests()
 
     engine = WorkflowEngine(cortex=cortex, chronicle=chronicle, pulse=pulse)
 

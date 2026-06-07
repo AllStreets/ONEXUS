@@ -501,6 +501,23 @@ class Cortex:
     def register_module(self, module: NexusModule) -> None:
         self._modules[module.name] = module
 
+    def register_builtin_manifests(self) -> None:
+        """Register every built-in module's manifest with Aegis.
+
+        Called once at kernel boot. Idempotent — registering the same
+        manifest twice overwrites the dict entry but does not duplicate
+        any DB rows (Aegis seeds trust only if the row is at 0.0).
+        """
+        registry = default_builtin_registry()
+        registry.register_all(self._aegis)
+        try:
+            self._chronicle.log("cortex", "builtins_registered", {
+                "slugs": registry.slugs(),
+            })
+        except Exception:
+            # Chronicle failures must never block kernel boot.
+            pass
+
     async def unregister_module(self, name: str) -> None:
         module = self._modules.pop(name, None)
         if module:
