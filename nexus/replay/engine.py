@@ -26,16 +26,23 @@ _TRUST_TIERS = [
 ]
 
 
-def _trust_tier(score: int) -> str:
-    """Return the tier name for a given trust score."""
+def _trust_tier(score) -> str:
+    """Return the tier name for a given trust score.
+
+    Accepts either a 0-100 integer (legacy) or a 0.0-1.0 float (current
+    Aegis scale).  Values <= 1.0 are treated as the float scale and
+    multiplied by 100 before the threshold comparison.
+    """
+    # Normalise 0.0-1.0 floats to 0-100 integer scale
+    normalised = int(score * 100) if isinstance(score, float) and score <= 1.0 else int(score)
     tier = "BLOCKED"
     for threshold, name in _TRUST_TIERS:
-        if score >= threshold:
+        if normalised >= threshold:
             tier = name
     return tier
 
 
-def _tier_change_label(old_score: int, new_score: int) -> str | None:
+def _tier_change_label(old_score, new_score) -> str | None:
     """Return a tier transition label if the tier changed, else None."""
     old_tier = _trust_tier(old_score)
     new_tier = _trust_tier(new_score)
@@ -120,11 +127,11 @@ class ReplayEngine:
         module_names = [p["module"] for p in policies]
 
         for module in module_names:
-            history = self.aegis.trust_history(module, limit=100_000)
-            score = 0
+            history = self.aegis.get_trust_history(module, limit=100_000)
+            score = 0.0
             for entry in history:
                 if entry["timestamp"] <= timestamp:
-                    score = entry["new_trust"]
+                    score = entry["new_score"]
                 else:
                     break
             trust_scores[module] = score
@@ -291,12 +298,11 @@ class ReplayEngine:
         self, module: str, limit: int = 50
     ) -> list[TrustEvent]:
         """Get trust score changes over time for a module."""
-        raw = self.aegis.trust_history(module, limit=limit)
+        raw = self.aegis.get_trust_history(module, limit=limit)
         events: list[TrustEvent] = []
         for entry in raw:
-            delta = entry["delta"]
-            new_score = entry["new_trust"]
-            old_score = max(0, min(100, new_score - delta))
+            old_score = entry["old_score"]
+            new_score = entry["new_score"]
             tier_change = _tier_change_label(old_score, new_score)
             events.append(
                 TrustEvent(
@@ -335,11 +341,11 @@ class ReplayEngine:
             duration = payload.get("duration_ms", 0.0)
 
             # Derive trust at that time
-            trust_at_time = 0
-            history = self.aegis.trust_history(module, limit=100_000)
+            trust_at_time = 0.0
+            history = self.aegis.get_trust_history(module, limit=100_000)
             for entry in history:
                 if entry["timestamp"] <= row["timestamp"]:
-                    trust_at_time = entry["new_trust"]
+                    trust_at_time = entry["new_score"]
                 else:
                     break
 
@@ -371,12 +377,11 @@ class ReplayEngine:
         policies = self.aegis.list_policies()
         for p in policies:
             module = p["module"]
-            history = self.aegis.trust_history(module, limit=100_000)
+            history = self.aegis.get_trust_history(module, limit=100_000)
             for entry in history:
                 if earlier <= entry["timestamp"] <= later:
-                    delta = entry["delta"]
-                    new_score = entry["new_trust"]
-                    old_score = max(0, min(100, new_score - delta))
+                    old_score = entry["old_score"]
+                    new_score = entry["new_score"]
                     tier_change = _tier_change_label(old_score, new_score)
                     changes.append(
                         TrustEvent(
