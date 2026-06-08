@@ -1,333 +1,487 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 620" role="img"
-     aria-label="ONEXUS — the operating system for agents">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img"
+     aria-label="ONEXUS Aurora dashboard — a workspace with an agent answering, a permission prompt firing, and the cockpit reading trust">
   <title>ONEXUS — the operating system for agents</title>
 
-  <!-- ─── definitions ─────────────────────────────────────────────────── -->
   <defs>
-    <!-- the breathing kernel mark gradient -->
-    <radialGradient id="kernel" cx="42%" cy="38%" r="60%">
-      <stop offset="0%"   stop-color="#fefcff" stop-opacity="1"/>
-      <stop offset="22%"  stop-color="#e8defc" stop-opacity="1"/>
-      <stop offset="55%"  stop-color="#c9b8ff" stop-opacity="0.95"/>
-      <stop offset="85%"  stop-color="#7a5fd4" stop-opacity="0.7"/>
-      <stop offset="100%" stop-color="#3a2876" stop-opacity="0"/>
+    <!-- ambient atmosphere behind the window -->
+    <radialGradient id="ambient-violet" cx="20%" cy="-5%" r="80%">
+      <stop offset="0%"  stop-color="#7a5fd4" stop-opacity="0.55"/>
+      <stop offset="40%" stop-color="#3a2868" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#08060f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ambient-amber" cx="92%" cy="98%" r="55%">
+      <stop offset="0%"  stop-color="#d68a3a" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#d68a3a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ambient-cyan" cx="80%" cy="10%" r="40%">
+      <stop offset="0%"  stop-color="#4a7fb8" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#4a7fb8" stop-opacity="0"/>
     </radialGradient>
 
-    <!-- inner core highlight -->
-    <radialGradient id="core" cx="40%" cy="35%" r="55%">
-      <stop offset="0%"  stop-color="#ffffff" stop-opacity="1"/>
-      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    <!-- panel surfaces -->
+    <linearGradient id="panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a1626"/>
+      <stop offset="100%" stop-color="#100d18"/>
+    </linearGradient>
+    <linearGradient id="panel-recessed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#14111e"/>
+      <stop offset="100%" stop-color="#0d0b14"/>
+    </linearGradient>
+    <linearGradient id="chrome" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#221c30"/>
+      <stop offset="100%" stop-color="#181425"/>
+    </linearGradient>
+
+    <!-- the breathing kernel mark -->
+    <radialGradient id="kernel" cx="38%" cy="34%" r="62%">
+      <stop offset="0%"  stop-color="#ffffff"/>
+      <stop offset="22%" stop-color="#f5edff"/>
+      <stop offset="55%" stop-color="#c9b8ff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0.35"/>
     </radialGradient>
 
-    <!-- aurora mood mesh — Calm Focus + a hint of every state -->
-    <radialGradient id="mesh-violet" cx="20%" cy="22%" r="55%">
-      <stop offset="0%"  stop-color="#7860c8" stop-opacity="0.55"/>
-      <stop offset="70%" stop-color="#7860c8" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="mesh-amber" cx="82%" cy="28%" r="40%">
-      <stop offset="0%"  stop-color="#ffb26e" stop-opacity="0.22"/>
-      <stop offset="70%" stop-color="#ffb26e" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="mesh-rose" cx="78%" cy="82%" r="45%">
-      <stop offset="0%"  stop-color="#d8508c" stop-opacity="0.30"/>
-      <stop offset="70%" stop-color="#d8508c" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="mesh-cyan" cx="22%" cy="80%" r="48%">
-      <stop offset="0%"  stop-color="#5cc8e6" stop-opacity="0.22"/>
-      <stop offset="70%" stop-color="#5cc8e6" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="mesh-indigo" cx="55%" cy="58%" r="60%">
-      <stop offset="0%"  stop-color="#4c5ca8" stop-opacity="0.30"/>
-      <stop offset="80%" stop-color="#4c5ca8" stop-opacity="0"/>
-    </radialGradient>
+    <!-- agent identity gradients -->
+    <radialGradient id="g-oracle"  cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#a8e8ff"/><stop offset="100%" stop-color="#346b9c"/></radialGradient>
+    <radialGradient id="g-council" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffd2a0"/><stop offset="100%" stop-color="#c47a32"/></radialGradient>
+    <radialGradient id="g-wraith"  cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#9affc8"/><stop offset="100%" stop-color="#2a6a4e"/></radialGradient>
+    <radialGradient id="g-specter" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ff9eb8"/><stop offset="100%" stop-color="#8c2e54"/></radialGradient>
+    <radialGradient id="g-echo"    cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#bfe6f5"/><stop offset="100%" stop-color="#3e6c8c"/></radialGradient>
+    <radialGradient id="g-autonomic" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#c8a0ff"/><stop offset="100%" stop-color="#5e3a9c"/></radialGradient>
 
-    <!-- agent identity disc gradients (the 10 built-ins) -->
-    <radialGradient id="g-council"      cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffd2a0"/><stop offset="100%" stop-color="#c47a32"/></radialGradient>
-    <radialGradient id="g-specter"      cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ff9eb8"/><stop offset="100%" stop-color="#8c2e54"/></radialGradient>
-    <radialGradient id="g-autonomic"    cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#c8a0ff"/><stop offset="100%" stop-color="#5e3a9c"/></radialGradient>
-    <radialGradient id="g-oracle"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#a8e8ff"/><stop offset="100%" stop-color="#346b9c"/></radialGradient>
-    <radialGradient id="g-wraith"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#9affc8"/><stop offset="100%" stop-color="#2a6a4e"/></radialGradient>
-    <radialGradient id="g-legacy"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffd680"/><stop offset="100%" stop-color="#9c6a1a"/></radialGradient>
-    <radialGradient id="g-consciousness" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#e0c8ff"/><stop offset="100%" stop-color="#5a3a8c"/></radialGradient>
-    <radialGradient id="g-sentry"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffb878"/><stop offset="100%" stop-color="#8c4218"/></radialGradient>
-    <radialGradient id="g-echo"         cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#a8e8ff"/><stop offset="100%" stop-color="#346b9c"/></radialGradient>
-    <radialGradient id="g-agents"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#c8c8ff"/><stop offset="100%" stop-color="#3a3a8c"/></radialGradient>
+    <!-- trust meter — rising = warm gold -->
+    <linearGradient id="trust-area" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffd680" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffd680" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="trust-line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#ffb878"/>
+      <stop offset="100%" stop-color="#ffe09a"/>
+    </linearGradient>
 
-    <!-- film grain noise -->
+    <!-- mood thumbnail mesh — calm focus -->
+    <radialGradient id="m1" cx="22%" cy="28%" r="60%"><stop offset="0%" stop-color="#7860c8" stop-opacity="0.85"/><stop offset="100%" stop-color="#7860c8" stop-opacity="0"/></radialGradient>
+    <radialGradient id="m2" cx="78%" cy="32%" r="55%"><stop offset="0%" stop-color="#c8a0ff" stop-opacity="0.55"/><stop offset="100%" stop-color="#c8a0ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="m3" cx="70%" cy="80%" r="55%"><stop offset="0%" stop-color="#5a4ac4" stop-opacity="0.65"/><stop offset="100%" stop-color="#5a4ac4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="m4" cx="30%" cy="78%" r="50%"><stop offset="0%" stop-color="#4a4080" stop-opacity="0.55"/><stop offset="100%" stop-color="#4a4080" stop-opacity="0"/></radialGradient>
+
+    <!-- film grain -->
     <filter id="grain" x="0%" y="0%" width="100%" height="100%">
-      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="3" stitchTiles="stitch"/>
-      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.09 0"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="5" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.06 0"/>
     </filter>
 
-    <!-- soft glow for the kernel -->
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="18" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <!-- soft shadow under the window -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="26"/>
+      <feOffset dy="18"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
 
-    <!-- subtle outer glow on agent discs -->
-    <filter id="disc-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="4"/>
+    <!-- kernel orb glow -->
+    <filter id="orb-glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
 
-    <!-- breathing animation -->
-    <radialGradient id="breath" cx="42%" cy="38%" r="60%">
-      <stop offset="0%"   stop-color="#fefcff" stop-opacity="1"/>
-      <stop offset="22%"  stop-color="#e8defc" stop-opacity="1"/>
-      <stop offset="55%"  stop-color="#c9b8ff" stop-opacity="0.95"/>
-      <stop offset="85%"  stop-color="#7a5fd4" stop-opacity="0.7"/>
-      <stop offset="100%" stop-color="#3a2876" stop-opacity="0"/>
-    </radialGradient>
+    <clipPath id="window-clip">
+      <rect x="60" y="70" width="1480" height="780" rx="14"/>
+    </clipPath>
+    <clipPath id="meter-clip">
+      <rect x="1200" y="178" width="320" height="86" rx="8"/>
+    </clipPath>
   </defs>
 
-  <!-- ─── canvas base ─────────────────────────────────────────────────── -->
-  <rect width="1600" height="620" fill="#0a0814"/>
+  <!-- ─────────────────────────── ambient canvas ─────────────────────── -->
+  <rect width="1600" height="900" fill="#08060f"/>
+  <rect width="1600" height="900" fill="url(#ambient-violet)"/>
+  <rect width="1600" height="900" fill="url(#ambient-amber)"/>
+  <rect width="1600" height="900" fill="url(#ambient-cyan)"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.5" style="mix-blend-mode:overlay"/>
 
-  <!-- aurora mood mesh -->
-  <g opacity="0.95">
-    <rect width="1600" height="620" fill="url(#mesh-violet)"/>
-    <rect width="1600" height="620" fill="url(#mesh-amber)"/>
-    <rect width="1600" height="620" fill="url(#mesh-rose)"/>
-    <rect width="1600" height="620" fill="url(#mesh-cyan)"/>
-    <rect width="1600" height="620" fill="url(#mesh-indigo)"/>
+  <!-- ─────────────────────────── window panel ───────────────────────── -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="70" width="1480" height="780" rx="14"
+          fill="url(#panel)" stroke="rgba(232,222,252,0.10)" stroke-width="1"/>
   </g>
 
-  <!-- film grain -->
-  <rect width="1600" height="620" filter="url(#grain)" opacity="0.55" style="mix-blend-mode: overlay"/>
+  <g clip-path="url(#window-clip)" font-family="-apple-system, ui-sans-serif, 'Inter', system-ui, sans-serif">
 
-  <!-- ─── orbit rings around the kernel ───────────────────────────────── -->
-  <g transform="translate(560 310)" fill="none" stroke-linecap="round">
-    <ellipse cx="0" cy="0" rx="220" ry="200" stroke="rgba(232,222,252,0.06)" stroke-width="1"/>
-    <ellipse cx="0" cy="0" rx="290" ry="260" stroke="rgba(232,222,252,0.05)" stroke-width="1"/>
-    <ellipse cx="0" cy="0" rx="360" ry="320" stroke="rgba(232,222,252,0.04)" stroke-width="1" stroke-dasharray="2 6"/>
-  </g>
+    <!-- ── chrome bar ─────────────────────────────────────────────────── -->
+    <rect x="60" y="70" width="1480" height="52" fill="url(#chrome)"/>
+    <line x1="60" y1="122" x2="1540" y2="122" stroke="rgba(232,222,252,0.08)"/>
 
-  <!-- ─── kernel components — 5 small labeled nodes on the inner orbit ── -->
-  <g transform="translate(560 310)" font-family="ui-monospace, 'JetBrains Mono', monospace"
-     font-size="10" letter-spacing="2.6" fill="#c9b8ff" text-anchor="middle">
-    <!-- positions on a 220×200 ellipse, 5 evenly spaced -->
+    <!-- traffic lights -->
+    <circle cx="90"  cy="96" r="7" fill="#ff5f57"/>
+    <circle cx="114" cy="96" r="7" fill="#febc2e"/>
+    <circle cx="138" cy="96" r="7" fill="#28c840"/>
+
+    <!-- center title: kernel orb + ONEXUS · inbox -->
+    <g transform="translate(800 96)" text-anchor="middle">
+      <circle cx="-92" cy="0" r="10" fill="url(#kernel)" filter="url(#orb-glow)"/>
+      <text x="-76" y="4" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="12" font-weight="700" letter-spacing="2.6" fill="#e8defc" text-anchor="start">ONEXUS</text>
+      <text x="14" y="4" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11" fill="#6b6080" text-anchor="start">— inbox · 2 agents on duty</text>
+    </g>
+
+    <!-- right cluster: mood pill + clock -->
+    <g transform="translate(1510 96)" font-family="ui-monospace,'JetBrains Mono',monospace">
+      <rect x="-72" y="-13" width="62" height="26" rx="13" fill="rgba(232,222,252,0.04)" stroke="rgba(232,222,252,0.08)"/>
+      <text x="-41" y="4" font-size="11" fill="#a8a0c8" text-anchor="middle">21:38</text>
+      <rect x="-204" y="-13" width="124" height="26" rx="13" fill="rgba(168,124,232,0.10)" stroke="rgba(168,124,232,0.28)"/>
+      <circle cx="-189" cy="0" r="3.5" fill="#a87af5"/>
+      <text x="-176" y="4" font-size="10.5" letter-spacing="1.8" fill="#c9b8ff" text-anchor="start">CALM FOCUS</text>
+    </g>
+
+    <!-- ── sidebar ────────────────────────────────────────────────────── -->
+    <rect x="60" y="122" width="260" height="728" fill="url(#panel-recessed)"/>
+    <line x1="320" y1="122" x2="320" y2="850" stroke="rgba(232,222,252,0.07)"/>
+
+    <!-- search input -->
+    <g transform="translate(80 144)">
+      <rect width="220" height="34" rx="8" fill="rgba(232,222,252,0.03)" stroke="rgba(232,222,252,0.06)"/>
+      <g transform="translate(13 11)" fill="none" stroke="#6b6080" stroke-width="1.4">
+        <circle cx="5.5" cy="5.5" r="4"/>
+        <line x1="8.5" y1="8.5" x2="11.5" y2="11.5" stroke-linecap="round"/>
+      </g>
+      <text x="33" y="22" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11" fill="#6b6080">search · ⌘K</text>
+    </g>
+
+    <!-- workspaces section -->
+    <text x="80" y="208" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" letter-spacing="2.6" fill="#6b6080">WORKSPACES</text>
+
+    <!-- active: Inbox -->
+    <g transform="translate(72 220)">
+      <rect width="236" height="50" rx="10" fill="rgba(168,124,232,0.13)" stroke="rgba(168,124,232,0.32)"/>
+      <circle cx="22" cy="25" r="6" fill="#a87af5"/>
+      <text x="42" y="22" font-size="14" font-weight="600" fill="#f3ecff">Inbox</text>
+      <text x="42" y="38" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#a89cc4">2 agents · 14 events today</text>
+    </g>
+
+    <!-- Build -->
+    <g transform="translate(72 280)">
+      <rect width="236" height="50" rx="10" fill="rgba(232,222,252,0.02)"/>
+      <circle cx="22" cy="25" r="6" fill="#f8c460"/>
+      <text x="42" y="22" font-size="14" font-weight="500" fill="#d9d0ea">Build</text>
+      <text x="42" y="38" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">aider · cline · 3 grants</text>
+    </g>
+
+    <!-- Research -->
+    <g transform="translate(72 340)">
+      <rect width="236" height="50" rx="10" fill="rgba(232,222,252,0.02)"/>
+      <circle cx="22" cy="25" r="6" fill="#a8b4ff"/>
+      <text x="42" y="22" font-size="14" font-weight="500" fill="#d9d0ea">Research</text>
+      <text x="42" y="38" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">oracle · echo</text>
+    </g>
+
+    <!-- Personal -->
+    <g transform="translate(72 400)">
+      <rect width="236" height="50" rx="10" fill="rgba(232,222,252,0.02)"/>
+      <circle cx="22" cy="25" r="6" fill="#f86078"/>
+      <text x="42" y="22" font-size="14" font-weight="500" fill="#d9d0ea">Personal</text>
+      <text x="42" y="38" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">paused · last 6h ago</text>
+    </g>
+
+    <!-- + new workspace -->
+    <g transform="translate(72 466)" font-family="ui-monospace,'JetBrains Mono',monospace">
+      <rect width="236" height="38" rx="10" fill="none" stroke="rgba(232,222,252,0.10)" stroke-dasharray="3 3"/>
+      <g transform="translate(22 19)" stroke="#a8a0c8" stroke-width="1.4" stroke-linecap="round">
+        <line x1="-5" y1="0" x2="5" y2="0"/>
+        <line x1="0" y1="-5" x2="0" y2="5"/>
+      </g>
+      <text x="42" y="23" font-size="11" fill="#a8a0c8">new workspace · ⌘N</text>
+    </g>
+
+    <!-- recent agents -->
+    <text x="80" y="566" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" letter-spacing="2.6" fill="#6b6080">RECENT AGENTS</text>
+    <g transform="translate(80 586)" font-family="-apple-system,ui-sans-serif,sans-serif">
+      <g>
+        <circle cx="14" cy="14" r="14" fill="url(#g-oracle)"/>
+        <g transform="translate(5 5)" fill="none" stroke="#fff" stroke-width="1.4">
+          <path d="M0 9c2-3 5-5 9-5s7 2 9 5c-2 3-5 5-9 5s-7-2-9-5z"/>
+          <circle cx="9" cy="9" r="2.2" fill="#fff" stroke="none"/>
+        </g>
+        <text x="40" y="13" font-size="12" font-weight="500" fill="#d9d0ea">oracle</text>
+        <text x="40" y="28" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">trusted · 7d</text>
+      </g>
+      <g transform="translate(0 44)">
+        <circle cx="14" cy="14" r="14" fill="url(#g-council)"/>
+        <g transform="translate(5 5)" fill="#fff">
+          <circle cx="9" cy="2" r="1.2"/><circle cx="16" cy="9" r="1.2"/>
+          <circle cx="9" cy="16" r="1.2"/><circle cx="2" cy="9" r="1.2"/>
+          <circle cx="9" cy="9" r="0.9"/>
+        </g>
+        <text x="40" y="13" font-size="12" font-weight="500" fill="#d9d0ea">council</text>
+        <text x="40" y="28" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">trusted · 22h</text>
+      </g>
+      <g transform="translate(0 88)">
+        <circle cx="14" cy="14" r="14" fill="url(#g-wraith)"/>
+        <g transform="translate(5 5)" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round">
+          <path d="M2 6c0-2.5 2.5-3.5 7-3.5s7 1.7 7 4.2c0 1.7-1.7 3.4-3.4 3.4-1.3 0-2-0.8-3.4-0.8s-2 0.8-2.5 0.8z"/>
+          <circle cx="4.5" cy="13" r="0.6" fill="#fff" stroke="none" opacity="0.85"/>
+          <circle cx="8.5" cy="14.5" r="0.55" fill="#fff" stroke="none" opacity="0.55"/>
+        </g>
+        <text x="40" y="13" font-size="12" font-weight="500" fill="#d9d0ea">wraith</text>
+        <text x="40" y="28" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">probationary</text>
+      </g>
+    </g>
+
+    <!-- footer: user identity -->
+    <g transform="translate(80 800)">
+      <rect width="220" height="34" rx="8" fill="rgba(232,222,252,0.03)"/>
+      <circle cx="20" cy="17" r="10" fill="#3a3050"/>
+      <text x="20" y="21" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" font-weight="700" fill="#c9b8ff" text-anchor="middle">CE</text>
+      <text x="40" y="15" font-size="11" font-weight="500" fill="#d9d0ea">connor</text>
+      <text x="40" y="27" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" fill="#6b6080">sovereign · local</text>
+    </g>
+
+    <!-- ── main canvas ───────────────────────────────────────────────── -->
+
+    <!-- top eyebrow: workspace path -->
+    <g transform="translate(360 156)" font-family="ui-monospace,'JetBrains Mono',monospace" fill="#a8a0c8" font-size="11">
+      <text x="0" y="0" fill="#6b6080">workspace /</text>
+      <text x="78" y="0" fill="#e8defc" font-weight="600">inbox</text>
+      <text x="120" y="0" fill="#6b6080">— today, 21:38</text>
+    </g>
+    <text x="360" y="200" font-family="-apple-system,ui-sans-serif,sans-serif" font-size="28" font-weight="700" fill="#f3ecff" letter-spacing="-0.4">Refactor the kernel runtime</text>
+    <text x="360" y="226" font-family="-apple-system,ui-sans-serif,sans-serif" font-size="13" fill="#8a8098">started by you · oracle is on duty · echo is listening</text>
+
+    <line x1="360" y1="250" x2="1140" y2="250" stroke="rgba(232,222,252,0.07)"/>
+
+    <!-- ── message 1 — oracle agent ──────────────────────────────────── -->
+    <g transform="translate(360 282)">
+      <!-- identity disc -->
+      <g transform="translate(0 0)">
+        <circle cx="20" cy="20" r="20" fill="url(#g-oracle)"/>
+        <g transform="translate(8 8)" fill="none" stroke="#fff" stroke-width="1.6">
+          <path d="M0 12c3-4 7-7 12-7s9 3 12 7c-3 4-7 7-12 7s-9-3-12-7z"/>
+          <circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/>
+        </g>
+      </g>
+      <!-- name + meta -->
+      <text x="56" y="14" font-size="13" font-weight="700" fill="#f3ecff">oracle</text>
+      <text x="100" y="14" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">research · trusted · 21:36</text>
+      <!-- bubble body -->
+      <text x="56" y="36" font-size="13.5" fill="#d9d0ea">I traced the dependency graph across 47 files in <tspan font-family="ui-monospace,'JetBrains Mono',monospace" fill="#c9b8ff">src/kernel/</tspan>. Three refactor</text>
+      <text x="56" y="56" font-size="13.5" fill="#d9d0ea">candidates match your scope — diffs below, ordered by smallest blast radius:</text>
+    </g>
+
+    <!-- file diff cards -->
+    <g transform="translate(416 358)" font-family="ui-monospace,'JetBrains Mono',monospace">
+      <!-- card 1 -->
+      <g>
+        <rect width="720" height="40" rx="8" fill="rgba(232,222,252,0.025)" stroke="rgba(232,222,252,0.06)"/>
+        <g transform="translate(14 14)" fill="none" stroke="#a8a0c8" stroke-width="1.3" stroke-linejoin="round">
+          <path d="M0 0h7l4 4v9H0z"/>
+          <path d="M7 0v4h4"/>
+        </g>
+        <text x="40" y="25" font-size="12" fill="#d9d0ea">src/agents/runtime.py</text>
+        <text x="640" y="25" font-size="11" fill="#9affb6" text-anchor="end">+12</text>
+        <text x="680" y="25" font-size="11" fill="#f8a0a0" text-anchor="end">−34</text>
+        <text x="704" y="25" font-size="10" fill="#6b6080" text-anchor="end">▸</text>
+      </g>
+      <!-- card 2 (selected) -->
+      <g transform="translate(0 50)">
+        <rect width="720" height="40" rx="8" fill="rgba(168,124,232,0.10)" stroke="rgba(168,124,232,0.34)"/>
+        <g transform="translate(14 14)" fill="none" stroke="#c9b8ff" stroke-width="1.3" stroke-linejoin="round">
+          <path d="M0 0h7l4 4v9H0z"/>
+          <path d="M7 0v4h4"/>
+        </g>
+        <text x="40" y="25" font-size="12" font-weight="600" fill="#f3ecff">src/kernel/cortex.py</text>
+        <text x="640" y="25" font-size="11" fill="#9affb6" text-anchor="end">+8</text>
+        <text x="680" y="25" font-size="11" fill="#f8a0a0" text-anchor="end">−2</text>
+        <g transform="translate(696 14)" stroke="#c9b8ff" stroke-width="1.4" stroke-linecap="round" fill="none">
+          <polyline points="0,5 4,9 10,2"/>
+        </g>
+      </g>
+      <!-- card 3 -->
+      <g transform="translate(0 100)">
+        <rect width="720" height="40" rx="8" fill="rgba(232,222,252,0.025)" stroke="rgba(232,222,252,0.06)"/>
+        <g transform="translate(14 14)" fill="none" stroke="#a8a0c8" stroke-width="1.3" stroke-linejoin="round">
+          <path d="M0 0h7l4 4v9H0z"/>
+          <path d="M7 0v4h4"/>
+        </g>
+        <text x="40" y="25" font-size="12" fill="#d9d0ea">src/aegis/grants.py</text>
+        <text x="640" y="25" font-size="11" fill="#9affb6" text-anchor="end">+5</text>
+        <text x="680" y="25" font-size="11" fill="#f8a0a0" text-anchor="end">−1</text>
+        <text x="704" y="25" font-size="10" fill="#6b6080" text-anchor="end">▸</text>
+      </g>
+    </g>
+
+    <!-- ── message 2 — user (right-aligned) ──────────────────────────── -->
+    <g transform="translate(820 530)" text-anchor="end">
+      <rect x="-320" y="-2" width="320" height="46" rx="14" fill="rgba(168,180,255,0.10)" stroke="rgba(168,180,255,0.20)"/>
+      <text x="-16" y="28" font-size="13.5" fill="#e2e6ff">second one looks clean. apply it.</text>
+    </g>
+
+    <!-- ── message 3 — oracle requesting permission ──────────────────── -->
+    <g transform="translate(360 600)">
+      <circle cx="20" cy="20" r="20" fill="url(#g-oracle)"/>
+      <g transform="translate(8 8)" fill="none" stroke="#fff" stroke-width="1.6">
+        <path d="M0 12c3-4 7-7 12-7s9 3 12 7c-3 4-7 7-12 7s-9-3-12-7z"/>
+        <circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/>
+      </g>
+      <text x="56" y="14" font-size="13" font-weight="700" fill="#f3ecff">oracle</text>
+      <text x="100" y="14" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">21:38</text>
+      <text x="56" y="36" font-size="13.5" fill="#d9d0ea">Applying. I need <tspan font-family="ui-monospace,'JetBrains Mono',monospace" fill="#f8c460">fs.write</tspan> on <tspan font-family="ui-monospace,'JetBrains Mono',monospace" fill="#c9b8ff">src/kernel/cortex.py</tspan>. First use in this workspace —</text>
+      <text x="56" y="56" font-size="13.5" fill="#d9d0ea">how should Aegis remember this?</text>
+    </g>
+
+    <!-- permission prompt card -->
+    <g transform="translate(416 686)">
+      <rect width="720" height="60" rx="12" fill="rgba(248,196,96,0.06)" stroke="rgba(248,196,96,0.32)"/>
+      <!-- amber pulse dot -->
+      <circle cx="22" cy="30" r="6" fill="#f8c460"/>
+      <circle cx="22" cy="30" r="10" fill="none" stroke="rgba(248,196,96,0.35)" stroke-width="1"/>
+
+      <text x="42" y="26" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10.5" letter-spacing="1.6" fill="#f8c460">FS.WRITE · SENSITIVE</text>
+      <text x="42" y="46" font-size="12.5" fill="#e8defc">oracle → <tspan font-family="ui-monospace,'JetBrains Mono',monospace" fill="#c9b8ff">src/kernel/cortex.py</tspan></text>
+
+      <!-- action pills -->
+      <g transform="translate(434 16)" font-family="-apple-system,ui-sans-serif,sans-serif">
+        <g>
+          <rect width="84" height="28" rx="14" fill="rgba(154,255,182,0.14)" stroke="rgba(154,255,182,0.40)"/>
+          <text x="42" y="19" font-size="12" font-weight="600" fill="#a8f4c0" text-anchor="middle">allow once</text>
+        </g>
+        <g transform="translate(92 0)">
+          <rect width="106" height="28" rx="14" fill="rgba(168,124,232,0.18)" stroke="rgba(168,124,232,0.50)"/>
+          <text x="53" y="19" font-size="12" font-weight="600" fill="#e0d0ff" text-anchor="middle">always · here</text>
+        </g>
+        <g transform="translate(206 0)">
+          <rect width="64" height="28" rx="14" fill="rgba(248,96,120,0.10)" stroke="rgba(248,96,120,0.36)"/>
+          <text x="32" y="19" font-size="12" font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- composer -->
+    <g transform="translate(360 786)">
+      <rect width="780" height="48" rx="12" fill="rgba(232,222,252,0.04)" stroke="rgba(232,222,252,0.08)"/>
+      <text x="20" y="30" font-size="13" fill="#6b6080">message agents in this workspace…</text>
+      <!-- keyboard hint right side -->
+      <g transform="translate(680 14)" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">
+        <rect width="22" height="20" rx="4" fill="rgba(232,222,252,0.06)"/>
+        <text x="11" y="14" text-anchor="middle" fill="#a8a0c8">⌘</text>
+        <rect x="26" width="22" height="20" rx="4" fill="rgba(232,222,252,0.06)"/>
+        <text x="37" y="14" text-anchor="middle" fill="#a8a0c8">⏎</text>
+        <text x="56" y="14" fill="#6b6080">send</text>
+      </g>
+    </g>
+
+    <!-- ── cockpit ──────────────────────────────────────────────────── -->
+    <line x1="1180" y1="122" x2="1180" y2="850" stroke="rgba(232,222,252,0.07)"/>
+    <rect x="1180" y="122" width="360" height="728" fill="url(#panel-recessed)"/>
+
+    <!-- TRUST header -->
+    <text x="1200" y="160" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" letter-spacing="2.6" fill="#6b6080">TRUST · LAST 60M</text>
+
+    <!-- trust meter card -->
     <g>
-      <circle cx="0"     cy="-200" r="3.5" fill="#c9b8ff"/>
-      <text x="0" y="-216">CORTEX</text>
+      <rect x="1200" y="178" width="320" height="86" rx="8" fill="rgba(255,214,128,0.04)" stroke="rgba(255,214,128,0.18)"/>
+      <g clip-path="url(#meter-clip)">
+        <!-- area fill -->
+        <path d="M1200 264 L1200 244 L1230 240 L1260 238 L1290 232 L1320 224 L1350 226 L1380 214 L1410 206 L1440 196 L1470 188 L1500 186 L1520 184 L1520 264 Z"
+              fill="url(#trust-area)"/>
+        <!-- line -->
+        <path d="M1200 244 L1230 240 L1260 238 L1290 232 L1320 224 L1350 226 L1380 214 L1410 206 L1440 196 L1470 188 L1500 186 L1520 184"
+              fill="none" stroke="url(#trust-line)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- end dot -->
+        <circle cx="1520" cy="184" r="4" fill="#ffe09a"/>
+        <circle cx="1520" cy="184" r="8" fill="none" stroke="rgba(255,224,154,0.40)" stroke-width="1"/>
+      </g>
+      <!-- reading -->
+      <text x="1216" y="230" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="22" font-weight="700" fill="#ffe09a">+14</text>
+      <text x="1260" y="230" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11" letter-spacing="1.8" fill="#f8c460">RISING</text>
+      <text x="1216" y="250" font-size="11" fill="#a8a0c8">5 routine grants · 1 sensitive · 0 denied</text>
     </g>
-    <g>
-      <circle cx="209"   cy="-62"  r="3.5" fill="#c9b8ff"/>
-      <text x="232" y="-58">ENGRAM</text>
-    </g>
-    <g>
-      <circle cx="129"   cy="162"  r="3.5" fill="#c9b8ff"/>
-      <text x="148" y="178">PULSE</text>
-    </g>
-    <g>
-      <circle cx="-129"  cy="162"  r="3.5" fill="#c9b8ff"/>
-      <text x="-148" y="178">CHRONICLE</text>
-    </g>
-    <g>
-      <circle cx="-209"  cy="-62"  r="3.5" fill="#c9b8ff"/>
-      <text x="-232" y="-58">AEGIS</text>
-    </g>
-  </g>
 
-  <!-- ─── connecting lines from kernel mark to the 5 components ──────── -->
-  <g transform="translate(560 310)" stroke="rgba(201,184,255,0.12)" stroke-width="0.8" fill="none">
-    <line x1="0" y1="0" x2="0"    y2="-200"/>
-    <line x1="0" y1="0" x2="209"  y2="-62"/>
-    <line x1="0" y1="0" x2="129"  y2="162"/>
-    <line x1="0" y1="0" x2="-129" y2="162"/>
-    <line x1="0" y1="0" x2="-209" y2="-62"/>
-  </g>
+    <!-- PERMISSIONS header -->
+    <text x="1200" y="304" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" letter-spacing="2.6" fill="#6b6080">RECENT PERMISSIONS</text>
 
-  <!-- ─── the kernel mark — the breathing core ────────────────────────── -->
-  <g transform="translate(560 310)" filter="url(#glow)">
-    <!-- outer corona -->
-    <circle r="180" fill="url(#kernel)" opacity="0.35">
-      <animate attributeName="r" values="172;188;172" dur="4.5s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.30;0.42;0.30" dur="4.5s" repeatCount="indefinite"/>
-    </circle>
-    <!-- main body -->
-    <circle r="120" fill="url(#kernel)">
-      <animate attributeName="r" values="115;124;115" dur="4.5s" repeatCount="indefinite"/>
-    </circle>
-    <!-- inner highlight -->
-    <circle r="60" fill="url(#core)" opacity="0.7">
-      <animate attributeName="opacity" values="0.55;0.85;0.55" dur="4.5s" repeatCount="indefinite"/>
-    </circle>
-  </g>
-
-  <!-- ─── the 10 built-in agents — identity discs arrayed on the right ── -->
-  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="9"
-     letter-spacing="1.4" fill="#e8defc" text-anchor="start">
-    <!-- column 1 (left of right zone) -->
-    <g transform="translate(1080 110)">
-      <!-- council -->
+    <g transform="translate(1200 320)" font-family="ui-monospace,'JetBrains Mono',monospace">
+      <!-- row 1 -->
       <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-council)" filter="url(#disc-glow)" opacity="0.85"/>
-        <circle cx="0" cy="0" r="22" fill="url(#g-council)"/>
-        <!-- compass-of-four glyph -->
-        <g fill="#ffffff" transform="translate(-9 -9)">
-          <circle cx="9" cy="2.5" r="1.3"/><circle cx="15.5" cy="9" r="1.3"/>
-          <circle cx="9" cy="15.5" r="1.3"/><circle cx="2.5" cy="9" r="1.3"/>
-          <circle cx="9" cy="9" r="1" opacity="0.8"/>
-        </g>
-        <text x="34" y="3">council</text>
+        <circle cx="6" cy="14" r="5" fill="#9affb6"/>
+        <text x="22" y="11" font-size="11" font-weight="600" fill="#d9d0ea">fs.read</text>
+        <text x="78" y="11" font-size="10" fill="#6b6080">src/**</text>
+        <text x="220" y="11" font-size="10" letter-spacing="1" fill="#9affb6" text-anchor="start">AUTO</text>
+        <text x="320" y="11" font-size="10" fill="#6b6080" text-anchor="end">14:32</text>
+        <line x1="0" y1="22" x2="320" y2="22" stroke="rgba(232,222,252,0.05)"/>
       </g>
-    </g>
-    <g transform="translate(1080 174)">
-      <!-- specter -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-specter)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" transform="translate(-9 -9)">
-          <path d="M9 3l6 12h-12z"/>
-          <path d="M9 9v2.5" stroke-linecap="round"/>
-          <circle cx="9" cy="13.4" r="0.65" fill="#fff" stroke="none"/>
-        </g>
-        <text x="34" y="3">specter</text>
+      <g transform="translate(0 32)">
+        <circle cx="6" cy="14" r="5" fill="#a8b4ff"/>
+        <text x="22" y="11" font-size="11" font-weight="600" fill="#d9d0ea">net.fetch</text>
+        <text x="92" y="11" font-size="10" fill="#6b6080">api.github.com</text>
+        <text x="220" y="11" font-size="10" letter-spacing="1" fill="#a8b4ff" text-anchor="start">ALLOWED</text>
+        <text x="320" y="11" font-size="10" fill="#6b6080" text-anchor="end">14:18</text>
+        <line x1="0" y1="22" x2="320" y2="22" stroke="rgba(232,222,252,0.05)"/>
       </g>
-    </g>
-    <g transform="translate(1080 238)">
-      <!-- autonomic -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-autonomic)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.3" transform="translate(-9 -9)">
-          <circle cx="9" cy="9" r="1.7"/>
-          <path d="M3.5 9a5.5 5.5 0 0 1 11 0"/>
-          <path d="M1 9a8 8 0 0 1 16 0" opacity="0.6"/>
-        </g>
-        <text x="34" y="3">autonomic</text>
+      <g transform="translate(0 64)">
+        <circle cx="6" cy="14" r="5" fill="#f8c460"/>
+        <text x="22" y="11" font-size="11" font-weight="600" fill="#d9d0ea">fs.write</text>
+        <text x="82" y="11" font-size="10" fill="#6b6080">src/kernel/…</text>
+        <text x="220" y="11" font-size="10" letter-spacing="1" fill="#f8c460" text-anchor="start">PENDING</text>
+        <text x="320" y="11" font-size="10" fill="#6b6080" text-anchor="end">21:38</text>
+        <line x1="0" y1="22" x2="320" y2="22" stroke="rgba(232,222,252,0.05)"/>
       </g>
-    </g>
-    <g transform="translate(1080 302)">
-      <!-- oracle -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-oracle)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.3" transform="translate(-9 -9)">
-          <path d="M1 9c2-3 5-5 8-5s6 2 8 5c-2 3-5 5-8 5s-6-2-8-5z"/>
-          <circle cx="9" cy="9" r="2" fill="#fff" stroke="none"/>
-        </g>
-        <text x="34" y="3">oracle</text>
-      </g>
-    </g>
-    <g transform="translate(1080 366)">
-      <!-- wraith -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-wraith)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" transform="translate(-9 -9)">
-          <path d="M3 7c0-2.5 2.5-3.5 6-3.5s6 1.7 6 4.2c0 1.7-1.7 3.4-3.4 3.4-1.3 0-2-0.8-3.4-0.8s-2 0.8-2.5 0.8z"/>
-          <circle cx="5" cy="14" r="0.7" fill="#fff" stroke="none" opacity="0.85"/>
-          <circle cx="8" cy="15.5" r="0.6" fill="#fff" stroke="none" opacity="0.55"/>
-          <circle cx="11" cy="14.5" r="0.55" fill="#fff" stroke="none" opacity="0.30"/>
-        </g>
-        <text x="34" y="3">wraith</text>
+      <g transform="translate(0 96)">
+        <circle cx="6" cy="14" r="5" fill="#f86078"/>
+        <text x="22" y="11" font-size="11" font-weight="600" fill="#d9d0ea">proc.spawn</text>
+        <text x="106" y="11" font-size="10" fill="#6b6080">git push</text>
+        <text x="220" y="11" font-size="10" letter-spacing="1" fill="#f86078" text-anchor="start">DENIED</text>
+        <text x="320" y="11" font-size="10" fill="#6b6080" text-anchor="end">13:02</text>
       </g>
     </g>
 
-    <!-- column 2 (right of right zone) -->
-    <g transform="translate(1300 110)">
-      <!-- legacy -->
+    <!-- MOOD header -->
+    <text x="1200" y="478" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" letter-spacing="2.6" fill="#6b6080">AMBIENT MOOD</text>
+
+    <!-- mood thumbnail (mini mesh) -->
+    <g transform="translate(1200 492)">
+      <rect width="320" height="120" rx="10" fill="#15121e"/>
       <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-legacy)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round" transform="translate(-9 -9)">
-          <path d="M3 4l6 0.8 6-0.8v10l-6 0.8-6-0.8z"/>
-          <path d="M9 4.8v10" opacity="0.5"/>
-        </g>
-        <text x="34" y="3">legacy</text>
+        <rect width="320" height="120" rx="10" fill="url(#m1)"/>
+        <rect width="320" height="120" rx="10" fill="url(#m2)"/>
+        <rect width="320" height="120" rx="10" fill="url(#m3)"/>
+        <rect width="320" height="120" rx="10" fill="url(#m4)"/>
+      </g>
+      <rect width="320" height="120" rx="10" fill="none" stroke="rgba(232,222,252,0.08)"/>
+      <!-- caption overlay -->
+      <text x="18" y="98" font-family="-apple-system,ui-sans-serif,sans-serif" font-size="20" font-weight="700" fill="#f3ecff">calm focus</text>
+      <text x="18" y="111" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#c9b8ff" opacity="0.8">low load · evening bias · drifting</text>
+    </g>
+
+    <!-- mood reasons -->
+    <g transform="translate(1200 632)" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#8a8098">
+      <text x="0" y="0">↳ kernel cpu 6% · engram quiet · pulse calm</text>
+      <text x="0" y="16">↳ time-of-day bias: +0.18 toward focus</text>
+      <text x="0" y="32">↳ 0 alerts · 0 paused agents</text>
+    </g>
+
+    <!-- AGENTS header -->
+    <text x="1200" y="712" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="9" letter-spacing="2.6" fill="#6b6080">10 BUILT-IN · 7K+ CATALOG</text>
+
+    <!-- mini agent disc row -->
+    <g transform="translate(1200 728)">
+      <g><circle cx="14" cy="14" r="14" fill="url(#g-oracle)"/></g>
+      <g transform="translate(36 0)"><circle cx="14" cy="14" r="14" fill="url(#g-council)"/></g>
+      <g transform="translate(72 0)"><circle cx="14" cy="14" r="14" fill="url(#g-wraith)"/></g>
+      <g transform="translate(108 0)"><circle cx="14" cy="14" r="14" fill="url(#g-echo)"/></g>
+      <g transform="translate(144 0)"><circle cx="14" cy="14" r="14" fill="url(#g-specter)"/></g>
+      <g transform="translate(180 0)"><circle cx="14" cy="14" r="14" fill="url(#g-autonomic)"/></g>
+      <g transform="translate(216 0)">
+        <circle cx="14" cy="14" r="14" fill="rgba(232,222,252,0.06)" stroke="rgba(232,222,252,0.18)"/>
+        <text x="14" y="18" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" font-weight="700" fill="#c9b8ff" text-anchor="middle">+4</text>
       </g>
     </g>
-    <g transform="translate(1300 174)">
-      <!-- consciousness -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-consciousness)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" transform="translate(-9 -9)">
-          <path d="M9 9 m-0.8 0 a0.8 0.8 0 1 1 1.6 0 a2.4 2.4 0 1 1 -3.2 0 a4 4 0 1 1 5.6 0 a5.6 5.6 0 1 1 -8 0"/>
-        </g>
-        <text x="34" y="3">consciousness</text>
-      </g>
+
+    <!-- footer status -->
+    <g transform="translate(1200 800)" font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10" fill="#6b6080">
+      <text x="0" y="0">v1.0 · 1075 tests passing</text>
+      <text x="0" y="16">kernel.network.io = ∅  (static-verified)</text>
     </g>
-    <g transform="translate(1300 238)">
-      <!-- sentry -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-sentry)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-9 -9)">
-          <path d="M1 9h3l1.6-3.2L8 12 9.6 7.2 11.2 8.8H17"/>
-        </g>
-        <text x="34" y="3">sentry</text>
-      </g>
-    </g>
-    <g transform="translate(1300 302)">
-      <!-- echo -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-echo)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" transform="translate(-9 -9)">
-          <path d="M3 12.5a5.5 5.5 0 0 1 11 0"/>
-          <path d="M5.5 12.5a3 3 0 0 1 6 0" opacity="0.7"/>
-          <circle cx="8.5" cy="12.5" r="0.75" fill="#fff" stroke="none"/>
-        </g>
-        <text x="34" y="3">echo</text>
-      </g>
-    </g>
-    <g transform="translate(1300 366)">
-      <!-- agents (dispatcher) -->
-      <g>
-        <circle cx="0" cy="0" r="22" fill="url(#g-agents)"/>
-        <g fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" transform="translate(-9 -9)">
-          <rect x="2" y="2" width="5" height="5" rx="1"/>
-          <rect x="11" y="2" width="5" height="5" rx="1"/>
-          <rect x="2" y="11" width="5" height="5" rx="1"/>
-          <rect x="11" y="11" width="5" height="5" rx="1" opacity="0.5" stroke-dasharray="1.5 1.5"/>
-        </g>
-        <text x="34" y="3">agents</text>
-      </g>
-    </g>
+
   </g>
 
-  <!-- ─── ONEXUS wordmark — large, top-right of the kernel ─────────────── -->
-  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-weight="700"
-     fill="#f5edff" text-anchor="start">
-    <text x="900" y="76" font-size="80" letter-spacing="14">O N E X U S</text>
-    <text x="903" y="119" font-size="14" letter-spacing="4" fill="#c9b8ff" opacity="0.85">
-      THE  OPERATING  SYSTEM  FOR  AGENTS
-    </text>
-  </g>
-
-  <!-- ─── tagline at bottom-right ─────────────────────────────────────── -->
-  <g font-family="ui-monospace, 'JetBrains Mono', monospace" fill="#a8a0c8" font-size="13">
-    <text x="903" y="475">Local-first.  Sovereign.  Beautiful.</text>
-    <text x="903" y="498" opacity="0.7">The kernel never touches the network — and there's a static test that proves it.</text>
-  </g>
-
-  <!-- ─── status pills bottom-right ───────────────────────────────────── -->
-  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="10" letter-spacing="1.5">
-    <g transform="translate(903 540)">
-      <rect width="80" height="22" rx="11" fill="rgba(168,180,255,0.10)" stroke="rgba(168,180,255,0.28)"/>
-      <text x="40" y="14" fill="#c6cfff" text-anchor="middle">v1.0</text>
-    </g>
-    <g transform="translate(993 540)">
-      <rect width="120" height="22" rx="11" fill="rgba(154,255,182,0.08)" stroke="rgba(154,255,182,0.24)"/>
-      <text x="60" y="14" fill="#b8f4cc" text-anchor="middle">1075 TESTS PASSING</text>
-    </g>
-    <g transform="translate(1123 540)">
-      <rect width="138" height="22" rx="11" fill="rgba(168,124,232,0.08)" stroke="rgba(168,124,232,0.26)"/>
-      <text x="69" y="14" fill="#c8b0f0" text-anchor="middle">10 BUILT-IN AGENTS</text>
-    </g>
-    <g transform="translate(1271 540)">
-      <rect width="78" height="22" rx="11" fill="rgba(232,168,124,0.08)" stroke="rgba(232,168,124,0.26)"/>
-      <text x="39" y="14" fill="#f0c8a0" text-anchor="middle">8 MOODS</text>
-    </g>
-  </g>
-
-  <!-- ─── kernel-layer eyebrow label below the orb ────────────────────── -->
-  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="10"
-     letter-spacing="3.4" fill="#a8a0c8" text-anchor="middle" opacity="0.7">
-    <text x="560" y="568">KERNEL · FIVE COMPONENTS · ZERO NETWORK I/O</text>
-  </g>
-
-  <!-- ─── agents-layer eyebrow label above the discs ──────────────────── -->
-  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="10"
-     letter-spacing="3.4" fill="#a8a0c8" opacity="0.7">
-    <text x="1080" y="78">BUILT-IN AGENTS · TEN IN THE BOX</text>
-  </g>
+  <!-- subtle viewport reflection on the chrome edge -->
+  <rect x="60" y="70" width="1480" height="2" rx="1" fill="rgba(255,255,255,0.04)" clip-path="url(#window-clip)"/>
 </svg>
