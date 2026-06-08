@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from nexus.context import as_agent
 from nexus.federation.models import PeerInfo
 from nexus.federation.peer import PeerRegistry
 from nexus.federation.security import FederationSecurity
@@ -58,7 +59,8 @@ class PeerDiscovery:
 
         try:
             if self._http is not None:
-                resp = await self._http.get(f"{url}/api/system/status")
+                async with as_agent("federation"):
+                    resp = await self._http.get(f"{url}/api/system/status")
                 resp.raise_for_status()
                 data = resp.json()
             else:
@@ -110,7 +112,8 @@ class PeerDiscovery:
 
             try:
                 if self._http is not None:
-                    resp = await self._http.get(f"{url}/api/system/status")
+                    async with as_agent("federation"):
+                        resp = await self._http.get(f"{url}/api/system/status")
                     if resp.status_code != 200:
                         continue
                     data = resp.json()
@@ -163,10 +166,11 @@ class PeerDiscovery:
 
             try:
                 if self._http is not None:
-                    resp = await self._http.post(
-                        f"{peer.url.rstrip('/')}/api/federation/heartbeat",
-                        json={"peer_id": self.instance_id},
-                    )
+                    async with as_agent("federation"):
+                        resp = await self._http.post(
+                            f"{peer.url.rstrip('/')}/api/federation/heartbeat",
+                            json={"peer_id": self.instance_id},
+                        )
                 else:
                     async with httpx.AsyncClient(timeout=5.0) as client:
                         resp = await client.post(

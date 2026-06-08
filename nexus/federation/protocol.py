@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from nexus.context import as_agent
 from nexus.federation.models import (
     FederationMessage,
     FederationRequest,
@@ -95,10 +96,11 @@ class FederationProtocol:
         self._log_outbound(peer_url, f"Handshake initiation to {peer_url}")
 
         if self._http is not None:
-            resp = await self._http.post(
-                f"{peer_url.rstrip('/')}/api/federation/handshake",
-                json=handshake_payload,
-            )
+            async with as_agent("federation"):
+                resp = await self._http.post(
+                    f"{peer_url.rstrip('/')}/api/federation/handshake",
+                    json=handshake_payload,
+                )
             resp.raise_for_status()
             data = resp.json()
         else:
@@ -181,9 +183,10 @@ class FederationProtocol:
         self._log_outbound(peer.url, f"Capability exchange with {peer.instance_name}")
 
         if self._http is not None:
-            resp = await self._http.get(
-                f"{peer.url.rstrip('/')}/api/federation/capabilities",
-            )
+            async with as_agent("federation"):
+                resp = await self._http.get(
+                    f"{peer.url.rstrip('/')}/api/federation/capabilities",
+                )
             resp.raise_for_status()
             data = resp.json()
         else:
@@ -251,10 +254,11 @@ class FederationProtocol:
         self._log_outbound(peer.url, f"Route request to {peer.instance_name}: {message[:100]}")
 
         if self._http is not None:
-            resp = await self._http.post(
-                f"{peer.url.rstrip('/')}/api/federation/route",
-                json=request.to_dict(),
-            )
+            async with as_agent("federation"):
+                resp = await self._http.post(
+                    f"{peer.url.rstrip('/')}/api/federation/route",
+                    json=request.to_dict(),
+                )
             resp.raise_for_status()
             data = resp.json()
         else:
@@ -384,10 +388,11 @@ class FederationProtocol:
         try:
             hb_payload = {"peer_id": self.instance_id, "timestamp": self._now_iso()}
             if self._http is not None:
-                resp = await self._http.post(
-                    f"{peer.url.rstrip('/')}/api/federation/heartbeat",
-                    json=hb_payload,
-                )
+                async with as_agent("federation"):
+                    resp = await self._http.post(
+                        f"{peer.url.rstrip('/')}/api/federation/heartbeat",
+                        json=hb_payload,
+                    )
                 resp.raise_for_status()
             else:
                 async with httpx.AsyncClient(timeout=5.0) as client:
@@ -429,10 +434,11 @@ class FederationProtocol:
             try:
                 disc_payload = {"peer_id": self.instance_id, "type": "disconnect"}
                 if self._http is not None:
-                    await self._http.post(
-                        f"{peer.url.rstrip('/')}/api/federation/heartbeat",
-                        json=disc_payload,
-                    )
+                    async with as_agent("federation"):
+                        await self._http.post(
+                            f"{peer.url.rstrip('/')}/api/federation/heartbeat",
+                            json=disc_payload,
+                        )
                 else:
                     async with httpx.AsyncClient(timeout=5.0) as client:
                         await client.post(
