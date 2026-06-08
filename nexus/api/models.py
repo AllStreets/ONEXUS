@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 class MessageRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User message to process")
     context: dict[str, Any] = Field(default_factory=dict, description="Optional context")
+    workspace_id: str | None = Field(default=None, description="Workspace scope — message + reply are stored in this workspace's Engram and logged with this scope in Chronicle")
 
 
 class TrustAdjustRequest(BaseModel):
@@ -27,6 +28,8 @@ class PublishEventRequest(BaseModel):
 class MessageResponse(BaseModel):
     response: str
     module: Optional[str] = None
+    workspace_id: Optional[str] = None
+    memory_id: Optional[str] = None  # Engram episodic memory ID for this exchange
 
 
 class ModuleInfo(BaseModel):

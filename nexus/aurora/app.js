@@ -546,6 +546,14 @@ function attachShellHandlers() {
       if (q) location.hash = `#/catalog?q=${encodeURIComponent(q)}`;
     }
   });
+  // Click the workspace name in the chrome → return to that workspace's home
+  // (clears the active thread and shows the welcome state + prompt cards).
+  document.getElementById("nx-chrome-context").addEventListener("click", () => {
+    if (!state.active) return;
+    state.thread.set(state.active, []);
+    location.hash = `#/conversation/${state.active}`;
+    renderConversation(state.active);
+  });
 }
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
@@ -589,6 +597,13 @@ function renderSidebar() {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
+        // Clicking the already-active workspace = return to its home
+        const alreadyActive = state.active === id;
+        if (alreadyActive) {
+          state.thread.set(id, []);
+          renderConversation(id);
+          return;
+        }
         await fetch(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST" });
         await loadWorkspaces();
         renderSidebar();
@@ -687,7 +702,12 @@ function renderTrustCard() {
   const dStr = state.trust.delta > 0 ? `+${state.trust.delta.toFixed(2)}`
             : state.trust.delta.toFixed(2);
   const bd = state.trust.breakdown || {};
-  const breakdownLine = `${bd.routine || 0} routine · ${bd.notable || 0} notable · ${bd.sensitive || 0} sensitive · ${bd.denied || 0} denied`;
+  const cells = [
+    { lbl: "ROUTINE",   val: bd.routine   || 0 },
+    { lbl: "NOTABLE",   val: bd.notable   || 0 },
+    { lbl: "SENSITIVE", val: bd.sensitive || 0 },
+    { lbl: "DENIED",    val: bd.denied    || 0 },
+  ];
   el.innerHTML = `
     <svg class="nx-trust-spark" viewBox="0 0 320 92" preserveAspectRatio="none" aria-hidden="true">
       ${trustSparkSVG(state.trust.history, dir)}
@@ -696,7 +716,14 @@ function renderTrustCard() {
       <span class="nx-trust-delta">${dStr}</span>
       <span class="nx-trust-state">${dir.toUpperCase()}</span>
     </div>
-    <div class="nx-trust-breakdown">${escapeHtml(breakdownLine)}</div>
+    <div class="nx-trust-breakdown">
+      ${cells.map(c => `
+        <div class="b-cell">
+          <span class="b-val">${c.val}</span>
+          <span class="b-lbl">${c.lbl}</span>
+        </div>
+      `).join("")}
+    </div>
   `;
 }
 
@@ -755,11 +782,13 @@ function renderPermLog() {
       <div class="nx-perm-row">
         <span class="nx-perm-dot class-${pc}"></span>
         <div class="nx-perm-cap">
-          <span>${escapeHtml(r.capability || "")}</span>
-          <span class="nx-perm-target">${escapeHtml(r.target ? truncate(r.target, 18) : "")}</span>
+          <span class="cap" title="${escapeHtml(r.capability || "")}">${escapeHtml(r.capability || "")}</span>
+          ${r.target ? `<span class="tgt" title="${escapeHtml(r.target)}">${escapeHtml(r.target)}</span>` : ""}
         </div>
-        <span class="nx-perm-status s-${status}">${status.toUpperCase()}</span>
-        <span class="nx-perm-time">${escapeHtml(t)}</span>
+        <div class="nx-perm-meta">
+          <span class="nx-perm-status s-${status}">${status.toUpperCase()}</span>
+          ${t ? `<span class="nx-perm-time">${escapeHtml(t)}</span>` : ""}
+        </div>
       </div>
     `;
   }).join("");
@@ -848,10 +877,20 @@ async function renderConversation(workspaceId) {
       : `Session in ${ws.name}`;
     main.innerHTML = `
       <div class="nx-conv-head">
-        <div class="nx-conv-crumb">
-          <span class="crumb-dim">workspace /</span>
-          <span class="crumb-strong">${escapeHtml((ws.name || ws.workspace_id).toLowerCase())}</span>
-          <span class="crumb-dim">— today, ${stamp}</span>
+        <div class="nx-conv-head-row">
+          <div class="nx-conv-crumb">
+            <button class="crumb-link" id="nx-crumb-home" data-id="${escapeHtml(ws.workspace_id)}">
+              <span class="crumb-dim">workspace /</span>
+              <span class="crumb-strong">${escapeHtml((ws.name || ws.workspace_id).toLowerCase())}</span>
+            </button>
+            <span class="crumb-dim">— today, ${stamp}</span>
+          </div>
+          <div class="nx-conv-head-actions">
+            <button class="nx-conv-action" id="nx-new-thread" title="Start a new thread in this workspace">
+              <span class="nx-plus" aria-hidden="true"></span>
+              <span>new thread</span>
+            </button>
+          </div>
         </div>
         <div class="nx-conv-title">${escapeHtml(title)}</div>
         <div class="nx-conv-meta">${escapeHtml(meta)}</div>
@@ -869,6 +908,13 @@ async function renderConversation(workspaceId) {
         </div>
       </form>
     `;
+    // Wire the home crumb and the new-thread button
+    const goHome = () => {
+      state.thread.set(workspaceId, []);
+      renderConversation(workspaceId);
+    };
+    document.getElementById("nx-crumb-home")?.addEventListener("click", goHome);
+    document.getElementById("nx-new-thread")?.addEventListener("click", goHome);
   }
 
   // Wire prompt suggestion cards (empty state)
@@ -947,6 +993,31 @@ async function renderConversation(workspaceId) {
       await renderConversation(workspaceId);
     });
   }
+
+  // Wire feedback buttons on every agent message
+  main.querySelectorAll(".nx-msg-agent[data-module]").forEach(msgNode => {
+    msgNode.querySelectorAll(".nx-fb-btn[data-fb]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const module = msgNode.dataset.module;
+        const accepted = btn.dataset.fb === "up";
+        const id = msgNode.dataset.messageId;
+        try {
+          await fetch("/api/messages/feedback", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ module, accepted }),
+          });
+          // Update cached thread state so the highlight persists across re-renders
+          const t = state.thread.get(workspaceId) || [];
+          const m = t.find(x => x.id === id);
+          if (m) m.feedback = accepted ? "up" : "down";
+          // Reflect immediately + reload trust + rerender
+          await loadTrust();
+          renderCockpitRail();
+          renderConversation(workspaceId);
+        } catch {}
+      });
+    });
+  });
 
   // Wire pending permission buttons
   main.querySelectorAll(".nx-perm-prompt[data-ticket]").forEach(node => {
@@ -1028,6 +1099,20 @@ function renderMessageHTML(m) {
   }
   const slug = m.agent || "oracle";
   const time = formatTime(m.ts) || "";
+  if (m.typing) {
+    return `
+      <div class="nx-msg-agent">
+        ${agentDisc(slug, { size: 40 })}
+        <div class="nx-msg-col">
+          <div class="nx-msg-head">
+            <span class="nx-msg-name">routing…</span>
+            <span class="nx-msg-meta">cortex is picking a module</span>
+          </div>
+          <div class="nx-typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    `;
+  }
   const diffs = (m.attachments || []).filter(a => a.kind === "diff");
   const diffHTML = diffs.length ? `
     <div class="nx-diff-stack">
@@ -1042,16 +1127,32 @@ function renderMessageHTML(m) {
       `).join("")}
     </div>
   ` : "";
+  const fb = m.feedback;  // null | 'up' | 'down'
   return `
-    <div class="nx-msg-agent">
+    <div class="nx-msg-agent" data-message-id="${escapeHtml(m.id || "")}" data-module="${escapeHtml(slug)}">
       ${agentDisc(slug, { size: 40 })}
-      <div>
+      <div class="nx-msg-col">
         <div class="nx-msg-head">
           <span class="nx-msg-name">${escapeHtml(slug)}</span>
           <span class="nx-msg-meta">${escapeHtml(time)}</span>
+          ${m.memory_id ? `<span class="nx-msg-memory" title="Stored in Engram: ${escapeHtml(m.memory_id)}">remembered</span>` : ""}
         </div>
         <div class="nx-msg-body" style="white-space:pre-wrap">${m.html || escapeHtml(m.body)}</div>
         ${diffHTML}
+        <div class="nx-msg-footer">
+          <button class="nx-fb-btn ${fb === 'up' ? 'on' : ''}" data-fb="up" title="Mark this response as useful (raises ${escapeHtml(slug)}'s trust)">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6V10H1.5V6z"/>
+              <path d="M3 6h5.5l1.5-2.5c.3-.6 0-1.5-.8-1.5H7l.4-1.3c.1-.5-.3-1-.8-1H6L4 4 3 5"/>
+            </svg>
+          </button>
+          <button class="nx-fb-btn ${fb === 'down' ? 'on down' : ''}" data-fb="down" title="Mark this response as unhelpful (lowers ${escapeHtml(slug)}'s trust)">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:rotate(180deg)">
+              <path d="M3 6V10H1.5V6z"/>
+              <path d="M3 6h5.5l1.5-2.5c.3-.6 0-1.5-.8-1.5H7l.4-1.3c.1-.5-.3-1-.8-1H6L4 4 3 5"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -1089,6 +1190,8 @@ function renderPendingPermissionHTML(p) {
   `;
 }
 
+function _msgId() { return "m_" + Math.random().toString(36).slice(2, 10); }
+
 async function sendMessage(workspaceId) {
   const input = document.getElementById("nx-composer-input");
   const body = input.value.trim();
@@ -1096,7 +1199,13 @@ async function sendMessage(workspaceId) {
   input.value = "";
   // Append user message locally
   const thread = state.thread.get(workspaceId) || [];
-  thread.push({ role: "user", body, ts: new Date().toISOString() });
+  thread.push({ id: _msgId(), role: "user", body, ts: new Date().toISOString() });
+  state.thread.set(workspaceId, thread);
+  renderConversation(workspaceId);
+
+  // Add a pending typing indicator message so the user sees the system thinking
+  const typingId = _msgId();
+  thread.push({ id: typingId, role: "agent", agent: "council", body: "", ts: new Date().toISOString(), typing: true });
   state.thread.set(workspaceId, thread);
   renderConversation(workspaceId);
 
@@ -1106,23 +1215,37 @@ async function sendMessage(workspaceId) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: body, workspace_id: workspaceId }),
     });
+    // Remove the typing placeholder
+    const idx = thread.findIndex(m => m.id === typingId);
+    if (idx >= 0) thread.splice(idx, 1);
+
     if (r.ok) {
       const resp = await r.json();
       const agentBody = resp.response || resp.message || resp.reply || "";
       const agent = resp.agent || resp.routed_to || resp.module || "oracle";
-      thread.push({ role: "agent", agent, body: agentBody, ts: new Date().toISOString() });
+      thread.push({
+        id: _msgId(),
+        role: "agent",
+        agent,
+        body: agentBody,
+        ts: new Date().toISOString(),
+        memory_id: resp.memory_id || null,
+        feedback: null,
+      });
       state.thread.set(workspaceId, thread);
       renderConversation(workspaceId);
       // Refresh trust + permissions in case routing produced events
       loadTrust().then(() => loadPermissions()).then(renderCockpitRail);
     } else {
       const errText = await r.text();
-      thread.push({ role: "agent", agent: "specter", body: `Routing failed (${r.status}): ${errText}`, ts: new Date().toISOString() });
+      thread.push({ id: _msgId(), role: "agent", agent: "specter", body: `Routing failed (${r.status}): ${errText}`, ts: new Date().toISOString() });
       state.thread.set(workspaceId, thread);
       renderConversation(workspaceId);
     }
   } catch (err) {
-    thread.push({ role: "agent", agent: "specter", body: `Routing error: ${err.message}`, ts: new Date().toISOString() });
+    const idx = thread.findIndex(m => m.id === typingId);
+    if (idx >= 0) thread.splice(idx, 1);
+    thread.push({ id: _msgId(), role: "agent", agent: "specter", body: `Routing error: ${err.message}`, ts: new Date().toISOString() });
     state.thread.set(workspaceId, thread);
     renderConversation(workspaceId);
   }

@@ -600,11 +600,19 @@ class Cortex:
                     if pin_agent in self._modules:
                         return pin_agent, scored
 
-        # 2. Check for explicit module invocation by name
+        # 2. Check for explicit module invocation.
+        #    Strong forms (prefix, @mention, "Module:") win over weak forms
+        #    (bare module name appearing anywhere in the message).
         msg_lower = message.lower()
+        msg_stripped = msg_lower.lstrip()
         for mod_name in self._modules:
+            # Strong: "@oracle ...", "Oracle: ...", "oracle, ..."
+            for prefix in (f"@{mod_name}", f"{mod_name}:", f"{mod_name},", f"{mod_name} —"):
+                if msg_stripped.startswith(prefix):
+                    return mod_name, scored
+        for mod_name in self._modules:
+            # Weak: bare module name anywhere in the message
             if mod_name in msg_lower:
-                # Explicit invocation bypasses trust floor
                 return mod_name, scored
 
         # 3. Filter by availability, permissions, and trust floor
