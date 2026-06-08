@@ -10,7 +10,7 @@ def oracle():
 
 def test_oracle_attrs(oracle):
     assert oracle.name == "oracle"
-    assert oracle.version == "0.1.0"
+    assert oracle.version == "1.0.0"
 
 
 def test_add_trigger_rule(oracle):

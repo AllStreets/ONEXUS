@@ -10,7 +10,7 @@ def echo():
 
 def test_echo_attrs(echo):
     assert echo.name == "echo"
-    assert echo.version == "0.1.0"
+    assert echo.version == "1.0.0"
 
 
 def test_observe_text_sample(echo):

@@ -10,7 +10,7 @@ def specter():
 
 def test_specter_attrs(specter):
     assert specter.name == "specter"
-    assert specter.version == "0.1.0"
+    assert specter.version == "1.0.0"
 
 
 def test_assess_stakes_low(specter):
@@ -59,8 +59,9 @@ def test_custom_adversarial_prompt(specter):
 
 @pytest.mark.asyncio
 async def test_specter_handle(specter):
+    # Use adversarial analysis path (not "red team" audit path, which requires chronicle)
     result = await specter.handle(
-        "Red team this: Accept a 2-year non-compete clause for a 20% raise",
+        "Should I accept a 2-year non-compete clause for a 20% raise?",
         {"llm": None},
     )
     assert "counter" in result.lower() or "risk" in result.lower() or "assumption" in result.lower()
