@@ -31,6 +31,24 @@ from enum import Enum
 from typing import Any
 
 
+def _tod_bias_for_hour(hour: int) -> float:
+    """Return a time-of-day bias float for the given UTC hour (0-23).
+
+    06–10 → +0.5  (morning gold)
+    10–17 →  0.0  (midday neutral)
+    17–22 → +0.5  (evening violet)
+    22–06 → -0.5  (night desat)
+    """
+    if 6 <= hour < 10:
+        return 0.5
+    if 10 <= hour < 17:
+        return 0.0
+    if 17 <= hour < 22:
+        return 0.5
+    # 22–23 and 00–05 (night)
+    return -0.5
+
+
 # ── mood enumeration ──────────────────────────────────────────────────────────
 
 
@@ -193,7 +211,10 @@ class MoodEngine:
         mood = self._select_mood(signals)
         overlay = self._select_overlay(signals)
         spec = _MOOD_SPECS[mood]
-        return MoodResult(mood=mood, spec=spec, overlay=overlay, signals=signals)
+        hour = signals.hour_utc if signals.hour_utc is not None else datetime.now().hour
+        tod_bias = _tod_bias_for_hour(hour)
+        return MoodResult(mood=mood, spec=spec, overlay=overlay, signals=signals,
+                          tod_bias=tod_bias)
 
     # ── mood selection (priority order) ───────────────────────────────────
 
@@ -293,6 +314,7 @@ class MoodResult:
     spec: MoodSpec
     overlay: TrustOverlay | None
     signals: MoodSignals
+    tod_bias: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -300,4 +322,5 @@ class MoodResult:
             "hue_family": self.spec.hue_family,
             "drift_seconds": self.spec.drift_seconds,
             "overlay": self.overlay.value if self.overlay else None,
+            "tod_bias": self.tod_bias,
         }
