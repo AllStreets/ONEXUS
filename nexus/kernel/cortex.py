@@ -18,6 +18,13 @@ from nexus.kernel.pulse import Pulse, Message
 from nexus.modules.base import NexusModule
 from nexus.config import NexusConfig
 
+# Lazy import — WorkspaceConfig lives in workspaces layer (above the kernel).
+# We use TYPE_CHECKING + string annotation to avoid the circular import at
+# module load time.  The actual object is only used at runtime inside methods.
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from nexus.workspaces.config import WorkspaceConfig
+
 
 # ---------------------------------------------------------------------------
 # Intent classification primitives
@@ -251,13 +258,45 @@ class IntentClassifier:
     structural analysis, and routing context to rank intents.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, intents: list[Intent] | None = None) -> None:
         self._intents: list[Intent] = []
         self._routing_history: deque[str] = deque(maxlen=5)
-        self._load_intents()
+        if intents is not None:
+            self._intents = list(intents)
+        else:
+            # Phase 2: default to loading from the built-in registry.
+            try:
+                registry = default_builtin_registry()
+                self._intents = self._intents_from_registry(registry)
+            except Exception:
+                # Fallback to the legacy hardcoded defs if registry boot fails
+                # (e.g., when an existing test instantiates without all modules importable).
+                self._load_intents_legacy()
 
-    def _load_intents(self) -> None:
-        """Build Intent objects from the canonical definitions."""
+    @classmethod
+    def from_registry(cls, registry) -> "IntentClassifier":
+        instance = cls.__new__(cls)
+        instance._intents = instance._intents_from_registry(registry)
+        instance._routing_history = deque(maxlen=5)
+        return instance
+
+    # ── intent construction ──────────────────────────────────────────────
+
+    def _intents_from_registry(self, registry) -> list[Intent]:
+        out: list[Intent] = []
+        for manifest in registry.manifests():
+            for intent_decl in manifest.intents:
+                out.append(Intent(
+                    name=intent_decl.name,
+                    module=manifest.slug,
+                    description=manifest.tagline,
+                    patterns=_compile(intent_decl.patterns),
+                    semantic_signals=list(intent_decl.semantic_signals),
+                ))
+        return out
+
+    def _load_intents_legacy(self) -> None:
+        """Fallback: build from the hardcoded `_INTENT_DEFS` (preserved during Phase 2)."""
         for defn in _INTENT_DEFS:
             self._intents.append(Intent(
                 name=defn["name"],
@@ -406,6 +445,32 @@ class IntentClassifier:
         self._routing_history.append(module)
 
 
+def default_builtin_registry():
+    """Build the registry of the 10 built-in NexusModule classes.
+
+    Lazy imports — these modules import the kernel transitively, so
+    a module-level import here would create a circular dependency at
+    `import nexus.kernel.cortex` time.
+    """
+    from nexus.agents.registry import BuiltinRegistry
+    from nexus.modules.council import CouncilModule
+    from nexus.modules.specter import SpecterModule
+    from nexus.modules.autonomic import AutonomicModule
+    from nexus.modules.oracle import OracleModule
+    from nexus.modules.wraith import WraithModule
+    from nexus.modules.legacy import LegacyModule
+    from nexus.modules.consciousness import ConsciousnessModule
+    from nexus.modules.sentry import SentryModule
+    from nexus.modules.echo import EchoModule
+    from nexus.modules.agent_dispatcher import AgentDispatcherModule
+
+    return BuiltinRegistry.from_modules([
+        CouncilModule, SpecterModule, AutonomicModule, OracleModule,
+        WraithModule, LegacyModule, ConsciousnessModule, SentryModule,
+        EchoModule, AgentDispatcherModule,
+    ])
+
+
 # ---------------------------------------------------------------------------
 # Cortex -- the central router
 # ---------------------------------------------------------------------------
@@ -433,8 +498,29 @@ class Cortex:
         self._modules: dict[str, NexusModule] = {}
         self._llm = None
         self._classifier = IntentClassifier()
+        # Active workspace routing pins — set via set_workspace_config().
+        # List of (intent_name_or_None, category_or_None, agent_slug).
+        self._workspace_pins: list[tuple[str | None, str | None, str]] = []
 
     # -- public API (preserved) --------------------------------------------
+
+    def set_workspace_config(self, config: "WorkspaceConfig | None") -> None:
+        """Load (or clear) routing pins from the active workspace config.
+
+        Called by the workspace switcher when a workspace is activated or
+        deactivated.  Passing ``None`` clears all pins.
+
+        The pins are consulted in :meth:`_select_module` *before* the
+        semantic scoring engine, so a pin bypasses Cortex's intent
+        classifier for the specified intents / categories.
+        """
+        if config is None:
+            self._workspace_pins = []
+            return
+        self._workspace_pins = [
+            (pin.intent, pin.category, pin.agent)
+            for pin in config.routing_pins
+        ]
 
     def set_llm(self, llm_fn) -> None:
         """Set the LLM inference function used by modules and fallback classification."""
@@ -442,6 +528,23 @@ class Cortex:
 
     def register_module(self, module: NexusModule) -> None:
         self._modules[module.name] = module
+
+    def register_builtin_manifests(self) -> None:
+        """Register every built-in module's manifest with Aegis.
+
+        Called once at kernel boot. Idempotent — registering the same
+        manifest twice overwrites the dict entry but does not duplicate
+        any DB rows (Aegis seeds trust only if the row is at 0.0).
+        """
+        registry = default_builtin_registry()
+        registry.register_all(self._aegis)
+        try:
+            self._chronicle.log("cortex", "builtins_registered", {
+                "slugs": registry.slugs(),
+            })
+        except Exception:
+            # Chronicle failures must never block kernel boot.
+            pass
 
     async def unregister_module(self, name: str) -> None:
         module = self._modules.pop(name, None)
@@ -483,6 +586,19 @@ class Cortex:
 
         # 1. Classify intent
         scored = self._classifier.classify(message)
+
+        # 1a. Workspace pin resolution — highest priority after classification.
+        #     If the top-ranked intent matches a workspace pin, route directly.
+        if self._workspace_pins and scored:
+            top_intent = scored[0]
+            for pin_intent, pin_category, pin_agent in self._workspace_pins:
+                if pin_intent is not None and pin_intent == top_intent.name:
+                    if pin_agent in self._modules:
+                        return pin_agent, scored
+                # Category pins apply when the top intent's module matches category.
+                if pin_category is not None and pin_category == top_intent.module:
+                    if pin_agent in self._modules:
+                        return pin_agent, scored
 
         # 2. Check for explicit module invocation by name
         msg_lower = message.lower()

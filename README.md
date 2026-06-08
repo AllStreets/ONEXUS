@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/ONEXUS-v0.2.0-blue?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/ONEXUS-v1.0-blue?style=for-the-badge" alt="Version"/>&nbsp;
+  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>&nbsp;
+  <img src="https://img.shields.io/badge/Tests-1074_passing-brightgreen?style=for-the-badge" alt="Tests"/>&nbsp;
+  <img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/>
 </p>
 
 <p align="center">
@@ -7,349 +10,181 @@
     <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=64&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=750&height=100&lines=O+N+E+X+U+S" alt="ONEXUS"/>
   </a>
 </p>
-<p align="center"><strong>Open-Source Neural Executive for Unified Superintelligence</strong></p>
-<p align="center"><em>A cognitive operating system that runs on your hardware, answers to no cloud, and compounds intelligence the longer it runs.</em></p>
+
+<p align="center"><strong>The operating system for agents.</strong></p>
+<p align="center"><em>Local-first. Sovereign. Beautiful. Built so the kernel never touches the network.</em></p>
 
 ---
 
-## The Idea
+## What it is
 
-Most AI tools are wrappers around an API. You send text up, you get text back, someone else stores your data.
-
-ONEXUS is the opposite. It is a microkernel -- a small, stable core that loads specialized cognitive modules on demand. Everything runs local. Your conversations, your memory, your audit trail -- all on your machine, in a single SQLite database. The kernel is lightweight and model-agnostic -- connect any LLM provider at runtime, or run fully offline with a local model.
-
-Five kernel components form the nervous system. Nine cognitive modules form the brain. Each module does something fundamentally different -- deliberation, adversarial analysis, pattern detection, self-reflection, behavioral modeling. They communicate through an event bus, earn trust through demonstrated reliability, and are accountable to an immutable audit trail.
-
-The kernel never touches the network. Two modules can optionally connect peer-to-peer -- blocked by default, logged when enabled. There is no central server, no telemetry, no cloud dependency. Every machine owns its own data.
-
-This is not prompt chaining. Not tool use. Not a wrapper around someone else's API. This is an operating system for intelligence -- a digital brain that runs locally and gets smarter the longer you use it.
-
----
-
-## Architecture
+NEXUS is an OS that runs **agents** the way iOS runs apps. Built-in cognitive modules (Council, Specter, Wraith, Echo, ...) and third-party catalog agents (aider, cline, browser-use, ...) share one runtime, one manifest format, one trust model, one set of surfaces. Workspaces are rooms with their own roster, memory, grants, and home tone. Every tool call routes through a capability arbiter that gates against the agent's declared permissions, surfaces a first-use prompt when something needs your approval, and logs every byte to an immutable audit ledger.
 
 ```
-                       +---------+
-                       |  USER   |
-                       +----+----+
-                            |
- +==========================|==========================+
- |                    ONEXUS KERNEL                    |
- |                          |                          |
- |                    +-----v-----+                    |
- |                    |  CORTEX   |                    |
- |                    | (router)  |                    |
- |                    +-----+-----+                    |
- |      +--------+----+-----+---+----+-------+         |
- |      |        |    |         |    |       |         |
- |   +--+---+ +--+--+ +---------+ +--+--+ +--+--+      |
- |   |ENGRAM| |PULSE| |CHRONICLE| |AEGIS| | LLM |      |
- |   |(mem) | |(bus)| | (audit) | |(trs)| |(inf)|      |
- |   +------+ +-----+ +---------+ +-----+ +-----+      |
- |                                                     |
- |   Trust: 0.00 -- 0.25 -- 0.50 -- 0.75 -- 1.00       |
- |   +0.12 correct / -0.22 wrong / asymmetric          |
- +=====================================================+
-       |            |          |         |        |
- +-----+----+ +-----+----+ +---+---+ +---+--+ +---+--+
- |DELIBERATE| | DEFENSE  | |PATTERN| | SELF | |MODEL |
- |          | |          | |       | |      | |      |
- | Council  | | Specter  | |Oracle | |Consc.| | Echo |
- | Autonomic| |          | |Sentry | |Legacy| |      |
- +-----+----+ +-----+----+ +---+---+ +---+--+ +---+--+
-       |            |          |         |        |
-       +------+-----+-----+----+------+--+--------+
-              |           |           |
-         +---------+  +-------+  +---------+
-         | ACTION  |  |  MCP  |  | CATALOG |
-         | Wraith  |  |bridge |  | reader  |
-         +----+----+  +---+---+  +----+----+
-                          |           |
-      +===================|===========|==========+
-      |           ONEXUS-AGENTS CATALOG          |
-      |                   |           |          |
-      |    +--------------+    +------+------+   |
-      |    | adapters/    |    | catalog/    |   |
-      |    | mcp.json     |    | <category>/ |   |
-      |    | per agent    |    | agent.json  |   |
-      |    +--------------+    +-------------+   |
-      |                                          |
-      |    40 categories -- top 100 per category |
-      |    Nightly crawl -- GitHub + Hugging Face|
-      +==========================================+
++------------------------------------------------------------------+
+|                              YOU                                 |
++------------------------------------------------------------------+
+|  Surfaces                                                        |
+|  Conversational  ·  Cockpit (Cmd-`)  ·  Spatial  ·  Settings     |
++------------------------------------------------------------------+
+|  Workspace layer                                                 |
+|  room manager · mood engine · routing pins · templates · grants  |
++------------------------------------------------------------------+
+|  Agent runtime  (one process per agent per workspace)            |
+|  supervisor · MCP client · capability filter · chronicle bridge  |
++------------------------------------------------------------------+
+|  Kernel (5 components, zero network I/O)                         |
+|  Cortex · Engram · Pulse · Chronicle · Aegis                     |
++------------------------------------------------------------------+
+       Outside world (only via aegis.fs / aegis.network):
+       Filesystem · Network · Federation peers
 ```
 
-### The Kernel
+## The four surfaces
 
-Five components. Each has one job:
+| Surface | Where | What |
+|---|---|---|
+| **Workspaces switcher** | ⌘K | Tiles of every workspace with home tone, roster, last-active |
+| **Conversational** | default | 3-column primary view — workspaces + roster, conversation, ambient mood |
+| **Cockpit** | ⌘\` | Observability overlay — live Pulse waveform, trust gradient, route trace, Chronicle tail |
+| **Spatial** | header | Catalog grid — system + installed agents in bespoke identity discs |
+| **Settings** | ⌘, | General / Workspaces / Agents / Security / Providers / About |
 
-| Component | Role | Storage |
-|-----------|------|---------|
-| **Cortex** | Semantic intent classification -- scores input against 9 intent categories and routes to the right module | -- |
-| **Engram** | Three-tier memory -- working (ephemeral), episodic (FTS5), semantic (vector) | SQLite |
-| **Pulse** | Async pub/sub event bus with priority queuing and wildcards | In-memory |
-| **Chronicle** | Immutable audit trail -- every route, response, denial, trust change | SQLite WAL |
-| **Aegis** | Trust engine -- 0.0-1.0 float scoring with +0.12/-0.22 asymmetric adjustment | SQLite |
+Each surface lives in one shell at `/aurora`. Eight ambient mood meshes drift behind everything; the body class follows the kernel's current state. Every glyph is custom SVG — zero emojis.
 
-### The Modules
+## The safety model
 
-Nine cognitive modules. Each does something fundamentally different:
+Four permission classes:
 
-| Module | What It Does |
-|--------|-------------|
-| **Council** | Multi-perspective deliberation with 4 lenses (ethical, verification, lateral, synthesis) and 2 modes (negotiation, simulation) |
-| **Specter** | Adversarial analysis -- red-team audits, stress testing, counter-arguments, failure mode detection |
-| **Autonomic** | Earned autonomy -- learns routines, proposes actions, acts within earned trust boundaries |
-| **Oracle** | Anticipatory pattern detection -- trigger rules, keyword scoring, severity-prioritized threat tracking |
-| **Wraith** | Ephemeral sub-agent spawner with death clocks -- auto-terminate on completion or timeout |
-| **Legacy** | Knowledge crystallization -- distills experience into frameworks, playbooks, heuristics |
-| **Consciousness** | Self-reflection -- journaling, pattern discovery, contradiction detection, reasoning traces |
-| **Sentry** | Cognitive regulation -- monitors focus, fatigue, stress, flow state, cognitive load |
-| **Echo** | User modeling -- behavioral fingerprinting, social graph, writing style analysis, relationship health |
+| Class | When approved | Auto-grant at Executor tier (≥0.75)? |
+|---|---|---|
+| **Routine** | At install | Always — silent |
+| **Notable** | First-use prompt | Yes, within declared scope |
+| **Sensitive** | First-use prompt + 30-day re-confirm | No — always prompts |
+| **Privileged** | Settings → Security only | Never automatic |
 
-Modules don't know about each other. They communicate through Pulse. They're constrained by Aegis. They're remembered by Engram. They're accountable to Chronicle.
+Trust collapse below 0.50 instantly revokes every grant for that agent across every workspace.
 
----
+## Local-first, by static invariant
 
-## Trust System
+The kernel modules (`cortex`, `engram`, `pulse`, `chronicle`) make **zero** direct network I/O. Aegis is the only kernel module that imports `httpx`; everything else routes through `aegis.network()`, which checks the agent's declared `network.outbound.<domain>` capability, rate-limits per agent, and writes a Chronicle entry for every byte that leaves the machine.
 
-Modules earn autonomy through demonstrated reliability. Every interaction adjusts trust:
-
-| Trust Score | Tier | What It Means |
-|-------------|------|---------------|
-| 0.00 - 0.24 | OBSERVER | Module only responds when explicitly invoked |
-| 0.25 - 0.49 | ADVISOR | Can suggest actions proactively |
-| 0.50 - 0.74 | MONITOR | Can watch events and surface findings |
-| 0.75 - 0.99 | EXECUTOR | Can act, but substantive work needs user authorization |
-| 1.00 | AUTONOMOUS | Full autonomy -- revocable instantly, never decays on its own |
-
-Correct response: **+0.12**. Wrong response: **-0.22**. The asymmetry is intentional -- trust is hard to earn and easy to lose.
-
----
+A static test enforces this — see `tests/inference/test_phase_6_smoke.py::test_kernel_never_directly_imports_httpx_in_kernel_modules`.
 
 ## Quickstart
 
 ```bash
-# Clone and install
 git clone https://github.com/AllStreets/ONEXUS.git
 cd ONEXUS
-pip install -e .
+pip install -e ".[llm,api,tui,messaging]"
 
-# Start the kernel -- no model download required
-onexus run
-
-# Connect a model when you're ready:
-#   Option A: local open-source model via llama.cpp, Ollama, or vLLM
-#   Option B: set NEXUS_OPENAI_KEY or NEXUS_ANTHROPIC_KEY
-#   Option C: register a provider at runtime via the API
-```
-
----
-
-## Commands
-
-| Command | What it does |
-|---------|-------------|
-| `onexus run` | Start an interactive session |
-| `onexus tui` | Launch the Rich terminal UI |
-| `onexus serve` | Start the REST/WebSocket API server |
-| `onexus dashboard` | Launch the live web dashboard |
-| `onexus status` | Show system state -- DB, model, port |
-| `onexus allow <module>` | Grant a module permission to operate |
-| `onexus deny <module>` | Revoke a module's permission |
-| `onexus trust <module>` | Show a module's trust score and tier |
-| `onexus revoke <module>` | Reset a module's trust to 0.0 immediately |
-| `onexus forget --yes` | Erase all data (GDPR Art. 17) |
-| `onexus workflow list` | List available built-in workflows |
-| `onexus workflow run <name>` | Run a workflow pipeline |
-| `onexus replay timeline` | Show Chronicle event timeline |
-| `onexus replay snapshot <ts>` | Reconstruct state at a timestamp |
-| `onexus replay diff <t1> <t2>` | Compare state between two points |
-| `onexus federation status` | Show federation status and peers |
-| `onexus federation discover` | Scan local network for peers |
-| `onexus mcp` | Start the MCP server (stdio) |
-
----
-
-## Platform Services
-
-Beyond the kernel, ONEXUS ships with a full platform layer:
-
-### API Server
-
-`onexus serve` starts a FastAPI server exposing the full kernel over REST + WebSocket. Every kernel operation has an endpoint: message routing, module management, memory queries, trust scoring, Chronicle audit, and real-time Pulse event streaming over WebSocket.
-
-### Live Dashboard
-
-A dark-themed real-time web dashboard at `/dashboard`. Trust gauges with animated SVG arcs and glow effects, live Pulse event stream over WebSocket, Chronicle audit timeline, module status panel, and an interactive message console.
-
-### Terminal UI
-
-`onexus tui` launches a Rich-based split-pane terminal interface. Four quadrants: active modules with colored trust bars, conversation history, live Pulse events, and Chronicle entries.
-
-### MCP Server
-
-Every ONEXUS cognitive module exposed as an MCP tool. Connect Claude Desktop, Cursor, VS Code, or any MCP client and ONEXUS becomes the backend brain.
-
-### Workflow Engine
-
-DAG-based pipelines that chain modules into multi-step workflows. Define in YAML or Python. Steps reference outputs of dependencies, support conditional execution, three error policies (stop/skip/continue), and timeout enforcement.
-
-### Time-Travel Replay
-
-Pick any point in ONEXUS history and reconstruct the exact system state: which modules were active, what trust scores were, how messages were routed, what memory was accessed. Snapshot diffs compare two points in time.
-
-### Federation
-
-ONEXUS-to-ONEXUS peer communication. Instances discover each other, exchange capability listings, and route requests across the mesh. HMAC-SHA256 request signing, per-peer rate limiting. All outbound data logged to Chronicle. Disabled by default -- opt-in only.
-
----
-
-## Multi-Provider Inference
-
-| Component | What it does |
-|-----------|-------------|
-| **LocalProvider** | llama.cpp HTTP client, ChatML conversion, zero-dependency local inference |
-| **OpenAIProvider** | OpenAI SDK wrapper, native messages format, configurable model |
-| **AnthropicProvider** | Anthropic SDK wrapper, system message separation per API contract |
-| **ProviderRouter** | Named provider registry, per-request routing, automatic fallback on unhealthy |
-
-Set `NEXUS_DEFAULT_PROVIDER`, `NEXUS_OPENAI_KEY`, `NEXUS_ANTHROPIC_KEY` to configure. Local provider is always available as fallback.
-
-Providers can also be registered at runtime via the API — start the kernel bare and connect a model whenever you're ready:
-
-```bash
-# Start with no model
+# Start the API server + Aurora surfaces
 onexus serve
 
-# Later, connect OpenAI
-curl -X POST http://localhost:8000/api/providers \
-  -H "Content-Type: application/json" \
-  -d '{"provider": "openai", "api_key": "sk-...", "model": "gpt-4o", "set_default": true}'
+# Open the new dashboard
+open http://localhost:8000/aurora
 
-# Or connect Anthropic
-curl -X POST http://localhost:8000/api/providers \
-  -H "Content-Type: application/json" \
-  -d '{"provider": "anthropic", "api_key": "sk-ant-...", "model": "claude-sonnet-4-20250514", "set_default": true}'
-
-# Or point to a local model (llama.cpp, Ollama, vLLM)
-curl -X POST http://localhost:8000/api/providers \
-  -H "Content-Type: application/json" \
-  -d '{"provider": "local", "base_url": "http://localhost:11434", "set_default": true}'
-```
-
----
-
-## Project Structure
-
-```
-nexus/
-+-- __init__.py .......... version
-+-- config.py ............ XDG paths, env overrides
-+-- cli.py ............... Click entry point
-+-- kernel/
-|   +-- cortex.py ........ semantic intent router
-|   +-- engram.py ........ three-tier memory
-|   +-- pulse.py ......... priority event bus
-|   +-- chronicle.py ..... immutable audit trail
-|   +-- aegis.py ......... trust engine (0.0-1.0)
-+-- modules/
-|   +-- base.py .......... NexusModule ABC
-|   +-- council.py ....... multi-perspective deliberation
-|   +-- specter.py ....... adversarial analysis
-|   +-- autonomic.py ..... earned autonomy
-|   +-- oracle.py ........ anticipatory pattern detection
-|   +-- wraith.py ........ ephemeral sub-agent spawner
-|   +-- legacy.py ........ knowledge crystallization
-|   +-- consciousness.py . self-reflection
-|   +-- sentry.py ........ cognitive regulation
-|   +-- echo.py .......... behavioral fingerprinting + social graph
-+-- agents/
-|   +-- catalog.py ....... ONEXUS-Agents catalog reader
-+-- inference/
-|   +-- provider.py ...... InferenceProvider ABC
-|   +-- local.py ......... llama.cpp HTTP client
-|   +-- openai_provider.py
-|   +-- anthropic_provider.py
-|   +-- router.py ........ ProviderRouter with fallback
-|   +-- llm.py ........... LLMClient (delegates to router)
-+-- messaging/
-|   +-- bridge.py ........ MessageBridge ABC
-|   +-- telegram.py ...... Telegram two-way bridge
-|   +-- discord_bridge.py Discord two-way bridge
-|   +-- manager.py ....... BridgeManager lifecycle
-+-- api/
-|   +-- server.py ........ FastAPI app factory
-|   +-- models.py ........ Pydantic request/response types
-|   +-- routes/ .......... REST + WebSocket endpoints
-+-- dashboard/ ........... dark-themed real-time web UI
-+-- tui/ ................. Rich split-pane terminal UI
-+-- mcp/ ................. MCP server + tools + resources
-+-- workflow/ ............ DAG pipeline engine
-+-- replay/ .............. time-travel reconstruction
-+-- federation/ .......... peer-to-peer mesh
-+-- multimodal/ .......... image, audio, document processing
-site/ .................... Astro + Starlight documentation
-tests/ ................... test suite
-```
-
----
-
-## Design Principles
-
-**Local-first.** The kernel never touches the network. No telemetry, no central server, no cloud dependency -- architecturally enforced, not just policy. Your data lives on your machine in a single SQLite database.
-
-**Data sovereignty.** Two modules can optionally connect peer-to-peer. They are blocked by default. Enabling them requires explicit consent. Even then, all outbound data is logged to Chronicle. There is no central server collecting anything from anyone.
-
-**Earned autonomy.** Every module starts at trust 0.0. Every action outcome adjusts trust -- correct results earn latitude (+0.12), failures revoke it (-0.22). This is a continuous score per module, enforced on every call by Aegis and logged permanently by Chronicle.
-
-**Microkernel, not monolith.** The kernel is five files. Modules are loaded and unloaded without restarting. If a module misbehaves, deny it and move on.
-
-**Immutable audit.** Chronicle logs every routing decision, every permission check, every module response, every trust adjustment, and every outbound data event. You can always answer: *what happened, when, and why?*
-
-**Model-agnostic.** Qwen, DeepSeek, Phi, Llama, Gemma -- any open-source model served over HTTP works. Cloud providers (OpenAI, Anthropic) available when configured. Providers can be registered and switched at runtime. No vendor lock-in.
-
-**Compounding value.** Through behavioral fingerprinting (Echo), knowledge crystallization (Legacy), and long-term memory (Engram), ONEXUS becomes more valuable over months and years. It does not reset between sessions.
-
----
-
-## Task Agents
-
-Looking for task-specific agents (code analysis, data pipelines, financial modeling, content generation)? Those live in a separate curated registry:
-
-**[ONEXUS Agents](https://github.com/AllStreets/ONEXUS-Agents)** -- a community hub where developers submit, review, and share task agents that plug into the ONEXUS kernel.
-
-### Deploying Agents into ONEXUS
-
-Clone the catalog and point ONEXUS at it:
-
-```bash
-git clone https://github.com/AllStreets/ONEXUS-Agents.git
-export NEXUS_AGENTS_CATALOG=/path/to/ONEXUS-Agents
+# Or use the CLI
+onexus workspace new client --name "Client work" --template coding
+onexus workspace switch client
 onexus run
 ```
 
-ONEXUS reads the catalog at startup. When Cortex routes a task that matches a catalogued agent's category, it can dispatch via the agent's MCP adapter. Three MCP tools expose the catalog:
+Provider configuration — pick one (or all):
 
-| Tool | What it does |
-|------|-------------|
-| `nexus_agents_browse` | List agents by category, filter to runnable-only |
-| `nexus_agents_search` | Keyword search across names, tags, categories |
-| `nexus_agents_info` | Full metadata + MCP adapter descriptor for a specific agent |
+```bash
+export NEXUS_OPENAI_KEY=sk-...
+export NEXUS_ANTHROPIC_KEY=sk-ant-...
+# or point at a local llama.cpp / Ollama / vLLM:
+export NEXUS_DEFAULT_PROVIDER=local
+```
 
-Runnable agents declare an `adapter_ref` pointing to an MCP server descriptor under `adapters/<name>/mcp.json`. The descriptor specifies transport, command, env keys, capabilities, and a trust floor -- the minimum Aegis trust score required before dispatch.
+You can also register a provider at runtime via `POST /api/providers`.
 
-### Building an Agent for ONEXUS
+## Workspaces
 
-1. Write the agent (any language, any framework).
-2. Wrap it in an MCP server (stdio or SSE transport).
-3. Add a catalog entry to `ONEXUS-Agents/catalog/<category>/<slug>.json`.
-4. Add an adapter descriptor to `ONEXUS-Agents/adapters/<slug>/mcp.json`.
-5. Open a PR. CI validates the schema. An admin reviews and merges.
+```bash
+onexus workspace list
+onexus workspace new <id> --name <name> --template <coding|design|research|writing|personal|blank>
+onexus workspace switch <id>
+onexus workspace destroy <id> [--yes]
+```
 
-The nightly pipeline re-scores every agent. Community submissions become first-class members of the ranking pool the next night after merge.
+Each workspace owns six things, in isolation:
+1. Filesystem root(s)
+2. Resident agents (warm `InProcessAgent` or `MCPAgent` processes)
+3. Memory partition (its own SQLite Engram namespace)
+4. Permission grants ("always in this workspace" lives here)
+5. Home tone (indigo · magenta · sage · plum · amber) + mood biases
+6. Routing pins (`{intent → preferred agent slug}`)
 
----
+Switching rooms feels like walking through a door — agents pause, mood transitions, pins activate.
+
+## Agents
+
+```bash
+onexus agent list                                # installed
+onexus agent install <manifest-path> [--dry-run] # preview the install plan
+onexus agent uninstall <slug> [--yes]
+```
+
+The manifest is the universal contract — see `nexus/schemas/manifest.v1.json` for the JSON Schema. Every agent (built-in or third-party) declares:
+- `intents` — patterns + semantic signals that Cortex's classifier consults
+- `capabilities.tools` — each tool's permission class + declared capability scope
+- `capabilities.declared` — what permissions the agent will ever ask for (4 classes)
+- `runtime` — how the kernel launches it (in_process / stdio / sse)
+- `identity.mark` — a bespoke geometric SVG glyph + radial-gradient disc
+
+## Built-in agents (ship in the box)
+
+| Slug | What it does | Identity |
+|---|---|---|
+| **council** | Four-lens deliberation (ethical, verification, lateral, synthesis) | Compass of four |
+| **specter** | Adversarial red-team review | Warning triangle |
+| **autonomic** | Earned-autonomy routines (Notable: `process.spawn`) | Concentric rings |
+| **oracle** | Anticipatory pattern detection | Eye + pupil |
+| **wraith** | Ephemeral sub-agents with death clocks | Wisp + trail |
+| **legacy** | Knowledge crystallization (playbooks, heuristics) | Open book |
+| **consciousness** | Self-reflection, journaling | Spiral |
+| **sentry** | Cognitive load / flow detection | Heartbeat |
+| **echo** | Behavioural fingerprinting (Privileged: `engram.read.global`) | Nested arcs |
+| **agents** | Catalog dispatcher (Notable: `inter_agent.call.*`) | Tile grid |
+
+## Key APIs
+
+```
+GET  /aurora                          # The Aurora shell
+GET  /api/mood/current                # Current mood snapshot
+WS   /api/mood/ws                     # Push mood transitions
+GET  /api/workspaces                  # List + active marker
+POST /api/workspaces/{id}/switch
+POST /api/messages                    # Send a message to Cortex
+GET  /api/permissions/pending         # First-use prompt inbox
+POST /api/permissions/decide
+WS   /api/permissions/ws              # Push pending tickets
+POST /api/agents/install              # Dry-run or persist
+GET  /api/spatial/agents              # System + installed agents
+GET  /api/cockpit/snapshot            # Cockpit panel data
+```
+
+The classic `/dashboard` is preserved for backward compatibility.
+
+## Design principles
+
+- **Local-first** — the kernel makes zero network calls. Enforced by a static test, not by policy.
+- **Earned autonomy** — every agent starts at trust 0.0. Correct outcomes earn +0.12; failures lose −0.22. Trust ≥ 0.75 unlocks Notable auto-grants in declared scope.
+- **Immutable audit** — Chronicle WAL'd SQLite ledger captures every routing decision, permission check, network request, file access, trust adjustment.
+- **Microkernel, not monolith** — five components: Cortex, Engram, Pulse, Chronicle, Aegis.
+- **Model-agnostic** — OpenAI / Anthropic / local llama.cpp / any HTTP LLM. Switch at runtime.
+- **Sovereign data** — federation is opt-in per workspace; all outbound traffic logged.
+- **Bespoke iconography** — custom SVG everywhere; never emojis.
+- **Accessibility non-negotiable** — `prefers-reduced-motion`, `prefers-contrast`, `prefers-reduced-data`, AAA contrast, color-blind signals via shape + name + drift speed (not color alone).
+
+## Documentation
+
+- Architecture spec: `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` (the design that drove v1)
+- Phase docs: `docs/agents/{foundation,workspaces,safety-ux,surfaces,network-gateway}.md`
+- Catalog of third-party agents: [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents)
 
 ## License
 

@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from nexus.inference.anthropic_provider import AnthropicProvider
 from nexus.inference.provider import InferenceProvider
 
@@ -37,7 +37,7 @@ async def test_anthropic_provider_infer_calls_sdk():
     mock_response = MagicMock()
     mock_response.content = [mock_content_block]
 
-    with patch.object(provider._client.messages, "create", return_value=mock_response) as mock_create:
+    with patch.object(provider._client.messages, "create", new_callable=AsyncMock, return_value=mock_response) as mock_create:
         result = await provider.infer(messages, max_tokens=512, temperature=0.5)
         assert result == "Hi from Claude!"
         mock_create.assert_called_once_with(
@@ -59,7 +59,7 @@ async def test_anthropic_provider_infer_no_system_message():
     mock_response = MagicMock()
     mock_response.content = [mock_content_block]
 
-    with patch.object(provider._client.messages, "create", return_value=mock_response) as mock_create:
+    with patch.object(provider._client.messages, "create", new_callable=AsyncMock, return_value=mock_response) as mock_create:
         result = await provider.infer(messages)
         assert result == "Hi!"
         call_kwargs = mock_create.call_args[1]
@@ -71,7 +71,7 @@ async def test_anthropic_provider_infer_error():
     provider = AnthropicProvider(api_key="test-key")
     messages = [{"role": "user", "content": "test"}]
 
-    with patch.object(provider._client.messages, "create", side_effect=Exception("API error")):
+    with patch.object(provider._client.messages, "create", new_callable=AsyncMock, side_effect=Exception("API error")):
         result = await provider.infer(messages)
         assert "[Inference error:" in result
 
@@ -80,12 +80,10 @@ async def test_anthropic_provider_infer_error():
 async def test_anthropic_provider_health_success():
     provider = AnthropicProvider(api_key="test-key")
 
-    mock_content_block = MagicMock()
-    mock_content_block.text = "ok"
-    mock_response = MagicMock()
-    mock_response.content = [mock_content_block]
+    mock_token_count = MagicMock()
+    mock_token_count.input_tokens = 1
 
-    with patch.object(provider._client.messages, "create", return_value=mock_response):
+    with patch.object(provider._client.messages, "count_tokens", new_callable=AsyncMock, return_value=mock_token_count):
         result = await provider.health()
         assert result is True
 
@@ -94,6 +92,7 @@ async def test_anthropic_provider_health_success():
 async def test_anthropic_provider_health_failure():
     provider = AnthropicProvider(api_key="test-key")
 
-    with patch.object(provider._client.messages, "create", side_effect=Exception("bad key")):
-        result = await provider.health()
-        assert result is False
+    with patch.object(provider._client.messages, "count_tokens", new_callable=AsyncMock, side_effect=Exception("bad key")):
+        with patch.object(provider._client.messages, "create", new_callable=AsyncMock, side_effect=Exception("bad key")):
+            result = await provider.health()
+            assert result is False

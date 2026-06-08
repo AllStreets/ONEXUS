@@ -23,6 +23,50 @@ class AgentDispatcherModule(NexusModule):
     description = "Console surface for browsing and summoning runnable ONEXUS-Agents"
     version = "0.1.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "agents",
+            "name": "agents",
+            "tagline": "Console surface for browsing and summoning runnable agents.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "orchestration",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:agents",
+                                  "gradient": ["#c8c8ff", "#3a3a8c"]}},
+            "intents": [{
+                "name": "SUMMON",
+                "patterns": [
+                    r"\bsummon\b", r"\blaunch\s+agent\b", r"\bstart\s+agent\b",
+                    r"\bstop\s+agent\b", r"\bdismiss\s+agent\b", r"\bkill\s+agent\b",
+                    r"\binvoke\s+agent\b", r"\blist\s+agents?\b", r"\bagent\s+catalog\b",
+                    r"\brunning\s+agents?\b", r"\bonexus[- ]?agents?\b",
+                    r"\bsearch\s+agents?\b", r"\bfind\s+agent\b",
+                ],
+                "semantic_signals": [
+                    "summon", "launch agent", "start agent", "stop agent",
+                    "list agents", "running agents", "agent catalog",
+                    "find agent", "search agents", "invoke agent",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {
+                    "Routine": ["engram.read.workspace", "inter_agent.list"],
+                    "Notable": ["inter_agent.call.*", "process.spawn"],
+                    "Sensitive": [],
+                    "Privileged": [],
+                },
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.30, "default_tier": "ADVISOR"},
+        })
+
     def __init__(
         self,
         catalog: Any | None = None,

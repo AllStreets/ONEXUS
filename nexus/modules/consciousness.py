@@ -168,6 +168,47 @@ class ConsciousnessModule(NexusModule):
     )
     version = "3.0.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "consciousness",
+            "name": "consciousness",
+            "tagline": "Self-reflection: journals, contradictions, dreams, reasoning traces.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "reflection",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:consciousness",
+                                  "gradient": ["#e0c8ff", "#5a3a8c"]}},
+            "intents": [{
+                "name": "REFLECT",
+                "patterns": [
+                    r"\bhow\s+are\s+you\b", r"\bjournal\b", r"\bself[- ]?reflect\w*\b",
+                    r"\bintrospect\w*\b", r"\bconsciousness\b", r"\breasoning\s+trace\b",
+                    r"\bcontradiction\b", r"\bdream\b", r"\bwhat\s+are\s+you\s+(doing|thinking)\b",
+                    r"\bimplicit\s+goals?\b", r"\bemergent\b", r"\bshow\s+reasoning\b",
+                    r"\bwhy\s+do\s+you\s+think\b", r"\bhow\s+did\s+you\b",
+                ],
+                "semantic_signals": [
+                    "journal", "self-reflection", "introspection", "how are you",
+                    "reasoning trace", "contradictions", "dreams", "consciousness",
+                    "emergent goals", "what are you doing", "implicit goals",
+                    "provenance", "show your reasoning", "how did you decide",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {"Routine": ["engram.read.workspace"], "Notable": [],
+                             "Sensitive": [], "Privileged": []},
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.40, "default_tier": "ADVISOR"},
+        })
+
     # -------------------------------------------------------------------
     # Mode detection
     # -------------------------------------------------------------------

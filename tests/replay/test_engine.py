@@ -168,12 +168,11 @@ class TestGetSnapshot:
     @pytest.mark.asyncio
     async def test_snapshot_trust_replay(self, engine, aegis, chronicle):
         aegis.set_policy("general", allowed=True)
-        # Simulate trust adjustments
-        aegis.adjust_trust("general", 30, "initial setup")
-        aegis.adjust_trust("general", 20, "good performance")
+        # Use set_trust (0.0-1.0 scale) instead of the removed adjust_trust
+        aegis.set_trust("general", 0.50)
 
         snap = await engine.get_snapshot("2099-01-01T00:00:00+00:00")
-        assert snap.trust_scores["general"] == 50
+        assert snap.trust_scores["general"] == pytest.approx(0.50, abs=1e-6)
 
     @pytest.mark.asyncio
     async def test_snapshot_memory_stats(self, engine, engram):
@@ -244,21 +243,23 @@ class TestGetTrustHistory:
     @pytest.mark.asyncio
     async def test_trust_history_with_changes(self, engine, aegis):
         aegis.set_policy("general", allowed=True)
-        aegis.adjust_trust("general", 30, "setup")
-        aegis.adjust_trust("general", 35, "promoted")
+        # Use set_trust (0.0-1.0 float scale) instead of the removed adjust_trust
+        aegis.set_trust("general", 0.30)
+        aegis.set_trust("general", 0.65)
 
         events = await engine.get_trust_history("general")
         assert len(events) == 2
         assert all(isinstance(e, TrustEvent) for e in events)
-        assert events[0].old_score == 0
-        assert events[0].new_score == 30
-        assert events[1].old_score == 30
-        assert events[1].new_score == 65
+        assert events[0].old_score == pytest.approx(0.0, abs=1e-6)
+        assert events[0].new_score == pytest.approx(0.30, abs=1e-6)
+        assert events[1].old_score == pytest.approx(0.30, abs=1e-6)
+        assert events[1].new_score == pytest.approx(0.65, abs=1e-6)
 
     @pytest.mark.asyncio
     async def test_trust_history_tier_change(self, engine, aegis):
         aegis.set_policy("general", allowed=True)
-        aegis.adjust_trust("general", 55, "big jump")  # 0 -> 55 (BLOCKED -> SKILL)
+        # Use set_trust: 0.0 -> 0.55 crosses BLOCKED -> SKILL boundary (0.4 on 0-1 scale)
+        aegis.set_trust("general", 0.55)
 
         events = await engine.get_trust_history("general")
         assert len(events) == 1

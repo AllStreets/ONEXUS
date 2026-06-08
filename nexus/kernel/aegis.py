@@ -6,8 +6,101 @@ Trust tiers: OBSERVER, ADVISOR, MONITOR, EXECUTOR, AUTONOMOUS.
 from __future__ import annotations
 
 import sqlite3
+import time
+import uuid
+from collections import deque
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Optional
+from urllib.parse import urlparse
+
+from nexus.agents.manifest import Manifest, PermissionClass
+
+
+class Verdict(str, Enum):
+    ALLOW = "ALLOW"
+    PROMPT = "PROMPT"
+    DENY = "DENY"
+
+
+@dataclass(frozen=True)
+class CapabilityDecision:
+    verdict: Verdict
+    reason: str
+    permission_class: PermissionClass | None = None
+
+
+class PermissionScope(str, Enum):
+    """The user's choice when answering a first-use prompt (spec §9.3)."""
+    ONCE = "once"
+    ALWAYS_IN_WORKSPACE = "always_in_workspace"
+    ALWAYS_EVERYWHERE = "always_everywhere"
+    NEVER = "never"
+
+
+class PermissionDecision(str, Enum):
+    """The shape the inbox returns once the user has decided."""
+    ALLOW_ONCE = "allow_once"
+    ALLOW_ALWAYS_IN_WORKSPACE = "allow_always_in_workspace"
+    ALLOW_ALWAYS_EVERYWHERE = "allow_always_everywhere"
+    DENY = "deny"
+
+
+@dataclass(frozen=True)
+class PermissionRequest:
+    agent_slug: str
+    capability: str
+    permission_class: str  # "Routine" / "Notable" / "Sensitive" / "Privileged"
+    workspace_id: str | None
+    preview: str = ""
+    target: str | None = None
+
+
+class _PendingTicket:
+    """One in-flight permission ask — pairs a request with the future that the asker is awaiting."""
+    __slots__ = ("id", "request", "future")
+
+    def __init__(self, request: PermissionRequest, future):
+        self.id = uuid.uuid4().hex[:12]
+        self.request = request
+        self.future = future
+
+
+@dataclass(frozen=True)
+class _PendingView:
+    """Public read-only view of a pending ticket (for surfaces)."""
+    id: str
+    request: PermissionRequest
+
+
+class PermissionInbox:
+    """Async mailbox: agents push requests; surfaces await/answer them."""
+
+    def __init__(self):
+        self._tickets: dict[str, _PendingTicket] = {}
+
+    async def ask(self, request: PermissionRequest) -> PermissionDecision:
+        """Push a request and suspend until the user answers."""
+        import asyncio
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        ticket = _PendingTicket(request, future)
+        self._tickets[ticket.id] = ticket
+        try:
+            return await future
+        finally:
+            self._tickets.pop(ticket.id, None)
+
+    def pending(self) -> list[_PendingView]:
+        return [_PendingView(t.id, t.request) for t in self._tickets.values()]
+
+    def answer(self, ticket_id: str, decision: PermissionDecision) -> None:
+        ticket = self._tickets.get(ticket_id)
+        if ticket is None:
+            raise KeyError(f"unknown permission ticket: {ticket_id!r}")
+        if not ticket.future.done():
+            ticket.future.set_result(decision)
 
 
 class PermissionDenied(Exception):
@@ -15,6 +108,15 @@ class PermissionDenied(Exception):
         self.module = module
         self.action = action
         super().__init__(f"Permission denied: {module} cannot perform {action}")
+
+
+def _is_within(child, parent) -> bool:
+    """True if child is parent or a descendant of parent."""
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 class TrustTier:
@@ -102,6 +204,15 @@ class Aegis:
                 delta       REAL NOT NULL,
                 reason      TEXT NOT NULL,
                 timestamp   TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS aegis_grants (
+                agent_slug   TEXT NOT NULL,
+                capability   TEXT NOT NULL,
+                workspace_id TEXT,
+                granted_at   TEXT NOT NULL,
+                PRIMARY KEY (agent_slug, capability, workspace_id)
             )
         """)
         conn.commit()
@@ -209,7 +320,12 @@ class Aegis:
         return TrustTier.from_score(self.get_trust(module))
 
     def revoke(self, module: str) -> None:
-        """Immediately set trust to 0.0 and log the revocation."""
+        """Immediately set trust to 0.0 and log the revocation.
+
+        Note: this bypasses ``set_trust`` and therefore does NOT trigger
+        the trust-collapse grant cleanup. If you want both trust reset
+        AND grant revocation, call ``set_trust(module, 0.0)`` instead.
+        """
         conn = self._conn()
         self._ensure_module(conn, module)
         row = conn.execute(
@@ -258,6 +374,321 @@ class Aegis:
 
     def is_autonomous(self, module: str) -> bool:
         return self.get_trust(module) == 1.0
+
+    # ── manifest registry ────────────────────────────────────────────────
+
+    def register_manifest(self, manifest: Manifest) -> None:
+        """Register an agent's manifest so check_capability can read it."""
+        if not hasattr(self, "_manifests"):
+            self._manifests: dict[str, Manifest] = {}
+        self._manifests[manifest.slug] = manifest
+        # Seed trust at the manifest's floor if not set yet
+        if self.get_trust(manifest.slug) == 0.0 and manifest.trust.floor > 0:
+            self.set_trust(manifest.slug, manifest.trust.floor)
+
+    def get_manifest(self, slug: str) -> Manifest | None:
+        return getattr(self, "_manifests", {}).get(slug)
+
+    # ── grant storage (SQLite-backed, aegis_grants table) ────────────────
+
+    def grant(
+        self,
+        agent_slug: str,
+        capability: str,
+        workspace_id: str | None = None,
+    ) -> None:
+        """Record an explicit user grant. workspace_id=None means global."""
+        conn = self._conn()
+        conn.execute(
+            "INSERT OR REPLACE INTO aegis_grants "
+            "(agent_slug, capability, workspace_id, granted_at) VALUES (?, ?, ?, ?)",
+            (agent_slug, capability, workspace_id, self._now()),
+        )
+        conn.commit()
+        conn.close()
+        self._log_chronicle("permission_granted", {
+            "agent": agent_slug,
+            "capability": capability,
+            "workspace_id": workspace_id,
+        })
+
+    def revoke_grant(
+        self,
+        agent_slug: str,
+        capability: str | None = None,
+        workspace_id: str | None = None,
+    ) -> None:
+        """Revoke one capability or, if capability is None, all grants for this agent in this scope.
+
+        Renamed from `revoke` to avoid colliding with the existing one-arg
+        `revoke(module)` which resets trust to 0.0.
+        """
+        conn = self._conn()
+        if capability is None:
+            conn.execute(
+                "DELETE FROM aegis_grants WHERE agent_slug = ? AND "
+                "((workspace_id IS NULL AND ? IS NULL) OR workspace_id = ?)",
+                (agent_slug, workspace_id, workspace_id),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM aegis_grants WHERE agent_slug = ? AND capability = ? AND "
+                "((workspace_id IS NULL AND ? IS NULL) OR workspace_id = ?)",
+                (agent_slug, capability, workspace_id, workspace_id),
+            )
+        conn.commit()
+        conn.close()
+        self._log_chronicle("permission_revoked", {
+            "agent": agent_slug,
+            "capability": capability,
+            "workspace_id": workspace_id,
+        })
+
+    def _has_grant(self, agent_slug: str, capability: str, workspace_id: str | None) -> bool:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT 1 FROM aegis_grants WHERE agent_slug = ? AND capability = ? AND "
+            "(workspace_id = ? OR workspace_id IS NULL) LIMIT 1",
+            (agent_slug, capability, workspace_id),
+        ).fetchone()
+        conn.close()
+        return row is not None
+
+    # ── direct trust setter + collapse revocation ───────────────────────
+
+    def set_trust(self, agent_slug: str, score: float) -> None:
+        """Set an agent's trust score directly (admin/testing). Clamped to [0,1].
+
+        If the new score falls below 0.50, all in-memory grants for the
+        agent are revoked and a `trust_collapse` event is logged.
+        """
+        score = max(0.0, min(1.0, score))
+        conn = self._conn()
+        self._ensure_module(conn, agent_slug)
+        row = conn.execute(
+            "SELECT trust_score FROM aegis_policies WHERE module_name = ?",
+            (agent_slug,),
+        ).fetchone()
+        old_score = float(row["trust_score"])
+        conn.execute(
+            "UPDATE aegis_policies SET trust_score = ? WHERE module_name = ?",
+            (score, agent_slug),
+        )
+        self._record_history(
+            conn, agent_slug, old_score, score, score - old_score, "set_trust",
+        )
+        conn.commit()
+        conn.close()
+
+        # Trust collapse: revoke every grant
+        if score < 0.50:
+            conn = self._conn()
+            removed = conn.execute(
+                "SELECT capability, workspace_id FROM aegis_grants WHERE agent_slug = ?",
+                (agent_slug,),
+            ).fetchall()
+            conn.execute("DELETE FROM aegis_grants WHERE agent_slug = ?", (agent_slug,))
+            conn.commit()
+            conn.close()
+            if removed:
+                self._log_chronicle("trust_collapse", {
+                    "agent": agent_slug,
+                    "score": score,
+                    "revoked": [
+                        {"capability": r["capability"], "workspace_id": r["workspace_id"]}
+                        for r in removed
+                    ],
+                })
+
+    # ── the arbiter ─────────────────────────────────────────────────────
+
+    def check_capability(
+        self,
+        agent_slug: str,
+        capability: str,
+        workspace_id: str | None = None,
+    ) -> CapabilityDecision:
+        """Decide whether `agent_slug` may use `capability` in `workspace_id`.
+
+        Algorithm:
+          1. Find the manifest. No manifest → DENY.
+          2. Find which class the manifest declares this capability under.
+             Not declared → DENY (undeclared).
+          3. Routine → always ALLOW.
+          4. If user has an explicit grant for this scope → ALLOW.
+          5. Notable + trust ≥ 0.75 (EXECUTOR) → ALLOW (auto-grant).
+          6. Privileged → never auto-grant; PROMPT (effectively requires Settings).
+          7. Otherwise → PROMPT.
+        """
+        manifest = self.get_manifest(agent_slug)
+        if manifest is None:
+            return CapabilityDecision(
+                Verdict.DENY,
+                f"no manifest registered for agent {agent_slug!r}",
+            )
+
+        cls = manifest.declares(capability)
+        if cls is None:
+            return CapabilityDecision(
+                Verdict.DENY,
+                f"capability {capability!r} undeclared in manifest",
+            )
+
+        # Routine — silent forever
+        if cls is PermissionClass.ROUTINE:
+            return CapabilityDecision(Verdict.ALLOW, "routine", cls)
+
+        # Explicit grant trumps everything below
+        if self._has_grant(agent_slug, capability, workspace_id):
+            return CapabilityDecision(Verdict.ALLOW, "explicit grant", cls)
+
+        trust = self.get_trust(agent_slug)
+
+        # Trust-gated auto-grant for Notable
+        if cls is PermissionClass.NOTABLE and trust >= 0.75:
+            return CapabilityDecision(
+                Verdict.ALLOW,
+                f"executor tier auto-grant (trust={trust:.2f})",
+                cls,
+            )
+
+        # Privileged — never granted from a check
+        if cls is PermissionClass.PRIVILEGED:
+            return CapabilityDecision(
+                Verdict.PROMPT,
+                "privileged capabilities require Settings → Security",
+                cls,
+            )
+
+        return CapabilityDecision(
+            Verdict.PROMPT,
+            f"{cls.value.lower()} capability requires user approval",
+            cls,
+        )
+
+    # ── filesystem broker ───────────────────────────────────────────────
+
+    def fs(
+        self,
+        agent_slug: str,
+        path,
+        *,
+        mode: str = "r",
+        workspace_roots: list = None,
+        workspace_id: str | None = None,
+    ):
+        """Mediated file access for an agent.
+
+        Returns an open file handle (context manager) or raises
+        PermissionDenied. Logs every call to Chronicle.
+        """
+        from pathlib import Path
+
+        target = Path(path).resolve()
+        roots = [Path(r).resolve() for r in (workspace_roots or [])]
+
+        # 1. Containment: must be under at least one root
+        if not any(_is_within(target, r) for r in roots):
+            self._log_chronicle("fs_access_denied", {
+                "agent": agent_slug, "path": str(target),
+                "mode": mode, "reason": "outside_workspace_roots",
+                "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"fs:{mode}:{target}")
+
+        # 2. Capability — "x" is exclusive-create (write-like); "+" upgrades any mode to read+write.
+        cap = "fs.write.workspace" if any(c in mode for c in ("w", "a", "x", "+")) else "fs.read.workspace"
+        decision = self.check_capability(agent_slug, cap, workspace_id=workspace_id)
+        if decision.verdict.value != "ALLOW":
+            self._log_chronicle("fs_access_denied", {
+                "agent": agent_slug, "path": str(target),
+                "mode": mode, "reason": decision.reason,
+                "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"fs:{mode}:{target}")
+
+        self._log_chronicle("fs_access", {
+            "agent": agent_slug, "path": str(target),
+            "mode": mode, "workspace_id": workspace_id,
+        })
+        return open(target, mode)
+
+    # ── network gateway ─────────────────────────────────────────────────
+
+    DEFAULT_RATE_LIMIT_PER_MIN = 60
+
+    def set_rate_limit(self, agent_slug: str, per_minute: int) -> None:
+        if not hasattr(self, "_rate_limits"):
+            self._rate_limits: dict[str, int] = {}
+        self._rate_limits[agent_slug] = per_minute
+
+    def _rate_limit(self, agent_slug: str) -> int:
+        return getattr(self, "_rate_limits", {}).get(agent_slug, self.DEFAULT_RATE_LIMIT_PER_MIN)
+
+    def _request_log(self, agent_slug: str) -> deque:
+        if not hasattr(self, "_req_log"):
+            self._req_log: dict[str, deque] = {}
+        return self._req_log.setdefault(agent_slug, deque())
+
+    def _check_rate_limit(self, agent_slug: str) -> bool:
+        """Return True if a request is allowed; False if rate-limited."""
+        log = self._request_log(agent_slug)
+        now = time.monotonic()
+        cutoff = now - 60.0
+        while log and log[0] < cutoff:
+            log.popleft()
+        if len(log) >= self._rate_limit(agent_slug):
+            return False
+        log.append(now)
+        return True
+
+    async def network(
+        self,
+        agent_slug: str,
+        url: str,
+        *,
+        method: str = "GET",
+        workspace_id: str | None = None,
+        **httpx_kwargs,
+    ):
+        """Outbound HTTP for an agent. Returns an httpx.Response.
+
+        Raises PermissionDenied if the agent's manifest doesn't declare
+        the URL's domain, if the user hasn't granted it, if the agent
+        is over its rate limit, or if Aegis is otherwise denying.
+        """
+        import httpx as _httpx
+
+        domain = urlparse(url).hostname or ""
+        capability = f"network.outbound.{domain}"
+
+        decision = self.check_capability(agent_slug, capability, workspace_id=workspace_id)
+        if decision.verdict.value != "ALLOW":
+            self._log_chronicle("network_request_denied", {
+                "agent": agent_slug, "url": url, "method": method,
+                "reason": decision.reason, "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"network:{method}:{url}")
+
+        if not self._check_rate_limit(agent_slug):
+            self._log_chronicle("network_request_denied", {
+                "agent": agent_slug, "url": url, "method": method,
+                "reason": "rate_limit",
+                "limit_per_minute": self._rate_limit(agent_slug),
+                "workspace_id": workspace_id,
+            })
+            raise PermissionDenied(agent_slug, f"network:rate_limit:{url}")
+
+        async with _httpx.AsyncClient() as client:
+            resp = await client.request(method, url, **httpx_kwargs)
+
+        self._log_chronicle("network_request", {
+            "agent": agent_slug, "url": url, "method": method,
+            "status": resp.status_code,
+            "bytes_in": len(resp.content),
+            "workspace_id": workspace_id,
+        })
+        return resp
 
     # -- policy listing ----------------------------------------------------
 

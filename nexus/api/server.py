@@ -163,6 +163,33 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
         # Startup: initialize modules
         await kernel.cortex.initialize_modules()
         kernel.chronicle.log("api", "server_start", {"version": __version__})
+
+        # Wire kernel Pulse events into the mood engine so /api/mood/current
+        # reflects live kernel state (Phase 5 T10).
+        from nexus.workspaces.mood import MoodSignals as _MoodSignals
+
+        signals = getattr(app.state, "mood_signals", None) or _MoodSignals()
+        app.state.mood_signals = signals
+
+        async def _on_cortex_route(msg):
+            _signals = app.state.mood_signals
+            target = (msg.payload or {}).get("target")
+            if target:
+                import dataclasses
+                updated = dataclasses.replace(_signals, active_agent=target)
+                app.state.mood_signals = updated
+
+        async def _on_trust_change(msg):
+            _signals = app.state.mood_signals
+            score = (msg.payload or {}).get("new_score")
+            if score is not None and score < 0.5:
+                import dataclasses
+                updated = dataclasses.replace(_signals, trust_collapsed=True)
+                app.state.mood_signals = updated
+
+        kernel.pulse.subscribe("cortex.route", _on_cortex_route)
+        kernel.pulse.subscribe("aegis.trust_change", _on_trust_change)
+
         yield
         # Shutdown: drain event bus, log shutdown
         await kernel.pulse.drain()
@@ -250,6 +277,26 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(multimodal_router)
     app.include_router(agents_router)
 
+    from nexus.api.routes.permissions import router as permissions_router
+    from nexus.api.routes.installer import router as installer_router
+    app.include_router(permissions_router)
+    app.include_router(installer_router)
+
+    from nexus.api.routes.aurora import router as aurora_router
+    app.include_router(aurora_router)
+
+    from nexus.api.routes.mood import router as mood_router
+    app.include_router(mood_router)
+
+    from nexus.api.routes.cockpit import router as cockpit_router
+    app.include_router(cockpit_router)
+
+    from nexus.api.routes.workspaces import router as workspaces_router
+    app.include_router(workspaces_router)
+
+    from nexus.api.routes.spatial import router as spatial_router
+    app.include_router(spatial_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):
@@ -258,6 +305,12 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             from nexus.federation.peer import PeerRegistry
             from nexus.federation.protocol import FederationProtocol
             from nexus.federation.discovery import PeerDiscovery
+            from nexus.inference.kernel_http_client import KernelHttpClient
+            from nexus.agents.manifest import (
+                Manifest, Publisher, IdentityMark, Identity, RuntimeConfig,
+                Capabilities, DeclaredCapabilities, TrustConfig, Compatibility,
+                Source,
+            )
 
             instance_id = os.environ.get(
                 "NEXUS_INSTANCE_ID",
@@ -265,6 +318,35 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             )
             instance_name = os.environ.get("NEXUS_INSTANCE_NAME", "nexus-local")
             shared_secret = os.environ.get("NEXUS_FEDERATION_SECRET", "")
+
+            # Register a built-in federation manifest so Aegis can gate
+            # outbound peer HTTP via check_capability("federation", ...).
+            # All peer domains are declared as Routine (auto-allowed).
+            fed_manifest = Manifest(
+                manifest_version=1,
+                slug="federation",
+                name="NEXUS Federation",
+                tagline="Peer-to-peer federation layer",
+                version=__version__,
+                system=True,
+                publisher=Publisher(type="org", handle="nexus-core"),
+                category="system",
+                tags=["federation", "system"],
+                license="proprietary",
+                identity=Identity(mark=IdentityMark(kind="builtin:federation")),
+                capabilities=Capabilities(
+                    declared=DeclaredCapabilities(**{
+                        "Routine": ["network.outbound.localhost"],
+                    }),
+                ),
+                runtime=RuntimeConfig(transport="in_process"),
+            )
+            kernel.aegis.register_manifest(fed_manifest)
+            kernel.aegis.set_policy(
+                "federation", allowed=True, network=True, initial_trust=0.80
+            )
+
+            fed_http = KernelHttpClient(aegis=kernel.aegis)
 
             fed_security = FederationSecurity(
                 instance_id=instance_id,
@@ -283,6 +365,7 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 cortex=kernel.cortex,
                 chronicle=kernel.chronicle,
                 enabled=True,
+                http_client=fed_http,
             )
 
             fed_discovery = PeerDiscovery(
@@ -290,6 +373,7 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 security=fed_security,
                 chronicle=kernel.chronicle,
                 instance_id=instance_id,
+                http_client=fed_http,
             )
 
             kernel.federation_protocol = fed_protocol

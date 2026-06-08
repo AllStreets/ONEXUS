@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS</title>
+  <link rel="stylesheet" href="/aurora/static/tokens.css">
+  <link rel="stylesheet" href="/aurora/static/mood.css">
+  <link rel="stylesheet" href="/aurora/static/app.css">
+</head>
+<body class="nx-mood nx-mood-calm-focus" data-mood="calm_focus">
+  <header class="nx-header">
+    <div class="nx-header-left">
+      <span id="nx-kernel-mark"></span>
+      <span class="nx-display" style="font-size:14px">NEXUS</span>
+    </div>
+    <div class="nx-header-right">
+      <button id="nx-workspaces-btn" class="nx-pill" title="Workspaces (⌘K)">
+        <span id="nx-active-workspace">No workspace</span>
+      </button>
+      <button id="nx-cockpit-btn" class="nx-pill" title="Cockpit (⌘\`)">cockpit</button>
+      <button id="nx-spatial-btn" class="nx-pill" title="Catalog">catalog</button>
+      <button id="nx-settings-btn" class="nx-pill" title="Settings (⌘,)">settings</button>
+    </div>
+  </header>
+
+  <main id="nx-view" class="nx-view">
+    <!-- view content rendered by app.js per route -->
+  </main>
+
+  <div id="nx-overlay-root"></div>
+
+  <script type="module" src="/aurora/static/app.js"></script>
+</body>
+</html>

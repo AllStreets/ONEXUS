@@ -1,0 +1,282 @@
+.nx-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  background: linear-gradient(to bottom, rgba(12,10,20,0.85), transparent);
+  backdrop-filter: blur(12px);
+}
+.nx-header-left, .nx-header-right { display: flex; align-items: center; gap: 10px; }
+
+.nx-kernel-mark {
+  filter: drop-shadow(0 0 4px rgba(168, 180, 255, 0.7))
+          drop-shadow(0 0 12px rgba(168, 180, 255, 0.35));
+  animation: nx-breath 4.5s ease-in-out infinite;
+}
+@keyframes nx-breath {
+  0%, 100% { opacity: 0.78; transform: scale(0.96); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+
+.nx-view {
+  position: relative; z-index: 1;
+  padding: 64px 24px 24px;
+  min-height: 100vh;
+}
+
+.nx-empty { padding: 40px; text-align: center; opacity: 0.6; }
+
+/* Overlay root for ⌘K, ⌘`, install review, first-use prompt */
+#nx-overlay-root { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
+#nx-overlay-root > * { pointer-events: auto; }
+
+/* Workspaces switcher overlay */
+.nx-switcher-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(6, 4, 12, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 12vh;
+}
+.nx-switcher {
+  width: min(880px, 90vw);
+  padding: 28px 32px;
+}
+.nx-switcher h3 { margin: 0 0 18px; font-family: var(--nx-font-display); font-size: 18px; font-weight: 500; }
+.nx-switcher-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+}
+.nx-ws-tile {
+  position: relative; border-radius: var(--nx-radius-md); padding: 16px;
+  aspect-ratio: 5 / 4; color: #fff; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.nx-ws-tile:hover { transform: translateY(-2px); }
+.nx-ws-tile.nx-tone-indigo  { background: linear-gradient(135deg, var(--nx-tone-indigo-a),  var(--nx-tone-indigo-b)); }
+.nx-ws-tile.nx-tone-magenta { background: linear-gradient(135deg, var(--nx-tone-magenta-a), var(--nx-tone-magenta-b)); }
+.nx-ws-tile.nx-tone-sage    { background: linear-gradient(135deg, var(--nx-tone-sage-a),    var(--nx-tone-sage-b)); }
+.nx-ws-tile.nx-tone-plum    { background: linear-gradient(135deg, var(--nx-tone-plum-a),    var(--nx-tone-plum-b)); }
+.nx-ws-tile.nx-tone-amber   { background: linear-gradient(135deg, var(--nx-tone-amber-a),   var(--nx-tone-amber-b)); }
+.nx-ws-tile.active {
+  box-shadow: 0 0 0 2px var(--nx-notable), 0 0 24px -4px rgba(168,180,255,0.5);
+}
+.nx-ws-tile.new {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.42);
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  cursor: pointer;
+}
+.nx-ws-tile .tile-eyebrow { font-size: 9px; letter-spacing: 0.2em; opacity: 0.7; }
+.nx-ws-tile .tile-name { font-family: var(--nx-font-display); font-size: 17px; margin-top: 4px; }
+.nx-ws-tile .tile-footer {
+  position: absolute; left: 16px; right: 16px; bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px;
+}
+.nx-ws-tile .disc-stack { display: flex; }
+.nx-ws-tile .disc-stack > * + * { margin-left: -6px; }
+
+/* ── Conversation surface ─────────────────────────────────────────────── */
+.nx-conv-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  gap: 32px;
+  min-height: calc(100vh - 64px);
+}
+.nx-conv-left, .nx-conv-right { padding-top: 8px; }
+.nx-conv-center { display: flex; flex-direction: column; min-height: 0; }
+.nx-conv-header { margin-bottom: 28px; }
+.nx-conv-thread { flex: 1; overflow-y: auto; padding-bottom: 18px; }
+.nx-conv-turn { margin-bottom: 18px; }
+.nx-conv-user { font-size: 15px; line-height: 1.55; }
+.nx-conv-agent { /* card-styled body */ }
+.nx-conv-input {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--nx-card-bg);
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-card-radius);
+  padding: 14px 18px;
+}
+.nx-conv-input input {
+  flex: 1; background: transparent; border: 0; outline: 0;
+  color: inherit; font: inherit; font-size: 14px;
+}
+.nx-conv-ws {
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 13px; cursor: pointer; opacity: 0.7;
+}
+.nx-conv-ws:hover { opacity: 1; }
+.nx-conv-ws.active { background: rgba(255,255,255,0.06); opacity: 1; }
+.nx-conv-roster-row {
+  display: flex; align-items: center; padding: 5px 0; font-size: 12.5px;
+}
+
+/* ── Cockpit overlay — Signal aesthetic ──────────────────────────────────── */
+.nx-cockpit-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(6, 8, 12, 0.85);
+  backdrop-filter: blur(14px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6vh 5vw;
+  overflow: auto;
+}
+.nx-cockpit {
+  width: 100%; max-width: 1100px;
+  background-image:
+    linear-gradient(rgba(168,184,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,184,255,0.025) 1px, transparent 1px);
+  background-size: 18px 18px;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.nx-cockpit-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.nx-cockpit-title {
+  font-family: var(--nx-font-display); font-size: 15px; letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.nx-cockpit-close {
+  background: none; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: inherit; cursor: pointer;
+  font: inherit; font-size: 11px; opacity: 0.6; padding: 4px 10px;
+}
+.nx-cockpit-close:hover { opacity: 1; }
+/* Scanline sweep */
+.nx-cockpit-scan {
+  position: absolute; inset: 0; pointer-events: none; border-radius: 16px; overflow: hidden;
+}
+.nx-cockpit-scan::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(transparent 0%, rgba(168,200,255,0.04) 50%, transparent 100%);
+  background-size: 100% 6px;
+  animation: nx-scan 8s linear infinite;
+}
+@keyframes nx-scan { to { transform: translateY(100%); } }
+/* 4-column grid */
+.nx-cockpit-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr;
+  gap: 14px;
+}
+.nx-cockpit-panel {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: var(--nx-font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  min-height: 120px;
+}
+.nx-cockpit-panel.span2 { grid-column: span 2; }
+.nx-cockpit-panel.row2  { grid-row: span 2; }
+.nx-cockpit-panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.nx-cockpit-panel-label {
+  font-size: 9px; letter-spacing: 0.18em; opacity: 0.55; text-transform: uppercase;
+}
+.nx-cockpit-panel-badge {
+  font-size: 9px; opacity: 0.4; font-family: var(--nx-font-mono);
+}
+/* SVG trace colours */
+.nx-cockpit-trace { stroke-width: 1.2; fill: none; stroke-linecap: round; }
+.nx-cockpit-trace.cyan   { stroke: #88d4ff; }
+.nx-cockpit-trace.violet { stroke: #c8a8ff; opacity: 0.7; }
+.nx-cockpit-trace.amber  { stroke: #ffc080; opacity: 0.6; }
+/* Trust bar */
+.nx-cockpit-bar-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 5px; font-size: 11px;
+}
+.nx-cockpit-bar-label { width: 80px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.7; }
+.nx-cockpit-bar-track {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.07);
+  position: relative;
+}
+.nx-cockpit-bar-fill {
+  position: absolute; top: 0; left: 0; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, #8ab4ff, #c8a8ff);
+  transition: width 0.4s ease;
+}
+.nx-cockpit-tail-row { opacity: 0.7; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-cockpit-stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; opacity: 0.75; }
+.nx-cockpit-stat-val { color: #88d4ff; font-family: var(--nx-font-mono); }
+
+/* ── Spatial catalog grid ─────────────────────────────────────────────────── */
+.nx-spatial {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+.nx-spatial-header {
+  display: flex; align-items: end; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.nx-spatial-card {
+  background: var(--nx-card-bg);
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-card-radius);
+  padding: 18px;
+}
+.nx-spatial-card .name { font-size: 14.5px; font-weight: 500; margin-top: 12px; }
+.nx-spatial-card .tagline { font-size: 12px; opacity: 0.62; margin-top: 3px; line-height: 1.4; }
+.nx-spatial-card .status {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px;
+  font-family: var(--nx-font-mono);
+  opacity: 0.7;
+}
+.nx-spatial-card .status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--nx-routine);
+  box-shadow: 0 0 6px var(--nx-routine);
+}
+.nx-spatial-card .status-dot.sleeping { background: rgba(255,255,255,0.25); box-shadow: none; }
+.nx-spatial-card .badge-system {
+  font-size: 9.5px; opacity: 0.4; margin-left: auto;
+  font-family: var(--nx-font-mono);
+}
+
+/* ── Settings surface ────────────────────────────────────────────────────── */
+.nx-settings-shell {
+  display: grid; grid-template-columns: 200px 1fr; gap: 24px;
+  margin-top: 12px;
+}
+.nx-settings-tabs {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.nx-settings-tabs button {
+  text-align: left; padding: 8px 12px; border-radius: 8px;
+  background: transparent; border: 0; color: inherit;
+  font: inherit; font-size: 13px; opacity: 0.7; cursor: pointer;
+}
+.nx-settings-tabs button:hover { opacity: 1; }
+.nx-settings-tabs button.active { background: rgba(255,255,255,0.06); opacity: 1; }
+.nx-settings-panel { padding: 22px 26px; }
+.nx-settings-panel h3 { margin: 0 0 12px; font-family: var(--nx-font-display); }
+
+/* ── First-use permission prompt (slides in from bottom-right) ───────────── */
+.nx-prompt-overlay {
+  position: fixed; right: 24px; bottom: 24px; z-index: 40;
+  max-width: 380px;
+}
+.nx-prompt-card { padding: 18px 20px; }
+
+/* ── Install review modal (full-screen) ──────────────────────────────────── */
+.nx-install-overlay {
+  position: fixed; inset: 0; z-index: 55;
+  background: rgba(6, 4, 12, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+}

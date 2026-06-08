@@ -49,8 +49,9 @@ class TestAppCreation:
         assert "/api/messages" in route_paths or any("/api/messages" in p for p in route_paths)
         assert any("/api/system/status" in getattr(r, "path", "") for r in app.routes)
 
-    def test_general_module_registered(self, tmp_path):
+    def test_council_module_registered(self, tmp_path):
+        # 'general' was renamed to 'council' in v0.2; verify council is present
         cfg = NexusConfig(data_dir=tmp_path / "nexus_mod")
         app = create_app(config=cfg)
         ks = app.state.kernel
-        assert "general" in ks.cortex.list_modules()
+        assert "council" in ks.cortex.list_modules()

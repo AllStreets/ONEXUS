@@ -90,6 +90,49 @@ class AutonomicModule(NexusModule):
     description = "Earned autonomous action -- observes patterns, learns routines, acts within trust boundaries"
     version = "0.1.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "autonomic",
+            "name": "autonomic",
+            "tagline": "Earned autonomy: learns routines, proposes actions, acts within trust boundaries.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "automation",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:autonomic",
+                                  "gradient": ["#c8a0ff", "#5e3a9c"]}},
+            "intents": [{
+                "name": "AUTOMATE",
+                "patterns": [
+                    r"\bautomat\w*\b", r"\broutine\b", r"\bautopilot\b", r"\bautonomous\b",
+                    r"\bon\s+my\s+behalf\b", r"\bhandle\s+it\b", r"\btake\s+care\s+of\b",
+                    r"\bmanage\s+for\s+me\b", r"\bdo\s+it\s+for\s+me\b", r"\bautonomic\b",
+                    r"\btrust\s+status\b", r"\bdomain\s+trust\b", r"\bdelegat\w*\b",
+                ],
+                "semantic_signals": [
+                    "do this automatically", "handle it", "take care of", "automate",
+                    "routine", "on my behalf", "manage for me", "autonomous",
+                    "trust management", "delegate", "run on autopilot",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {
+                    "Routine": ["engram.read.workspace"],
+                    "Notable": ["process.spawn"],
+                    "Sensitive": [],
+                    "Privileged": [],
+                },
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.30, "default_tier": "ADVISOR"},
+        })
+
     def __init__(self, config: dict[str, Any] | None = None):
         self._config = {**_DEFAULT_CONFIG, **(config or {})}
         self._patterns: dict[str, Pattern] = {}

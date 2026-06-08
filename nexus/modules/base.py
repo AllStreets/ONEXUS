@@ -1,11 +1,20 @@
 """
 Base class for all Nexus modules.
-Every module must declare name, description, version, and implement handle().
+
+A NexusModule is the in-process implementation of a built-in agent.
+It exposes:
+  - identity (name, description, version)
+  - a Manifest (so it can be unified with catalog agents)
+  - one or more tools (callable surfaces; default = the single `handle` tool)
+  - lifecycle hooks (on_load / on_unload)
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from nexus.agents.manifest import Manifest
 
 
 class NexusModule(ABC):
@@ -38,7 +47,34 @@ class NexusModule(ABC):
     @abstractmethod
     async def handle(self, message: str, context: dict[str, Any]) -> str:
         """Process a user message and return a response string."""
-        ...
+
+    # ── unified-agent surface ────────────────────────────────────────────
+
+    @classmethod
+    def manifest(cls) -> "Manifest":
+        """Return the agent manifest for this module.
+
+        Concrete modules MUST override this. During Phase 2 (migration)
+        each of the 9 built-ins ships its own override. Until then,
+        this raises so subclasses can't accidentally forget.
+        """
+        raise NotImplementedError(
+            f"{cls.__name__} must implement manifest() — see Phase 2 migration."
+        )
+
+    def tools(self) -> list[dict[str, Any]]:
+        """Return MCP-shaped tool descriptors for the runtime to expose.
+
+        Default: a single `handle` tool of class Routine. Modules with
+        multiple distinct tool surfaces override this.
+        """
+        return [{
+            "name": "handle",
+            "class": "Routine",
+            "description": getattr(self, "description", ""),
+        }]
+
+    # ── legacy chronicle helper (preserved) ──────────────────────────────
 
     def _log_outbound(self, context: dict[str, Any], destination: str, summary: str) -> None:
         """Log an outbound data event to Chronicle. Required for network modules."""

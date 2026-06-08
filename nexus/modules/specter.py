@@ -143,6 +143,46 @@ class SpecterModule(NexusModule):
     )
     version = "1.0.0"
 
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "specter",
+            "name": "specter",
+            "tagline": "Adversarial review: red-team audits, counter-arguments, failure modes.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "deliberation",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:specter",
+                                  "gradient": ["#ff9eb8", "#8c2e54"]}},
+            "intents": [{
+                "name": "CHALLENGE",
+                "patterns": [
+                    r"\bstress\s+test\b", r"\bred\s+team\b", r"\bdevil'?s?\s+advocate\b",
+                    r"\bwhat\s+could\s+go\s+wrong\b", r"\brisk\s+analysis\b",
+                    r"\bcounter-?argument\b", r"\bchallenge\s+(this|that|my)\b",
+                    r"\bvulnerabilit\w*\b", r"\bharden\b", r"\bweakness\w*\b",
+                    r"\bpoke\s+holes?\b", r"\bspecter\b",
+                ],
+                "semantic_signals": [
+                    "stress test", "red team", "devil's advocate", "what could go wrong",
+                    "risk analysis", "counter-argument", "challenge this", "find flaws",
+                    "adversarial", "worst case", "attack surface", "poke holes",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {"Routine": ["engram.read.workspace"], "Notable": [],
+                             "Sensitive": [], "Privileged": []},
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.40, "default_tier": "ADVISOR"},
+        })
+
     # -------------------------------------------------------------------
     # Stake assessment
     # -------------------------------------------------------------------

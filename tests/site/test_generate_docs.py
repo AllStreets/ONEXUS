@@ -194,12 +194,11 @@ def test_render_module_page_has_frontmatter():
             }
         ],
     }
-    keywords = ["trigger", "alert", "monitor"]
-    page = render_module_page(info, keywords)
+    # render_module_page takes only the info dict; keywords are not a parameter
+    page = render_module_page(info)
     assert "---" in page
     assert "oracle" in page.lower()
     assert "Anticipatory trigger engine" in page
-    assert "trigger" in page
     assert "TriggerRule" in page
     assert "handle" in page
 

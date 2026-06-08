@@ -1,0 +1,424 @@
+{
+  "$defs": {
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "items": {
+            "$ref": "#/$defs/ToolDescriptor"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "declared": {
+          "$ref": "#/$defs/DeclaredCapabilities"
+        }
+      },
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "Compatibility": {
+      "additionalProperties": false,
+      "properties": {
+        "nexus_version": {
+          "default": ">=1.0.0",
+          "title": "Nexus Version",
+          "type": "string"
+        }
+      },
+      "title": "Compatibility",
+      "type": "object"
+    },
+    "DeclaredCapabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "Routine": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Routine",
+          "type": "array"
+        },
+        "Notable": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notable",
+          "type": "array"
+        },
+        "Sensitive": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sensitive",
+          "type": "array"
+        },
+        "Privileged": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Privileged",
+          "type": "array"
+        }
+      },
+      "title": "DeclaredCapabilities",
+      "type": "object"
+    },
+    "Identity": {
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "$ref": "#/$defs/IdentityMark"
+        }
+      },
+      "required": [
+        "mark"
+      ],
+      "title": "Identity",
+      "type": "object"
+    },
+    "IdentityMark": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "\"svg\" or \"builtin:<slug>\"",
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "gradient": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Gradient",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "IdentityMark",
+      "type": "object"
+    },
+    "IntentDecl": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Patterns",
+          "type": "array"
+        },
+        "semantic_signals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Semantic Signals",
+          "type": "array"
+        },
+        "weight": {
+          "default": 1.0,
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "IntentDecl",
+      "type": "object"
+    },
+    "PermissionClass": {
+      "enum": [
+        "Routine",
+        "Notable",
+        "Sensitive",
+        "Privileged"
+      ],
+      "title": "PermissionClass",
+      "type": "string"
+    },
+    "Publisher": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "org",
+            "individual"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "handle": {
+          "title": "Handle",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "required": [
+        "type",
+        "handle"
+      ],
+      "title": "Publisher",
+      "type": "object"
+    },
+    "RuntimeConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "transport": {
+          "enum": [
+            "stdio",
+            "sse",
+            "in_process"
+          ],
+          "title": "Transport",
+          "type": "string"
+        },
+        "command": {
+          "default": "",
+          "title": "Command",
+          "type": "string"
+        },
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "env_keys": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Env Keys",
+          "type": "array"
+        }
+      },
+      "required": [
+        "transport"
+      ],
+      "title": "RuntimeConfig",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "github": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Github"
+        },
+        "huggingface": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Huggingface"
+        },
+        "homepage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Homepage"
+        }
+      },
+      "title": "Source",
+      "type": "object"
+    },
+    "ToolDescriptor": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "class": {
+          "$ref": "#/$defs/PermissionClass"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        }
+      },
+      "required": [
+        "name",
+        "class"
+      ],
+      "title": "ToolDescriptor",
+      "type": "object"
+    },
+    "TrustConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "floor": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Floor",
+          "type": "number"
+        },
+        "default_tier": {
+          "$ref": "#/$defs/TrustTierName",
+          "default": "OBSERVER"
+        }
+      },
+      "title": "TrustConfig",
+      "type": "object"
+    },
+    "TrustTierName": {
+      "enum": [
+        "OBSERVER",
+        "ADVISOR",
+        "MONITOR",
+        "EXECUTOR",
+        "AUTONOMOUS"
+      ],
+      "title": "TrustTierName",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The v1 agent manifest.",
+  "properties": {
+    "manifest_version": {
+      "const": 1,
+      "title": "Manifest Version",
+      "type": "integer"
+    },
+    "slug": {
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "tagline": {
+      "default": "",
+      "title": "Tagline",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "system": {
+      "default": false,
+      "title": "System",
+      "type": "boolean"
+    },
+    "publisher": {
+      "$ref": "#/$defs/Publisher"
+    },
+    "category": {
+      "title": "Category",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    },
+    "license": {
+      "default": "Unknown",
+      "title": "License",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    },
+    "identity": {
+      "$ref": "#/$defs/Identity"
+    },
+    "intents": {
+      "items": {
+        "$ref": "#/$defs/IntentDecl"
+      },
+      "title": "Intents",
+      "type": "array"
+    },
+    "capabilities": {
+      "$ref": "#/$defs/Capabilities"
+    },
+    "runtime": {
+      "$ref": "#/$defs/RuntimeConfig"
+    },
+    "trust": {
+      "$ref": "#/$defs/TrustConfig"
+    },
+    "compatibility": {
+      "$ref": "#/$defs/Compatibility"
+    }
+  },
+  "required": [
+    "manifest_version",
+    "slug",
+    "name",
+    "version",
+    "publisher",
+    "category",
+    "identity",
+    "runtime"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

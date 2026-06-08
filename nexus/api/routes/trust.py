@@ -44,12 +44,20 @@ async def get_trust_detail(module: str, request: Request) -> TrustDetailResponse
     if policy is None:
         raise HTTPException(status_code=404, detail=f"Module '{module}' has no trust record")
 
-    history_raw = kernel.aegis.trust_history(module)
-    history = [TrustHistoryEntry(**entry) for entry in history_raw]
+    history_raw = kernel.aegis.get_trust_history(module)
+    history = [
+        TrustHistoryEntry(
+            timestamp=e["timestamp"],
+            delta=e["delta"],
+            new_trust=e["new_score"],
+            reason=e["reason"],
+        )
+        for e in history_raw
+    ]
 
     return TrustDetailResponse(
         module=module,
-        trust=policy["trust"],
+        trust=policy["trust_score"],
         allowed=policy["allowed"],
         network_allowed=policy["network_allowed"],
         history=history,
@@ -68,7 +76,9 @@ async def adjust_trust(
     if module not in policies:
         raise HTTPException(status_code=404, detail=f"Module '{module}' has no trust record")
 
-    new_trust = kernel.aegis.adjust_trust(module, body.delta, body.reason)
+    current_trust = kernel.aegis.get_trust(module)
+    new_trust = max(0.0, min(1.0, current_trust + body.delta))
+    kernel.aegis.set_trust(module, new_trust)
     kernel.chronicle.log("api", "trust_adjusted", {
         "module": module,
         "delta": body.delta,

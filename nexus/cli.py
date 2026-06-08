@@ -145,6 +145,7 @@ def run():
         pulse=pulse,
         config=cfg,
     )
+    cortex.register_builtin_manifests()
 
     # Register cognitive modules
     from nexus.modules.council import CouncilModule
@@ -312,6 +313,7 @@ def workflow_run(name, variables):
     aegis.init_db()
     pulse = Pulse()
     cortex = Cortex(engram=engram, chronicle=chronicle, aegis=aegis, pulse=pulse, config=cfg)
+    cortex.register_builtin_manifests()
 
     engine = WorkflowEngine(cortex=cortex, chronicle=chronicle, pulse=pulse)
 
@@ -496,6 +498,200 @@ def mcp():
 
     click.echo("Starting ONEXUS MCP server (stdio transport)...")
     asyncio.run(server.run_stdio())
+
+
+@main.group()
+def workspace():
+    """Manage ONEXUS workspaces."""
+    pass
+
+
+def _workspace_root(cfg: NexusConfig):
+    """Return (and create) the workspaces root directory."""
+    from pathlib import Path
+    root = cfg.data_dir / "workspaces"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+@workspace.command("list")
+def workspace_list():
+    """List all workspaces."""
+    from nexus.workspaces.manager import WorkspaceManager
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+    workspaces = mgr.list()
+    active_id = mgr.active_id()
+
+    if not workspaces:
+        click.echo("No workspaces yet. Create one with: onexus workspace create --name <name>")
+        return
+
+    for ws in workspaces:
+        marker = " *" if ws.workspace_id == active_id else ""
+        click.echo(f"  {ws.workspace_id:<30} {ws.tone.value:<10} {ws.name}{marker}")
+
+
+@workspace.command("create")
+@click.option("--name", required=True, help="Display name for the workspace.")
+@click.option("--id", "workspace_id", default=None, help="Kebab-case ID (auto-generated if omitted).")
+@click.option("--tone", default="INDIGO",
+              type=click.Choice(["INDIGO", "MAGENTA", "SAGE", "PLUM", "AMBER"], case_sensitive=False),
+              help="Home tone.")
+@click.option("--template", default=None,
+              type=click.Choice(["coding", "design", "research", "writing", "personal", "blank"],
+                                case_sensitive=False),
+              help="Start from a built-in template.")
+def workspace_create(name, workspace_id, tone, template):
+    """Create a new workspace."""
+    import re
+    from nexus.workspaces.manager import WorkspaceManager
+
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+
+    # Auto-generate ID from name if not provided
+    if workspace_id is None:
+        workspace_id = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40]
+        if not workspace_id:
+            workspace_id = "workspace"
+
+    if template:
+        from nexus.workspaces.templates import apply_template
+        try:
+            ws = apply_template(
+                template,
+                workspace_id=workspace_id,
+                name=name,
+                manager=mgr,
+                tone_override=tone.upper(),
+            )
+        except FileExistsError:
+            click.echo(f"Error: workspace '{workspace_id}' already exists.")
+            raise SystemExit(1)
+        except KeyError as e:
+            click.echo(f"Error: {e}")
+            raise SystemExit(1)
+    else:
+        try:
+            ws = mgr.create(name=name, workspace_id=workspace_id, tone=tone.upper())
+        except FileExistsError:
+            click.echo(f"Error: workspace '{workspace_id}' already exists.")
+            raise SystemExit(1)
+
+    click.echo(f"Created workspace '{workspace_id}' ({ws.tone.value}) — {ws.name}")
+
+
+@workspace.command("switch")
+@click.argument("workspace_id")
+def workspace_switch(workspace_id):
+    """Switch the active workspace."""
+    from nexus.workspaces.manager import WorkspaceManager
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+    try:
+        mgr.set_active(workspace_id)
+        ws = mgr.get(workspace_id)
+        click.echo(f"Switched to workspace '{workspace_id}' — {ws.name} ({ws.tone.value})")
+    except KeyError:
+        click.echo(f"Error: workspace '{workspace_id}' not found.")
+        raise SystemExit(1)
+
+
+@workspace.command("destroy")
+@click.argument("workspace_id")
+@click.option("--yes", is_flag=True, help="Skip confirmation.")
+def workspace_destroy(workspace_id, yes):
+    """Permanently delete a workspace and all its data."""
+    from nexus.workspaces.manager import WorkspaceManager
+    cfg = NexusConfig()
+    mgr = WorkspaceManager(_workspace_root(cfg))
+
+    ws = mgr.get(workspace_id)
+    if ws is None:
+        click.echo(f"Error: workspace '{workspace_id}' not found.")
+        raise SystemExit(1)
+
+    if not yes:
+        click.confirm(
+            f"Permanently delete workspace '{workspace_id}' ({ws.name})? This cannot be undone.",
+            abort=True,
+        )
+
+    try:
+        mgr.destroy(workspace_id)
+        click.echo(f"Workspace '{workspace_id}' destroyed.")
+    except KeyError:
+        click.echo(f"Error: workspace '{workspace_id}' not found.")
+        raise SystemExit(1)
+
+
+@main.group()
+def agent():
+    """Manage installed agents."""
+    pass
+
+
+@agent.command("install")
+@click.argument("manifest_source")
+@click.option("--dry-run", is_flag=True, help="Show the install plan without persisting.")
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt.")
+def agent_install(manifest_source, dry_run, yes):
+    """Install a manifest from a local path or URL."""
+    from pathlib import Path
+    from nexus.agents.installer import plan_from_manifest_path, install_from_plan
+
+    cfg = NexusConfig()
+    src = Path(manifest_source)
+    if not src.exists():
+        click.echo(f"manifest not found: {manifest_source}", err=True)
+        raise SystemExit(1)
+
+    plan = plan_from_manifest_path(src)
+    click.echo(plan.short_summary())
+    if dry_run:
+        click.echo("(dry run — nothing was installed)")
+        return
+
+    if not yes:
+        if not click.confirm("install this agent?"):
+            return
+    target = install_from_plan(plan, cfg.data_dir)
+    click.echo(f"installed: {plan.slug} -> {target}")
+
+
+@agent.command("uninstall")
+@click.argument("slug")
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt.")
+def agent_uninstall(slug, yes):
+    """Remove an installed agent."""
+    from nexus.agents.installer import uninstall as _uninstall
+
+    if not yes:
+        if not click.confirm(f"uninstall {slug!r}? this removes all its data."):
+            return
+    cfg = NexusConfig()
+    if _uninstall(slug, cfg.data_dir):
+        click.echo(f"uninstalled: {slug}")
+    else:
+        click.echo(f"not installed: {slug}", err=True)
+        raise SystemExit(1)
+
+
+@agent.command("list")
+def agent_list():
+    """List installed agents."""
+    from nexus.agents.installer import installed_slugs, load_installed_manifest
+
+    cfg = NexusConfig()
+    slugs = installed_slugs(cfg.data_dir)
+    if not slugs:
+        click.echo("no installed agents")
+        return
+    for slug in slugs:
+        m = load_installed_manifest(slug, cfg.data_dir)
+        if m is not None:
+            click.echo(f"  {slug:24}  v{m.version}  [{m.publisher.handle}]")
 
 
 if __name__ == "__main__":
