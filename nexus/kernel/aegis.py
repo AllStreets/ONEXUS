@@ -102,6 +102,24 @@ class PermissionInbox:
         if not ticket.future.done():
             ticket.future.set_result(decision)
 
+    def seed(self, request: PermissionRequest) -> str:
+        """Push a demo/test ticket with no awaiter. The ticket auto-cleans
+        after the user decides — used by /api/demo endpoints and tests."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        ticket = _PendingTicket(request, future)
+        self._tickets[ticket.id] = ticket
+
+        async def _cleanup():
+            try:
+                await future
+            finally:
+                self._tickets.pop(ticket.id, None)
+
+        asyncio.create_task(_cleanup())
+        return ticket.id
+
 
 class PermissionDenied(Exception):
     def __init__(self, module: str, action: str):

@@ -1,47 +1,801 @@
-import { KERNEL_MARK, agentDisc, UI } from "/aurora/static/icons.js";
+/* ───────────────────────────────────────────────────────────────────────────
+ * ONEXUS Aurora — application bootstrap and renderers.
+ * Layout: persistent window shell with sidebar + main + cockpit rail.
+ * Overlays for ⌘K switcher / ⌘N new workspace / ⌘` cockpit / ⌘, settings.
+ * ─────────────────────────────────────────────────────────────────────────── */
 
-document.getElementById("nx-kernel-mark").innerHTML = KERNEL_MARK(14);
+import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI } from "/aurora/static/icons.js";
 
-// ── State ────────────────────────────────────────────────────────────────
+// ── State ──────────────────────────────────────────────────────────────────
 const state = {
   workspaces: [],
   active: null,
+  thread: new Map(),       // workspace_id -> array of message records
+  agents: [],              // catalog/runtime metadata
+  recentAgents: [],
+  trust: {                 // last 60m aggregate
+    delta: 0,
+    direction: "rising",   // rising | falling | collapse
+    history: [],           // [{t, score}]
+    breakdown: { routine: 0, notable: 0, sensitive: 0, privileged: 0, denied: 0 },
+  },
+  perms: {
+    pending: [],
+    recent: [],            // last N decisions for cockpit log
+  },
+  mood: {
+    mood: "calm_focus",
+    tone: null,
+    reason: "",
+  },
+  user: { initials: "you", name: "you" },
 };
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+async function boot() {
+  document.getElementById("nx-kernel-mark").innerHTML = KERNEL_MARK(16);
+  startClock();
+  attachShellHandlers();
+  attachKeybinds();
+  await loadAll();
+  renderSidebar();
+  renderCockpitRail();
+  subscribeStreams();
+  await route(location.hash);
+}
+
+// ── Data loaders ──────────────────────────────────────────────────────────
+async function loadAll() {
+  await Promise.allSettled([
+    loadWorkspaces(),
+    loadAgents(),
+    loadTrust(),
+    loadPermissions(),
+    loadMood(),
+  ]);
+}
 
 async function loadWorkspaces() {
   try {
     const r = await fetch("/api/workspaces");
-    if (r.ok) {
-      const body = await r.json();
-      state.workspaces = body.workspaces;
-      state.active = body.active;
-      // Update header active workspace label
-      const label = document.getElementById("nx-active-workspace");
-      if (label) {
-        if (state.active) {
-          const cfg = state.workspaces.find(w => w.workspace_id === state.active);
-          label.textContent = cfg ? cfg.name : state.active;
-        } else {
-          label.textContent = "No workspace";
-        }
-      }
-    }
+    if (!r.ok) return;
+    const body = await r.json();
+    state.workspaces = body.workspaces || [];
+    state.active = body.active || null;
   } catch {}
 }
 
-// ── Switcher overlay ─────────────────────────────────────────────────────
-function renderSwitcher() {
-  const root = document.getElementById("nx-overlay-root");
+async function loadAgents() {
+  try {
+    // Pull built-in / system agents first (these are the resident set).
+    const r = await fetch("/api/agents?category=system&limit=20");
+    if (r.ok) {
+      const body = await r.json();
+      state.agents = body.agents || [];
+    }
+  } catch {}
+  // Recent = running agents first, then top of system catalog
+  try {
+    const r = await fetch("/api/agents/running");
+    if (r.ok) {
+      const running = await r.json();
+      const runningSet = new Set(running.map(a => a.slug));
+      state.recentAgents = [
+        ...running.map(a => ({ ...a, is_running: true })),
+        ...state.agents.filter(a => !runningSet.has(a.slug)),
+      ].slice(0, 3);
+      return;
+    }
+  } catch {}
+  state.recentAgents = state.agents.slice(0, 3);
+}
+
+async function loadTrust() {
+  // Read trust_change events from chronicle (one call, regardless of how many
+  // modules are registered). Aegis logs every adjustment as a chronicle entry.
+  try {
+    const r = await fetch("/api/chronicle?source=aegis&event_type=aegis.trust_change&limit=100");
+    if (!r.ok) return;
+    const body = await r.json();
+    const entries = body.entries || [];
+    const cutoff = Date.now() - 60 * 60 * 1000;
+    const recent = entries
+      .map(e => {
+        const p = e.payload || {};
+        return {
+          timestamp: e.timestamp,
+          delta: typeof p.delta === "number" ? p.delta : 0,
+          new_score: typeof p.new_score === "number" ? p.new_score : 1.0,
+          module: p.module || "",
+        };
+      })
+      .filter(e => {
+        const t = Date.parse(e.timestamp);
+        return !isNaN(t) && t >= cutoff;
+      })
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+
+    state.trust.history = recent;
+    state.trust.delta = recent.reduce((s, e) => s + (e.delta || 0), 0);
+    const anyCollapse = recent.some(e => e.new_score < 0.50);
+    state.trust.direction = anyCollapse
+      ? "collapse"
+      : state.trust.delta < -0.01 ? "falling" : "rising";
+  } catch {}
+}
+
+async function loadPermissions() {
+  try {
+    const p = await fetch("/api/permissions/pending");
+    if (p.ok) {
+      const body = await p.json();
+      state.perms.pending = body.pending || [];
+    }
+  } catch {}
+  // Recent decisions — try the convenience endpoint first, fall back to chronicle
+  try {
+    const r = await fetch("/api/permissions/recent?limit=20");
+    if (r.ok) {
+      const body = await r.json();
+      state.perms.recent = body.events || [];
+      return;
+    }
+  } catch {}
+  try {
+    const r = await fetch("/api/chronicle?source=aegis&limit=40");
+    if (r.ok) {
+      const body = await r.json();
+      // Filter to permission-shaped events
+      state.perms.recent = (body.entries || [])
+        .filter(e => /permission|fs_|net_|trust|grant/.test(e.action || ""))
+        .slice(0, 8)
+        .map(formatChronicleAsPerm);
+    }
+  } catch {}
+  // Breakdown count
+  state.trust.breakdown = state.perms.recent.reduce((acc, e) => {
+    const k = (e.permission_class || "routine").toLowerCase();
+    acc[k] = (acc[k] || 0) + 1;
+    if (e.status === "denied") acc.denied = (acc.denied || 0) + 1;
+    return acc;
+  }, { routine: 0, notable: 0, sensitive: 0, privileged: 0, denied: 0 });
+}
+
+function formatChronicleAsPerm(e) {
+  const payload = e.payload || {};
+  const action = e.action || "";
+  let status = "auto", pc = "routine";
+  if (action === "permission_granted") { status = "allowed"; pc = (payload.permission_class || "notable").toLowerCase(); }
+  else if (action === "permission_revoked" || action === "fs_access_denied" || action.includes("denied")) {
+    status = "denied"; pc = "privileged";
+  } else if (action.startsWith("fs_") || action.startsWith("net_")) {
+    status = "auto"; pc = "routine";
+  } else if (action.includes("trust_change")) {
+    status = "auto"; pc = "notable";
+  }
+  return {
+    capability: payload.capability || action,
+    target: payload.path || payload.url || payload.target || payload.module || "",
+    status,
+    permission_class: pc,
+    time: e.timestamp,
+  };
+}
+
+async function loadMood() {
+  try {
+    const r = await fetch("/api/mood/current");
+    if (!r.ok) return;
+    const body = await r.json();
+    state.mood.mood = body.mood;
+    state.mood.tone = body.tone;
+    state.mood.reason = body.reason || "";
+    applyMood(body.mood);
+  } catch {}
+}
+
+function applyMood(moodKey) {
+  const cls = "nx-mood-" + (moodKey || "calm_focus").replace(/_/g, "-");
+  const current = [...document.body.classList].find(c => c.startsWith("nx-mood-"));
+  if (current && current !== cls) document.body.classList.remove(current);
+  if (!document.body.classList.contains(cls)) document.body.classList.add(cls);
+  document.body.dataset.mood = moodKey;
+  // Update mood-label in chrome
+  const lbl = document.getElementById("nx-mood-label");
+  if (lbl) lbl.textContent = (moodKey || "calm focus").replace(/_/g, " ");
+}
+
+// ── Chrome ─────────────────────────────────────────────────────────────────
+function startClock() {
+  const el = document.getElementById("nx-clock");
+  const tick = () => {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    el.textContent = `${hh}:${mm}`;
+  };
+  tick();
+  setInterval(tick, 30 * 1000);
+}
+
+function attachShellHandlers() {
+  document.getElementById("nx-new-ws").addEventListener("click", openNewWorkspaceForm);
+  document.getElementById("nx-mood-pill").addEventListener("click", toggleCockpitOverlay);
+  document.getElementById("nx-open-catalog").addEventListener("click", () => location.hash = "#/catalog");
+  document.getElementById("nx-open-settings").addEventListener("click", () => location.hash = "#/settings");
+  document.getElementById("nx-search-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const q = e.target.value.trim();
+      if (q) location.hash = `#/catalog?q=${encodeURIComponent(q)}`;
+    }
+  });
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  // Workspaces
+  const list = document.getElementById("nx-ws-list");
+  if (!state.workspaces.length) {
+    list.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:14px 4px;font-size:11.5px">no workspaces yet · ⌘N to create one</div>`;
+  } else {
+    list.innerHTML = state.workspaces.map(w => {
+      const tone = w.tone || "indigo";
+      const colorMap = {
+        indigo: "#a8b4ff",  amber: "#f8c460",  sage: "#9affb6",
+        plum: "#c8a0ff",    magenta: "#f86078", "calm-focus": "#a87af5",
+      };
+      const dotColor = colorMap[(tone || "").toLowerCase()] || "#a87af5";
+      const meta = w.workspace_id === state.active
+        ? `${w.resident_agents?.length || 0} agents · active`
+        : `${w.resident_agents?.length || 0} agents`;
+      return `
+        <button class="nx-ws-pill ${w.workspace_id === state.active ? "active" : ""}" data-id="${w.workspace_id}" aria-label="Workspace ${w.name}">
+          <span class="ws-dot" style="background:${dotColor};color:${dotColor}"></span>
+          <span class="ws-name">${escapeHtml(w.name || w.workspace_id)}</span>
+          <span></span>
+          <span class="ws-meta">${escapeHtml(meta)}</span>
+        </button>
+      `;
+    }).join("");
+    list.querySelectorAll(".nx-ws-pill").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        await fetch(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST" });
+        await loadWorkspaces();
+        renderSidebar();
+        renderChromeContext();
+        location.hash = `#/conversation/${id}`;
+      });
+    });
+  }
+
+  // Recent agents
+  const recentEl = document.getElementById("nx-recent-agents");
+  if (!state.recentAgents.length) {
+    recentEl.innerHTML = `<div class="nx-empty" style="opacity:0.45;padding:8px 4px;font-size:11px">no installed agents yet</div>`;
+  } else {
+    recentEl.innerHTML = state.recentAgents.map(a => {
+      const floor = typeof a.trust_floor === "number" ? a.trust_floor : null;
+      const trustLabel = a.is_running ? "running"
+        : floor == null ? "—"
+        : floor >= 0.75 ? "trusted"
+        : floor >= 0.50 ? "executor"
+        : "probationary";
+      return `
+        <div class="nx-agent-row" data-slug="${a.slug}">
+          ${agentDisc(a.slug, { size: 28, trust: floor })}
+          <div>
+            <div class="ag-name">${escapeHtml(a.slug)}</div>
+            <div class="ag-sub">${escapeHtml(a.category || "")}</div>
+          </div>
+          <div class="ag-status">${escapeHtml(trustLabel)}</div>
+        </div>
+      `;
+    }).join("");
+    recentEl.querySelectorAll(".nx-agent-row").forEach(row => {
+      row.addEventListener("click", () => location.hash = `#/catalog?focus=${encodeURIComponent(row.dataset.slug)}`);
+    });
+  }
+
+  // User footer initials
+  const initialsEl = document.getElementById("nx-user-initials");
+  initialsEl.textContent = state.user.initials;
+}
+
+function renderChromeContext() {
+  const el = document.getElementById("nx-chrome-context");
+  if (!el) return;
+  if (!state.active) { el.textContent = "no workspace"; return; }
+  const w = state.workspaces.find(ws => ws.workspace_id === state.active);
+  const name = w ? w.name : state.active;
+  const count = w?.resident_agents?.length || 0;
+  el.textContent = `— ${name.toLowerCase()} · ${count} agent${count === 1 ? "" : "s"} on duty`;
+}
+
+// ── Cockpit rail ──────────────────────────────────────────────────────────
+function renderCockpitRail() {
+  renderTrustCard();
+  renderPermLog();
+  renderMoodCard();
+  renderAgentDiscs();
+}
+
+function renderTrustCard() {
+  const el = document.getElementById("nx-trust-card");
+  if (!el) return;
+  const dir = state.trust.direction;
+  el.classList.remove("falling", "collapse");
+  if (dir === "falling")  el.classList.add("falling");
+  if (dir === "collapse") el.classList.add("collapse");
+  const dStr = state.trust.delta > 0 ? `+${state.trust.delta.toFixed(2)}`
+            : state.trust.delta.toFixed(2);
+  const bd = state.trust.breakdown || {};
+  const breakdownLine = `${bd.routine || 0} routine · ${bd.notable || 0} notable · ${bd.sensitive || 0} sensitive · ${bd.denied || 0} denied`;
+  el.innerHTML = `
+    <svg class="nx-trust-spark" viewBox="0 0 320 92" preserveAspectRatio="none" aria-hidden="true">
+      ${trustSparkSVG(state.trust.history, dir)}
+    </svg>
+    <div class="nx-trust-head">
+      <span class="nx-trust-delta">${dStr}</span>
+      <span class="nx-trust-state">${dir.toUpperCase()}</span>
+    </div>
+    <div class="nx-trust-breakdown">${escapeHtml(breakdownLine)}</div>
+  `;
+}
+
+function trustSparkSVG(history, direction) {
+  const w = 320, h = 92;
+  if (!history.length) {
+    // Draw a flat baseline
+    return `<line x1="0" y1="${h * 0.7}" x2="${w}" y2="${h * 0.7}" stroke="rgba(255,224,154,0.3)" stroke-width="1"/>`;
+  }
+  // Map history to (x,y) points; cumulative trust delta over time → simple stepped curve
+  let acc = 0;
+  const points = history.map((e, i) => {
+    acc += (e.delta || 0);
+    return { x: (i / Math.max(history.length - 1, 1)) * w, t: e.timestamp, acc };
+  });
+  const minAcc = Math.min(0, ...points.map(p => p.acc));
+  const maxAcc = Math.max(0.5, ...points.map(p => p.acc));
+  const range = maxAcc - minAcc || 1;
+  const y = (acc) => h - ((acc - minAcc) / range) * h * 0.7 - h * 0.15;
+
+  const pts = points.map(p => `${p.x.toFixed(1)},${y(p.acc).toFixed(1)}`).join(" L");
+  const colorLine = direction === "collapse" ? "#ff8868"
+                  : direction === "falling"  ? "#b0d4ec"
+                                              : "#ffe09a";
+  const colorArea = direction === "collapse" ? "rgba(248,100,60,0.30)"
+                  : direction === "falling"  ? "rgba(140,184,212,0.22)"
+                                              : "rgba(255,214,128,0.32)";
+  const last = points[points.length - 1];
+  return `
+    <defs>
+      <linearGradient id="ts-area" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="${colorArea}"/>
+        <stop offset="100%" stop-color="${colorArea}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="M ${pts} L ${w},${h} L 0,${h} Z" fill="url(#ts-area)"/>
+    <path d="M ${pts}" fill="none" stroke="${colorLine}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last.x.toFixed(1)}" cy="${y(last.acc).toFixed(1)}" r="3.5" fill="${colorLine}"/>
+    <circle cx="${last.x.toFixed(1)}" cy="${y(last.acc).toFixed(1)}" r="8" fill="none" stroke="${colorLine}" stroke-opacity="0.4"/>
+  `;
+}
+
+function renderPermLog() {
+  const el = document.getElementById("nx-perm-log");
+  if (!el) return;
+  const rows = state.perms.recent.slice(0, 6);
+  if (!rows.length) {
+    el.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:14px 4px;font-size:11px">no recent activity</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const pc = (r.permission_class || "routine").toLowerCase();
+    const status = (r.status || "auto").toLowerCase();
+    const t = formatTime(r.time);
+    return `
+      <div class="nx-perm-row">
+        <span class="nx-perm-dot class-${pc}"></span>
+        <div class="nx-perm-cap">
+          <span>${escapeHtml(r.capability || "")}</span>
+          <span class="nx-perm-target">${escapeHtml(r.target ? truncate(r.target, 18) : "")}</span>
+        </div>
+        <span class="nx-perm-status s-${status}">${status.toUpperCase()}</span>
+        <span class="nx-perm-time">${escapeHtml(t)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderMoodCard() {
+  const el = document.getElementById("nx-mood-card");
+  if (!el) return;
+  const name = (state.mood.mood || "calm_focus").replace(/_/g, " ");
+  const reason = state.mood.reason || "";
+  el.innerHTML = `
+    <div class="nx-mood-mesh"></div>
+    <div class="nx-mood-caption">
+      <div class="nx-mood-caption-name">${escapeHtml(name)}</div>
+      <div class="nx-mood-caption-sub">${escapeHtml(reason.toLowerCase())}</div>
+    </div>
+  `;
+  // reasons block
+  const r = document.getElementById("nx-mood-reasons");
+  r.innerHTML = `
+    <div>↳ mood: ${escapeHtml(name)}</div>
+    <div>↳ ${escapeHtml(reason || "ambient")}</div>
+    <div>↳ ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ${state.perms.pending.length} pending</div>
+  `;
+}
+
+function renderAgentDiscs() {
+  const el = document.getElementById("nx-agent-discs");
+  if (!el) return;
+  const BUILTINS = ["oracle", "council", "wraith", "echo", "specter", "autonomic"];
+  const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
+  document.getElementById("nx-agents-label").textContent =
+    `${totalBuiltin} BUILT-IN · ${state.agents.length || 0} INSTALLED`;
+  const overflow = Math.max(0, totalBuiltin - BUILTINS.length);
+  el.innerHTML = BUILTINS.map(slug => agentDisc(slug, { size: 28 })).join("") +
+    (overflow > 0 ? `<button class="nx-agent-overflow" title="Browse catalog">+${overflow}</button>` : "");
+  const overEl = el.querySelector(".nx-agent-overflow");
+  if (overEl) overEl.addEventListener("click", () => location.hash = "#/catalog");
+}
+
+// ── Main view: conversation ────────────────────────────────────────────────
+async function renderConversation(workspaceId) {
+  const main = document.getElementById("nx-main");
+  let ws = state.workspaces.find(w => w.workspace_id === workspaceId);
+  if (!ws) {
+    try {
+      const r = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}`);
+      if (r.ok) ws = await r.json();
+    } catch {}
+  }
+  if (!ws) {
+    main.innerHTML = `<div class="nx-empty">workspace not found: ${escapeHtml(workspaceId)}</div>`;
+    return;
+  }
+  renderChromeContext();
+
+  const thread = state.thread.get(workspaceId) || [];
+  const pending = state.perms.pending.filter(p => !p.workspace_id || p.workspace_id === workspaceId);
+  const now = new Date();
+  const stamp = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  const isEmpty = thread.length === 0 && pending.length === 0;
+  const onDuty = (ws.resident_agents || [])[0];
+  const meta = onDuty
+    ? `started by you · ${onDuty} on duty${(ws.resident_agents || []).length > 1 ? ` · ${(ws.resident_agents || [])[1]} listening` : ""}`
+    : `started by you · council routing`;
+
+  if (isEmpty) {
+    // Empty state — full-canvas welcome, no breadcrumb/title duplication
+    main.innerHTML = `
+      ${renderEmptyThreadHTML(ws)}
+      <form class="nx-composer" id="nx-composer" autocomplete="off">
+        <input id="nx-composer-input"
+               placeholder="message agents in this workspace…"
+               aria-label="Compose a message"
+               autofocus>
+        <div class="nx-composer-kbd">
+          <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
+        </div>
+      </form>
+    `;
+  } else {
+    // Active conversation: show breadcrumb + title + thread
+    const firstUserMessage = thread.find(m => m.role === "user");
+    const title = firstUserMessage
+      ? truncate(firstUserMessage.body, 60)
+      : `Session in ${ws.name}`;
+    main.innerHTML = `
+      <div class="nx-conv-head">
+        <div class="nx-conv-crumb">
+          <span class="crumb-dim">workspace /</span>
+          <span class="crumb-strong">${escapeHtml((ws.name || ws.workspace_id).toLowerCase())}</span>
+          <span class="crumb-dim">— today, ${stamp}</span>
+        </div>
+        <div class="nx-conv-title">${escapeHtml(title)}</div>
+        <div class="nx-conv-meta">${escapeHtml(meta)}</div>
+      </div>
+      <div class="nx-thread" id="nx-thread">
+        ${thread.map(renderMessageHTML).join("") + pending.map(renderPendingPermissionHTML).join("")}
+      </div>
+      <form class="nx-composer" id="nx-composer" autocomplete="off">
+        <input id="nx-composer-input"
+               placeholder="message agents in this workspace…"
+               aria-label="Compose a message"
+               autofocus>
+        <div class="nx-composer-kbd">
+          <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
+        </div>
+      </form>
+    `;
+  }
+
+  // Wire prompt suggestion cards (empty state)
+  main.querySelectorAll(".nx-prompt-card[data-prompt]").forEach(card => {
+    card.addEventListener("click", async () => {
+      const input = document.getElementById("nx-composer-input");
+      if (input) input.value = card.dataset.prompt;
+      await sendMessage(workspaceId);
+    });
+  });
+
+  // Tour link — bring the screenshot's narrative to life:
+  //   1) Pre-populate the thread with user → oracle (diff cards) → user pick
+  //   2) Bump some trust scores so the cockpit sparkline shows real motion
+  //   3) Seed a sensitive fs.write permission ticket → inline prompt renders
+  const tour = document.getElementById("nx-tour-link");
+  if (tour) {
+    tour.addEventListener("click", async () => {
+      tour.disabled = true;
+      tour.textContent = "Loading the tour…";
+      const t = state.thread.get(workspaceId) || [];
+      const now = new Date();
+      const minus = (s) => new Date(now.getTime() - s * 1000).toISOString();
+      t.push({
+        role: "user",
+        body: "Refactor the kernel runtime — three candidates, smallest blast radius first.",
+        ts: minus(140),
+      });
+      t.push({
+        role: "agent", agent: "oracle", ts: minus(120),
+        body: "I traced the dependency graph across 47 files in src/kernel/. Three refactor candidates match your scope — diffs below, ordered by smallest blast radius:",
+        attachments: [
+          { kind: "diff", path: "src/agents/runtime.py", adds: 12, dels: 34, selected: false },
+          { kind: "diff", path: "src/kernel/cortex.py", adds: 8,  dels: 2,  selected: true  },
+          { kind: "diff", path: "src/aegis/grants.py",  adds: 5,  dels: 1,  selected: false },
+        ],
+      });
+      t.push({ role: "user", body: "second one looks clean. apply it.", ts: minus(80) });
+      state.thread.set(workspaceId, t);
+
+      // Bump trust on a few modules so the sparkline shows motion
+      try {
+        await Promise.allSettled([
+          fetch("/api/trust/oracle/adjust", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ delta: 0.04, reason: "tour:correct-citation" }),
+          }),
+          fetch("/api/trust/echo/adjust", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ delta: 0.02, reason: "tour:answer-validated" }),
+          }),
+          fetch("/api/trust/council/adjust", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ delta: 0.03, reason: "tour:dissent-useful" }),
+          }),
+        ]);
+      } catch {}
+
+      // Fire the sensitive permission prompt (the wow moment from the hero)
+      try {
+        await fetch("/api/permissions/seed", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agent_slug: "oracle",
+            capability: "fs.write",
+            permission_class: "Sensitive",
+            workspace_id: workspaceId,
+            target: "src/kernel/cortex.py",
+            preview: "Apply candidate #2 — replaces the inline router fallback with explicit dispatch.",
+          }),
+        });
+      } catch {}
+
+      await Promise.allSettled([loadPermissions(), loadTrust()]);
+      renderCockpitRail();
+      await renderConversation(workspaceId);
+    });
+  }
+
+  // Wire pending permission buttons
+  main.querySelectorAll(".nx-perm-prompt[data-ticket]").forEach(node => {
+    node.querySelectorAll("[data-decision]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        await fetch("/api/permissions/decide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ticket_id: node.dataset.ticket,
+            decision: btn.dataset.decision,
+          }),
+        });
+        await loadPermissions();
+        renderCockpitRail();
+        renderConversation(workspaceId);
+      });
+    });
+  });
+
+  // Composer
+  document.getElementById("nx-composer").addEventListener("submit", (e) => {
+    e.preventDefault();
+    sendMessage(workspaceId);
+  });
+  document.getElementById("nx-composer-input").addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      sendMessage(workspaceId);
+    }
+  });
+
+  // Scroll to bottom of thread
+  const t = document.getElementById("nx-thread");
+  if (t) t.scrollTop = t.scrollHeight;
+}
+
+function renderEmptyThreadHTML(ws) {
+  const SUGGESTIONS = [
+    { glyph: "council",       label: "Convene the council",  hint: "Get a 3-round deliberation across the cognitive modules.", prompt: "Council: I'm refactoring my kernel runtime — what should I be careful about?" },
+    { glyph: "oracle",        label: "Ask the oracle",        hint: "A first read across whatever is in this workspace.",      prompt: "Oracle: read this repo and summarise its architecture in 5 bullets." },
+    { glyph: "specter",       label: "Red-team a plan",       hint: "Counter-arguments and dissenting views, no flattery.",     prompt: "Specter: red-team my decision to switch from postgres to sqlite." },
+    { glyph: "legacy",        label: "Pull from memory",      hint: "Recall what was decided last time, with citations.",       prompt: "Legacy: what have I tried for this problem before?" },
+  ];
+  return `
+    <div class="nx-welcome">
+      <div class="nx-welcome-orb">${KERNEL_MARK(72)}</div>
+      <h1>${escapeHtml(ws.name)}</h1>
+      <p>A workspace is a room with its own agents, memory, and grants. Send a
+         message to start — or pick a thread below. Every tool call passes
+         through <span class="nx-mono" style="color:#c9b8ff">Aegis</span>, every event lands in
+         <span class="nx-mono" style="color:#c9b8ff">Chronicle</span>.</p>
+      <div class="nx-prompt-grid" id="nx-prompt-grid">
+        ${SUGGESTIONS.map(s => `
+          <button class="nx-prompt-card" data-prompt="${escapeHtml(s.prompt)}">
+            <div class="nx-prompt-glyph">${agentDisc(s.glyph, { size: 32 })}</div>
+            <div class="nx-prompt-text">
+              <div class="nx-prompt-label">${escapeHtml(s.label)}</div>
+              <div class="nx-prompt-hint">${escapeHtml(s.hint)}</div>
+            </div>
+            <div class="nx-prompt-arrow">↩</div>
+          </button>
+        `).join("")}
+      </div>
+      <button class="nx-tour-link" id="nx-tour-link" data-workspace="${escapeHtml(ws.workspace_id)}">
+        See the safety model in action — fire a sample permission prompt
+      </button>
+    </div>
+  `;
+}
+
+function renderMessageHTML(m) {
+  if (m.role === "user") {
+    return `
+      <div class="nx-msg-user">
+        <div class="nx-msg-bubble">${escapeHtml(m.body)}</div>
+      </div>
+    `;
+  }
+  const slug = m.agent || "oracle";
+  const time = formatTime(m.ts) || "";
+  const diffs = (m.attachments || []).filter(a => a.kind === "diff");
+  const diffHTML = diffs.length ? `
+    <div class="nx-diff-stack">
+      ${diffs.map(d => `
+        <div class="nx-diff-card ${d.selected ? "selected" : ""}" data-path="${escapeHtml(d.path)}">
+          <span class="nx-diff-icon" aria-hidden="true"></span>
+          <span class="nx-diff-path">${escapeHtml(d.path)}</span>
+          <span class="nx-diff-adds">+${d.adds || 0}</span>
+          <span class="nx-diff-dels">−${d.dels || 0}</span>
+          <span class="nx-diff-trail" aria-hidden="true"></span>
+        </div>
+      `).join("")}
+    </div>
+  ` : "";
+  return `
+    <div class="nx-msg-agent">
+      ${agentDisc(slug, { size: 40 })}
+      <div>
+        <div class="nx-msg-head">
+          <span class="nx-msg-name">${escapeHtml(slug)}</span>
+          <span class="nx-msg-meta">${escapeHtml(time)}</span>
+        </div>
+        <div class="nx-msg-body" style="white-space:pre-wrap">${m.html || escapeHtml(m.body)}</div>
+        ${diffHTML}
+      </div>
+    </div>
+  `;
+}
+
+function renderPendingPermissionHTML(p) {
+  const pc = (p.permission_class || "sensitive").toLowerCase();
+  const slug = p.agent_slug || "oracle";
+  return `
+    <div class="nx-msg-agent">
+      ${agentDisc(slug, { size: 40 })}
+      <div>
+        <div class="nx-msg-head">
+          <span class="nx-msg-name">${escapeHtml(slug)}</span>
+          <span class="nx-msg-meta">requesting access</span>
+        </div>
+        <div class="nx-msg-body">
+          Needs <span class="nx-cap">${escapeHtml(p.capability)}</span>${p.target ? ` on <span class="nx-code">${escapeHtml(p.target)}</span>` : ""}.
+          ${p.preview ? ` ${escapeHtml(p.preview)}` : ""} How should Aegis remember this?
+        </div>
+        <div class="nx-perm-prompt class-${pc}" data-ticket="${escapeHtml(p.id)}">
+          <span class="nx-perm-pulse" aria-hidden="true"></span>
+          <div class="nx-perm-info">
+            <div class="nx-perm-eyebrow">${escapeHtml((p.capability || "").toUpperCase())} · ${pc.toUpperCase()}</div>
+            <div class="nx-perm-body">${escapeHtml(slug)} → <span class="nx-code">${escapeHtml(p.target || "—")}</span></div>
+          </div>
+          <div class="nx-perm-actions">
+            <button class="nx-perm-btn allow"  data-decision="allow_once">allow once</button>
+            <button class="nx-perm-btn always" data-decision="allow_always_in_workspace">always · here</button>
+            <button class="nx-perm-btn deny"   data-decision="deny">deny</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function sendMessage(workspaceId) {
+  const input = document.getElementById("nx-composer-input");
+  const body = input.value.trim();
+  if (!body) return;
+  input.value = "";
+  // Append user message locally
+  const thread = state.thread.get(workspaceId) || [];
+  thread.push({ role: "user", body, ts: new Date().toISOString() });
+  state.thread.set(workspaceId, thread);
+  renderConversation(workspaceId);
+
+  try {
+    const r = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: body, workspace_id: workspaceId }),
+    });
+    if (r.ok) {
+      const resp = await r.json();
+      const agentBody = resp.response || resp.message || resp.reply || "";
+      const agent = resp.agent || resp.routed_to || resp.module || "oracle";
+      thread.push({ role: "agent", agent, body: agentBody, ts: new Date().toISOString() });
+      state.thread.set(workspaceId, thread);
+      renderConversation(workspaceId);
+      // Refresh trust + permissions in case routing produced events
+      loadTrust().then(() => loadPermissions()).then(renderCockpitRail);
+    } else {
+      const errText = await r.text();
+      thread.push({ role: "agent", agent: "specter", body: `Routing failed (${r.status}): ${errText}`, ts: new Date().toISOString() });
+      state.thread.set(workspaceId, thread);
+      renderConversation(workspaceId);
+    }
+  } catch (err) {
+    thread.push({ role: "agent", agent: "specter", body: `Routing error: ${err.message}`, ts: new Date().toISOString() });
+    state.thread.set(workspaceId, thread);
+    renderConversation(workspaceId);
+  }
+}
+
+// ── Main view: workspaces grid (no active workspace) ──────────────────────
+function renderWorkspacesGrid() {
+  const main = document.getElementById("nx-main");
+  if (!state.workspaces.length) {
+    main.innerHTML = `
+      <div class="nx-welcome">
+        <div class="nx-welcome-orb">${KERNEL_MARK(96)}</div>
+        <h1>Welcome to ONEXUS</h1>
+        <p>An operating system for agents. Each room — a workspace — has its own
+           agents, memory, and grants. Create your first one to get started.</p>
+        <button class="nx-welcome-cta" id="nx-welcome-create">Create your first workspace · ⌘N</button>
+      </div>
+    `;
+    document.getElementById("nx-welcome-create").addEventListener("click", openNewWorkspaceForm);
+    return;
+  }
   const tiles = state.workspaces.map(w => `
-    <div class="nx-ws-tile nx-tone-${w.tone} ${w.workspace_id === state.active ? "active" : ""}"
+    <div class="nx-ws-tile nx-tone-${w.tone || "indigo"} ${w.workspace_id === state.active ? "active" : ""}"
          data-id="${w.workspace_id}">
-      <div class="tile-eyebrow">${w.tone.toUpperCase()}</div>
+      <div class="tile-eyebrow">${escapeHtml((w.tone || "indigo").toUpperCase())}</div>
       <div class="tile-name">${escapeHtml(w.name)}</div>
       <div class="tile-footer">
         <div class="disc-stack">
-          ${w.resident_agents.slice(0, 3).map(a =>
-            agentDisc(a, { size: 22 })
-          ).join("")}
+          ${(w.resident_agents || []).slice(0, 3).map(a => agentDisc(a, { size: 22 })).join("")}
         </div>
         <span class="nx-mono" style="opacity:0.8">
           ${w.workspace_id === state.active ? "active" : (w.last_active_at ? "seen" : "—")}
@@ -49,45 +803,168 @@ function renderSwitcher() {
       </div>
     </div>
   `).join("");
+  main.innerHTML = `
+    <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div class="nx-eyebrow" style="margin-bottom:6px">Rooms</div>
+        <div class="nx-display" style="font-size:28px;color:#f3ecff;font-weight:700">Workspaces</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">
+          ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ⌘K to switch · ⌘N for new
+        </div>
+      </div>
+    </header>
+    <div class="nx-ws-grid">
+      ${tiles}
+      <div class="nx-ws-tile new" id="nx-inline-new-workspace">
+        ${UI.plus(22)}
+        <div style="font-size:13px;margin-top:6px">New workspace</div>
+      </div>
+    </div>
+  `;
+  main.querySelectorAll(".nx-ws-tile[data-id]").forEach(el => {
+    el.addEventListener("click", async () => {
+      await fetch(`/api/workspaces/${el.dataset.id}/switch`, { method: "POST" });
+      await loadWorkspaces();
+      renderSidebar();
+      location.hash = `#/conversation/${el.dataset.id}`;
+    });
+  });
+  document.getElementById("nx-inline-new-workspace").addEventListener("click", openNewWorkspaceForm);
+}
+
+// ── Main view: catalog (spatial grid) ─────────────────────────────────────
+async function renderCatalog() {
+  const main = document.getElementById("nx-main");
+  main.innerHTML = `<div class="nx-empty">loading catalog…</div>`;
+  try {
+    const r = await fetch("/api/agents?limit=32");
+    if (!r.ok) throw new Error("catalog fetch failed");
+    const body = await r.json();
+    const agents = body.agents || [];
+    main.innerHTML = `
+      <div class="nx-spatial-header">
+        <div>
+          <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
+          <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
+          <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of 7,000+ — built-ins are installed by default</div>
+        </div>
+      </div>
+      <div class="nx-spatial">
+        ${agents.map(renderCatalogCard).join("")}
+      </div>
+    `;
+  } catch (e) {
+    main.innerHTML = `<div class="nx-empty">could not load catalog: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderCatalogCard(a) {
+  const sys = a.is_builtin ? "<span class='badge-system'>SYSTEM</span>" : "";
+  const status = a.running ? "active" : "sleeping";
+  return `
+    <div class="nx-spatial-card" data-slug="${escapeHtml(a.slug)}">
+      ${agentDisc(a.slug, { size: 36, trust: a.trust_score ?? null })}
+      <div class="name">${escapeHtml(a.slug)}</div>
+      <div class="tagline">${escapeHtml(a.tagline || a.description || "")}</div>
+      <div class="status">
+        <span class="status-dot ${status === "sleeping" ? "sleeping" : ""}"></span>
+        ${status}
+        ${sys}
+      </div>
+    </div>
+  `;
+}
+
+// ── Main view: settings ───────────────────────────────────────────────────
+async function renderSettings() {
+  const main = document.getElementById("nx-main");
+  main.innerHTML = `
+    <div class="nx-settings-shell">
+      <nav class="nx-settings-tabs">
+        <button class="active" data-tab="general">General</button>
+        <button data-tab="security">Security</button>
+        <button data-tab="providers">Providers</button>
+        <button data-tab="federation">Federation</button>
+        <button data-tab="moods">Moods</button>
+        <button data-tab="about">About</button>
+      </nav>
+      <section class="nx-card nx-settings-panel" id="nx-settings-panel">
+        <h3>General</h3>
+        <p class="nx-dim" style="font-size:13px">Workspace defaults, autosave, and locale.</p>
+      </section>
+    </div>
+  `;
+  main.querySelectorAll(".nx-settings-tabs button").forEach(b => {
+    b.addEventListener("click", () => {
+      main.querySelectorAll(".nx-settings-tabs button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      const tab = b.dataset.tab;
+      const panel = document.getElementById("nx-settings-panel");
+      const heading = tab[0].toUpperCase() + tab.slice(1);
+      panel.innerHTML = `<h3>${heading}</h3><p class="nx-dim" style="font-size:13px">— stub —</p>`;
+    });
+  });
+}
+
+// ── Overlay: workspace switcher (⌘K) ──────────────────────────────────────
+function renderSwitcher() {
+  const root = document.getElementById("nx-overlay-root");
+  const tiles = state.workspaces.map(w => `
+    <div class="nx-ws-tile nx-tone-${w.tone || "indigo"} ${w.workspace_id === state.active ? "active" : ""}"
+         data-id="${w.workspace_id}">
+      <div class="tile-eyebrow">${escapeHtml((w.tone || "indigo").toUpperCase())}</div>
+      <div class="tile-name">${escapeHtml(w.name)}</div>
+      <div class="tile-footer">
+        <div class="disc-stack">
+          ${(w.resident_agents || []).slice(0, 3).map(a => agentDisc(a, { size: 22 })).join("")}
+        </div>
+        <span class="nx-mono" style="opacity:0.8">${w.workspace_id === state.active ? "active" : (w.last_active_at ? "seen" : "—")}</span>
+      </div>
+    </div>
+  `).join("");
   root.innerHTML = `
     <div class="nx-switcher-overlay" id="nx-switcher-overlay">
-      <div class="nx-card nx-switcher">
+      <div class="nx-switcher">
         <h3>Workspaces</h3>
         <div class="nx-switcher-grid">
           ${tiles}
-          <div class="nx-ws-tile new" id="nx-new-workspace">
+          <div class="nx-ws-tile new" id="nx-new-workspace-overlay">
             ${UI.plus(22)}
             <div style="font-size:13px;margin-top:6px">New workspace</div>
           </div>
         </div>
       </div>
-    </div>`;
-
-  // Click handlers
+    </div>
+  `;
   root.querySelectorAll(".nx-ws-tile[data-id]").forEach(el => {
     el.addEventListener("click", async () => {
       await fetch(`/api/workspaces/${el.dataset.id}/switch`, { method: "POST" });
       await loadWorkspaces();
+      renderSidebar();
+      renderChromeContext();
       closeOverlay();
       location.hash = `#/conversation/${el.dataset.id}`;
     });
   });
-  document.getElementById("nx-new-workspace").addEventListener("click", openNewWorkspaceForm);
+  document.getElementById("nx-new-workspace-overlay").addEventListener("click", openNewWorkspaceForm);
   document.getElementById("nx-switcher-overlay").addEventListener("click", (e) => {
     if (e.target.id === "nx-switcher-overlay") closeOverlay();
   });
 }
 
+// ── Overlay: new workspace form (⌘N) ──────────────────────────────────────
 function openNewWorkspaceForm() {
   const root = document.getElementById("nx-overlay-root");
   root.innerHTML = `
     <div class="nx-switcher-overlay" id="nx-newws-overlay">
-      <form class="nx-card nx-switcher" id="nx-newws-form" style="max-width:480px" autocomplete="off">
+      <form class="nx-switcher" id="nx-newws-form" style="max-width:480px" autocomplete="off">
         <h3>New workspace</h3>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <input id="ws-name" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit" placeholder="Name (e.g. Client work)" required autofocus>
-          <input id="ws-id" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit" placeholder="workspace-id (kebab-case, auto-generated from name)" pattern="^[a-z][a-z0-9-]{0,63}$">
-          <select id="ws-tone" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit">
+          <input id="ws-name" placeholder="Name (e.g. Client work)" required autofocus
+                 style="padding:10px 12px;border:1px solid var(--nx-card-border);background:rgba(232,222,252,0.04);color:inherit;border-radius:8px;font:inherit">
+          <input id="ws-id" placeholder="workspace-id (kebab-case)" pattern="^[a-z][a-z0-9-]{0,63}$"
+                 style="padding:10px 12px;border:1px solid var(--nx-card-border);background:rgba(232,222,252,0.04);color:inherit;border-radius:8px;font:inherit">
+          <select id="ws-tone" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:rgba(232,222,252,0.04);color:inherit;border-radius:8px;font:inherit">
             <option value="indigo">indigo</option>
             <option value="magenta">magenta</option>
             <option value="sage">sage</option>
@@ -97,13 +974,12 @@ function openNewWorkspaceForm() {
           <div id="ws-error" class="nx-dim" style="font-size:12px;color:#ffb8c0;min-height:16px"></div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
             <button type="button" class="nx-pill" id="ws-cancel">Cancel</button>
-            <button type="submit" class="nx-pill" id="ws-create" style="background:rgba(168,180,255,0.18);border:1px solid rgba(168,180,255,0.34)">Create</button>
+            <button type="submit" id="ws-create" style="padding:6px 14px;font-size:12px;background:rgba(168,124,232,0.18);border:1px solid rgba(168,124,232,0.40);border-radius:999px;color:#e0d0ff;font-weight:600;cursor:pointer">Create</button>
           </div>
         </div>
       </form>
     </div>`;
 
-  // Auto-derive slug from name as the user types
   const nameInput = document.getElementById("ws-name");
   const idInput = document.getElementById("ws-id");
   let userTypedSlug = false;
@@ -115,18 +991,13 @@ function openNewWorkspaceForm() {
     }
   });
 
-  // Cancel returns to the switcher (not a blank page)
   document.getElementById("ws-cancel").addEventListener("click", (e) => {
     e.preventDefault();
-    renderSwitcher();
+    closeOverlay();
   });
-
-  // Click outside the card closes back to the switcher
   document.getElementById("nx-newws-overlay").addEventListener("click", (e) => {
-    if (e.target.id === "nx-newws-overlay") renderSwitcher();
+    if (e.target.id === "nx-newws-overlay") closeOverlay();
   });
-
-  // Form submit (Enter key or Create click)
   document.getElementById("nx-newws-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = nameInput.value.trim();
@@ -136,7 +1007,6 @@ function openNewWorkspaceForm() {
     errEl.textContent = "";
     if (!name) { errEl.textContent = "Name is required."; return; }
     if (!id) {
-      // Derive on submit if the user left it blank
       id = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
     }
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(id)) {
@@ -152,6 +1022,8 @@ function openNewWorkspaceForm() {
       if (r.ok) {
         await fetch(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST" });
         await loadWorkspaces();
+        renderSidebar();
+        renderChromeContext();
         closeOverlay();
         location.hash = `#/conversation/${id}`;
       } else {
@@ -168,791 +1040,164 @@ function closeOverlay() {
   document.getElementById("nx-overlay-root").innerHTML = "";
 }
 
-// Inline-render the workspace grid into the MAIN view (no overlay).
-// Used as the default landing when the user has no active workspace yet.
-function renderWorkspacesView() {
-  const v = document.getElementById("nx-view");
-  if (state.workspaces.length === 0) {
-    v.innerHTML = `
-      <div class="nx-empty" style="padding-top:80px">
-        <div class="nx-display" style="font-size:28px;margin-bottom:8px">Welcome to NEXUS</div>
-        <p class="nx-dim" style="max-width:520px;margin:0 auto 24px">
-          You don't have any workspaces yet. A workspace is a room — agents, memory, and grants live inside it.
-          Create your first one to get started.
-        </p>
-        <button class="nx-pill" id="nx-create-first" style="background:rgba(168,180,255,0.18);border:1px solid rgba(168,180,255,0.34);padding:8px 18px;font-size:14px">
-          Create your first workspace
-        </button>
-      </div>`;
-    document.getElementById("nx-create-first").addEventListener("click", openNewWorkspaceForm);
-    return;
-  }
-  // Show the grid inline (same layout as the overlay)
-  const tiles = state.workspaces.map(w => `
-    <div class="nx-ws-tile nx-tone-${w.tone} ${w.workspace_id === state.active ? "active" : ""}"
-         data-id="${w.workspace_id}">
-      <div class="tile-eyebrow">${w.tone.toUpperCase()}</div>
-      <div class="tile-name">${escapeHtml(w.name)}</div>
-      <div class="tile-footer">
-        <div class="disc-stack">
-          ${w.resident_agents.slice(0, 3).map(a => agentDisc(a, { size: 22 })).join("")}
-        </div>
-        <span class="nx-mono" style="opacity:0.8">
-          ${w.workspace_id === state.active ? "active" : (w.last_active_at ? "seen" : "—")}
-        </span>
-      </div>
-    </div>`).join("");
-  v.innerHTML = `
-    <div style="max-width:980px;margin:0 auto;padding-top:24px">
-      <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:24px">
-        <div>
-          <div class="nx-eyebrow" style="margin-bottom:6px">Rooms</div>
-          <div class="nx-display" style="font-size:28px">Workspaces</div>
-          <div class="nx-dim" style="font-size:13px;margin-top:4px">${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ⌘K to switch · ⌘N for new</div>
-        </div>
-      </header>
-      <div class="nx-switcher-grid" id="nx-inline-grid">
-        ${tiles}
-        <div class="nx-ws-tile new" id="nx-inline-new-workspace">
-          ${UI.plus(22)}
-          <div style="font-size:13px;margin-top:6px">New workspace</div>
-        </div>
-      </div>
-    </div>`;
-  v.querySelectorAll(".nx-ws-tile[data-id]").forEach(el => {
-    el.addEventListener("click", async () => {
-      await fetch(`/api/workspaces/${el.dataset.id}/switch`, { method: "POST" });
-      await loadWorkspaces();
-      location.hash = `#/conversation/${el.dataset.id}`;
-    });
-  });
-  document.getElementById("nx-inline-new-workspace").addEventListener("click", openNewWorkspaceForm);
-}
-
-function escapeHtml(s) {
-  const d = document.createElement("div");
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-// ── Conversation surface ─────────────────────────────────────────────────
-async function renderConversation(workspaceId) {
-  const v = document.getElementById("nx-view");
-  // Fetch workspace details
-  let ws = state.workspaces.find(w => w.workspace_id === workspaceId);
-  if (!ws) {
-    const r = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}`);
-    if (r.ok) ws = await r.json();
-  }
-  if (!ws) {
-    v.innerHTML = `<div class="nx-empty nx-dim">workspace not found: ${workspaceId}</div>`;
-    return;
-  }
-  v.innerHTML = `
-    <div class="nx-conv-grid">
-      <aside class="nx-conv-left">
-        <div class="nx-eyebrow" style="margin-bottom:10px">Workspaces</div>
-        <div id="nx-conv-ws-list"></div>
-        <div class="nx-eyebrow" style="margin:24px 0 10px">Roster</div>
-        <div id="nx-conv-roster"></div>
-      </aside>
-      <section class="nx-conv-center">
-        <header class="nx-conv-header">
-          <div class="nx-display" style="font-size:24px">${escapeHtml(ws.name)}</div>
-          <div class="nx-dim" style="font-size:12.5px;margin-top:4px">${ws.routing_pins ? ws.routing_pins.length : (ws.pins ? ws.pins.length : 0)} pins · ${ws.resident_agents.length} agents resident</div>
-        </header>
-        <div id="nx-conv-thread" class="nx-conv-thread"></div>
-        <form id="nx-conv-input" class="nx-conv-input">
-          <span class="nx-conv-kernel">${KERNEL_MARK(14)}</span>
-          <input id="nx-conv-text" placeholder="Ask anything, or @ to call a specific agent…">
-          <span class="nx-mono nx-softer">⌘K</span>
-        </form>
-      </section>
-      <aside class="nx-conv-right">
-        <div class="nx-eyebrow" style="margin-bottom:10px">Ambient</div>
-        <div class="nx-card" id="nx-conv-mood" style="padding:14px;margin-bottom:12px"></div>
-        <div class="nx-eyebrow" style="margin-bottom:10px">Recent</div>
-        <div id="nx-conv-recent" style="font-size:12px;line-height:1.6"></div>
-      </aside>
-    </div>`;
-
-  // Workspaces mini-list (left)
-  document.getElementById("nx-conv-ws-list").innerHTML = state.workspaces.map(w => `
-    <div class="nx-conv-ws ${w.workspace_id === workspaceId ? "active" : ""}"
-         data-id="${w.workspace_id}">${escapeHtml(w.name)}</div>
-  `).join("");
-  document.querySelectorAll(".nx-conv-ws").forEach(el => {
-    el.addEventListener("click", () => {
-      location.hash = `#/conversation/${el.dataset.id}`;
-    });
-  });
-
-  // Roster (left)
-  const roster = ws.resident_agents.map(slug => `
-    <div class="nx-conv-roster-row">
-      ${agentDisc(slug, { size: 22 })}
-      <span style="margin-left:8px">${slug}</span>
-    </div>
-  `).join("");
-  document.getElementById("nx-conv-roster").innerHTML = roster || `<span class="nx-softer">no agents resident</span>`;
-
-  // Mood card (right)
-  await refreshMoodCard();
-
-  // Recent chronicle (right)
-  await refreshRecent();
-
-  // Input
-  document.getElementById("nx-conv-input").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const input = document.getElementById("nx-conv-text");
-    const message = input.value.trim();
-    if (!message) return;
-    appendMessage("you", message);
-    input.value = "";
-    try {
-      const r = await fetch("/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-      if (r.ok) {
-        const body = await r.json();
-        appendMessage(body.module || "nexus", body.response, body);
-        await refreshRecent();
-      } else {
-        appendMessage("nexus", `(error ${r.status})`);
-      }
-    } catch (err) {
-      appendMessage("nexus", `(error: ${err.message})`);
-    }
-  });
-}
-
-function appendMessage(speaker, text, meta = null) {
-  const thread = document.getElementById("nx-conv-thread");
-  if (!thread) return;
-  if (speaker === "you") {
-    thread.insertAdjacentHTML("beforeend", `
-      <div class="nx-conv-turn nx-conv-user">
-        <div class="nx-eyebrow">You</div>
-        <div>${escapeHtml(text)}</div>
-      </div>`);
-  } else {
-    const trust = meta && meta.trust ? `· ${(meta.trust).toFixed(2)} trust` : "";
-    const score = meta && meta.score ? `· ${(meta.score).toFixed(2)} match` : "";
-    thread.insertAdjacentHTML("beforeend", `
-      <div class="nx-conv-turn nx-conv-agent">
-        <div class="nx-card" style="padding:14px 16px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            ${agentDisc(speaker, { size: 28 })}
-            <div style="font-weight:500">${escapeHtml(speaker)}</div>
-            <div class="nx-mono nx-softer" style="font-size:10.5px">picked by cortex ${score} ${trust}</div>
-          </div>
-          <div style="font-size:13.5px;line-height:1.6">${escapeHtml(text)}</div>
-        </div>
-      </div>`);
-  }
-  thread.scrollTop = thread.scrollHeight;
-}
-
-async function refreshMoodCard() {
-  const el = document.getElementById("nx-conv-mood");
-  if (!el) return;
-  try {
-    const r = await fetch("/api/mood/current");
-    if (r.ok) {
-      const m = await r.json();
-      el.innerHTML = `
-        <div class="nx-eyebrow" style="margin-bottom:4px">Workspace mood</div>
-        <div class="nx-display" style="font-size:18px">${m.mood.replace(/_/g, " ")}</div>
-        <div class="nx-dim" style="font-size:11.5px;margin-top:6px">${escapeHtml(m.reason || "")}</div>`;
-    }
-  } catch {}
-}
-
-async function refreshRecent() {
-  const el = document.getElementById("nx-conv-recent");
-  if (!el) return;
-  try {
-    const r = await fetch("/api/chronicle/recent?source=cortex&action=route&limit=5");
-    if (r.ok) {
-      const body = await r.json();
-      const rows = (body.events || []).slice(0, 5).map(ev => {
-        const target = (ev.payload || {}).target || "—";
-        const ts = (ev.timestamp || "").slice(11, 16);
-        return `<div style="display:flex;gap:8px"><span class="nx-softer nx-mono" style="width:48px;flex:none">${ts}</span><span>routed to <strong>${escapeHtml(target)}</strong></span></div>`;
-      }).join("");
-      el.innerHTML = rows || `<span class="nx-softer">no recent routes</span>`;
-    }
-  } catch {}
-}
-
-// ── Spatial catalog grid ─────────────────────────────────────────────────
-
-async function renderSpatial() {
-  const v = document.getElementById("nx-view");
-  v.innerHTML = `<div class="nx-empty nx-dim">Loading agents…</div>`;
-  let body;
-  try {
-    const r = await fetch("/api/spatial/agents");
-    body = await r.json();
-  } catch {
-    v.innerHTML = `<div class="nx-empty nx-dim">Failed to load agents.</div>`;
-    return;
-  }
-  const agents = body.agents || [];
-  v.innerHTML = `
-    <header class="nx-spatial-header">
-      <div>
-        <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
-        <div class="nx-display" style="font-size:30px">Agents</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} known</div>
-      </div>
-    </header>
-    <div class="nx-spatial" id="nx-spatial-grid">
-      ${agents.map(a => renderSpatialCard(a)).join("") || `<div class="nx-empty nx-dim">no agents registered yet</div>`}
-    </div>`;
-}
-
-function renderSpatialCard(a) {
-  const trust = a.trust != null ? a.trust.toFixed(2) : "—";
-  const tier = a.tier || "OBSERVER";
-  const dotClass = tier === "OBSERVER" ? "sleeping" : "";
-  return `
-    <div class="nx-spatial-card" data-slug="${a.slug}">
-      ${agentDisc(a.slug, { size: 48, trust: a.trust })}
-      <div class="name">${escapeHtml(a.name)} ${a.system ? `<span class="badge-system">system</span>` : ""}</div>
-      <div class="tagline">${escapeHtml(a.tagline || "")}</div>
-      <div class="status">
-        <span class="status-dot ${dotClass}"></span>
-        ${tier.toLowerCase()} · ${trust}
-      </div>
-    </div>`;
-}
-
-// ── Settings surface ─────────────────────────────────────────────────────
-
-async function renderSettings() {
-  const v = document.getElementById("nx-view");
-  v.innerHTML = `
-    <div class="nx-settings-shell">
-      <nav class="nx-settings-tabs" id="nx-settings-tabs">
-        <button data-tab="general" class="active">General</button>
-        <button data-tab="workspaces">Workspaces</button>
-        <button data-tab="agents">Agents</button>
-        <button data-tab="security">Security</button>
-        <button data-tab="providers">Providers</button>
-        <button data-tab="about">About</button>
-      </nav>
-      <section class="nx-settings-panel nx-card" id="nx-settings-panel"></section>
-    </div>`;
-  selectSettingsTab("general");
-  document.querySelectorAll("#nx-settings-tabs button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#nx-settings-tabs button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectSettingsTab(btn.dataset.tab);
-    });
-  });
-}
-
-function selectSettingsTab(tab) {
-  const panel = document.getElementById("nx-settings-panel");
-  if (!panel) return;
-  if (tab === "general") {
-    panel.innerHTML = `
-      <h3>General</h3>
-      <div class="nx-dim">Theme, mood preferences, accessibility toggles — v2.</div>
-      <div style="margin-top:14px">
-        <label style="display:flex;gap:10px;align-items:center;font-size:13px">
-          <input type="checkbox" id="nx-reduce-motion-toggle">
-          Reduce motion (also respects OS setting)
-        </label>
-      </div>`;
-  } else if (tab === "agents") {
-    panel.innerHTML = `
-      <h3>Agents</h3>
-      <button class="nx-pill" id="nx-install-from-file">Install from manifest…</button>
-      <div id="nx-installed-list" style="margin-top:18px"></div>`;
-    document.getElementById("nx-install-from-file").addEventListener("click", openInstallReview);
-    fetch("/api/spatial/agents").then(r => r.json()).then(b => {
-      const installed = b.agents.filter(a => !a.system);
-      document.getElementById("nx-installed-list").innerHTML = installed.length
-        ? installed.map(a => `<div style="padding:8px 0;border-bottom:1px solid var(--nx-hairline)">${escapeHtml(a.name)} <span class="nx-dim">v${a.version}</span></div>`).join("")
-        : `<div class="nx-dim">No installed agents yet.</div>`;
-    });
-  } else if (tab === "security") {
-    panel.innerHTML = `<h3>Security</h3><div class="nx-dim">Permission grants and trust history — v2.</div>`;
-  } else if (tab === "workspaces") {
-    panel.innerHTML = `<h3>Workspaces</h3><div class="nx-dim">Use ⌘K to manage workspaces.</div>`;
-  } else if (tab === "providers") {
-    panel.innerHTML = `<h3>Providers</h3><div class="nx-dim">LLM provider configuration — v2.</div>`;
-  } else if (tab === "about") {
-    panel.innerHTML = `<h3>About</h3>
-      <div class="nx-dim">NEXUS · the agent OS.</div>
-      <div class="nx-mono nx-softer" style="margin-top:10px">Aurora · Phase 5</div>`;
-  }
-}
-
-// ── Install review modal ──────────────────────────────────────────────────
-
-function openInstallReview() {
+// ── Overlay: expanded cockpit (⌘`) ─────────────────────────────────────────
+async function toggleCockpitOverlay() {
   const root = document.getElementById("nx-overlay-root");
-  root.innerHTML = `
-    <div class="nx-install-overlay" id="nx-install-overlay">
-      <div class="nx-card" style="max-width:560px;width:90%;padding:22px 24px">
-        <h3 style="margin:0 0 12px">Install agent</h3>
-        <p class="nx-dim" style="font-size:12px">Paste a manifest.json to review the install plan.</p>
-        <textarea id="nx-install-text" class="nx-card" rows="10"
-          style="width:100%;padding:10px;font-family:var(--nx-font-mono);font-size:11px;color:inherit;background:transparent;border:1px solid var(--nx-card-border)"></textarea>
-        <div id="nx-install-plan" style="margin-top:14px"></div>
-        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
-          <button class="nx-pill" id="nx-install-cancel">Cancel</button>
-          <button class="nx-pill" id="nx-install-review-btn">Review plan</button>
-          <button class="nx-pill" id="nx-install-confirm" style="background:rgba(168,180,255,0.18);border-color:rgba(168,180,255,0.34);display:none">Install</button>
-        </div>
-      </div>
-    </div>`;
-  let lastManifest = null;
-  document.getElementById("nx-install-cancel").addEventListener("click", () => { root.innerHTML = ""; });
-  document.getElementById("nx-install-review-btn").addEventListener("click", async () => {
-    try {
-      lastManifest = JSON.parse(document.getElementById("nx-install-text").value);
-    } catch (err) {
-      document.getElementById("nx-install-plan").innerHTML = `<div style="color:var(--nx-privileged)">Invalid JSON: ${escapeHtml(err.message)}</div>`;
-      return;
-    }
-    const r = await fetch("/api/agents/install", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ manifest: lastManifest, confirm: false }),
-    });
-    if (!r.ok) {
-      const err = await r.json();
-      document.getElementById("nx-install-plan").innerHTML = `<div style="color:var(--nx-privileged)">${escapeHtml(JSON.stringify(err))}</div>`;
-      return;
-    }
-    const body = await r.json();
-    document.getElementById("nx-install-plan").innerHTML = renderInstallPlan(body.plan);
-    document.getElementById("nx-install-confirm").style.display = "";
-  });
-  document.getElementById("nx-install-confirm").addEventListener("click", async () => {
-    if (!lastManifest) return;
-    const r = await fetch("/api/agents/install", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ manifest: lastManifest, confirm: true }),
-    });
-    if (r.ok) {
-      root.innerHTML = `<div class="nx-install-overlay"><div class="nx-card" style="padding:20px 24px">Installed.</div></div>`;
-      setTimeout(() => { root.innerHTML = ""; }, 1200);
-    }
-  });
-}
-
-function renderInstallPlan(plan) {
-  const accent = { Routine: "var(--nx-routine)", Notable: "var(--nx-notable)", Sensitive: "var(--nx-sensitive)", Privileged: "var(--nx-privileged)" };
-  return `
-    <div style="font-size:13px;line-height:1.6">
-      <div><strong>${escapeHtml(plan.name)} v${plan.version}</strong> by ${escapeHtml(plan.publisher)} · ${escapeHtml(plan.license)}</div>
-      <div class="nx-dim" style="margin-top:4px">${escapeHtml(plan.tagline || "")}</div>
-      <div style="margin-top:12px">
-        ${plan.groups.filter(g => g.capabilities.length).map(g => `
-          <div style="margin-top:8px">
-            <span style="color:${accent[g.permission_class]||"#fff"};font-family:var(--nx-font-mono);font-size:11px">${g.permission_class}</span>
-            <span class="nx-dim" style="font-family:var(--nx-font-mono);font-size:11.5px">${g.capabilities.join(", ")}</span>
-          </div>`).join("")}
-      </div>
-    </div>`;
-}
-
-// ── First-use prompt polling ──────────────────────────────────────────────
-const _shownTickets = new Set();
-async function pollPermissions() {
-  try {
-    const r = await fetch("/api/permissions/pending");
-    if (!r.ok) return;
-    const body = await r.json();
-    const pending = body.pending || [];
-    if (pending.length === 0) {
-      _shownTickets.clear();
-      return;
-    }
-    const ticket = pending[0];
-    if (_shownTickets.has(ticket.id)) return;
-    _shownTickets.add(ticket.id);
-    renderPermissionPrompt(ticket);
-  } catch {}
-}
-setInterval(pollPermissions, 1500);
-
-function renderPermissionPrompt(t) {
-  const root = document.getElementById("nx-overlay-root");
-  // Don't replace install overlay if visible
-  if (document.getElementById("nx-install-overlay")) return;
-  const ws = t.workspace_id || "—";
-  root.insertAdjacentHTML("beforeend", `
-    <div class="nx-prompt-overlay" id="nx-prompt-${t.id}">
-      <div class="nx-prompt-card nx-card">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          ${agentDisc(t.agent_slug, { size: 28 })}
-          <div>
-            <div style="font-size:13px;font-weight:500">${escapeHtml(t.agent_slug)} wants <span class="nx-mono" style="font-size:12px">${escapeHtml(t.capability)}</span></div>
-            <div class="nx-dim" style="font-size:11px;margin-top:2px">workspace · ${escapeHtml(ws)}</div>
-          </div>
-          <span class="nx-pc nx-pc-${t.permission_class.toLowerCase()}" style="margin-left:auto">${t.permission_class}</span>
-        </div>
-        <div class="nx-dim" style="font-size:12px;margin-bottom:12px">${escapeHtml(t.preview || "")}</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="nx-pill" data-decision="allow_once">Allow once</button>
-          <button class="nx-pill" data-decision="allow_always_in_workspace">Always in <strong>${escapeHtml(ws)}</strong></button>
-          <button class="nx-pill" data-decision="allow_always_everywhere">Always for ${escapeHtml(t.agent_slug)}, everywhere</button>
-          <button class="nx-pill" data-decision="deny" style="background:rgba(248,100,120,0.12);border-color:rgba(248,100,120,0.34);color:#ffd0d4">Don't allow</button>
-        </div>
-      </div>
-    </div>`);
-  const el = document.getElementById(`nx-prompt-${t.id}`);
-  el.querySelectorAll("button[data-decision]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      await fetch("/api/permissions/decide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticket_id: t.id, decision: btn.dataset.decision }),
-      });
-      el.remove();
-    });
-  });
-}
-
-// ── Router ───────────────────────────────────────────────────────────────
-async function route(hash) {
-  await loadWorkspaces();
-  const v = document.getElementById("nx-view");
-  // Default landing — if there's an active workspace, open its conversation;
-  // otherwise show the inline workspaces grid (or the welcome empty state).
-  if (!hash || hash === "#" || hash === "#/") {
-    if (state.active) {
-      location.hash = `#/conversation/${state.active}`;
-      return;
-    }
-    renderWorkspacesView();
-    return;
-  }
-  // Explicit #/workspaces also lands on the inline view (not the overlay)
-  if (hash === "#/workspaces") {
-    renderWorkspacesView();
-    return;
-  }
-  if (hash === "#/spatial") {
-    renderSpatial();
-    return;
-  }
-  if (hash === "#/settings") {
-    renderSettings();
-    return;
-  }
-  if (hash.startsWith("#/conversation/")) {
-    const ws = hash.slice("#/conversation/".length);
-    renderConversation(ws);
-    return;
-  }
-  v.innerHTML = `<div class="nx-empty nx-dim">unknown route: ${escapeHtml(hash)}</div>`;
-}
-window.addEventListener("hashchange", () => route(location.hash));
-route(location.hash);
-
-// ── Cockpit overlay ──────────────────────────────────────────────────────
-
-/**
- * toggleCockpit — open or close the Cockpit observability overlay (Cmd-`).
- * Six panels: Pulse waveform · Residents · Trust gradient · Last route ·
- * Chronicle tail · Network / Engram stats.
- */
-async function toggleCockpit() {
-  const root = document.getElementById("nx-overlay-root");
-  // If already open, close it.
-  if (root.querySelector(".nx-cockpit-overlay")) {
-    closeOverlay();
-    return;
-  }
-
-  // Render loading shell immediately.
+  if (root.querySelector(".nx-cockpit-overlay")) { closeOverlay(); return; }
   root.innerHTML = `
     <div class="nx-cockpit-overlay" id="nx-cockpit-overlay">
       <div class="nx-cockpit">
         <div class="nx-cockpit-scan"></div>
         <div class="nx-cockpit-header">
-          <span class="nx-cockpit-title">COCKPIT</span>
+          <span class="nx-cockpit-title">COCKPIT — ${escapeHtml(state.mood.mood)}</span>
           <button class="nx-cockpit-close" id="nx-cockpit-close">ESC</button>
         </div>
-        <div class="nx-cockpit-grid" id="nx-cockpit-grid">
-          <div class="nx-cockpit-panel span2 row2" id="cp-pulse">
+        <div class="nx-cockpit-grid">
+          <div class="nx-cockpit-panel span2 row2">
             <div class="nx-cockpit-panel-header">
-              <span class="nx-cockpit-panel-label">Pulse waveform</span>
-              <span class="nx-cockpit-panel-badge">60s</span>
+              <span class="nx-cockpit-panel-label">Trust · 60m</span>
+              <span class="nx-cockpit-panel-badge">${state.trust.history.length} events</span>
             </div>
-            <svg width="100%" height="80" id="cp-pulse-svg" viewBox="0 0 240 80" preserveAspectRatio="none"></svg>
+            <svg viewBox="0 0 320 160" preserveAspectRatio="none" style="width:100%;height:160px">
+              ${trustSparkSVG(state.trust.history.length ? state.trust.history : [], state.trust.direction)
+                  .replace('viewBox="0 0 320 92"', '')}
+            </svg>
+            <div style="margin-top:8px;font-size:11px;opacity:0.7">
+              ${state.trust.delta > 0 ? "+" : ""}${state.trust.delta.toFixed(2)} · ${state.trust.direction}
+            </div>
           </div>
-          <div class="nx-cockpit-panel" id="cp-residents">
-            <div class="nx-cockpit-panel-header">
-              <span class="nx-cockpit-panel-label">Residents</span>
-            </div>
-            <div id="cp-residents-body" class="nx-dim" style="font-size:11px">loading…</div>
+          <div class="nx-cockpit-panel">
+            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Mood</span></div>
+            <div style="font-family:var(--nx-font-display);font-size:18px;color:#f3ecff;margin-bottom:4px">${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
+            <div class="nx-dim" style="font-size:11px">${escapeHtml(state.mood.reason || "")}</div>
           </div>
-          <div class="nx-cockpit-panel" id="cp-trust">
-            <div class="nx-cockpit-panel-header">
-              <span class="nx-cockpit-panel-label">Trust gradient</span>
-            </div>
-            <div id="cp-trust-body">loading…</div>
+          <div class="nx-cockpit-panel">
+            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Workspaces</span></div>
+            <div style="font-size:11px;line-height:1.7">${state.workspaces.map(w => `<div>· ${escapeHtml(w.name)}</div>`).join("") || "<div class='nx-dim'>none</div>"}</div>
           </div>
-          <div class="nx-cockpit-panel" id="cp-last-route">
-            <div class="nx-cockpit-panel-header">
-              <span class="nx-cockpit-panel-label">Last route</span>
+          <div class="nx-cockpit-panel span2">
+            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Recent permissions</span></div>
+            <div style="font-size:11px;line-height:1.7">
+              ${(state.perms.recent.slice(0, 6).map(r =>
+                `<div class="nx-cockpit-tail-row">${escapeHtml(r.capability || "")} → ${escapeHtml(r.target || "—")} <span style="float:right;opacity:0.55">${escapeHtml(r.status || "")}</span></div>`
+              )).join("") || "<div class='nx-dim'>no activity</div>"}
             </div>
-            <div id="cp-last-route-body" class="nx-dim">—</div>
           </div>
-          <div class="nx-cockpit-panel span2" id="cp-chronicle">
-            <div class="nx-cockpit-panel-header">
-              <span class="nx-cockpit-panel-label">Chronicle tail</span>
-            </div>
-            <div id="cp-chronicle-body" class="nx-dim">loading…</div>
-          </div>
-          <div class="nx-cockpit-panel" id="cp-network">
-            <div class="nx-cockpit-panel-header">
-              <span class="nx-cockpit-panel-label">Network · Engram</span>
-            </div>
-            <div id="cp-network-body" class="nx-dim">loading…</div>
+          <div class="nx-cockpit-panel">
+            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Pending</span></div>
+            <div style="font-size:11px">${state.perms.pending.length} ticket${state.perms.pending.length === 1 ? "" : "s"}</div>
           </div>
         </div>
       </div>
-    </div>`;
-
+    </div>
+  `;
   document.getElementById("nx-cockpit-close").addEventListener("click", closeOverlay);
   document.getElementById("nx-cockpit-overlay").addEventListener("click", (e) => {
     if (e.target.id === "nx-cockpit-overlay") closeOverlay();
   });
-
-  // Fetch both in parallel.
-  const [snapRes, pulseRes] = await Promise.all([
-    fetch("/api/cockpit/snapshot").catch(() => null),
-    fetch("/api/cockpit/pulse-rate").catch(() => null),
-  ]);
-
-  const snap = snapRes && snapRes.ok ? await snapRes.json() : null;
-  const pulseData = pulseRes && pulseRes.ok ? await pulseRes.json() : null;
-
-  _renderPulse(pulseData);
-  _renderResidents(snap);
-  _renderTrust(snap);
-  _renderLastRoute(snap);
-  _renderChronicle(snap);
-  _renderNetwork(snap);
 }
 
-function _renderPulse(data) {
-  const svg = document.getElementById("cp-pulse-svg");
-  if (!svg || !data || !data.points || data.points.length === 0) return;
-  const pts = data.points;
-  const n = pts.length;
-  const W = 240, H = 80;
-  const maxChron = Math.max(1, ...pts.map(p => p.chronicle));
-  const maxCortex = Math.max(1, ...pts.map(p => p.cortex_route));
-  const maxAegis  = Math.max(1, ...pts.map(p => p.aegis_check));
-
-  function toPath(vals, maxVal) {
-    const step = W / (n - 1 || 1);
-    return vals.map((v, i) => {
-      const x = i * step;
-      const y = H - 8 - (v / maxVal) * (H - 16);
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
-  }
-
-  svg.innerHTML = `
-    <path class="nx-cockpit-trace cyan"   d="${toPath(pts.map(p => p.chronicle),    maxChron)}"/>
-    <path class="nx-cockpit-trace violet" d="${toPath(pts.map(p => p.cortex_route), maxCortex)}"/>
-    <path class="nx-cockpit-trace amber"  d="${toPath(pts.map(p => p.aegis_check),  maxAegis)}"/>`;
-}
-
-function _renderResidents(snap) {
-  const el = document.getElementById("cp-residents-body");
-  if (!el) return;
-  const modules = snap && snap.residents ? snap.residents : [];
-  if (modules.length === 0) {
-    el.textContent = "(no data)";
-    return;
-  }
-  el.innerHTML = modules.map(m =>
-    `<div style="padding:2px 0;opacity:0.8">${escapeHtml(String(m))}</div>`
-  ).join("");
-}
-
-function _renderTrust(snap) {
-  const el = document.getElementById("cp-trust-body");
-  if (!el) return;
-  const policies = snap && snap.trust_gradient ? snap.trust_gradient : [];
-  if (policies.length === 0) {
-    el.innerHTML = `<span class="nx-dim">(no data)</span>`;
-    return;
-  }
-  const top = policies.slice(0, 6);
-  el.innerHTML = top.map(p => {
-    const trust = typeof p.trust_score === "number" ? p.trust_score : (p.trust || 0);
-    const pct = Math.round(trust * 100);
-    return `<div class="nx-cockpit-bar-row">
-      <span class="nx-cockpit-bar-label" title="${escapeHtml(p.module)}">${escapeHtml(p.module)}</span>
-      <div class="nx-cockpit-bar-track">
-        <div class="nx-cockpit-bar-fill" style="width:${pct}%"></div>
-      </div>
-      <span style="opacity:0.5;font-size:10px;width:28px;text-align:right">${pct}</span>
-    </div>`;
-  }).join("");
-}
-
-function _renderLastRoute(snap) {
-  const el = document.getElementById("cp-last-route-body");
-  if (!el) return;
-  const route = snap && snap.last_route;
-  if (!route) {
-    el.textContent = "(no recent route)";
-    return;
-  }
-  const target = (route.payload || {}).target || "—";
-  const ts = (route.timestamp || "").slice(11, 19);
-  el.innerHTML = `
-    <div style="opacity:0.5;font-size:10px;margin-bottom:4px">${escapeHtml(ts)}</div>
-    <div style="color:#88d4ff">${escapeHtml(target)}</div>
-    <div style="opacity:0.5;font-size:10px;margin-top:4px">${escapeHtml(route.source || "")} · ${escapeHtml(route.action || "")}</div>`;
-}
-
-function _renderChronicle(snap) {
-  const el = document.getElementById("cp-chronicle-body");
-  if (!el) return;
-  const tail = snap && snap.chronicle_tail ? snap.chronicle_tail : [];
-  if (tail.length === 0) {
-    el.textContent = "(no data)";
-    return;
-  }
-  el.innerHTML = tail.slice(0, 8).map(ev => {
-    const ts = (ev.timestamp || "").slice(11, 19);
-    return `<div class="nx-cockpit-tail-row">
-      <span style="opacity:0.4;margin-right:8px">${escapeHtml(ts)}</span>
-      <span style="color:#c8a8ff">${escapeHtml(ev.source || "")}</span>
-      <span style="opacity:0.5;margin:0 4px">·</span>
-      <span>${escapeHtml(ev.action || "")}</span>
-    </div>`;
-  }).join("");
-}
-
-function _renderNetwork(snap) {
-  const el = document.getElementById("cp-network-body");
-  if (!el) return;
-  const stats = snap && snap.engram_stats ? snap.engram_stats : {};
-  const network = snap && snap.network ? snap.network : [];
-  el.innerHTML = `
-    <div class="nx-cockpit-stat-row">
-      <span>network gates</span>
-      <span class="nx-cockpit-stat-val">${network.length > 0 ? network.length : "—"}</span>
-    </div>
-    <div class="nx-cockpit-stat-row">
-      <span>engram partitions</span>
-      <span class="nx-cockpit-stat-val">${Object.keys(stats).length > 0 ? Object.keys(stats).length : "—"}</span>
-    </div>`;
-}
-
-// ── Header buttons ───────────────────────────────────────────────────────
-document.getElementById("nx-workspaces-btn").addEventListener("click", () => {
-  loadWorkspaces().then(renderSwitcher);
-});
-document.getElementById("nx-cockpit-btn").addEventListener("click", toggleCockpit);
-document.getElementById("nx-spatial-btn").addEventListener("click", () => {
-  location.hash = "#/spatial";
-});
-document.getElementById("nx-settings-btn").addEventListener("click", () => {
-  location.hash = "#/settings";
-});
-
-// ── Keybinds ─────────────────────────────────────────────────────────────
-window.addEventListener("keydown", (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); loadWorkspaces().then(renderSwitcher); }
-  if ((e.metaKey || e.ctrlKey) && e.key === "n") { e.preventDefault(); openNewWorkspaceForm(); }
-  if ((e.metaKey || e.ctrlKey) && e.key === "`") { e.preventDefault(); document.getElementById("nx-cockpit-btn").click(); }
-  if ((e.metaKey || e.ctrlKey) && e.key === ",") { e.preventDefault(); document.getElementById("nx-settings-btn").click(); }
-  if (e.key === "Escape") closeOverlay();
-});
-
-// ── Trust event temperature overlays ────────────────────────────────────
-let _lastTrustEventId = null;
-
-async function pollTrustEvents() {
-  try {
-    const r = await fetch("/api/chronicle/recent?source=aegis&action=trust_change&limit=1");
-    if (!r.ok) return;
-    const body = await r.json();
-    const events = body.events || [];
-    if (events.length === 0) return;
-    const ev = events[0];
-    if (ev.id === _lastTrustEventId) return;
-    _lastTrustEventId = ev.id;
-
-    const payload = ev.payload || {};
-    let cls;
-    if (typeof payload.new_score === "number" && payload.new_score < 0.50) {
-      cls = "nx-trust-wash-collapse";
-    } else if (typeof payload.new_score === "number" && typeof payload.old_score === "number"
-               && payload.new_score > payload.old_score) {
-      cls = "nx-trust-wash-rising";
-    } else {
-      cls = "nx-trust-wash-falling";
+// ── Router ────────────────────────────────────────────────────────────────
+async function route(hash) {
+  await loadWorkspaces();
+  renderSidebar();
+  if (!hash || hash === "#" || hash === "#/") {
+    if (state.active) {
+      location.hash = `#/conversation/${state.active}`;
+      return;
     }
-
-    document.body.classList.add(cls);
-    setTimeout(() => document.body.classList.remove(cls), 1500);
-  } catch {}
+    renderWorkspacesGrid();
+    return;
+  }
+  if (hash === "#/workspaces") { renderWorkspacesGrid(); return; }
+  if (hash.startsWith("#/catalog")) { renderCatalog(); return; }
+  if (hash === "#/settings") { renderSettings(); return; }
+  if (hash.startsWith("#/conversation/")) {
+    const id = decodeURIComponent(hash.slice("#/conversation/".length));
+    await renderConversation(id);
+    return;
+  }
+  document.getElementById("nx-main").innerHTML = `<div class="nx-empty">unknown route: ${escapeHtml(hash)}</div>`;
 }
-setInterval(pollTrustEvents, 2000);
+window.addEventListener("hashchange", () => route(location.hash));
 
-// ── Mood push (WS preferred, polling fallback) ──────────────────────────
-function _applyMoodBody(body) {
-  const cls = "nx-mood-" + body.mood.replace(/_/g, "-");
-  const current = [...document.body.classList].find(c => c.startsWith("nx-mood-"));
-  if (current && current !== cls) document.body.classList.remove(current);
-  if (!document.body.classList.contains(cls)) document.body.classList.add(cls);
-  document.body.dataset.mood = body.mood;
-}
-
-(function initMoodStream() {
+// ── Streams ───────────────────────────────────────────────────────────────
+function subscribeStreams() {
   const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
-  let ws = null;
-  let pollInterval = null;
-
-  function startPolling() {
-    if (pollInterval) return;
-    pollInterval = setInterval(async () => {
+  // Mood
+  try {
+    const w = new WebSocket(`${wsProto}//${location.host}/api/mood/ws`);
+    w.onmessage = (e) => {
       try {
-        const r = await fetch("/api/mood/current");
-        if (r.ok) _applyMoodBody(await r.json());
+        const body = JSON.parse(e.data);
+        state.mood.mood = body.mood;
+        state.mood.reason = body.reason || "";
+        applyMood(body.mood);
+        renderMoodCard();
       } catch {}
-    }, 2000);
-    // Run immediately
-    fetch("/api/mood/current").then(r => r.ok ? r.json() : null).then(b => b && _applyMoodBody(b)).catch(() => {});
-  }
+    };
+  } catch {}
+  // Permissions
+  try {
+    const w = new WebSocket(`${wsProto}//${location.host}/api/permissions/ws`);
+    w.onmessage = (e) => {
+      try {
+        const body = JSON.parse(e.data);
+        state.perms.pending = body.pending || [];
+        renderCockpitRail();
+        // Refresh the conversation if we're in one
+        if (location.hash.startsWith("#/conversation/")) {
+          const id = decodeURIComponent(location.hash.slice("#/conversation/".length));
+          renderConversation(id);
+        }
+      } catch {}
+    };
+  } catch {}
+  // Trust + permission log: poll every 5s (no WS yet)
+  setInterval(async () => {
+    await Promise.allSettled([loadTrust(), loadPermissions()]);
+    renderCockpitRail();
+  }, 5000);
+}
 
-  function connectWs() {
-    try {
-      ws = new WebSocket(`${wsProto}//${location.host}/api/mood/ws`);
-      ws.onmessage = (e) => { try { _applyMoodBody(JSON.parse(e.data)); } catch {} };
-      ws.onerror = () => { ws = null; startPolling(); };
-      ws.onclose = () => { ws = null; startPolling(); };
-    } catch {
-      startPolling();
+// ── Keybinds ──────────────────────────────────────────────────────────────
+function attachKeybinds() {
+  window.addEventListener("keydown", (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && e.key === "k") { e.preventDefault(); loadWorkspaces().then(renderSwitcher); return; }
+    if (meta && e.key === "n") { e.preventDefault(); openNewWorkspaceForm(); return; }
+    if (meta && e.key === "`") { e.preventDefault(); toggleCockpitOverlay(); return; }
+    if (meta && e.key === ",") { e.preventDefault(); location.hash = "#/settings"; return; }
+    if (e.key === "Escape")     { closeOverlay(); return; }
+    if (e.key === "/" && document.activeElement === document.body) {
+      e.preventDefault();
+      document.getElementById("nx-search-input").focus();
     }
-  }
+  });
+}
 
-  if (typeof WebSocket !== "undefined") {
-    connectWs();
-  } else {
-    startPolling();
-  }
-})();
+// ── Utilities ─────────────────────────────────────────────────────────────
+function escapeHtml(s) {
+  if (s == null) return "";
+  const d = document.createElement("div");
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+function truncate(s, n) {
+  s = String(s);
+  if (s.length <= n) return s;
+  return s.slice(0, Math.max(1, n - 1)) + "…";
+}
+function formatTime(s) {
+  if (!s) return "";
+  try {
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return "";
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  } catch { return ""; }
+}
+
+// ── Go ────────────────────────────────────────────────────────────────────
+boot();

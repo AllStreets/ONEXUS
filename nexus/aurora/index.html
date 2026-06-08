@@ -3,31 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEXUS</title>
+  <title>ONEXUS</title>
   <link rel="stylesheet" href="/aurora/static/tokens.css">
   <link rel="stylesheet" href="/aurora/static/mood.css">
   <link rel="stylesheet" href="/aurora/static/app.css">
 </head>
 <body class="nx-mood nx-mood-calm-focus" data-mood="calm_focus">
-  <header class="nx-header">
-    <div class="nx-header-left">
-      <span id="nx-kernel-mark"></span>
-      <span class="nx-display" style="font-size:14px">NEXUS</span>
-    </div>
-    <div class="nx-header-right">
-      <button id="nx-workspaces-btn" class="nx-pill" title="Workspaces (⌘K)">
-        <span id="nx-active-workspace">No workspace</span>
-      </button>
-      <button id="nx-cockpit-btn" class="nx-pill" title="Cockpit (⌘\`)">cockpit</button>
-      <button id="nx-spatial-btn" class="nx-pill" title="Catalog">catalog</button>
-      <button id="nx-settings-btn" class="nx-pill" title="Settings (⌘,)">settings</button>
-    </div>
-  </header>
+  <!-- Ambient gradient mesh background (lives behind everything) -->
+  <div class="nx-ambient" aria-hidden="true"></div>
 
-  <main id="nx-view" class="nx-view">
-    <!-- view content rendered by app.js per route -->
-  </main>
+  <!-- Window-style shell -->
+  <div class="nx-window">
+    <!-- chrome bar: traffic lights · center title · right cluster -->
+    <header class="nx-chrome">
+      <div class="nx-chrome-lights" aria-hidden="true">
+        <span class="nx-tl nx-tl-red"></span>
+        <span class="nx-tl nx-tl-yel"></span>
+        <span class="nx-tl nx-tl-grn"></span>
+      </div>
 
+      <div class="nx-chrome-center">
+        <span class="nx-chrome-mark" id="nx-kernel-mark"></span>
+        <span class="nx-chrome-brand">ONEXUS</span>
+        <span class="nx-chrome-sep">—</span>
+        <span class="nx-chrome-context" id="nx-chrome-context">no workspace</span>
+      </div>
+
+      <div class="nx-chrome-right">
+        <button class="nx-chrome-pill nx-mood-pill" id="nx-mood-pill" title="Ambient mood (⌘`)">
+          <span class="nx-mood-dot"></span>
+          <span class="nx-mood-label" id="nx-mood-label">calm focus</span>
+        </button>
+        <span class="nx-chrome-clock" id="nx-clock">--:--</span>
+      </div>
+    </header>
+
+    <!-- 3-column body -->
+    <div class="nx-body">
+      <!-- ── sidebar ───────────────────────────────────────────────── -->
+      <aside class="nx-sidebar">
+        <!-- search -->
+        <div class="nx-search">
+          <span class="nx-search-icon" aria-hidden="true"></span>
+          <input class="nx-search-input" id="nx-search-input"
+                 placeholder="search · ⌘K"
+                 aria-label="Search workspaces and agents">
+        </div>
+
+        <!-- workspaces -->
+        <div class="nx-section">
+          <div class="nx-section-label">WORKSPACES</div>
+          <div class="nx-ws-list" id="nx-ws-list">
+            <!-- workspace pills rendered by app.js -->
+          </div>
+          <button class="nx-new-ws" id="nx-new-ws" title="New workspace (⌘N)">
+            <span class="nx-new-ws-plus"></span>
+            <span>new workspace</span>
+            <span class="nx-new-ws-kbd">⌘N</span>
+          </button>
+        </div>
+
+        <!-- recent agents -->
+        <div class="nx-section">
+          <div class="nx-section-label">RECENT AGENTS</div>
+          <div class="nx-agent-list" id="nx-recent-agents">
+            <!-- rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- catalog link -->
+        <div class="nx-section nx-section-tail">
+          <button class="nx-side-link" id="nx-open-catalog">
+            <span>browse agent catalog</span>
+            <span class="nx-side-link-arrow">↗</span>
+          </button>
+          <button class="nx-side-link" id="nx-open-settings">
+            <span>settings</span>
+            <span class="nx-side-link-kbd">⌘,</span>
+          </button>
+        </div>
+
+        <!-- user footer -->
+        <div class="nx-user-footer" id="nx-user-footer">
+          <div class="nx-user-avatar"><span id="nx-user-initials">CE</span></div>
+          <div class="nx-user-meta">
+            <div class="nx-user-name" id="nx-user-name">you</div>
+            <div class="nx-user-sub">sovereign · local</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ── main canvas ───────────────────────────────────────────── -->
+      <main class="nx-main" id="nx-main">
+        <!-- main view rendered by app.js (conversation / workspaces grid / catalog / settings) -->
+      </main>
+
+      <!-- ── cockpit ───────────────────────────────────────────────── -->
+      <aside class="nx-cockpit-rail" id="nx-cockpit-rail">
+        <!-- TRUST -->
+        <div class="nx-cp-section">
+          <div class="nx-section-label">TRUST · LAST 60M</div>
+          <div class="nx-trust-card" id="nx-trust-card">
+            <!-- rendered by app.js: sparkline + readout + breakdown -->
+          </div>
+        </div>
+
+        <!-- PERMISSIONS -->
+        <div class="nx-cp-section">
+          <div class="nx-section-label">RECENT PERMISSIONS</div>
+          <div class="nx-perm-log" id="nx-perm-log">
+            <!-- rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- AMBIENT MOOD -->
+        <div class="nx-cp-section">
+          <div class="nx-section-label">AMBIENT MOOD</div>
+          <div class="nx-mood-card" id="nx-mood-card">
+            <!-- rendered by app.js -->
+          </div>
+          <div class="nx-mood-reasons nx-mono" id="nx-mood-reasons">
+            <!-- mood reasons text -->
+          </div>
+        </div>
+
+        <!-- AGENTS row -->
+        <div class="nx-cp-section">
+          <div class="nx-section-label" id="nx-agents-label">10 BUILT-IN · 7K+ CATALOG</div>
+          <div class="nx-agent-discs" id="nx-agent-discs">
+            <!-- mini disc row rendered by app.js -->
+          </div>
+        </div>
+
+        <!-- footer -->
+        <div class="nx-cp-foot nx-mono">
+          <div>v1.0 · <span id="nx-tests-line">1075 tests passing</span></div>
+          <div>kernel.network.io = ∅ <span class="nx-cp-foot-sub">(static-verified)</span></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Overlay roots (preserved for Cmd-K switcher, Cmd-` expanded cockpit, etc.) -->
   <div id="nx-overlay-root"></div>
 
   <script type="module" src="/aurora/static/app.js"></script>
