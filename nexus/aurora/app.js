@@ -81,12 +81,12 @@ function renderSwitcher() {
 function openNewWorkspaceForm() {
   const root = document.getElementById("nx-overlay-root");
   root.innerHTML = `
-    <div class="nx-switcher-overlay">
-      <div class="nx-card nx-switcher" style="max-width:480px">
+    <div class="nx-switcher-overlay" id="nx-newws-overlay">
+      <form class="nx-card nx-switcher" id="nx-newws-form" style="max-width:480px" autocomplete="off">
         <h3>New workspace</h3>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <input id="ws-name" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit" placeholder="Name (e.g. Client work)">
-          <input id="ws-id" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit" placeholder="workspace-id (kebab-case)">
+          <input id="ws-name" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit" placeholder="Name (e.g. Client work)" required autofocus>
+          <input id="ws-id" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit" placeholder="workspace-id (kebab-case, auto-generated from name)" pattern="^[a-z][a-z0-9-]{0,63}$">
           <select id="ws-tone" class="nx-card" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:transparent;color:inherit">
             <option value="indigo">indigo</option>
             <option value="magenta">magenta</option>
@@ -94,36 +94,139 @@ function openNewWorkspaceForm() {
             <option value="plum">plum</option>
             <option value="amber">amber</option>
           </select>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-            <button class="nx-pill" id="ws-cancel">Cancel</button>
-            <button class="nx-pill" id="ws-create" style="background:rgba(168,180,255,0.18);border:1px solid rgba(168,180,255,0.34)">Create</button>
+          <div id="ws-error" class="nx-dim" style="font-size:12px;color:#ffb8c0;min-height:16px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+            <button type="button" class="nx-pill" id="ws-cancel">Cancel</button>
+            <button type="submit" class="nx-pill" id="ws-create" style="background:rgba(168,180,255,0.18);border:1px solid rgba(168,180,255,0.34)">Create</button>
           </div>
         </div>
-      </div>
+      </form>
     </div>`;
-  document.getElementById("ws-cancel").addEventListener("click", closeOverlay);
-  document.getElementById("ws-create").addEventListener("click", async () => {
-    const name = document.getElementById("ws-name").value.trim();
-    const id = document.getElementById("ws-id").value.trim();
+
+  // Auto-derive slug from name as the user types
+  const nameInput = document.getElementById("ws-name");
+  const idInput = document.getElementById("ws-id");
+  let userTypedSlug = false;
+  idInput.addEventListener("input", () => { userTypedSlug = idInput.value.length > 0; });
+  nameInput.addEventListener("input", () => {
+    if (!userTypedSlug) {
+      idInput.value = nameInput.value.toLowerCase().trim()
+        .replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+    }
+  });
+
+  // Cancel returns to the switcher (not a blank page)
+  document.getElementById("ws-cancel").addEventListener("click", (e) => {
+    e.preventDefault();
+    renderSwitcher();
+  });
+
+  // Click outside the card closes back to the switcher
+  document.getElementById("nx-newws-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "nx-newws-overlay") renderSwitcher();
+  });
+
+  // Form submit (Enter key or Create click)
+  document.getElementById("nx-newws-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = nameInput.value.trim();
+    let id = idInput.value.trim();
     const tone = document.getElementById("ws-tone").value;
-    if (!name || !id) return;
-    const r = await fetch("/api/workspaces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workspace_id: id, name, tone }),
-    });
-    if (r.ok) {
-      await loadWorkspaces();
-      renderSwitcher();
-    } else {
-      const err = await r.json();
-      alert(err.detail || "failed");
+    const errEl = document.getElementById("ws-error");
+    errEl.textContent = "";
+    if (!name) { errEl.textContent = "Name is required."; return; }
+    if (!id) {
+      // Derive on submit if the user left it blank
+      id = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+    }
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(id)) {
+      errEl.textContent = "ID must be kebab-case (a-z, 0-9, hyphens), starting with a letter.";
+      return;
+    }
+    try {
+      const r = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace_id: id, name, tone }),
+      });
+      if (r.ok) {
+        await fetch(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST" });
+        await loadWorkspaces();
+        closeOverlay();
+        location.hash = `#/conversation/${id}`;
+      } else {
+        const err = await r.json().catch(() => ({ detail: "request failed" }));
+        errEl.textContent = err.detail || "failed";
+      }
+    } catch (err) {
+      errEl.textContent = "Network error: " + err.message;
     }
   });
 }
 
 function closeOverlay() {
   document.getElementById("nx-overlay-root").innerHTML = "";
+}
+
+// Inline-render the workspace grid into the MAIN view (no overlay).
+// Used as the default landing when the user has no active workspace yet.
+function renderWorkspacesView() {
+  const v = document.getElementById("nx-view");
+  if (state.workspaces.length === 0) {
+    v.innerHTML = `
+      <div class="nx-empty" style="padding-top:80px">
+        <div class="nx-display" style="font-size:28px;margin-bottom:8px">Welcome to NEXUS</div>
+        <p class="nx-dim" style="max-width:520px;margin:0 auto 24px">
+          You don't have any workspaces yet. A workspace is a room — agents, memory, and grants live inside it.
+          Create your first one to get started.
+        </p>
+        <button class="nx-pill" id="nx-create-first" style="background:rgba(168,180,255,0.18);border:1px solid rgba(168,180,255,0.34);padding:8px 18px;font-size:14px">
+          Create your first workspace
+        </button>
+      </div>`;
+    document.getElementById("nx-create-first").addEventListener("click", openNewWorkspaceForm);
+    return;
+  }
+  // Show the grid inline (same layout as the overlay)
+  const tiles = state.workspaces.map(w => `
+    <div class="nx-ws-tile nx-tone-${w.tone} ${w.workspace_id === state.active ? "active" : ""}"
+         data-id="${w.workspace_id}">
+      <div class="tile-eyebrow">${w.tone.toUpperCase()}</div>
+      <div class="tile-name">${escapeHtml(w.name)}</div>
+      <div class="tile-footer">
+        <div class="disc-stack">
+          ${w.resident_agents.slice(0, 3).map(a => agentDisc(a, { size: 22 })).join("")}
+        </div>
+        <span class="nx-mono" style="opacity:0.8">
+          ${w.workspace_id === state.active ? "active" : (w.last_active_at ? "seen" : "—")}
+        </span>
+      </div>
+    </div>`).join("");
+  v.innerHTML = `
+    <div style="max-width:980px;margin:0 auto;padding-top:24px">
+      <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div class="nx-eyebrow" style="margin-bottom:6px">Rooms</div>
+          <div class="nx-display" style="font-size:28px">Workspaces</div>
+          <div class="nx-dim" style="font-size:13px;margin-top:4px">${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ⌘K to switch · ⌘N for new</div>
+        </div>
+      </header>
+      <div class="nx-switcher-grid" id="nx-inline-grid">
+        ${tiles}
+        <div class="nx-ws-tile new" id="nx-inline-new-workspace">
+          ${UI.plus(22)}
+          <div style="font-size:13px;margin-top:6px">New workspace</div>
+        </div>
+      </div>
+    </div>`;
+  v.querySelectorAll(".nx-ws-tile[data-id]").forEach(el => {
+    el.addEventListener("click", async () => {
+      await fetch(`/api/workspaces/${el.dataset.id}/switch`, { method: "POST" });
+      await loadWorkspaces();
+      location.hash = `#/conversation/${el.dataset.id}`;
+    });
+  });
+  document.getElementById("nx-inline-new-workspace").addEventListener("click", openNewWorkspaceForm);
 }
 
 function escapeHtml(s) {
@@ -526,8 +629,19 @@ function renderPermissionPrompt(t) {
 async function route(hash) {
   await loadWorkspaces();
   const v = document.getElementById("nx-view");
-  if (!hash || hash === "#" || hash === "#/" || hash === "#/workspaces") {
-    renderSwitcher();
+  // Default landing — if there's an active workspace, open its conversation;
+  // otherwise show the inline workspaces grid (or the welcome empty state).
+  if (!hash || hash === "#" || hash === "#/") {
+    if (state.active) {
+      location.hash = `#/conversation/${state.active}`;
+      return;
+    }
+    renderWorkspacesView();
+    return;
+  }
+  // Explicit #/workspaces also lands on the inline view (not the overlay)
+  if (hash === "#/workspaces") {
+    renderWorkspacesView();
     return;
   }
   if (hash === "#/spatial") {
@@ -543,7 +657,7 @@ async function route(hash) {
     renderConversation(ws);
     return;
   }
-  v.innerHTML = `<div class="nx-empty nx-dim">surfaces in progress: ${escapeHtml(hash)}</div>`;
+  v.innerHTML = `<div class="nx-empty nx-dim">unknown route: ${escapeHtml(hash)}</div>`;
 }
 window.addEventListener("hashchange", () => route(location.hash));
 route(location.hash);
@@ -762,6 +876,7 @@ document.getElementById("nx-settings-btn").addEventListener("click", () => {
 // ── Keybinds ─────────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); loadWorkspaces().then(renderSwitcher); }
+  if ((e.metaKey || e.ctrlKey) && e.key === "n") { e.preventDefault(); openNewWorkspaceForm(); }
   if ((e.metaKey || e.ctrlKey) && e.key === "`") { e.preventDefault(); document.getElementById("nx-cockpit-btn").click(); }
   if ((e.metaKey || e.ctrlKey) && e.key === ",") { e.preventDefault(); document.getElementById("nx-settings-btn").click(); }
   if (e.key === "Escape") closeOverlay();
