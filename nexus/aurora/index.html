@@ -16,10 +16,16 @@
   <div class="nx-window">
     <!-- chrome bar: traffic lights · center title · right cluster -->
     <header class="nx-chrome">
-      <div class="nx-chrome-lights" aria-hidden="true">
-        <span class="nx-tl nx-tl-red"></span>
-        <span class="nx-tl nx-tl-yel"></span>
-        <span class="nx-tl nx-tl-grn"></span>
+      <div class="nx-chrome-lights" role="group" aria-label="Window controls">
+        <button class="nx-tl nx-tl-red" id="nx-tl-close" title="Close tab"  aria-label="Close tab">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#5a1010" stroke-width="1.4" stroke-linecap="round"><path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/></svg>
+        </button>
+        <button class="nx-tl nx-tl-yel" id="nx-tl-focus" title="Focus mode — hide sidebar &amp; cockpit" aria-label="Toggle focus mode">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#5a3a0a" stroke-width="1.4" stroke-linecap="round"><path d="M3 6h6"/></svg>
+        </button>
+        <button class="nx-tl nx-tl-grn" id="nx-tl-fullscreen" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#0a3a14" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5V3h2M9 5V3H7M3 7v2h2M9 7v2H7"/></svg>
+        </button>
       </div>
 
       <div class="nx-chrome-center">

@@ -554,6 +554,28 @@ function attachShellHandlers() {
     location.hash = `#/conversation/${state.active}`;
     renderConversation(state.active);
   });
+
+  // Chrome traffic lights — wired so they aren't decorative
+  document.getElementById("nx-tl-close").addEventListener("click", () => {
+    // window.close() only works if the tab was opened by script. If not, give
+    // the user a clean "are you sure" path via a confirm dialog.
+    if (window.opener) { window.close(); return; }
+    if (confirm("Close ONEXUS in this tab?")) {
+      try { window.close(); } catch {}
+      // Fallback: navigate to about:blank
+      setTimeout(() => { location.href = "about:blank"; }, 50);
+    }
+  });
+  document.getElementById("nx-tl-focus").addEventListener("click", () => {
+    document.body.classList.toggle("nx-focus-mode");
+  });
+  document.getElementById("nx-tl-fullscreen").addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  });
 }
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
@@ -703,10 +725,10 @@ function renderTrustCard() {
             : state.trust.delta.toFixed(2);
   const bd = state.trust.breakdown || {};
   const cells = [
-    { lbl: "ROUTINE",   val: bd.routine   || 0 },
-    { lbl: "NOTABLE",   val: bd.notable   || 0 },
-    { lbl: "SENSITIVE", val: bd.sensitive || 0 },
-    { lbl: "DENIED",    val: bd.denied    || 0 },
+    { cls: "routine",   lbl: "routine",   val: bd.routine   || 0 },
+    { cls: "notable",   lbl: "notable",   val: bd.notable   || 0 },
+    { cls: "sensitive", lbl: "sensitive", val: bd.sensitive || 0 },
+    { cls: "denied",    lbl: "denied",    val: bd.denied    || 0 },
   ];
   el.innerHTML = `
     <svg class="nx-trust-spark" viewBox="0 0 320 92" preserveAspectRatio="none" aria-hidden="true">
@@ -718,10 +740,11 @@ function renderTrustCard() {
     </div>
     <div class="nx-trust-breakdown">
       ${cells.map(c => `
-        <div class="b-cell">
+        <span class="b-cell ${c.cls}">
+          <span class="b-dot" aria-hidden="true"></span>
           <span class="b-val">${c.val}</span>
           <span class="b-lbl">${c.lbl}</span>
-        </div>
+        </span>
       `).join("")}
     </div>
   `;
