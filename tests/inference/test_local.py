@@ -1,6 +1,5 @@
 import json
 import pytest
-from unittest.mock import patch, MagicMock
 from nexus.inference.local import LocalProvider
 from nexus.inference.provider import InferenceProvider
 
@@ -76,18 +75,25 @@ async def test_local_provider_infer_error_raises(respx_mock):
         await provider.infer([{"role": "user", "content": "test"}])
 
 
-def test_local_provider_health_returns_false_on_failure():
+@pytest.mark.asyncio
+async def test_local_provider_health_returns_false_on_failure(respx_mock):
+    """health() returns False when the /health endpoint is unreachable."""
+    import httpx as _httpx
+    respx_mock.get("http://localhost:99999/health").mock(
+        side_effect=_httpx.ConnectError("refused")
+    )
     provider = LocalProvider(base_url="http://localhost:99999")
-    with patch("urllib.request.urlopen", side_effect=Exception("refused")):
-        assert provider.health() is False
+    result = await provider.health()
+    assert result is False
 
 
-def test_local_provider_health_returns_true_on_success():
+@pytest.mark.asyncio
+async def test_local_provider_health_returns_true_on_success(respx_mock):
+    """health() returns True when the /health endpoint returns 200."""
+    import httpx as _httpx
+    respx_mock.get("http://localhost:8384/health").mock(
+        return_value=_httpx.Response(200)
+    )
     provider = LocalProvider(base_url="http://localhost:8384")
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.__enter__ = lambda s: s
-    mock_response.__exit__ = MagicMock(return_value=False)
-
-    with patch("urllib.request.urlopen", return_value=mock_response):
-        assert provider.health() is True
+    result = await provider.health()
+    assert result is True
