@@ -10,7 +10,7 @@ from nexus.kernel.chronicle import Chronicle
 from nexus.kernel.aegis import Aegis
 from nexus.kernel.pulse import Pulse
 from nexus.kernel.cortex import Cortex
-from nexus.modules.general import GeneralModule
+from nexus.modules.council import CouncilModule
 from nexus.api.server import KernelState, create_app
 
 
@@ -41,9 +41,9 @@ def kernel(tmp_config):
         config=tmp_config,
     )
 
-    general = GeneralModule()
-    cortex.register_module(general)
-    aegis.set_policy("general", allowed=True)
+    council = CouncilModule()
+    cortex.register_module(council)
+    aegis.set_policy("council", allowed=True)
 
     async def _mock_llm(msg):
         return f"mock response to: {msg}"
