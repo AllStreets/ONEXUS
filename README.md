@@ -23,7 +23,7 @@
 
 ---
 
-<p align="center"><sub>⚠ <em>Add a screenshot of <code>/aurora</code> to <code>.github/assets/hero.png</code> and replace this line with: <code>&lt;img src=".github/assets/hero.png" /&gt;</code> — the README needs the visual.</em></sub></p>
+<p align="center"><img src=".github/assets/hero.svg" alt="ONEXUS — the operating system for agents" width="100%" /></p>
 
 NEXUS runs agents the way iOS runs apps. Built-in cognitive modules (Council, Specter, Wraith, Echo, …) and third-party catalog agents (aider, cline, browser-use, …) share **one runtime, one manifest, one trust model, one set of surfaces.** Workspaces are rooms with their own roster, memory, grants, and home tone. Every tool call routes through a capability arbiter that gates against the agent's declared permissions, surfaces a first-use prompt when something needs your approval, and writes every byte to an immutable audit ledger.
 

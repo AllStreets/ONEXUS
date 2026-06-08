@@ -1,0 +1,333 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 620" role="img"
+     aria-label="ONEXUS — the operating system for agents">
+  <title>ONEXUS — the operating system for agents</title>
+
+  <!-- ─── definitions ─────────────────────────────────────────────────── -->
+  <defs>
+    <!-- the breathing kernel mark gradient -->
+    <radialGradient id="kernel" cx="42%" cy="38%" r="60%">
+      <stop offset="0%"   stop-color="#fefcff" stop-opacity="1"/>
+      <stop offset="22%"  stop-color="#e8defc" stop-opacity="1"/>
+      <stop offset="55%"  stop-color="#c9b8ff" stop-opacity="0.95"/>
+      <stop offset="85%"  stop-color="#7a5fd4" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#3a2876" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- inner core highlight -->
+    <radialGradient id="core" cx="40%" cy="35%" r="55%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- aurora mood mesh — Calm Focus + a hint of every state -->
+    <radialGradient id="mesh-violet" cx="20%" cy="22%" r="55%">
+      <stop offset="0%"  stop-color="#7860c8" stop-opacity="0.55"/>
+      <stop offset="70%" stop-color="#7860c8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mesh-amber" cx="82%" cy="28%" r="40%">
+      <stop offset="0%"  stop-color="#ffb26e" stop-opacity="0.22"/>
+      <stop offset="70%" stop-color="#ffb26e" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mesh-rose" cx="78%" cy="82%" r="45%">
+      <stop offset="0%"  stop-color="#d8508c" stop-opacity="0.30"/>
+      <stop offset="70%" stop-color="#d8508c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mesh-cyan" cx="22%" cy="80%" r="48%">
+      <stop offset="0%"  stop-color="#5cc8e6" stop-opacity="0.22"/>
+      <stop offset="70%" stop-color="#5cc8e6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mesh-indigo" cx="55%" cy="58%" r="60%">
+      <stop offset="0%"  stop-color="#4c5ca8" stop-opacity="0.30"/>
+      <stop offset="80%" stop-color="#4c5ca8" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- agent identity disc gradients (the 10 built-ins) -->
+    <radialGradient id="g-council"      cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffd2a0"/><stop offset="100%" stop-color="#c47a32"/></radialGradient>
+    <radialGradient id="g-specter"      cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ff9eb8"/><stop offset="100%" stop-color="#8c2e54"/></radialGradient>
+    <radialGradient id="g-autonomic"    cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#c8a0ff"/><stop offset="100%" stop-color="#5e3a9c"/></radialGradient>
+    <radialGradient id="g-oracle"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#a8e8ff"/><stop offset="100%" stop-color="#346b9c"/></radialGradient>
+    <radialGradient id="g-wraith"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#9affc8"/><stop offset="100%" stop-color="#2a6a4e"/></radialGradient>
+    <radialGradient id="g-legacy"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffd680"/><stop offset="100%" stop-color="#9c6a1a"/></radialGradient>
+    <radialGradient id="g-consciousness" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#e0c8ff"/><stop offset="100%" stop-color="#5a3a8c"/></radialGradient>
+    <radialGradient id="g-sentry"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffb878"/><stop offset="100%" stop-color="#8c4218"/></radialGradient>
+    <radialGradient id="g-echo"         cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#a8e8ff"/><stop offset="100%" stop-color="#346b9c"/></radialGradient>
+    <radialGradient id="g-agents"       cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#c8c8ff"/><stop offset="100%" stop-color="#3a3a8c"/></radialGradient>
+
+    <!-- film grain noise -->
+    <filter id="grain" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="3" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.09 0"/>
+    </filter>
+
+    <!-- soft glow for the kernel -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- subtle outer glow on agent discs -->
+    <filter id="disc-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+
+    <!-- breathing animation -->
+    <radialGradient id="breath" cx="42%" cy="38%" r="60%">
+      <stop offset="0%"   stop-color="#fefcff" stop-opacity="1"/>
+      <stop offset="22%"  stop-color="#e8defc" stop-opacity="1"/>
+      <stop offset="55%"  stop-color="#c9b8ff" stop-opacity="0.95"/>
+      <stop offset="85%"  stop-color="#7a5fd4" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#3a2876" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ─── canvas base ─────────────────────────────────────────────────── -->
+  <rect width="1600" height="620" fill="#0a0814"/>
+
+  <!-- aurora mood mesh -->
+  <g opacity="0.95">
+    <rect width="1600" height="620" fill="url(#mesh-violet)"/>
+    <rect width="1600" height="620" fill="url(#mesh-amber)"/>
+    <rect width="1600" height="620" fill="url(#mesh-rose)"/>
+    <rect width="1600" height="620" fill="url(#mesh-cyan)"/>
+    <rect width="1600" height="620" fill="url(#mesh-indigo)"/>
+  </g>
+
+  <!-- film grain -->
+  <rect width="1600" height="620" filter="url(#grain)" opacity="0.55" style="mix-blend-mode: overlay"/>
+
+  <!-- ─── orbit rings around the kernel ───────────────────────────────── -->
+  <g transform="translate(560 310)" fill="none" stroke-linecap="round">
+    <ellipse cx="0" cy="0" rx="220" ry="200" stroke="rgba(232,222,252,0.06)" stroke-width="1"/>
+    <ellipse cx="0" cy="0" rx="290" ry="260" stroke="rgba(232,222,252,0.05)" stroke-width="1"/>
+    <ellipse cx="0" cy="0" rx="360" ry="320" stroke="rgba(232,222,252,0.04)" stroke-width="1" stroke-dasharray="2 6"/>
+  </g>
+
+  <!-- ─── kernel components — 5 small labeled nodes on the inner orbit ── -->
+  <g transform="translate(560 310)" font-family="ui-monospace, 'JetBrains Mono', monospace"
+     font-size="10" letter-spacing="2.6" fill="#c9b8ff" text-anchor="middle">
+    <!-- positions on a 220×200 ellipse, 5 evenly spaced -->
+    <g>
+      <circle cx="0"     cy="-200" r="3.5" fill="#c9b8ff"/>
+      <text x="0" y="-216">CORTEX</text>
+    </g>
+    <g>
+      <circle cx="209"   cy="-62"  r="3.5" fill="#c9b8ff"/>
+      <text x="232" y="-58">ENGRAM</text>
+    </g>
+    <g>
+      <circle cx="129"   cy="162"  r="3.5" fill="#c9b8ff"/>
+      <text x="148" y="178">PULSE</text>
+    </g>
+    <g>
+      <circle cx="-129"  cy="162"  r="3.5" fill="#c9b8ff"/>
+      <text x="-148" y="178">CHRONICLE</text>
+    </g>
+    <g>
+      <circle cx="-209"  cy="-62"  r="3.5" fill="#c9b8ff"/>
+      <text x="-232" y="-58">AEGIS</text>
+    </g>
+  </g>
+
+  <!-- ─── connecting lines from kernel mark to the 5 components ──────── -->
+  <g transform="translate(560 310)" stroke="rgba(201,184,255,0.12)" stroke-width="0.8" fill="none">
+    <line x1="0" y1="0" x2="0"    y2="-200"/>
+    <line x1="0" y1="0" x2="209"  y2="-62"/>
+    <line x1="0" y1="0" x2="129"  y2="162"/>
+    <line x1="0" y1="0" x2="-129" y2="162"/>
+    <line x1="0" y1="0" x2="-209" y2="-62"/>
+  </g>
+
+  <!-- ─── the kernel mark — the breathing core ────────────────────────── -->
+  <g transform="translate(560 310)" filter="url(#glow)">
+    <!-- outer corona -->
+    <circle r="180" fill="url(#kernel)" opacity="0.35">
+      <animate attributeName="r" values="172;188;172" dur="4.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.30;0.42;0.30" dur="4.5s" repeatCount="indefinite"/>
+    </circle>
+    <!-- main body -->
+    <circle r="120" fill="url(#kernel)">
+      <animate attributeName="r" values="115;124;115" dur="4.5s" repeatCount="indefinite"/>
+    </circle>
+    <!-- inner highlight -->
+    <circle r="60" fill="url(#core)" opacity="0.7">
+      <animate attributeName="opacity" values="0.55;0.85;0.55" dur="4.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- ─── the 10 built-in agents — identity discs arrayed on the right ── -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="9"
+     letter-spacing="1.4" fill="#e8defc" text-anchor="start">
+    <!-- column 1 (left of right zone) -->
+    <g transform="translate(1080 110)">
+      <!-- council -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-council)" filter="url(#disc-glow)" opacity="0.85"/>
+        <circle cx="0" cy="0" r="22" fill="url(#g-council)"/>
+        <!-- compass-of-four glyph -->
+        <g fill="#ffffff" transform="translate(-9 -9)">
+          <circle cx="9" cy="2.5" r="1.3"/><circle cx="15.5" cy="9" r="1.3"/>
+          <circle cx="9" cy="15.5" r="1.3"/><circle cx="2.5" cy="9" r="1.3"/>
+          <circle cx="9" cy="9" r="1" opacity="0.8"/>
+        </g>
+        <text x="34" y="3">council</text>
+      </g>
+    </g>
+    <g transform="translate(1080 174)">
+      <!-- specter -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-specter)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" transform="translate(-9 -9)">
+          <path d="M9 3l6 12h-12z"/>
+          <path d="M9 9v2.5" stroke-linecap="round"/>
+          <circle cx="9" cy="13.4" r="0.65" fill="#fff" stroke="none"/>
+        </g>
+        <text x="34" y="3">specter</text>
+      </g>
+    </g>
+    <g transform="translate(1080 238)">
+      <!-- autonomic -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-autonomic)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.3" transform="translate(-9 -9)">
+          <circle cx="9" cy="9" r="1.7"/>
+          <path d="M3.5 9a5.5 5.5 0 0 1 11 0"/>
+          <path d="M1 9a8 8 0 0 1 16 0" opacity="0.6"/>
+        </g>
+        <text x="34" y="3">autonomic</text>
+      </g>
+    </g>
+    <g transform="translate(1080 302)">
+      <!-- oracle -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-oracle)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.3" transform="translate(-9 -9)">
+          <path d="M1 9c2-3 5-5 8-5s6 2 8 5c-2 3-5 5-8 5s-6-2-8-5z"/>
+          <circle cx="9" cy="9" r="2" fill="#fff" stroke="none"/>
+        </g>
+        <text x="34" y="3">oracle</text>
+      </g>
+    </g>
+    <g transform="translate(1080 366)">
+      <!-- wraith -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-wraith)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" transform="translate(-9 -9)">
+          <path d="M3 7c0-2.5 2.5-3.5 6-3.5s6 1.7 6 4.2c0 1.7-1.7 3.4-3.4 3.4-1.3 0-2-0.8-3.4-0.8s-2 0.8-2.5 0.8z"/>
+          <circle cx="5" cy="14" r="0.7" fill="#fff" stroke="none" opacity="0.85"/>
+          <circle cx="8" cy="15.5" r="0.6" fill="#fff" stroke="none" opacity="0.55"/>
+          <circle cx="11" cy="14.5" r="0.55" fill="#fff" stroke="none" opacity="0.30"/>
+        </g>
+        <text x="34" y="3">wraith</text>
+      </g>
+    </g>
+
+    <!-- column 2 (right of right zone) -->
+    <g transform="translate(1300 110)">
+      <!-- legacy -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-legacy)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round" transform="translate(-9 -9)">
+          <path d="M3 4l6 0.8 6-0.8v10l-6 0.8-6-0.8z"/>
+          <path d="M9 4.8v10" opacity="0.5"/>
+        </g>
+        <text x="34" y="3">legacy</text>
+      </g>
+    </g>
+    <g transform="translate(1300 174)">
+      <!-- consciousness -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-consciousness)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" transform="translate(-9 -9)">
+          <path d="M9 9 m-0.8 0 a0.8 0.8 0 1 1 1.6 0 a2.4 2.4 0 1 1 -3.2 0 a4 4 0 1 1 5.6 0 a5.6 5.6 0 1 1 -8 0"/>
+        </g>
+        <text x="34" y="3">consciousness</text>
+      </g>
+    </g>
+    <g transform="translate(1300 238)">
+      <!-- sentry -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-sentry)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-9 -9)">
+          <path d="M1 9h3l1.6-3.2L8 12 9.6 7.2 11.2 8.8H17"/>
+        </g>
+        <text x="34" y="3">sentry</text>
+      </g>
+    </g>
+    <g transform="translate(1300 302)">
+      <!-- echo -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-echo)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" transform="translate(-9 -9)">
+          <path d="M3 12.5a5.5 5.5 0 0 1 11 0"/>
+          <path d="M5.5 12.5a3 3 0 0 1 6 0" opacity="0.7"/>
+          <circle cx="8.5" cy="12.5" r="0.75" fill="#fff" stroke="none"/>
+        </g>
+        <text x="34" y="3">echo</text>
+      </g>
+    </g>
+    <g transform="translate(1300 366)">
+      <!-- agents (dispatcher) -->
+      <g>
+        <circle cx="0" cy="0" r="22" fill="url(#g-agents)"/>
+        <g fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" transform="translate(-9 -9)">
+          <rect x="2" y="2" width="5" height="5" rx="1"/>
+          <rect x="11" y="2" width="5" height="5" rx="1"/>
+          <rect x="2" y="11" width="5" height="5" rx="1"/>
+          <rect x="11" y="11" width="5" height="5" rx="1" opacity="0.5" stroke-dasharray="1.5 1.5"/>
+        </g>
+        <text x="34" y="3">agents</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ─── ONEXUS wordmark — large, top-right of the kernel ─────────────── -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-weight="700"
+     fill="#f5edff" text-anchor="start">
+    <text x="900" y="76" font-size="80" letter-spacing="14">O N E X U S</text>
+    <text x="903" y="119" font-size="14" letter-spacing="4" fill="#c9b8ff" opacity="0.85">
+      THE  OPERATING  SYSTEM  FOR  AGENTS
+    </text>
+  </g>
+
+  <!-- ─── tagline at bottom-right ─────────────────────────────────────── -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" fill="#a8a0c8" font-size="13">
+    <text x="903" y="475">Local-first.  Sovereign.  Beautiful.</text>
+    <text x="903" y="498" opacity="0.7">The kernel never touches the network — and there's a static test that proves it.</text>
+  </g>
+
+  <!-- ─── status pills bottom-right ───────────────────────────────────── -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="10" letter-spacing="1.5">
+    <g transform="translate(903 540)">
+      <rect width="80" height="22" rx="11" fill="rgba(168,180,255,0.10)" stroke="rgba(168,180,255,0.28)"/>
+      <text x="40" y="14" fill="#c6cfff" text-anchor="middle">v1.0</text>
+    </g>
+    <g transform="translate(993 540)">
+      <rect width="120" height="22" rx="11" fill="rgba(154,255,182,0.08)" stroke="rgba(154,255,182,0.24)"/>
+      <text x="60" y="14" fill="#b8f4cc" text-anchor="middle">1075 TESTS PASSING</text>
+    </g>
+    <g transform="translate(1123 540)">
+      <rect width="138" height="22" rx="11" fill="rgba(168,124,232,0.08)" stroke="rgba(168,124,232,0.26)"/>
+      <text x="69" y="14" fill="#c8b0f0" text-anchor="middle">10 BUILT-IN AGENTS</text>
+    </g>
+    <g transform="translate(1271 540)">
+      <rect width="78" height="22" rx="11" fill="rgba(232,168,124,0.08)" stroke="rgba(232,168,124,0.26)"/>
+      <text x="39" y="14" fill="#f0c8a0" text-anchor="middle">8 MOODS</text>
+    </g>
+  </g>
+
+  <!-- ─── kernel-layer eyebrow label below the orb ────────────────────── -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="10"
+     letter-spacing="3.4" fill="#a8a0c8" text-anchor="middle" opacity="0.7">
+    <text x="560" y="568">KERNEL · FIVE COMPONENTS · ZERO NETWORK I/O</text>
+  </g>
+
+  <!-- ─── agents-layer eyebrow label above the discs ──────────────────── -->
+  <g font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="10"
+     letter-spacing="3.4" fill="#a8a0c8" opacity="0.7">
+    <text x="1080" y="78">BUILT-IN AGENTS · TEN IN THE BOX</text>
+  </g>
+</svg>
