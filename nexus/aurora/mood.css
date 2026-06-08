@@ -103,3 +103,32 @@
 @media (prefers-contrast: more) {
   .nx-mood::before { background: rgba(255,255,255,0.04) !important; opacity: 0.10 !important; }
 }
+
+/* ── Trust event temperature overlays ─────────────────────────────────────── */
+
+.nx-trust-wash-rising,
+.nx-trust-wash-falling,
+.nx-trust-wash-collapse {
+  position: relative;
+}
+.nx-trust-wash-rising::after,
+.nx-trust-wash-falling::after,
+.nx-trust-wash-collapse::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  opacity: 0;
+  animation: nx-wash-fade 1.5s ease-out forwards;
+}
+.nx-trust-wash-rising::after {
+  background: radial-gradient(circle at 50% 50%, var(--nx-trust-rising) 0%, transparent 60%);
+}
+.nx-trust-wash-falling::after {
+  background: radial-gradient(circle at 50% 50%, var(--nx-trust-falling) 0%, transparent 60%);
+}
+.nx-trust-wash-collapse::after {
+  background: radial-gradient(circle at 50% 50%, var(--nx-trust-collapse) 0%, transparent 60%);
+}
+@keyframes nx-wash-fade {
+  0% { opacity: 0; }
+  25% { opacity: 0.35; }
+  100% { opacity: 0; }
+}

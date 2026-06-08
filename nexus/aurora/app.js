@@ -767,6 +767,37 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeOverlay();
 });
 
+// ── Trust event temperature overlays ────────────────────────────────────
+let _lastTrustEventId = null;
+
+async function pollTrustEvents() {
+  try {
+    const r = await fetch("/api/chronicle/recent?source=aegis&action=trust_change&limit=1");
+    if (!r.ok) return;
+    const body = await r.json();
+    const events = body.events || [];
+    if (events.length === 0) return;
+    const ev = events[0];
+    if (ev.id === _lastTrustEventId) return;
+    _lastTrustEventId = ev.id;
+
+    const payload = ev.payload || {};
+    let cls;
+    if (typeof payload.new_score === "number" && payload.new_score < 0.50) {
+      cls = "nx-trust-wash-collapse";
+    } else if (typeof payload.new_score === "number" && typeof payload.old_score === "number"
+               && payload.new_score > payload.old_score) {
+      cls = "nx-trust-wash-rising";
+    } else {
+      cls = "nx-trust-wash-falling";
+    }
+
+    document.body.classList.add(cls);
+    setTimeout(() => document.body.classList.remove(cls), 1500);
+  } catch {}
+}
+setInterval(pollTrustEvents, 2000);
+
 // ── Mood polling (from T3) ───────────────────────────────────────────────
 async function pollMood() {
   try {
