@@ -1,12 +1,18 @@
 """
 Federation protocol -- core NEXUS-to-NEXUS peer communication.
 Handles handshakes, capability exchange, message routing, and heartbeats.
+
+Phase 6 (T7): accepts an optional ``http_client`` (a ``KernelHttpClient``)
+so that all outbound peer HTTP traffic is routed through ``aegis.network()``
+with the ``network.federation.*`` capability.
+When ``http_client`` is ``None`` the implementation falls back to a direct
+``httpx.AsyncClient`` call (preserves existing test mocking).
 """
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -19,6 +25,9 @@ from nexus.federation.models import (
 )
 from nexus.federation.peer import PeerRegistry
 from nexus.federation.security import FederationSecurity
+
+if TYPE_CHECKING:
+    from nexus.inference.kernel_http_client import KernelHttpClient
 
 
 class FederationProtocol:
@@ -42,6 +51,7 @@ class FederationProtocol:
         cortex: Any,
         chronicle: Any,
         enabled: bool = False,
+        http_client: "KernelHttpClient | None" = None,
     ):
         self.instance_id = instance_id
         self.instance_name = instance_name
@@ -51,6 +61,7 @@ class FederationProtocol:
         self.cortex = cortex
         self.chronicle = chronicle
         self.enabled = enabled
+        self._http = http_client
 
     def _now_iso(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -83,13 +94,21 @@ class FederationProtocol:
 
         self._log_outbound(peer_url, f"Handshake initiation to {peer_url}")
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
+        if self._http is not None:
+            resp = await self._http.post(
                 f"{peer_url.rstrip('/')}/api/federation/handshake",
                 json=handshake_payload,
             )
             resp.raise_for_status()
             data = resp.json()
+        else:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    f"{peer_url.rstrip('/')}/api/federation/handshake",
+                    json=handshake_payload,
+                )
+                resp.raise_for_status()
+                data = resp.json()
 
         # Validate the response contains required fields
         required = {"peer_id", "instance_name", "version"}
@@ -161,12 +180,19 @@ class FederationProtocol:
 
         self._log_outbound(peer.url, f"Capability exchange with {peer.instance_name}")
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
+        if self._http is not None:
+            resp = await self._http.get(
                 f"{peer.url.rstrip('/')}/api/federation/capabilities",
             )
             resp.raise_for_status()
             data = resp.json()
+        else:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    f"{peer.url.rstrip('/')}/api/federation/capabilities",
+                )
+                resp.raise_for_status()
+                data = resp.json()
 
         caps = PeerCapabilities.from_dict({
             "peer_id": peer.peer_id,
@@ -224,13 +250,21 @@ class FederationProtocol:
 
         self._log_outbound(peer.url, f"Route request to {peer.instance_name}: {message[:100]}")
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
+        if self._http is not None:
+            resp = await self._http.post(
                 f"{peer.url.rstrip('/')}/api/federation/route",
                 json=request.to_dict(),
             )
             resp.raise_for_status()
             data = resp.json()
+        else:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{peer.url.rstrip('/')}/api/federation/route",
+                    json=request.to_dict(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
 
         fed_response = FederationResponse.from_dict(data)
 
@@ -348,15 +382,20 @@ class FederationProtocol:
         self._log_outbound(peer.url, f"Heartbeat to {peer.instance_name}")
 
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                resp = await client.post(
+            hb_payload = {"peer_id": self.instance_id, "timestamp": self._now_iso()}
+            if self._http is not None:
+                resp = await self._http.post(
                     f"{peer.url.rstrip('/')}/api/federation/heartbeat",
-                    json={
-                        "peer_id": self.instance_id,
-                        "timestamp": self._now_iso(),
-                    },
+                    json=hb_payload,
                 )
                 resp.raise_for_status()
+            else:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    resp = await client.post(
+                        f"{peer.url.rstrip('/')}/api/federation/heartbeat",
+                        json=hb_payload,
+                    )
+                    resp.raise_for_status()
             self.registry.update_heartbeat(peer_id)
             return True
         except Exception:
@@ -388,14 +427,18 @@ class FederationProtocol:
         if self.enabled and peer.url:
             self._log_outbound(peer.url, f"Disconnect from {peer.instance_name}")
             try:
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    await client.post(
+                disc_payload = {"peer_id": self.instance_id, "type": "disconnect"}
+                if self._http is not None:
+                    await self._http.post(
                         f"{peer.url.rstrip('/')}/api/federation/heartbeat",
-                        json={
-                            "peer_id": self.instance_id,
-                            "type": "disconnect",
-                        },
+                        json=disc_payload,
                     )
+                else:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        await client.post(
+                            f"{peer.url.rstrip('/')}/api/federation/heartbeat",
+                            json=disc_payload,
+                        )
             except Exception:
                 pass
 

@@ -305,6 +305,12 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             from nexus.federation.peer import PeerRegistry
             from nexus.federation.protocol import FederationProtocol
             from nexus.federation.discovery import PeerDiscovery
+            from nexus.inference.kernel_http_client import KernelHttpClient
+            from nexus.agents.manifest import (
+                Manifest, Publisher, IdentityMark, Identity, RuntimeConfig,
+                Capabilities, DeclaredCapabilities, TrustConfig, Compatibility,
+                Source,
+            )
 
             instance_id = os.environ.get(
                 "NEXUS_INSTANCE_ID",
@@ -312,6 +318,35 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             )
             instance_name = os.environ.get("NEXUS_INSTANCE_NAME", "nexus-local")
             shared_secret = os.environ.get("NEXUS_FEDERATION_SECRET", "")
+
+            # Register a built-in federation manifest so Aegis can gate
+            # outbound peer HTTP via check_capability("federation", ...).
+            # All peer domains are declared as Routine (auto-allowed).
+            fed_manifest = Manifest(
+                manifest_version=1,
+                slug="federation",
+                name="NEXUS Federation",
+                tagline="Peer-to-peer federation layer",
+                version=__version__,
+                system=True,
+                publisher=Publisher(type="org", handle="nexus-core"),
+                category="system",
+                tags=["federation", "system"],
+                license="proprietary",
+                identity=Identity(mark=IdentityMark(kind="builtin:federation")),
+                capabilities=Capabilities(
+                    declared=DeclaredCapabilities(**{
+                        "Routine": ["network.outbound.localhost"],
+                    }),
+                ),
+                runtime=RuntimeConfig(transport="in_process"),
+            )
+            kernel.aegis.register_manifest(fed_manifest)
+            kernel.aegis.set_policy(
+                "federation", allowed=True, network=True, initial_trust=0.80
+            )
+
+            fed_http = KernelHttpClient(aegis=kernel.aegis)
 
             fed_security = FederationSecurity(
                 instance_id=instance_id,
@@ -330,6 +365,7 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 cortex=kernel.cortex,
                 chronicle=kernel.chronicle,
                 enabled=True,
+                http_client=fed_http,
             )
 
             fed_discovery = PeerDiscovery(
@@ -337,6 +373,7 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 security=fed_security,
                 chronicle=kernel.chronicle,
                 instance_id=instance_id,
+                http_client=fed_http,
             )
 
             kernel.federation_protocol = fed_protocol

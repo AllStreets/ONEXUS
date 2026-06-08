@@ -1,15 +1,24 @@
 """
 Peer discovery -- find other NEXUS instances on the network.
+
+Phase 6 (T7): accepts an optional ``http_client`` (a ``KernelHttpClient``)
+so that all outbound peer-discovery traffic can be routed through
+``aegis.network()`` with the ``network.federation.*`` capability.
+When ``http_client`` is ``None`` the implementation falls back to a
+direct ``httpx.AsyncClient`` call (preserves existing test mocking).
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from nexus.federation.models import PeerInfo
 from nexus.federation.peer import PeerRegistry
 from nexus.federation.security import FederationSecurity
+
+if TYPE_CHECKING:
+    from nexus.inference.kernel_http_client import KernelHttpClient
 
 
 class PeerDiscovery:
@@ -21,11 +30,13 @@ class PeerDiscovery:
         security: FederationSecurity,
         chronicle: Any,
         instance_id: str,
+        http_client: "KernelHttpClient | None" = None,
     ):
         self.registry = registry
         self.security = security
         self.chronicle = chronicle
         self.instance_id = instance_id
+        self._http = http_client
 
     def _log_outbound(self, destination: str, summary: str) -> None:
         """Log outbound discovery traffic to Chronicle."""
@@ -46,10 +57,15 @@ class PeerDiscovery:
         self._log_outbound(url, f"Manual discovery probe to {url}")
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(f"{url}/api/system/status")
+            if self._http is not None:
+                resp = await self._http.get(f"{url}/api/system/status")
                 resp.raise_for_status()
                 data = resp.json()
+            else:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(f"{url}/api/system/status")
+                    resp.raise_for_status()
+                    data = resp.json()
         except Exception:
             return None
 
@@ -93,11 +109,17 @@ class PeerDiscovery:
             self._log_outbound(url, f"Local discovery scan on port {port}")
 
             try:
-                async with httpx.AsyncClient(timeout=2.0) as client:
-                    resp = await client.get(f"{url}/api/system/status")
+                if self._http is not None:
+                    resp = await self._http.get(f"{url}/api/system/status")
                     if resp.status_code != 200:
                         continue
                     data = resp.json()
+                else:
+                    async with httpx.AsyncClient(timeout=2.0) as client:
+                        resp = await client.get(f"{url}/api/system/status")
+                        if resp.status_code != 200:
+                            continue
+                        data = resp.json()
             except Exception:
                 continue
 
@@ -140,19 +162,23 @@ class PeerDiscovery:
             self._log_outbound(peer.url, f"Heartbeat to {peer.instance_name}")
 
             try:
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    resp = await client.post(
+                if self._http is not None:
+                    resp = await self._http.post(
                         f"{peer.url.rstrip('/')}/api/federation/heartbeat",
-                        json={
-                            "peer_id": self.instance_id,
-                        },
+                        json={"peer_id": self.instance_id},
                     )
-                    if resp.status_code == 200:
-                        self.registry.update_heartbeat(peer.peer_id)
-                        results[peer.peer_id] = True
-                    else:
-                        self.registry.mark_stale(peer.peer_id)
-                        results[peer.peer_id] = False
+                else:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        resp = await client.post(
+                            f"{peer.url.rstrip('/')}/api/federation/heartbeat",
+                            json={"peer_id": self.instance_id},
+                        )
+                if resp.status_code == 200:
+                    self.registry.update_heartbeat(peer.peer_id)
+                    results[peer.peer_id] = True
+                else:
+                    self.registry.mark_stale(peer.peer_id)
+                    results[peer.peer_id] = False
             except Exception:
                 self.registry.mark_stale(peer.peer_id)
                 results[peer.peer_id] = False
