@@ -10,9 +10,12 @@ def test_spatial_agents_returns_unified_list(client):
 
 
 def test_spatial_route_in_app_js(client):
+    """v2 renamed the user-visible surface from 'spatial' to 'catalog' but
+    the underlying renderer + grid CSS are preserved."""
     r = client.get("/aurora/static/app.js")
-    assert "renderSpatial" in r.text
-    assert "#/spatial" in r.text
+    body = r.text
+    assert "renderCatalog" in body
+    assert "#/catalog" in body
 
 
 def test_spatial_css_present(client):
@@ -23,4 +26,4 @@ def test_spatial_css_present(client):
 
 def test_spatial_button_in_header(client):
     r = client.get("/aurora")
-    assert "nx-spatial-btn" in r.text
+    assert "nx-open-catalog" in r.text

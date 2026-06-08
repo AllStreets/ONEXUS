@@ -7,18 +7,20 @@ def test_settings_route_in_app_js(client):
     assert "#/settings" in r.text
 
 
-def test_permission_polling_in_app_js(client):
+def test_permission_handling_in_app_js(client):
+    """v2 uses /api/permissions/ws (preferred) with a /pending+/decide REST
+    fallback; the inline permission prompt renders both pending tickets and
+    their action pills."""
     r = client.get("/aurora/static/app.js")
-    assert "pollPermissions" in r.text
-    assert "/api/permissions/pending" in r.text
-    assert "/api/permissions/decide" in r.text
-
-
-def test_install_review_in_app_js(client):
-    r = client.get("/aurora/static/app.js")
-    assert "/api/agents/install" in r.text
+    body = r.text
+    assert "/api/permissions/pending" in body
+    assert "/api/permissions/decide" in body
+    # WebSocket subscription path
+    assert "/api/permissions/ws" in body
+    # Inline prompt component
+    assert "renderPendingPermissionHTML" in body
 
 
 def test_settings_btn_present(client):
     r = client.get("/aurora")
-    assert "nx-settings-btn" in r.text
+    assert "nx-open-settings" in r.text

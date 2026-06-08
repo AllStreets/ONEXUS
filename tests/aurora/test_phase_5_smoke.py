@@ -13,11 +13,16 @@ def test_aurora_index_loads(client):
     r = client.get("/aurora")
     assert r.status_code == 200
     body = r.text
+    # v2 shell — persistent window-chrome layout with sidebar, main, and
+    # cockpit rail. The four navigational entry points moved from header
+    # buttons into the sidebar and chrome.
     assert 'id="nx-kernel-mark"' in body
-    assert 'id="nx-workspaces-btn"' in body
-    assert 'id="nx-cockpit-btn"' in body
-    assert 'id="nx-spatial-btn"' in body
-    assert 'id="nx-settings-btn"' in body
+    assert 'id="nx-mood-pill"' in body          # mood pill in chrome (toggles cockpit)
+    assert 'id="nx-ws-list"' in body            # sidebar workspaces list
+    assert 'id="nx-new-ws"' in body             # new workspace entry
+    assert 'id="nx-open-catalog"' in body       # catalog entry
+    assert 'id="nx-open-settings"' in body      # settings entry
+    assert 'id="nx-cockpit-rail"' in body       # persistent cockpit rail
 
 
 def test_aurora_icons_js_has_all_builtins(client):
@@ -34,10 +39,12 @@ def test_aurora_icons_js_has_all_builtins(client):
 def test_aurora_app_js_has_four_surface_routes(client):
     r = client.get("/aurora/static/app.js")
     body = r.text
+    # v2 renderers — naming evolved: catalog replaces "spatial" as the
+    # user-visible label, but the four surfaces remain.
     for marker in ["renderSwitcher", "renderConversation",
-                   "toggleCockpit", "renderSpatial", "renderSettings"]:
+                   "toggleCockpitOverlay", "renderCatalog", "renderSettings"]:
         assert marker in body, f"missing {marker}"
-    for hash_route in ["#/workspaces", "#/conversation/", "#/spatial", "#/settings"]:
+    for hash_route in ["#/workspaces", "#/conversation/", "#/catalog", "#/settings"]:
         assert hash_route in body, f"missing route {hash_route}"
 
 

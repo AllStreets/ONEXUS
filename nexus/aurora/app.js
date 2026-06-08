@@ -42,6 +42,322 @@ async function boot() {
   renderCockpitRail();
   subscribeStreams();
   await route(location.hash);
+  maybeShowTour();
+}
+
+// ── First-open guided tour ────────────────────────────────────────────────
+const TOUR_FLAG = "nx.tour.seen.v1";
+
+function maybeShowTour() {
+  if (location.hash.includes("tour")) { renderTour(0); return; }
+  if (location.search.includes("tour")) { renderTour(0); return; }
+  try {
+    if (localStorage.getItem(TOUR_FLAG)) return;
+  } catch { return; }
+  renderTour(0);
+}
+
+function markTourSeen() {
+  try { localStorage.setItem(TOUR_FLAG, String(Date.now())); } catch {}
+}
+
+const TOUR_SCENES = [
+  {
+    eyebrow: "ONEXUS",
+    title: "An operating system for agents.",
+    body: "ONEXUS runs agents the way iOS runs apps. A short tour — eight scenes, sixty seconds, skip whenever.",
+    diagram: () => sceneWelcome(),
+  },
+  {
+    eyebrow: "01 · WORKSPACES",
+    title: "Each room is its own world.",
+    body: "A workspace owns its agents, its memory, its grants, and its home tone. Switch between them with ⌘K. Each one stays private to itself.",
+    diagram: () => sceneWorkspaces(),
+  },
+  {
+    eyebrow: "02 · CONVERSATION",
+    title: "Talk to a room of agents at once.",
+    body: "Send a message — Cortex routes it to whoever is best placed to answer. Mention an agent by name with @ to call them directly.",
+    diagram: () => sceneConversation(),
+  },
+  {
+    eyebrow: "03 · SAFETY MODEL",
+    title: "Every sensitive tool call asks first.",
+    body: "Aegis classifies every capability — routine, notable, sensitive, privileged. Sensitive calls pause until you allow once, always-in-workspace, or deny.",
+    diagram: () => sceneSafety(),
+  },
+  {
+    eyebrow: "04 · TRUST",
+    title: "Trust is earned, asymmetrically.",
+    body: "Outcomes nudge an agent's trust score. Above 0.75 it earns auto-grants on notable calls. Below 0.50, every grant collapses — instantly.",
+    diagram: () => sceneTrust(),
+  },
+  {
+    eyebrow: "05 · COCKPIT",
+    title: "See what the kernel sees.",
+    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Press ⌘\` for the expanded six-panel cockpit.",
+    diagram: () => sceneCockpit(),
+  },
+  {
+    eyebrow: "06 · AGENTS",
+    title: "Ten built-in. Seven thousand more in the catalog.",
+    body: "Council deliberates, Specter red-teams, Oracle reads, Legacy remembers, Wraith forgets, Sentry watches. Install third-party agents like apps.",
+    diagram: () => sceneAgents(),
+  },
+  {
+    eyebrow: "READY",
+    title: "Your turn.",
+    body: "⌘K switch · ⌘N new workspace · ⌘\` cockpit · ⌘, settings · click the trash on any workspace to delete it. Have fun.",
+    diagram: () => sceneReady(),
+  },
+];
+
+function renderTour(index) {
+  const root = document.getElementById("nx-overlay-root");
+  const scene = TOUR_SCENES[index];
+  const total = TOUR_SCENES.length;
+  const dots = TOUR_SCENES.map((_, i) =>
+    `<span class="nx-tour-dot ${i === index ? "active" : (i < index ? "done" : "")}" data-i="${i}"></span>`
+  ).join("");
+  root.innerHTML = `
+    <div class="nx-tour-overlay" id="nx-tour-overlay" role="dialog" aria-modal="true" aria-label="Tour">
+      <button class="nx-tour-skip" id="nx-tour-skip" aria-label="Skip tour">Skip · esc</button>
+      <div class="nx-tour-stage">
+        <div class="nx-tour-diagram" id="nx-tour-diagram" aria-hidden="true">${scene.diagram()}</div>
+        <div class="nx-tour-eyebrow">${escapeHtml(scene.eyebrow)}</div>
+        <h2 class="nx-tour-title">${escapeHtml(scene.title)}</h2>
+        <p class="nx-tour-body">${escapeHtml(scene.body)}</p>
+      </div>
+      <div class="nx-tour-nav">
+        <button class="nx-tour-prev" id="nx-tour-prev" ${index === 0 ? "disabled" : ""} aria-label="Previous scene">←</button>
+        <div class="nx-tour-dots">${dots}</div>
+        <button class="nx-tour-next" id="nx-tour-next" aria-label="${index === total - 1 ? "Begin" : "Next scene"}">
+          ${index === total - 1 ? "Begin →" : "Next →"}
+        </button>
+      </div>
+    </div>
+  `;
+  const close = () => {
+    markTourSeen();
+    closeOverlay();
+  };
+  document.getElementById("nx-tour-skip").addEventListener("click", close);
+  document.getElementById("nx-tour-prev").addEventListener("click", () => {
+    if (index > 0) renderTour(index - 1);
+  });
+  document.getElementById("nx-tour-next").addEventListener("click", () => {
+    if (index === total - 1) close();
+    else renderTour(index + 1);
+  });
+  root.querySelectorAll(".nx-tour-dot").forEach(dot => {
+    dot.addEventListener("click", () => renderTour(Number(dot.dataset.i)));
+  });
+  // Esc closes
+  const onKey = (e) => {
+    if (e.key === "Escape") { close(); window.removeEventListener("keydown", onKey); }
+    if (e.key === "ArrowRight") { if (index < total - 1) renderTour(index + 1); }
+    if (e.key === "ArrowLeft")  { if (index > 0) renderTour(index - 1); }
+  };
+  window.addEventListener("keydown", onKey, { once: false });
+}
+
+// Tour scenes — each returns SVG with boomerang (alternate-infinite) motion.
+// Animations use animation-direction: alternate so motion springs forward
+// then back, like an Instagram boomerang.
+
+function sceneWelcome() {
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <defs>
+        <radialGradient id="t-orb" cx="40%" cy="35%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="25%" stop-color="#f0e6ff"/>
+          <stop offset="60%" stop-color="#c9b8ff"/>
+          <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0.3"/>
+        </radialGradient>
+      </defs>
+      <g transform="translate(160 110)">
+        <circle r="80" fill="url(#t-orb)" opacity="0.30" class="nx-tour-anim-corona"/>
+        <circle r="56" fill="url(#t-orb)" class="nx-tour-anim-orb"/>
+        <circle r="20" fill="#ffffff" opacity="0.7" class="nx-tour-anim-core"/>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneWorkspaces() {
+  // 4 workspace tiles that drift apart and back together (boomerang)
+  const tones = [
+    { x: -70, y: -30, c1: "#5a6cd0", c2: "#2c3a78" },
+    { x:  70, y: -30, c1: "#88a888", c2: "#3e5840" },
+    { x: -70, y:  40, c1: "#c060a0", c2: "#5e2050" },
+    { x:  70, y:  40, c1: "#e8a06c", c2: "#844820" },
+  ];
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(160 110)" class="nx-tour-anim-rooms">
+        ${tones.map(t => `
+          <g transform="translate(${t.x} ${t.y})">
+            <rect x="-46" y="-26" width="92" height="52" rx="9"
+                  fill="url(#g-${t.c1.replace('#','')})" opacity="0.95"/>
+            <defs>
+              <linearGradient id="g-${t.c1.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${t.c1}"/>
+                <stop offset="100%" stop-color="${t.c2}"/>
+              </linearGradient>
+            </defs>
+            <circle cx="-32" cy="-14" r="3" fill="#ffffff" opacity="0.8"/>
+          </g>
+        `).join("")}
+        <circle r="14" fill="url(#t-orb)"/>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneConversation() {
+  // Two message bubbles trade back and forth
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <defs>
+        <radialGradient id="ag-disc" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#a8e8ff"/>
+          <stop offset="100%" stop-color="#346b9c"/>
+        </radialGradient>
+      </defs>
+      <g transform="translate(40 70)">
+        <circle cx="14" cy="14" r="14" fill="url(#ag-disc)" class="nx-tour-anim-disc"/>
+        <rect x="36" y="4" width="170" height="22" rx="11" fill="rgba(232,222,252,0.08)" class="nx-tour-anim-bubble-a"/>
+        <rect x="36" y="32" width="120" height="14" rx="7" fill="rgba(232,222,252,0.05)" class="nx-tour-anim-bubble-a"/>
+      </g>
+      <g transform="translate(80 130)" class="nx-tour-anim-bubble-b">
+        <rect x="0" y="0" width="200" height="26" rx="13" fill="rgba(168,180,255,0.18)"/>
+        <text x="14" y="17" font-family="ui-sans-serif,sans-serif" font-size="11" fill="#e2e6ff">summarize the kernel runtime</text>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneSafety() {
+  // Amber permission prompt that pulses + pills slide in
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(160 110)">
+        <rect x="-130" y="-32" width="260" height="64" rx="12"
+              fill="rgba(248,196,96,0.08)" stroke="rgba(248,196,96,0.35)" stroke-width="1"
+              class="nx-tour-anim-card"/>
+        <circle cx="-110" cy="0" r="6" fill="#f8c460" class="nx-tour-anim-pulse-dot"/>
+        <circle cx="-110" cy="0" r="11" fill="none" stroke="rgba(248,196,96,0.50)" class="nx-tour-anim-ping"/>
+        <text x="-92" y="-6" font-family="ui-monospace,monospace" font-size="9" letter-spacing="2" fill="#f8c460">FS.WRITE · SENSITIVE</text>
+        <text x="-92" y="10" font-family="ui-sans-serif,sans-serif" font-size="10" fill="#e8defc">oracle → src/kernel/cortex.py</text>
+        <g class="nx-tour-anim-pills">
+          <rect x="22" y="-12" width="40" height="22" rx="11" fill="rgba(154,255,182,0.14)" stroke="rgba(154,255,182,0.40)"/>
+          <text x="42" y="2" font-family="ui-sans-serif,sans-serif" font-size="8.5" font-weight="600" fill="#a8f4c0" text-anchor="middle">allow</text>
+          <rect x="66" y="-12" width="48" height="22" rx="11" fill="rgba(168,124,232,0.18)" stroke="rgba(168,124,232,0.50)"/>
+          <text x="90" y="2" font-family="ui-sans-serif,sans-serif" font-size="8.5" font-weight="600" fill="#e0d0ff" text-anchor="middle">always</text>
+          <rect x="118" y="-12" width="32" height="22" rx="11" fill="rgba(248,96,120,0.10)" stroke="rgba(248,96,120,0.36)"/>
+          <text x="134" y="2" font-family="ui-sans-serif,sans-serif" font-size="8.5" font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
+        </g>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneTrust() {
+  // Sparkline that draws itself going up, mirrors to baseline (boomerang)
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <defs>
+        <linearGradient id="t-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ffd680" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#ffd680" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="t-line" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ffb878"/>
+          <stop offset="100%" stop-color="#ffe09a"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(30 30)">
+        <path d="M0 160 L0 130 L30 125 L60 122 L90 110 L120 100 L150 95 L180 80 L210 70 L240 56 L260 50 L260 160 Z"
+              fill="url(#t-fill)" class="nx-tour-anim-area"/>
+        <path d="M0 130 L30 125 L60 122 L90 110 L120 100 L150 95 L180 80 L210 70 L240 56 L260 50"
+              fill="none" stroke="url(#t-line)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="nx-tour-anim-line"/>
+        <circle cx="260" cy="50" r="4" fill="#ffe09a" class="nx-tour-anim-dot"/>
+        <text x="0" y="20" font-family="ui-monospace,monospace" font-size="18" font-weight="700" fill="#ffe09a">+0.14</text>
+        <text x="60" y="20" font-family="ui-monospace,monospace" font-size="10" letter-spacing="2" fill="#f8c460">RISING</text>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneCockpit() {
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(40 40)">
+        <rect x="0"   y="0"   width="60" height="40" rx="6" fill="rgba(255,214,128,0.10)" stroke="rgba(255,214,128,0.30)" class="nx-tour-anim-panel" style="animation-delay:0s"/>
+        <rect x="72"  y="0"   width="76" height="40" rx="6" fill="rgba(168,180,255,0.08)" stroke="rgba(168,180,255,0.28)" class="nx-tour-anim-panel" style="animation-delay:0.2s"/>
+        <rect x="160" y="0"   width="80" height="40" rx="6" fill="rgba(168,124,232,0.08)" stroke="rgba(168,124,232,0.28)" class="nx-tour-anim-panel" style="animation-delay:0.4s"/>
+        <rect x="0"   y="52"  width="100" height="48" rx="6" fill="rgba(154,255,182,0.07)" stroke="rgba(154,255,182,0.26)" class="nx-tour-anim-panel" style="animation-delay:0.6s"/>
+        <rect x="112" y="52"  width="128" height="48" rx="6" fill="rgba(140,184,212,0.07)" stroke="rgba(140,184,212,0.24)" class="nx-tour-anim-panel" style="animation-delay:0.8s"/>
+        <rect x="0"   y="112" width="240" height="32" rx="6" fill="rgba(248,196,96,0.06)" stroke="rgba(248,196,96,0.24)" class="nx-tour-anim-panel" style="animation-delay:1.0s"/>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneAgents() {
+  const SLUGS = ["council", "oracle", "specter", "wraith", "echo", "autonomic", "legacy", "consciousness"];
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(160 110)" class="nx-tour-anim-discs">
+        ${SLUGS.map((s, i) => {
+          const angle = (i / SLUGS.length) * Math.PI * 2 - Math.PI / 2;
+          const r = 70;
+          const x = Math.cos(angle) * r;
+          const y = Math.sin(angle) * r;
+          const grads = {
+            council:["#ffd2a0","#c47a32"], oracle:["#a8e8ff","#346b9c"],
+            specter:["#ff9eb8","#8c2e54"], wraith:["#9affc8","#2a6a4e"],
+            echo:["#a8e8ff","#346b9c"], autonomic:["#c8a0ff","#5e3a9c"],
+            legacy:["#ffd680","#9c6a1a"], consciousness:["#e0c8ff","#5a3a8c"],
+          };
+          const g = grads[s] || ["#c8c8ff","#3a3a8c"];
+          const gid = `td-${s}`;
+          return `
+            <defs>
+              <radialGradient id="${gid}" cx="35%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="${g[0]}"/>
+                <stop offset="100%" stop-color="${g[1]}"/>
+              </radialGradient>
+            </defs>
+            <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" fill="url(#${gid})" class="nx-tour-anim-disc-pop" style="animation-delay:${(i * 0.1).toFixed(2)}s"/>
+          `;
+        }).join("")}
+        <circle r="22" fill="url(#t-orb)"/>
+      </g>
+    </svg>
+  `;
+}
+
+function sceneReady() {
+  return `
+    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+      <defs>
+        <radialGradient id="r-orb" cx="40%" cy="35%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="25%" stop-color="#f0e6ff"/>
+          <stop offset="60%" stop-color="#c9b8ff"/>
+          <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0.3"/>
+        </radialGradient>
+      </defs>
+      <g transform="translate(160 110)">
+        <circle r="48" fill="url(#r-orb)" class="nx-tour-anim-core"/>
+        <circle r="60" fill="none" stroke="rgba(201,184,255,0.30)" stroke-width="1" class="nx-tour-anim-ring1"/>
+        <circle r="80" fill="none" stroke="rgba(201,184,255,0.20)" stroke-width="1" class="nx-tour-anim-ring2"/>
+      </g>
+    </svg>
+  `;
 }
 
 // ── Data loaders ──────────────────────────────────────────────────────────
@@ -250,22 +566,62 @@ function renderSidebar() {
         ? `${w.resident_agents?.length || 0} agents · active`
         : `${w.resident_agents?.length || 0} agents`;
       return `
-        <button class="nx-ws-pill ${w.workspace_id === state.active ? "active" : ""}" data-id="${w.workspace_id}" aria-label="Workspace ${w.name}">
-          <span class="ws-dot" style="background:${dotColor};color:${dotColor}"></span>
-          <span class="ws-name">${escapeHtml(w.name || w.workspace_id)}</span>
-          <span></span>
-          <span class="ws-meta">${escapeHtml(meta)}</span>
-        </button>
+        <div class="nx-ws-row ${w.workspace_id === state.active ? "active" : ""}" data-id="${w.workspace_id}">
+          <button class="nx-ws-pill" data-id="${w.workspace_id}" aria-label="Open workspace ${escapeHtml(w.name)}">
+            <span class="ws-dot" style="background:${dotColor};color:${dotColor}"></span>
+            <span class="ws-name">${escapeHtml(w.name || w.workspace_id)}</span>
+            <span></span>
+            <span class="ws-meta">${escapeHtml(meta)}</span>
+          </button>
+          <button class="nx-ws-trash" data-id="${w.workspace_id}" data-name="${escapeHtml(w.name)}"
+                  aria-label="Delete workspace ${escapeHtml(w.name)}" title="Delete workspace">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2.5 3.5h9"/>
+              <path d="M5 3.5V2.2c0-.4.3-.7.7-.7h2.6c.4 0 .7.3.7.7v1.3"/>
+              <path d="M3.5 3.5l.6 8.4c0 .3.3.6.6.6h4.6c.3 0 .6-.3.6-.6l.6-8.4"/>
+              <path d="M6 6v4M8 6v4"/>
+            </svg>
+          </button>
+        </div>
       `;
     }).join("");
     list.querySelectorAll(".nx-ws-pill").forEach(btn => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
         await fetch(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST" });
         await loadWorkspaces();
         renderSidebar();
         renderChromeContext();
         location.hash = `#/conversation/${id}`;
+      });
+    });
+    list.querySelectorAll(".nx-ws-trash").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        if (!confirm(`Delete workspace "${name}"? This is permanent — its memory and grants will be removed.`)) return;
+        try {
+          const r = await fetch(`/api/workspaces/${encodeURIComponent(id)}`, { method: "DELETE" });
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({ detail: "delete failed" }));
+            alert(`Could not delete: ${err.detail || r.status}`);
+            return;
+          }
+          // Remove from thread state
+          state.thread.delete(id);
+          await loadWorkspaces();
+          renderSidebar();
+          renderChromeContext();
+          // If we were viewing the deleted workspace, redirect
+          if (location.hash === `#/conversation/${id}` || state.active !== id) {
+            if (state.active) location.hash = `#/conversation/${state.active}`;
+            else location.hash = "#/workspaces";
+          }
+        } catch (err) {
+          alert(`Network error: ${err.message}`);
+        }
       });
     });
   }
@@ -1158,6 +1514,37 @@ function subscribeStreams() {
     await Promise.allSettled([loadTrust(), loadPermissions()]);
     renderCockpitRail();
   }, 5000);
+  // Trust event temperature overlays — flash a brief gold/steel/crimson wash
+  // on the body when a new trust_change event lands in chronicle.
+  setInterval(pollTrustEvents, 2000);
+}
+
+// ── Trust event temperature overlays ──────────────────────────────────────
+let _lastTrustEventId = null;
+async function pollTrustEvents() {
+  try {
+    const r = await fetch("/api/chronicle?source=aegis&event_type=aegis.trust_change&limit=1");
+    if (!r.ok) return;
+    const body = await r.json();
+    const events = body.entries || [];
+    if (events.length === 0) return;
+    const ev = events[0];
+    if (ev.id === _lastTrustEventId) return;
+    _lastTrustEventId = ev.id;
+
+    const payload = ev.payload || {};
+    let cls;
+    if (typeof payload.new_score === "number" && payload.new_score < 0.50) {
+      cls = "nx-trust-wash-collapse";
+    } else if (typeof payload.new_score === "number" && typeof payload.old_score === "number"
+               && payload.new_score > payload.old_score) {
+      cls = "nx-trust-wash-rising";
+    } else {
+      cls = "nx-trust-wash-falling";
+    }
+    document.body.classList.add(cls);
+    setTimeout(() => document.body.classList.remove(cls), 1500);
+  } catch {}
 }
 
 // ── Keybinds ──────────────────────────────────────────────────────────────

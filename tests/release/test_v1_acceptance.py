@@ -22,14 +22,25 @@ def client(tmp_path, monkeypatch):
 
 def test_v1_acceptance(client, tmp_path):
     """The shipped OS — every surface live, every gate honoured."""
-    # 1. Aurora shell loads with kernel mark + all four surface buttons
+    # 1. Aurora shell loads — window chrome + sidebar + cockpit rail + all
+    #    navigation entry points present (v2 layout: persistent 3-column shell).
     r = client.get("/aurora")
     assert r.status_code == 200
-    for marker in ['id="nx-kernel-mark"',
-                   'id="nx-workspaces-btn"',
-                   'id="nx-cockpit-btn"',
-                   'id="nx-spatial-btn"',
-                   'id="nx-settings-btn"']:
+    for marker in ['id="nx-kernel-mark"',         # breathing kernel orb
+                   'id="nx-mood-pill"',           # mood pill in chrome (toggles cockpit overlay)
+                   'id="nx-clock"',               # live clock
+                   'id="nx-ws-list"',             # sidebar workspace pills
+                   'id="nx-new-ws"',              # + new workspace (⌘N)
+                   'id="nx-recent-agents"',       # recent agents block
+                   'id="nx-open-catalog"',        # browse catalog link
+                   'id="nx-open-settings"',       # settings link (⌘,)
+                   'id="nx-user-footer"',         # user identity footer
+                   'id="nx-main"',                # main canvas slot
+                   'id="nx-cockpit-rail"',        # persistent cockpit rail
+                   'id="nx-trust-card"',          # trust sparkline mount
+                   'id="nx-perm-log"',            # recent permissions log
+                   'id="nx-mood-card"',           # ambient mood mesh
+                   'id="nx-agent-discs"']:        # built-in agents disc row
         assert marker in r.text, f"missing {marker}"
 
     # 2. Classic dashboard backward-compat

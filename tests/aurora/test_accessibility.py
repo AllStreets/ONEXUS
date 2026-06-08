@@ -24,7 +24,7 @@ def test_aurora_html_has_lang_attribute(client):
 
 def test_aurora_html_has_title(client):
     r = client.get("/aurora")
-    assert "<title>NEXUS</title>" in r.text
+    assert "<title>ONEXUS</title>" in r.text
 
 
 def test_no_emojis_in_any_aurora_asset(client):

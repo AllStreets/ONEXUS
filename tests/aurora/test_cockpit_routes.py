@@ -29,4 +29,4 @@ def test_aurora_app_css_has_signal_aesthetic(client):
 
 def test_aurora_index_has_cockpit_button(client):
     r = client.get("/aurora")
-    assert "nx-cockpit-btn" in r.text
+    assert "nx-mood-pill" in r.text
