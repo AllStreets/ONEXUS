@@ -2,10 +2,13 @@
 
 GET  /api/mood/current   — returns {mood, tone, drift_seconds, reason}
 POST /api/mood/observe   — push state observations into the engine
+WS   /api/mood/ws        — push mood snapshots every 2s
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+import asyncio
+
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict
 
 from nexus.workspaces.mood import MoodEngine, MoodSignals
@@ -144,6 +147,25 @@ async def current(request: Request) -> dict:
         "drift_seconds": result.spec.drift_seconds,
         "reason": result.spec.description,
     }
+
+
+@router.websocket("/ws")
+async def mood_ws(websocket: WebSocket):
+    """WebSocket push stream: current mood every 2s."""
+    await websocket.accept()
+    try:
+        while True:
+            engine = _get_engine(websocket)
+            snap = engine.evaluate(getattr(websocket.app.state, "mood_signals", MoodSignals()))
+            await websocket.send_json({
+                "mood": snap.mood.name.lower(),
+                "tone": snap.overlay.value if snap.overlay is not None else None,
+                "drift_seconds": snap.spec.drift_seconds,
+                "reason": snap.spec.description,
+            })
+            await asyncio.sleep(2.0)
+    except WebSocketDisconnect:
+        return
 
 
 @router.post("/observe")

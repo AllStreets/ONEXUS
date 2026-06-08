@@ -798,19 +798,46 @@ async function pollTrustEvents() {
 }
 setInterval(pollTrustEvents, 2000);
 
-// ── Mood polling (from T3) ───────────────────────────────────────────────
-async function pollMood() {
-  try {
-    const r = await fetch("/api/mood/current");
-    if (r.ok) {
-      const body = await r.json();
-      const cls = "nx-mood-" + body.mood.replace(/_/g, "-");
-      const current = [...document.body.classList].find(c => c.startsWith("nx-mood-"));
-      if (current && current !== cls) document.body.classList.remove(current);
-      if (!document.body.classList.contains(cls)) document.body.classList.add(cls);
-      document.body.dataset.mood = body.mood;
-    }
-  } catch {}
+// ── Mood push (WS preferred, polling fallback) ──────────────────────────
+function _applyMoodBody(body) {
+  const cls = "nx-mood-" + body.mood.replace(/_/g, "-");
+  const current = [...document.body.classList].find(c => c.startsWith("nx-mood-"));
+  if (current && current !== cls) document.body.classList.remove(current);
+  if (!document.body.classList.contains(cls)) document.body.classList.add(cls);
+  document.body.dataset.mood = body.mood;
 }
-setInterval(pollMood, 2000);
-pollMood();
+
+(function initMoodStream() {
+  const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+  let ws = null;
+  let pollInterval = null;
+
+  function startPolling() {
+    if (pollInterval) return;
+    pollInterval = setInterval(async () => {
+      try {
+        const r = await fetch("/api/mood/current");
+        if (r.ok) _applyMoodBody(await r.json());
+      } catch {}
+    }, 2000);
+    // Run immediately
+    fetch("/api/mood/current").then(r => r.ok ? r.json() : null).then(b => b && _applyMoodBody(b)).catch(() => {});
+  }
+
+  function connectWs() {
+    try {
+      ws = new WebSocket(`${wsProto}//${location.host}/api/mood/ws`);
+      ws.onmessage = (e) => { try { _applyMoodBody(JSON.parse(e.data)); } catch {} };
+      ws.onerror = () => { ws = null; startPolling(); };
+      ws.onclose = () => { ws = null; startPolling(); };
+    } catch {
+      startPolling();
+    }
+  }
+
+  if (typeof WebSocket !== "undefined") {
+    connectWs();
+  } else {
+    startPolling();
+  }
+})();

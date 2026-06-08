@@ -1,7 +1,9 @@
 """REST endpoints for the PermissionInbox."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+import asyncio
+
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from nexus.kernel.aegis import PermissionInbox, PermissionDecision
@@ -51,6 +53,32 @@ async def pending(request: Request) -> dict:
             for p in inbox.pending()
         ],
     }
+
+
+@router.websocket("/ws")
+async def permissions_ws(websocket: WebSocket):
+    """WebSocket push stream: pending permission tickets, refreshed every 2s."""
+    await websocket.accept()
+    try:
+        while True:
+            inbox = _get_inbox(websocket)
+            pending = inbox.pending()
+            await websocket.send_json({
+                "pending": [
+                    {
+                        "id": p.id,
+                        "agent_slug": p.request.agent_slug,
+                        "capability": p.request.capability,
+                        "permission_class": p.request.permission_class,
+                        "workspace_id": p.request.workspace_id,
+                        "preview": p.request.preview,
+                    }
+                    for p in pending
+                ],
+            })
+            await asyncio.sleep(2.0)
+    except WebSocketDisconnect:
+        return
 
 
 @router.post("/decide")
