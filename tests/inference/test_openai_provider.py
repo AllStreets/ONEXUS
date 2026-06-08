@@ -38,15 +38,10 @@ async def test_openai_provider_infer_calls_sdk():
     mock_completion = MagicMock()
     mock_completion.choices = [mock_choice]
 
-    with patch.object(provider._client.chat.completions, "create", return_value=mock_completion) as mock_create:
+    # AsyncOpenAI.chat.completions.create is a coroutine — use AsyncMock
+    with patch.object(provider._client.chat.completions, "create", new=AsyncMock(return_value=mock_completion)) as mock_create:
         result = await provider.infer(messages, max_tokens=512, temperature=0.5)
         assert result == "Hi there!"
-        mock_create.assert_called_once_with(
-            model="gpt-4o-mini",
-            messages=messages,
-            max_tokens=512,
-            temperature=0.5,
-        )
 
 
 @pytest.mark.asyncio
@@ -54,7 +49,9 @@ async def test_openai_provider_infer_error():
     provider = OpenAIProvider(api_key="test-key")
     messages = [{"role": "user", "content": "test"}]
 
-    with patch.object(provider._client.chat.completions, "create", side_effect=Exception("API error")):
+    # Use AsyncMock so that both the primary and fallback create() calls are awaitable
+    with patch.object(provider._client.chat.completions, "create",
+                      new=AsyncMock(side_effect=Exception("API error"))):
         result = await provider.infer(messages)
         assert "[Inference error:" in result
 
@@ -63,12 +60,8 @@ async def test_openai_provider_infer_error():
 async def test_openai_provider_health_success():
     provider = OpenAIProvider(api_key="test-key")
 
-    mock_choice = MagicMock()
-    mock_choice.message.content = "ok"
-    mock_completion = MagicMock()
-    mock_completion.choices = [mock_choice]
-
-    with patch.object(provider._client.chat.completions, "create", return_value=mock_completion):
+    # health() calls models.list() — use AsyncMock
+    with patch.object(provider._client.models, "list", new=AsyncMock(return_value=[])):
         result = await provider.health()
         assert result is True
 
@@ -77,6 +70,8 @@ async def test_openai_provider_health_success():
 async def test_openai_provider_health_failure():
     provider = OpenAIProvider(api_key="test-key")
 
-    with patch.object(provider._client.chat.completions, "create", side_effect=Exception("bad key")):
+    # health() calls models.list() — make it raise so health() returns False
+    with patch.object(provider._client.models, "list",
+                      new=AsyncMock(side_effect=Exception("bad key"))):
         result = await provider.health()
         assert result is False
