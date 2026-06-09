@@ -2208,13 +2208,19 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   align-self: center;     /* center within the stage */
   width: 100%;
 }
+/* Tall-narrow shots (sidebar-only, cockpit-only) constrain the wrap width
+   so the image renders at native aspect without letterboxing — markers
+   positioned in image-percentage space then land exactly on features. */
+.nx-g-shot-wrap.nx-g-shot-narrow  { max-width: 320px; }
+.nx-g-shot-wrap.nx-g-shot-cockpit { max-width: 380px; }
+
 .nx-g-shot {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 50vh;
-  object-fit: contain;
-  object-position: top center;
+  max-height: 64vh;
+  /* No object-fit — width:100%/height:auto preserves aspect, no letterboxing.
+     The wrap matches the image's rendered box exactly so % markers align. */
 }
 .nx-g-shot-markers { position: absolute; inset: 0; pointer-events: none; }
 .nx-g-marker {

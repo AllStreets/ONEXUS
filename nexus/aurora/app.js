@@ -2136,9 +2136,9 @@ const GUIDE_PAGES = [
     body: "ONEXUS runs agents the way iOS runs apps — workspaces with their own memory, agents with their own trust, and every tool call gated by Aegis. This guide walks every surface in eight minutes. Use ← → to flip pages, click any dot to jump, press Esc to leave.",
     shot: "/aurora/static/guide/01-welcome.png",
     callouts: [
-      { x: 12, y: 14, label: "1", note: "Sidebar — workspaces, recent agents, in-OS tools." },
-      { x: 58, y: 50, label: "2", note: "Main canvas — workspace home with agent prompts." },
-      { x: 88, y: 32, label: "3", note: "Cockpit rail — trust meter, permissions, mood." },
+      { x: 10, y: 30, label: "1", note: "Sidebar — workspaces, recent agents, in-OS tools." },
+      { x: 50, y: 50, label: "2", note: "Main canvas — workspace home with agent prompts." },
+      { x: 89, y: 18, label: "3", note: "Cockpit rail — trust meter, permissions, mood." },
     ],
     cta: { label: "Continue →", action: null },
   },
@@ -2150,9 +2150,9 @@ const GUIDE_PAGES = [
     shot: "/aurora/static/guide/09-sidebar.png",
     fullSidebar: true,
     callouts: [
-      { x: 50, y: 20, label: "1", note: "Workspace pills — click to switch, click active again for home." },
-      { x: 75, y: 36, label: "2", note: "Hover any row to reveal the delete trash." },
-      { x: 50, y: 50, label: "3", note: "+ new workspace · ⌘N." },
+      { x: 50, y: 13, label: "1", note: "Workspace pills — click to switch, click active again for home." },
+      { x: 78, y: 28, label: "2", note: "Hover any row to reveal the delete trash." },
+      { x: 50, y: 40, label: "3", note: "+ new workspace · ⌘N." },
     ],
     cta: { label: "Try it · ⌘K", action: "switcher" },
   },
@@ -2163,9 +2163,9 @@ const GUIDE_PAGES = [
     body: "Send a message and Cortex routes it to whoever is best placed to answer. @ mention an agent (@oracle, @council) to call them directly. Press ⌘⏎ to send. The composer stays pinned at the bottom; the thread scrolls above it.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 40, y: 30, label: "1", note: "Agent identity disc + module name." },
-      { x: 50, y: 60, label: "2", note: "Inline permission prompt — fires on first sensitive call." },
-      { x: 50, y: 92, label: "3", note: "Composer · type, paste, drop files, hit ⌘⏎." },
+      { x: 24, y: 16, label: "1", note: "Agent identity disc + module name." },
+      { x: 52, y: 23, label: "2", note: "Inline permission prompt — fires on first sensitive call." },
+      { x: 50, y: 93, label: "3", note: "Composer · type, paste, drop files, hit ⌘⏎." },
     ],
     cta: { label: "Try it · type to a room", action: "compose" },
   },
@@ -2176,9 +2176,9 @@ const GUIDE_PAGES = [
     body: "Drop any file anywhere on the conversation surface to attach it. The blue glow overlay confirms drop. Files are stored in <code>.onexus/uploads/</code> under the workspace root, hashed for dedup, registered with Engram so the agent can recall them, and logged to Chronicle. The composer's + button does the same with a file picker.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 18, y: 92, label: "1", note: "The + button opens a file picker." },
-      { x: 50, y: 50, label: "2", note: "Drag a file anywhere on the canvas — the overlay glows mood-color." },
-      { x: 60, y: 88, label: "3", note: "Attached files appear as chips above the composer." },
+      { x: 35, y: 93, label: "1", note: "The + button opens a file picker." },
+      { x: 50, y: 55, label: "2", note: "Drag a file anywhere on the canvas — the overlay glows mood-color." },
+      { x: 60, y: 87, label: "3", note: "Attached files appear as chips above the composer." },
     ],
     cta: { label: "Done", action: null },
   },
@@ -2189,9 +2189,9 @@ const GUIDE_PAGES = [
     body: "Aegis classifies every capability — routine / notable / sensitive / privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always for this workspace, or deny. The cockpit log keeps a record of every decision with a colored class dot.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 38, y: 64, label: "1", note: "Amber pulse — sensitive permission requested." },
-      { x: 60, y: 64, label: "2", note: "Three pill buttons: allow once · always · here · deny." },
-      { x: 87, y: 36, label: "3", note: "Cockpit log records the decision." },
+      { x: 32, y: 22, label: "1", note: "Amber pulse — sensitive permission requested." },
+      { x: 52, y: 23, label: "2", note: "Three pill buttons: allow once · always · here · deny." },
+      { x: 89, y: 32, label: "3", note: "Cockpit log records the decision." },
     ],
     cta: { label: "See it in action", action: "seed-permission" },
   },
@@ -2203,8 +2203,8 @@ const GUIDE_PAGES = [
     shot: "/aurora/static/guide/08-cockpit.png",
     cockpitOnly: true,
     callouts: [
-      { x: 50, y: 12, label: "1", note: "Trust meter — gold rising / steel falling / crimson collapse." },
-      { x: 50, y: 22, label: "2", note: "Class breakdown by colored dot." },
+      { x: 28, y: 8, label: "1", note: "Trust meter — gold rising / steel falling / crimson collapse." },
+      { x: 28, y: 13, label: "2", note: "Class breakdown by colored dot." },
     ],
     cta: { label: "Done", action: null },
   },
@@ -2216,10 +2216,10 @@ const GUIDE_PAGES = [
     shot: "/aurora/static/guide/08-cockpit.png",
     cockpitOnly: true,
     callouts: [
-      { x: 50, y: 12, label: "1", note: "TRUST · last 60 minutes." },
-      { x: 50, y: 38, label: "2", note: "RECENT PERMISSIONS log." },
-      { x: 50, y: 62, label: "3", note: "AMBIENT MOOD — drives the whole shell." },
-      { x: 50, y: 82, label: "4", note: "Built-in agents — click any disc for capabilities." },
+      { x: 28, y: 8,  label: "1", note: "TRUST · last 60 minutes." },
+      { x: 28, y: 22, label: "2", note: "RECENT PERMISSIONS log." },
+      { x: 28, y: 40, label: "3", note: "AMBIENT MOOD — drives the whole shell." },
+      { x: 12, y: 62, label: "4", note: "Built-in agents — click any disc for capabilities." },
     ],
     cta: { label: "Open the expanded cockpit · ⌘0", action: "cockpit" },
   },
@@ -2230,9 +2230,9 @@ const GUIDE_PAGES = [
     body: "Click the mood pill (top-right of the title bar) to open a color switcher. Pick any of the 8 atmospheres — Calm focus, Deep flow, Routing, Deliberating, Creative, Reflective, Watchful, Alert — and the <em>whole shell</em> crossfades: ambient mesh, workspace pills, composer focus ring, buttons, capability sheet edge, all of it. Press <code>Auto · follow the kernel</code> at the top to release back to automatic, which picks based on CPU load, engram activity, time of day, and trust events.",
     shot: "/aurora/static/guide/10-mood-picker.png",
     callouts: [
-      { x: 85, y: 5,  label: "1", note: "The mood pill — click to open the switcher." },
-      { x: 80, y: 25, label: "2", note: "Auto · follow the kernel — releases manual override." },
-      { x: 80, y: 60, label: "3", note: "8 swatches — pick one to override the whole atmosphere." },
+      { x: 73, y: 7,  label: "1", note: "The mood pill — click to open the switcher." },
+      { x: 78, y: 16, label: "2", note: "Auto · follow the kernel — releases manual override." },
+      { x: 78, y: 38, label: "3", note: "8 swatches — pick one to override the whole atmosphere." },
     ],
     cta: { label: "Try it · pick a mood", action: "moodpicker" },
   },
@@ -2243,9 +2243,9 @@ const GUIDE_PAGES = [
     body: "Council deliberates. Specter red-teams. Oracle reads. Legacy remembers. Wraith forgets. Sentry watches. Autonomic automates. Echo mirrors. Consciousness regulates mood. Agents-dispatcher routes to installed third-parties. Click any disc to see its declared capabilities + trust floor + network reach.",
     shot: "/aurora/static/guide/03-capability-sheet.png",
     callouts: [
-      { x: 38, y: 22, label: "1", note: "Identity disc + name." },
-      { x: 50, y: 52, label: "2", note: "Tools declared + class color." },
-      { x: 50, y: 72, label: "3", note: "Trust floor + network reach." },
+      { x: 40, y: 27, label: "1", note: "Identity disc + name." },
+      { x: 50, y: 65, label: "2", note: "Tools declared + class color." },
+      { x: 50, y: 82, label: "3", note: "Trust floor + network reach." },
     ],
     cta: { label: "Done", action: null },
   },
@@ -2256,9 +2256,9 @@ const GUIDE_PAGES = [
     body: "Open the Workshop from the sidebar (or press ⌘E). Pick a runtime: Python, JavaScript, or shell. Hit Run (or ⌘⏎). Code executes in a subprocess sandbox with a stripped env, an 8-second timeout, and captured stdout/stderr. Every run lands in Chronicle.",
     shot: "/aurora/static/guide/04-workshop.png",
     callouts: [
-      { x: 17, y: 28, label: "1", note: "Language selector." },
-      { x: 50, y: 50, label: "2", note: "Code editor — JetBrains Mono, 12.5px." },
-      { x: 50, y: 88, label: "3", note: "Output panel — exit code, elapsed ms, stdout + stderr." },
+      { x: 28, y: 14, label: "1", note: "Language selector." },
+      { x: 50, y: 35, label: "2", note: "Code editor — JetBrains Mono, 12.5px." },
+      { x: 50, y: 78, label: "3", note: "Output panel — exit code, elapsed ms, stdout + stderr." },
     ],
     cta: { label: "Open Workshop · ⌘E", action: "workshop" },
   },
@@ -2269,8 +2269,8 @@ const GUIDE_PAGES = [
     body: "Press ⌘/ to open Search. Queries route through aegis.network() to DuckDuckGo's instant-answer API by default — no tracking. Set NEXUS_BRAVE_KEY for organic results via Brave Search. Wikipedia is always a fallback so you never see an empty page.",
     shot: "/aurora/static/guide/05-search.png",
     callouts: [
-      { x: 50, y: 24, label: "1", note: "Search input — ⌘/ to focus from anywhere." },
-      { x: 50, y: 56, label: "2", note: "Hits — title + URL + snippet + source." },
+      { x: 45, y: 13, label: "1", note: "Search input — ⌘/ to focus from anywhere." },
+      { x: 45, y: 30, label: "2", note: "Hits — title + URL + snippet + source." },
     ],
     cta: { label: "Open Search · ⌘/", action: "search" },
   },
@@ -2281,8 +2281,8 @@ const GUIDE_PAGES = [
     body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar (or press ⌘? — not yet). Filter by runnable-only to see the 571 with MCP adapters that you can launch with one click. Each card links to its source repo.",
     shot: "/aurora/static/guide/06-catalog.png",
     callouts: [
-      { x: 50, y: 16, label: "1", note: "Filters: search · category · runnable-only." },
-      { x: 50, y: 56, label: "2", note: "Each card has Launch + source link." },
+      { x: 55, y: 13, label: "1", note: "Filters: search · category · runnable-only." },
+      { x: 35, y: 35, label: "2", note: "Each card has Launch + source link." },
     ],
     cta: { label: "Browse catalog →", action: "catalog" },
   },
@@ -2364,7 +2364,7 @@ function renderGuide(pageIndex) {
         <div class="nx-g-body">${p.body}</div>
 
         ${showShot ? `
-          <div class="nx-g-shot-wrap">
+          <div class="nx-g-shot-wrap ${p.fullSidebar ? "nx-g-shot-narrow" : ""} ${p.cockpitOnly ? "nx-g-shot-cockpit" : ""}">
             <img class="nx-g-shot" src="${escapeHtml(p.shot)}?v=${state._guideCacheBust}" alt="${escapeHtml(p.title)}">
             <div class="nx-g-shot-markers" aria-hidden="true">${markersHTML}</div>
           </div>
