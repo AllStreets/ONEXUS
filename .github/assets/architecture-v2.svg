@@ -48,24 +48,49 @@
   <rect width="1280" height="720" fill="#08060f"/>
 
   <!-- ─── Shell band (top) ─────────────────────────────────────────────── -->
-  <rect x="40" y="40" width="1200" height="86" rx="14" fill="url(#shell)"
-        stroke="rgba(232,222,252,0.10)"/>
-  <text x="640" y="74" text-anchor="middle"
+  <!-- Outer shell container — flat fill so the eye doesn't read a gradient. -->
+  <rect x="40" y="40" width="1200" height="124" rx="16" fill="#160f24"
+        stroke="rgba(180,139,255,0.18)" stroke-width="1"/>
+
+  <!-- SHELL label -->
+  <text x="640" y="70" text-anchor="middle"
         font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
-        letter-spacing="0.30em" fill="#c9b8ff">ONEXUS · SHELL</text>
-  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#e8defc" text-anchor="middle">
-    <text x="220"  y="106">chrome</text>
-    <text x="460"  y="106">sidebar</text>
-    <text x="720"  y="106">conversation</text>
-    <text x="940"  y="106">cockpit</text>
-    <text x="1140" y="106">overlays</text>
-    <!-- divider dots -->
-    <g fill="#6b6080">
-      <circle cx="335" cy="100" r="1.6"/>
-      <circle cx="585" cy="100" r="1.6"/>
-      <circle cx="835" cy="100" r="1.6"/>
-      <circle cx="1040" cy="100" r="1.6"/>
-    </g>
+        letter-spacing="0.32em" fill="#c9b8ff">ONEXUS · SHELL</text>
+
+  <!-- Five region chips — each label in its own rounded box for a more
+       professional, scannable feel. Spaced evenly across the band. -->
+  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="16"
+     font-weight="600" fill="#f3ecff" text-anchor="middle">
+
+    <!-- chrome -->
+    <rect x="76"   y="104" width="180" height="36" rx="10"
+          fill="rgba(180,139,255,0.10)"
+          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
+    <text x="166"  y="128">chrome</text>
+
+    <!-- sidebar -->
+    <rect x="280"  y="104" width="180" height="36" rx="10"
+          fill="rgba(180,139,255,0.10)"
+          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
+    <text x="370"  y="128">sidebar</text>
+
+    <!-- conversation -->
+    <rect x="484"  y="104" width="220" height="36" rx="10"
+          fill="rgba(180,139,255,0.10)"
+          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
+    <text x="594"  y="128">conversation</text>
+
+    <!-- cockpit -->
+    <rect x="728"  y="104" width="180" height="36" rx="10"
+          fill="rgba(180,139,255,0.10)"
+          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
+    <text x="818"  y="128">cockpit</text>
+
+    <!-- overlays -->
+    <rect x="932"  y="104" width="220" height="36" rx="10"
+          fill="rgba(180,139,255,0.10)"
+          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
+    <text x="1042" y="128">overlays</text>
   </g>
 
   <!-- ─── Kernel band (middle) — 4 components + Aegis below ────────────── -->
