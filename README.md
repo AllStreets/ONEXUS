@@ -43,17 +43,26 @@ You don't leave the OS to do anything. Code editor, web search, file drop, mood-
 
 ## Quickstart
 
+> **Prerequisites:** Python 3.11+, [Ollama](https://ollama.com) (for natural-language responses — see next section), and ~6 GB free disk if you want a local LLM.
+
 ```bash
-# Clone + install (Python 3.11+)
-git clone https://github.com/AllStreets/ONEXUS.git && cd ONEXUS
+# 1. Clone ONEXUS + the agent catalog as siblings (the kernel looks for
+#    ../ONEXUS-Agents/ for the 8,000+ catalog agents).
+git clone https://github.com/AllStreets/ONEXUS.git
+git clone https://github.com/AllStreets/ONEXUS-Agents.git
+cd ONEXUS
+
+# 2. Install the kernel + Aurora into a fresh venv.
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[llm,api,tui,messaging]"
 
-# Start the OS — API + Aurora dashboard + WebSocket streams in one command
+# 3. Boot — single command brings up API + Aurora + WebSocket streams.
 onexus serve --port 8000
 ```
 
-Open **http://127.0.0.1:8000/aurora** and you're in. First-time visitors get a **13-page guided tour**; hit `?` any time to re-open it.
+Open **http://127.0.0.1:8000/aurora** and you're in. Every new install lands you in a default `Hello World` workspace; create more with `⌘N`, delete from the sidebar trash. First-time visitors also get a **13-page guided tour**; hit `?` any time to re-open it.
+
+**Heads-up — without a local LLM (next section) agents only respond to pattern-matched commands** (`summon X`, `list`, `agents <keyword>`). Plain-English questions return a keyword-search dump instead of a real recommendation. Install Ollama and the same questions get LLM-backed answers.
 
 ### Local LLM (recommended — keeps you sovereign + offline)
 

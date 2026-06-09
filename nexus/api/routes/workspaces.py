@@ -27,6 +27,22 @@ def _get_manager(request: Request) -> WorkspaceManager:
         ws_root = data_dir / "workspaces"
         ws_root.mkdir(parents=True, exist_ok=True)
         mgr = WorkspaceManager(root=ws_root)
+
+        # First-run seed — every new install gets a "Hello World" workspace
+        # so the user has somewhere to land instead of an empty grid. They
+        # can delete it from the sidebar trash any time.
+        if not mgr.list():
+            try:
+                mgr.create(
+                    name="Hello World",
+                    workspace_id="hello-world",
+                    tone="INDIGO",
+                )
+                mgr.set_active("hello-world")
+            except (FileExistsError, Exception):
+                # Race / disk error — silently degrade to empty grid.
+                pass
+
         request.app.state.workspace_manager = mgr
     return mgr
 
