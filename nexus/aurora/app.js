@@ -537,7 +537,7 @@ function startClock() {
 
 function attachShellHandlers() {
   document.getElementById("nx-new-ws").addEventListener("click", openNewWorkspaceForm);
-  document.getElementById("nx-mood-pill").addEventListener("click", toggleCockpitOverlay);
+  document.getElementById("nx-mood-pill").addEventListener("click", openMoodPicker);
   document.getElementById("nx-open-catalog").addEventListener("click", () => location.hash = "#/catalog");
   document.getElementById("nx-open-settings").addEventListener("click", () => location.hash = "#/settings");
   document.getElementById("nx-open-workshop").addEventListener("click", () => location.hash = "#/workshop");
@@ -1720,6 +1720,99 @@ async function renderSettings() {
       panel.innerHTML = `<h3>${heading}</h3><p class="nx-dim" style="font-size:13px">— stub —</p>`;
     });
   });
+}
+
+// ── Mood picker (click the mood pill) ─────────────────────────────────────
+const MOOD_OPTIONS = [
+  { key: "calm_focus",    name: "calm focus",    note: "violet · default · low load, eyes-down work" },
+  { key: "deep_flow",     name: "deep flow",     note: "jewel green · long uninterrupted stretches" },
+  { key: "routing",       name: "routing",       note: "magenta + cyan · cortex dispatching, lots of small tasks" },
+  { key: "deliberating",  name: "deliberating",  note: "amber + bronze · multi-round council weighing options" },
+  { key: "creative",      name: "creative",      note: "coral + tangerine · open-ended generation, low risk" },
+  { key: "reflective",    name: "reflective",    note: "plum + rose · review, summarise, look back" },
+  { key: "watchful",      name: "watchful",      note: "brass + olive · sentry on, pending alerts" },
+  { key: "alert",         name: "alert",         note: "crimson · trust collapse, denied call, override" },
+];
+
+function openMoodPicker() {
+  // Close existing
+  const existing = document.getElementById("nx-mood-picker");
+  if (existing) { existing.remove(); return; }
+
+  const pill = document.getElementById("nx-mood-pill");
+  const rect = pill.getBoundingClientRect();
+  const current = state.mood.mood || "calm_focus";
+
+  const pop = document.createElement("div");
+  pop.id = "nx-mood-picker";
+  pop.className = "nx-mood-picker";
+  pop.style.top = (rect.bottom + 8) + "px";
+  pop.style.right = (window.innerWidth - rect.right) + "px";
+  pop.innerHTML = `
+    <div class="nx-mp-head">
+      <div class="nx-mp-eyebrow">CHOOSE MOOD</div>
+      <div class="nx-mp-hint">drives the whole shell · the kernel will keep updating automatically</div>
+    </div>
+    <div class="nx-mp-grid">
+      ${MOOD_OPTIONS.map(m => `
+        <button class="nx-mp-cell ${m.key === current ? "active" : ""}" data-mood="${m.key}" title="${escapeHtml(m.note)}">
+          <span class="nx-mp-swatch nx-mood-preview-${m.key.replace(/_/g, "-")}"></span>
+          <span class="nx-mp-name">${escapeHtml(m.name)}</span>
+          <span class="nx-mp-note">${escapeHtml(m.note)}</span>
+        </button>
+      `).join("")}
+    </div>
+    <div class="nx-mp-foot">
+      Auto mode follows kernel state. Pick one to override; the kernel will resume picking on the next observation.
+    </div>
+  `;
+  document.body.appendChild(pop);
+
+  pop.querySelectorAll(".nx-mp-cell[data-mood]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const mood = btn.dataset.mood;
+      applyMood(mood);
+      state.mood.mood = mood;
+      // Persist the override server-side so future renders see it
+      try {
+        // Use observe with a synthetic signal that maps to this mood — fall
+        // back to setting trust_sliding which biases the engine. The engine
+        // is the source of truth; we just suggest a direction.
+        const map = {
+          calm_focus:    { kernel_cpu: 0.2, engram_busy_ratio: 0.2 },
+          deep_flow:     { kernel_cpu: 0.5, engram_busy_ratio: 0.7 },
+          routing:       { kernel_cpu: 0.8, engram_busy_ratio: 0.6 },
+          deliberating:  { engram_busy_ratio: 0.4, trust_sliding: 0.0 },
+          creative:      { kernel_cpu: 0.4, engram_busy_ratio: 0.5 },
+          reflective:    { kernel_cpu: 0.15, engram_busy_ratio: 0.3 },
+          watchful:      { trust_sliding: -0.05 },
+          alert:         { trust_sliding: -0.30 },
+        };
+        await fetch("/api/mood/observe", {
+          method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(map[mood] || {}),
+        });
+      } catch {}
+      // Update active state in the popover
+      pop.querySelectorAll(".nx-mp-cell").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      // Re-render any mood-aware cockpit pieces
+      renderMoodCard();
+    });
+  });
+
+  // Close on outside click / Esc
+  const onClick = (e) => { if (!pop.contains(e.target) && e.target !== pill) closePicker(); };
+  const onKey = (e) => { if (e.key === "Escape") closePicker(); };
+  const closePicker = () => {
+    pop.remove();
+    document.removeEventListener("click", onClick);
+    window.removeEventListener("keydown", onKey);
+  };
+  setTimeout(() => {
+    document.addEventListener("click", onClick);
+    window.addEventListener("keydown", onKey);
+  }, 50);
 }
 
 // ── Guide (multi-page walkthrough) ────────────────────────────────────────
