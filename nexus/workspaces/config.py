@@ -47,11 +47,10 @@ class WorkspaceTone(str, Enum):
     FUCHSIA   = "FUCHSIA"
     PLUM      = "PLUM"
     ORCHID    = "ORCHID"
-    # neutrals
+    # earthy + neutrals
+    MOCHA     = "MOCHA"
     SLATE     = "SLATE"
     GRAPHITE  = "GRAPHITE"
-    BONE      = "BONE"
-    MOCHA     = "MOCHA"
 
 
 class RoutingPin(BaseModel):

@@ -1729,16 +1729,44 @@ async function renderSettings() {
       });
     }
     if (tab === "security") {
-      panel.querySelectorAll(".nx-st-revoke[data-module]").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const mod = btn.dataset.module;
-          if (!confirm(`Reset ${mod}'s trust to 0.0 (revokes all grants)?`)) return;
-          await fetch(`/api/trust/${encodeURIComponent(mod)}/adjust`, {
-            method: "POST", headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ delta: -1.0, reason: "user_revoke_settings" }),
+      const listEl = panel.querySelector("#nx-st-trust-list");
+      const more = panel.querySelector("#nx-st-trust-more");
+      const countEl = panel.querySelector("#nx-st-search-count");
+
+      const wireRevokes = () => {
+        listEl.querySelectorAll(".nx-st-revoke[data-module]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const mod = btn.dataset.module;
+            if (!confirm(`Reset ${mod}'s trust to 0.0 (revokes all grants)?`)) return;
+            await fetch(`/api/trust/${encodeURIComponent(mod)}/adjust`, {
+              method: "POST", headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({ delta: -1.0, reason: "user_revoke_settings" }),
+            });
+            renderTab("security");
           });
-          renderTab("security");
         });
+      };
+      wireRevokes();
+
+      // Live filter — incrementally renders the matches
+      const search = panel.querySelector("#nx-st-trust-search");
+      search?.addEventListener("input", (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        const all = state._securityModules || [];
+        const matched = q
+          ? all.filter(s => s.module.toLowerCase().includes(q))
+          : all;
+        // Cap rendering at 80 rows for perf
+        const visible = matched.slice(0, 80);
+        listEl.innerHTML = renderTrustRows(visible);
+        if (countEl) countEl.textContent = matched.length;
+        if (more) {
+          more.style.display = matched.length > 80 ? "" : "none";
+          more.textContent = matched.length > 80
+            ? `showing first 80 of ${matched.length} matches · narrow further`
+            : "";
+        }
+        wireRevokes();
       });
     }
   };
@@ -1746,6 +1774,25 @@ async function renderSettings() {
     b.addEventListener("click", () => renderTab(b.dataset.tab));
   });
   renderTab("general");
+}
+
+function renderTrustRows(rows) {
+  if (!rows.length) return `<div class="nx-empty" style="opacity:0.55;padding:18px;font-size:12px">no matches</div>`;
+  return rows.map(s => {
+    const score = s.trust ?? 0;
+    const tier = score >= 0.75 ? "EXECUTOR"
+               : score >= 0.50 ? "MONITOR"
+               : score >= 0.25 ? "ADVISOR" : "OBSERVER";
+    return `
+      <div class="nx-st-trust-row">
+        <div class="nx-st-trust-name">${escapeHtml(s.module)}</div>
+        <div class="nx-st-trust-bar"><span style="width:${(score * 100).toFixed(1)}%"></span></div>
+        <div class="nx-st-trust-score">${score.toFixed(2)}</div>
+        <div class="nx-st-trust-tier">${tier}</div>
+        <button class="nx-st-revoke" data-module="${escapeHtml(s.module)}">revoke</button>
+      </div>
+    `;
+  }).join("");
 }
 
 async function renderSettingsTab(tab) {
@@ -1782,31 +1829,24 @@ async function renderSettingsTab(tab) {
     case "security": {
       const all = await fetch("/api/trust").then(r => r.ok ? r.json() : { scores: [] }).catch(() => ({scores:[]}));
       const sorted = (all.scores || []).slice().sort((a,b) => (b.trust ?? 0) - (a.trust ?? 0));
-      const top = sorted.slice(0, 30);
+      // Cache full list for client-side filtering
+      state._securityModules = sorted;
       return `
         <h3>Security · Trust</h3>
-        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">
-          ${sorted.length} module${sorted.length === 1 ? "" : "s"} registered with Aegis. Click revoke to reset a module's trust to 0 — all its grants collapse.
+        <p class="nx-dim" style="font-size:13px;margin-bottom:14px">
+          <span id="nx-st-trust-count">${sorted.length}</span> module${sorted.length === 1 ? "" : "s"} registered with Aegis. Click revoke to reset a module's trust to 0 — all its grants collapse.
         </p>
-        <div class="nx-st-trust-list">
-          ${top.length === 0 ? `<div class="nx-empty">no trust records yet — modules register on first use</div>` :
-            top.map(s => {
-              const score = s.trust ?? 0;
-              const tier = score >= 0.75 ? "EXECUTOR"
-                         : score >= 0.50 ? "MONITOR"
-                         : score >= 0.25 ? "ADVISOR" : "OBSERVER";
-              return `
-                <div class="nx-st-trust-row">
-                  <div class="nx-st-trust-name">${escapeHtml(s.module)}</div>
-                  <div class="nx-st-trust-bar"><span style="width:${(score * 100).toFixed(1)}%"></span></div>
-                  <div class="nx-st-trust-score">${score.toFixed(2)}</div>
-                  <div class="nx-st-trust-tier">${tier}</div>
-                  <button class="nx-st-revoke" data-module="${escapeHtml(s.module)}">revoke</button>
-                </div>
-              `;
-            }).join("")}
+        <div class="nx-st-search">
+          <span class="nx-st-search-icon" aria-hidden="true"></span>
+          <input id="nx-st-trust-search" type="search"
+                 placeholder="search modules · 590 MCP agents · type to filter"
+                 aria-label="Search modules">
+          <span class="nx-st-search-count" id="nx-st-search-count">${sorted.length}</span>
         </div>
-        ${sorted.length > 30 ? `<div class="nx-dim" style="font-size:12px;margin-top:10px">+${sorted.length - 30} more…</div>` : ""}
+        <div class="nx-st-trust-list" id="nx-st-trust-list">
+          ${renderTrustRows(sorted.slice(0, 60))}
+        </div>
+        ${sorted.length > 60 ? `<div class="nx-dim" id="nx-st-trust-more" style="font-size:12px;margin-top:10px">showing first 60 of ${sorted.length} · use the search to narrow</div>` : ""}
       `;
     }
     case "providers": {
@@ -1875,6 +1915,13 @@ async function renderSettingsTab(tab) {
       `;
     }
     case "about": {
+      // Live counts — never hardcoded.
+      const [tests, all, runnable] = await Promise.all([
+        fetch("/api/system/tests").then(r => r.ok ? r.json() : { total: null }).catch(() => ({total: null})),
+        fetch("/api/agents?limit=1").then(r => r.ok ? r.json() : { total: null }).catch(() => ({total: null})),
+        fetch("/api/agents?runnable_only=true&limit=1").then(r => r.ok ? r.json() : { total: null }).catch(() => ({total: null})),
+      ]);
+      const fmt = n => (n === null || n === undefined) ? "?" : Number(n).toLocaleString();
       return `
         <h3>About ONEXUS</h3>
         <p class="nx-dim" style="font-size:13px;line-height:1.6">
@@ -1887,12 +1934,18 @@ async function renderSettingsTab(tab) {
             <dd><code>v1.0</code></dd>
           </div>
           <div class="nx-st-row">
-            <dt>Tests passing</dt>
-            <dd><span class="ok">1014</span> · 1 skipped · 0 failing</dd>
+            <dt>Tests</dt>
+            <dd>
+              <span class="ok">${fmt(tests.total)}</span> declared
+              <span class="nx-dim" style="font-size:11px;margin-left:8px">scanned live from <code>tests/</code></span>
+            </dd>
           </div>
           <div class="nx-st-row">
             <dt>Catalog</dt>
-            <dd>6,745 agents · 571 runnable (MCP adapter)</dd>
+            <dd>
+              ${fmt(all.total)} agents · ${fmt(runnable.total)} runnable
+              <span class="nx-dim" style="font-size:11px;margin-left:8px">(MCP adapter present)</span>
+            </dd>
           </div>
           <div class="nx-st-row">
             <dt>Source</dt>
@@ -2706,9 +2759,10 @@ function renderSwitcher() {
 const WORKSPACE_TONES = [
   "indigo", "violet", "lavender", "cobalt", "sky", "ocean", "teal",
   "mint", "sage", "emerald", "lime",
-  "amber", "honey", "tangerine", "coral", "rose", "crimson",
+  "amber", "honey", "tangerine", "mocha",
+  "coral", "rose", "crimson",
   "magenta", "fuchsia", "plum", "orchid",
-  "slate", "graphite", "bone", "mocha",
+  "slate", "graphite",
 ];
 
 function _toneSwatchHex(tone) {

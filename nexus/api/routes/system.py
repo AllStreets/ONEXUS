@@ -117,3 +117,52 @@ async def system_config(request: Request) -> SystemConfigResponse:
         telegram_configured=bool(cfg.telegram_token),
         discord_configured=bool(cfg.discord_token),
     )
+
+
+# ─── Live test count for the About panel ───────────────────────────────────
+# Counts test functions across tests/ at runtime — no hardcoded values.
+
+_TESTS_CACHE: dict | None = None
+
+
+@router.get("/tests")
+async def system_tests() -> dict:
+    """Count `def test_*` and `async def test_*` across tests/ at runtime.
+
+    Cached for the lifetime of the server (tests don't change without a
+    code reload). Returns total, by-file, and by-directory breakdowns
+    so the About panel can show real numbers.
+    """
+    global _TESTS_CACHE
+    if _TESTS_CACHE is not None:
+        return _TESTS_CACHE
+
+    import re
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[3] / "tests"
+    pat = re.compile(r"^\s*(async\s+)?def\s+(test_[A-Za-z0-9_]+)\s*\(", re.MULTILINE)
+
+    if not root.exists():
+        _TESTS_CACHE = {"total": 0, "by_directory": {}}
+        return _TESTS_CACHE
+
+    by_dir: dict[str, int] = {}
+    total = 0
+    for path in root.rglob("test_*.py"):
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        matches = pat.findall(text)
+        # filter out duplicates within a file (defensive)
+        n = len(set(m[1] for m in matches))
+        rel_dir = str(path.parent.relative_to(root)) or "."
+        by_dir[rel_dir] = by_dir.get(rel_dir, 0) + n
+        total += n
+
+    _TESTS_CACHE = {
+        "total": total,
+        "by_directory": dict(sorted(by_dir.items(), key=lambda kv: -kv[1])),
+    }
+    return _TESTS_CACHE

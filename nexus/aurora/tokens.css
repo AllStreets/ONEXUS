@@ -58,11 +58,10 @@
   --nx-tone-plum-a:      #7e5ea0;  --nx-tone-plum-b:      #2c1c44;
   --nx-tone-orchid-a:    #b070d8;  --nx-tone-orchid-b:    #4c2868;
 
-  /* neutrals */
+  /* earthy + neutrals */
+  --nx-tone-mocha-a:     #b08868;  --nx-tone-mocha-b:     #4c382c;
   --nx-tone-slate-a:     #889098;  --nx-tone-slate-b:     #383c44;
   --nx-tone-graphite-a:  #5c6068;  --nx-tone-graphite-b:  #1c2028;
-  --nx-tone-bone-a:      #d4ccc0;  --nx-tone-bone-b:      #645c50;
-  --nx-tone-mocha-a:     #b08868;  --nx-tone-mocha-b:     #4c382c;
 
   /* type */
   --nx-font-display: "Inter Display", "SF Pro Display", -apple-system, system-ui, sans-serif;
