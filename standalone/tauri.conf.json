@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ONEXUS",
+  "version": "1.0.0",
+  "identifier": "com.allstreets.onexus",
+  "build": {
+    "frontendDist": "../nexus/aurora",
+    "devUrl": "http://127.0.0.1:8000/aurora"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ONEXUS",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 980,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "url": "http://127.0.0.1:8000/aurora",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": false,
+        "decorations": true,
+        "shadow": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "capabilities": ["default"]
+    },
+    "macOSPrivateApi": true,
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "title": "ONEXUS",
+      "tooltip": "ONEXUS — agent OS"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "category": "DeveloperTool",
+    "shortDescription": "An operating system for agents.",
+    "longDescription": "ONEXUS is a sovereign-local agent operating system. It runs your agents, gates every tool call through Aegis, logs every event to Chronicle, and keeps your memory in Engram — all from one binary on your machine.",
+    "copyright": "© 2026 AllStreets",
+    "icon": [
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "frameworks": []
+    }
+  }
+}

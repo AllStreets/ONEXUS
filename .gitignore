@@ -30,3 +30,9 @@ workshop-*.png
 v3-*.png
 dashboard-*.png
 Screenshot*.png
+
+# Tauri standalone wrapper build artifacts
+standalone/target/
+standalone/Cargo.lock
+standalone/gen/
+no-stoplight-*.png
