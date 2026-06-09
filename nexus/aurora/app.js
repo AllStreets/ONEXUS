@@ -116,6 +116,21 @@ const TOUR_SCENES = [
   },
 ];
 
+// Wrap a DOM-replacement function in the View Transitions API so the swap
+// crossfades instead of flashing. The `update` callback is queued as a
+// microtask by the browser, so handler wiring that depends on the new DOM
+// must live in `after` — which runs as soon as the update completes,
+// regardless of whether view-transitions are supported.
+function withSmoothSwap(update, after) {
+  if (typeof document.startViewTransition === "function") {
+    const t = document.startViewTransition(update);
+    t.updateCallbackDone.then(() => after && after()).catch(() => after && after());
+  } else {
+    update();
+    if (after) after();
+  }
+}
+
 function renderTour(index) {
   const root = document.getElementById("nx-overlay-root");
   const scene = TOUR_SCENES[index];
@@ -123,7 +138,7 @@ function renderTour(index) {
   const dots = TOUR_SCENES.map((_, i) =>
     `<span class="nx-tour-dot ${i === index ? "active" : (i < index ? "done" : "")}" data-i="${i}"></span>`
   ).join("");
-  root.innerHTML = `
+  const html = `
     <div class="nx-tour-overlay" id="nx-tour-overlay" role="dialog" aria-modal="true" aria-label="Tour">
       <button class="nx-tour-skip" id="nx-tour-skip" aria-label="Skip tour">Skip · esc</button>
       <div class="nx-tour-stage">
@@ -141,46 +156,48 @@ function renderTour(index) {
       </div>
     </div>
   `;
-  const close = () => {
-    markTourSeen();
-    closeOverlay();
-  };
-  document.getElementById("nx-tour-skip").addEventListener("click", close);
-  document.getElementById("nx-tour-prev").addEventListener("click", () => {
-    if (index > 0) renderTour(index - 1);
-  });
-  document.getElementById("nx-tour-next").addEventListener("click", () => {
-    if (index === total - 1) close();
-    else renderTour(index + 1);
-  });
-  root.querySelectorAll(".nx-tour-dot").forEach(dot => {
-    dot.addEventListener("click", () => renderTour(Number(dot.dataset.i)));
-  });
-  // Keyboard: Esc closes, ←/→ navigate. The listener is bound to window so
-  // it works regardless of focus, but we must tear it down when the tour
-  // DOM goes away (user clicks Begin/Skip, or another overlay replaces it)
-  // — otherwise a later arrow-key press would re-render the tour ON TOP
-  // of whatever overlay is now showing (e.g. the help guide).
-  const overlayEl = document.getElementById("nx-tour-overlay");
-  const onKey = (e) => {
-    // Self-guard: if our overlay is gone, this listener is a leftover —
-    // remove it and do nothing.
-    if (!document.body.contains(overlayEl)) {
-      window.removeEventListener("keydown", onKey);
-      return;
+  withSmoothSwap(
+    () => { root.innerHTML = html; },
+    () => {
+      const close = () => {
+        markTourSeen();
+        closeOverlay();
+      };
+      document.getElementById("nx-tour-skip").addEventListener("click", close);
+      document.getElementById("nx-tour-prev").addEventListener("click", () => {
+        if (index > 0) renderTour(index - 1);
+      });
+      document.getElementById("nx-tour-next").addEventListener("click", () => {
+        if (index === total - 1) close();
+        else renderTour(index + 1);
+      });
+      root.querySelectorAll(".nx-tour-dot").forEach(dot => {
+        dot.addEventListener("click", () => renderTour(Number(dot.dataset.i)));
+      });
+      // Keyboard: Esc closes, ←/→ navigate. The listener is bound to window so
+      // it works regardless of focus, but we tear it down when the tour DOM
+      // goes away — otherwise a later arrow-key press would re-render the
+      // tour ON TOP of whatever overlay is now showing (e.g. the help guide).
+      const overlayEl = document.getElementById("nx-tour-overlay");
+      const onKey = (e) => {
+        if (!document.body.contains(overlayEl)) {
+          window.removeEventListener("keydown", onKey);
+          return;
+        }
+        if (e.key === "Escape") { close(); }
+        else if (e.key === "ArrowRight") { if (index < total - 1) renderTour(index + 1); }
+        else if (e.key === "ArrowLeft")  { if (index > 0) renderTour(index - 1); }
+      };
+      window.addEventListener("keydown", onKey, { once: false });
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(overlayEl)) {
+          window.removeEventListener("keydown", onKey);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
     }
-    if (e.key === "Escape") { close(); }
-    else if (e.key === "ArrowRight") { if (index < total - 1) renderTour(index + 1); }
-    else if (e.key === "ArrowLeft")  { if (index > 0) renderTour(index - 1); }
-  };
-  window.addEventListener("keydown", onKey, { once: false });
-  const observer = new MutationObserver(() => {
-    if (!document.body.contains(overlayEl)) {
-      window.removeEventListener("keydown", onKey);
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  );
 }
 
 // Tour scenes — each returns SVG with boomerang (alternate-infinite) motion.
@@ -1008,8 +1025,8 @@ async function renderConversation(workspaceId) {
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9.8 5.5 5.8 9.5a2 2 0 1 1-2.8-2.8L8 1.7a3 3 0 0 1 4.2 4.2L7.2 11a4 4 0 0 1-5.7-5.6"/>
         </svg>
-        <input type="file" id="nx-file-input" multiple aria-hidden="true" class="nx-file-input-vis">
       </label>
+      <input type="file" id="nx-file-input" multiple aria-hidden="true" class="nx-file-input-vis">
       <input id="nx-composer-input"
              placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
              aria-label="Compose a message"
@@ -2333,7 +2350,7 @@ function renderGuide(pageIndex) {
 
   const showShot = p.shot && !p.keys;
 
-  root.innerHTML = `
+  const html = `
     <div class="nx-guide-overlay" id="nx-guide-overlay" role="dialog" aria-modal="true">
       <button class="nx-g-close-btn" id="nx-g-close" aria-label="Close guide">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
@@ -2377,82 +2394,83 @@ function renderGuide(pageIndex) {
     </div>
   `;
 
-  const close = () => closeOverlay();
+  withSmoothSwap(
+    () => { root.innerHTML = html; },
+    () => {
+      const close = () => closeOverlay();
+      const isLastPage = pageIndex === total - 1;
 
-  const isLastPage = pageIndex === total - 1;
+      // Advancing through the guide (arrow keys, → button) — strictly moves
+      // to the next page. NEVER triggers a CTA action. On the LAST page,
+      // advance is a no-op: the user has to click "Done", Esc, or outside.
+      const advance = () => {
+        if (pageIndex < total - 1) renderGuide(pageIndex + 1);
+      };
 
-  // Advancing through the guide (arrow keys, → button) — strictly moves to
-  // the next page. NEVER triggers a CTA action. On the LAST page, advance is
-  // a no-op: the user has to click "Done", press Esc, or click outside.
-  const advance = () => {
-    if (pageIndex < total - 1) renderGuide(pageIndex + 1);
-    // Last page: do nothing — user must explicitly close.
-  };
+      // The CTA button runs the page's specific action. On the last page
+      // the CTA explicitly closes the guide ("Done — start using ONEXUS").
+      const runCTA = () => {
+        if (isLastPage) { close(); return; }
+        const action = p.cta?.action;
+        switch (action) {
+          case "switcher":        close(); renderSwitcher(); return;
+          case "compose":         close(); document.getElementById("nx-composer-input")?.focus(); return;
+          case "seed-permission":
+            fetch("/api/permissions/seed", {
+              method: "POST", headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({ workspace_id: state.active, target: "src/test.py" }),
+            });
+            return;
+          case "cockpit":         close(); toggleCockpitOverlay(); return;
+          case "moodpicker":      close(); setTimeout(() => openMoodPicker(), 100); return;
+          case "workshop":        close(); location.hash = "#/workshop"; return;
+          case "search":          close(); location.hash = "#/search"; return;
+          case "catalog":         close(); location.hash = "#/catalog"; return;
+          default:                advance(); return;
+        }
+      };
 
-  // The CTA button runs the page's specific action. On the last page the
-  // CTA explicitly closes the guide ("Done — start using ONEXUS").
-  const runCTA = () => {
-    if (isLastPage) { close(); return; }
-    const action = p.cta?.action;
-    switch (action) {
-      case "switcher":        close(); renderSwitcher(); return;
-      case "compose":         close(); document.getElementById("nx-composer-input")?.focus(); return;
-      case "seed-permission":
-        fetch("/api/permissions/seed", {
-          method: "POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ workspace_id: state.active, target: "src/test.py" }),
+      document.getElementById("nx-g-close").addEventListener("click", close);
+      document.getElementById("nx-g-prev").addEventListener("click", () => pageIndex > 0 && renderGuide(pageIndex - 1));
+      document.getElementById("nx-g-next")?.addEventListener("click", runCTA);
+      document.getElementById("nx-g-advance")?.addEventListener("click", advance);
+
+      if (isLastPage) {
+        const overlay = document.getElementById("nx-guide-overlay");
+        overlay.addEventListener("click", (e) => {
+          const t = e.target;
+          const isInteractive = t.closest("button, a, .nx-g-dot");
+          if (!isInteractive) close();
         });
-        // Don't close — show the user the result on the same page
-        return;
-      case "cockpit":         close(); toggleCockpitOverlay(); return;
-      case "moodpicker":      close(); setTimeout(() => openMoodPicker(), 100); return;
-      case "workshop":        close(); location.hash = "#/workshop"; return;
-      case "search":          close(); location.hash = "#/search"; return;
-      case "catalog":         close(); location.hash = "#/catalog"; return;
-      default:                advance(); return;
+      }
+      root.querySelectorAll(".nx-g-dot[data-i]").forEach(dot => {
+        dot.addEventListener("click", () => renderGuide(Number(dot.dataset.i)));
+      });
+      const overlayEl = document.getElementById("nx-guide-overlay");
+      const onKey = (e) => {
+        if (!document.body.contains(overlayEl)) {
+          window.removeEventListener("keydown", onKey);
+          return;
+        }
+        if (e.key === "Escape") { close(); }
+        else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); advance(); }
+        else if (e.key === "ArrowLeft")  { if (pageIndex > 0) renderGuide(pageIndex - 1); }
+        else if (e.key >= "1" && e.key <= "9") {
+          const i = Number(e.key) - 1;
+          if (i < total) renderGuide(i);
+        }
+        else if (e.key === "0") { if (total > 9) renderGuide(9); }
+      };
+      window.addEventListener("keydown", onKey, { once: false });
+      const observer = new MutationObserver(() => {
+        if (!document.body.contains(overlayEl)) {
+          window.removeEventListener("keydown", onKey);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
     }
-  };
-
-  document.getElementById("nx-g-close").addEventListener("click", close);
-  document.getElementById("nx-g-prev").addEventListener("click", () => pageIndex > 0 && renderGuide(pageIndex - 1));
-  document.getElementById("nx-g-next")?.addEventListener("click", runCTA);
-  document.getElementById("nx-g-advance")?.addEventListener("click", advance);
-
-  // On the LAST page, clicking anywhere outside an interactive element
-  // closes the guide — gives users a clear "I'm done" affordance.
-  if (isLastPage) {
-    const overlay = document.getElementById("nx-guide-overlay");
-    overlay.addEventListener("click", (e) => {
-      // Only close on direct clicks on the overlay backdrop OR on inert
-      // text content (stage, body) — never on buttons/dots/links.
-      const t = e.target;
-      const isInteractive = t.closest("button, a, .nx-g-dot");
-      if (!isInteractive) close();
-    });
-  }
-  root.querySelectorAll(".nx-g-dot[data-i]").forEach(dot => {
-    dot.addEventListener("click", () => renderGuide(Number(dot.dataset.i)));
-  });
-  const onKey = (e) => {
-    if (e.key === "Escape") { close(); window.removeEventListener("keydown", onKey); }
-    else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); advance(); }
-    else if (e.key === "ArrowLeft")  { if (pageIndex > 0) renderGuide(pageIndex - 1); }
-    else if (e.key >= "1" && e.key <= "9") {
-      const i = Number(e.key) - 1;
-      if (i < total) renderGuide(i);
-    }
-    else if (e.key === "0") { if (total > 9) renderGuide(9); }   // 0 → page 10
-  };
-  window.addEventListener("keydown", onKey, { once: false });
-  // Cleanup the keydown listener when the overlay is replaced
-  const overlayEl = document.getElementById("nx-guide-overlay");
-  const observer = new MutationObserver(() => {
-    if (!document.body.contains(overlayEl)) {
-      window.removeEventListener("keydown", onKey);
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  );
 }
 
 // ── History helpers (workshop + search) ──────────────────────────────────
