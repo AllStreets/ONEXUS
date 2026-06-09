@@ -1757,7 +1757,7 @@ function openMoodPicker() {
       <span class="nx-mp-auto-icon">∞</span>
       <span class="nx-mp-auto-text">
         <span class="nx-mp-auto-name">Auto · follow the kernel</span>
-        <span class="nx-mp-auto-note">${escapeHtml(`now sensing ${state.mood.kernelMood || "calm_focus"}`)}</span>
+        <span class="nx-mp-auto-note">currently sensing ${escapeHtml((state.mood.kernelMood || "calm_focus").replace(/_/g, " "))}</span>
       </span>
     </button>
     <div class="nx-mp-grid">
@@ -1838,7 +1838,7 @@ function openMoodPicker() {
 // ── Guide (multi-page walkthrough) ────────────────────────────────────────
 const GUIDE_PAGES = [
   {
-    eyebrow: "PAGE 1 / 12",
+    eyebrow: "PAGE 1 / 13",
     chapter: "WELCOME",
     title: "An operating system for agents.",
     body: "ONEXUS runs agents the way iOS runs apps — workspaces with their own memory, agents with their own trust, and every tool call gated by Aegis. This guide walks every surface in eight minutes. Use ← → to flip pages, click any dot to jump, press Esc to leave.",
@@ -1851,7 +1851,7 @@ const GUIDE_PAGES = [
     cta: { label: "Continue →", action: null },
   },
   {
-    eyebrow: "PAGE 2 / 12",
+    eyebrow: "PAGE 2 / 13",
     chapter: "WORKSPACES",
     title: "Each workspace is its own room.",
     body: "Rooms have their own agents, memory, grants, and home tone. Switch between them with ⌘K. Create new ones with ⌘N. Delete by hovering the row and clicking the neon-red trash icon. Each room stays private to itself — what's remembered here doesn't leak there.",
@@ -1865,7 +1865,7 @@ const GUIDE_PAGES = [
     cta: { label: "Try it · ⌘K", action: "switcher" },
   },
   {
-    eyebrow: "PAGE 3 / 12",
+    eyebrow: "PAGE 3 / 13",
     chapter: "CONVERSATION",
     title: "Talk to a room of agents at once.",
     body: "Send a message and Cortex routes it to whoever is best placed to answer. @ mention an agent (@oracle, @council) to call them directly. Press ⌘⏎ to send. The composer stays pinned at the bottom; the thread scrolls above it.",
@@ -1878,7 +1878,7 @@ const GUIDE_PAGES = [
     cta: { label: "Try it · type to a room", action: "compose" },
   },
   {
-    eyebrow: "PAGE 4 / 12",
+    eyebrow: "PAGE 4 / 13",
     chapter: "FILES",
     title: "Drag, drop, attach.",
     body: "Drop any file anywhere on the conversation surface to attach it. The blue glow overlay confirms drop. Files are stored in <code>.onexus/uploads/</code> under the workspace root, hashed for dedup, registered with Engram so the agent can recall them, and logged to Chronicle. The composer's + button does the same with a file picker.",
@@ -1891,7 +1891,7 @@ const GUIDE_PAGES = [
     cta: { label: "Done", action: null },
   },
   {
-    eyebrow: "PAGE 5 / 12",
+    eyebrow: "PAGE 5 / 13",
     chapter: "SAFETY MODEL",
     title: "Every sensitive call asks first.",
     body: "Aegis classifies every capability — routine / notable / sensitive / privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always for this workspace, or deny. The cockpit log keeps a record of every decision with a colored class dot.",
@@ -1904,7 +1904,7 @@ const GUIDE_PAGES = [
     cta: { label: "See it in action", action: "seed-permission" },
   },
   {
-    eyebrow: "PAGE 6 / 12",
+    eyebrow: "PAGE 6 / 13",
     chapter: "TRUST",
     title: "Trust is earned, asymmetrically.",
     body: "Click the thumb-up or thumb-down icon under any agent message to mark it useful or wrong. Useful = +0.12 to that agent's Aegis trust. Wrong = −0.22. Above 0.75 the agent auto-grants its Notable capabilities. Below 0.50, every grant collapses instantly. The cockpit's trust meter shows the rolling 60-minute delta.",
@@ -1917,7 +1917,7 @@ const GUIDE_PAGES = [
     cta: { label: "Done", action: null },
   },
   {
-    eyebrow: "PAGE 7 / 12",
+    eyebrow: "PAGE 7 / 13",
     chapter: "COCKPIT",
     title: "Watch what the kernel sees.",
     body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Toggle it with the chrome icon (top-right). Press ⌘` for the expanded six-panel cockpit. Every panel auto-refreshes as the kernel runs.",
@@ -1932,7 +1932,20 @@ const GUIDE_PAGES = [
     cta: { label: "Open the expanded cockpit · ⌘`", action: "cockpit" },
   },
   {
-    eyebrow: "PAGE 8 / 12",
+    eyebrow: "PAGE 8 / 13",
+    chapter: "MOOD · ATMOSPHERE",
+    title: "The shell shifts color with what's happening.",
+    body: "Click the mood pill (top-right of the title bar) to open a color switcher. Pick any of the 8 atmospheres — Calm focus, Deep flow, Routing, Deliberating, Creative, Reflective, Watchful, Alert — and the <em>whole shell</em> crossfades: ambient mesh, workspace pills, composer focus ring, buttons, capability sheet edge, all of it. Press <code>Auto · follow the kernel</code> at the top to release back to automatic, which picks based on CPU load, engram activity, time of day, and trust events.",
+    shot: "/aurora/static/guide/10-mood-picker.png",
+    callouts: [
+      { x: 85, y: 5,  label: "1", note: "The mood pill — click to open the switcher." },
+      { x: 80, y: 25, label: "2", note: "Auto · follow the kernel — releases manual override." },
+      { x: 80, y: 60, label: "3", note: "8 swatches — pick one to override the whole atmosphere." },
+    ],
+    cta: { label: "Try it · pick a mood", action: "moodpicker" },
+  },
+  {
+    eyebrow: "PAGE 9 / 13",
     chapter: "AGENTS",
     title: "Ten built-in. Click any disc.",
     body: "Council deliberates. Specter red-teams. Oracle reads. Legacy remembers. Wraith forgets. Sentry watches. Autonomic automates. Echo mirrors. Consciousness regulates mood. Agents-dispatcher routes to installed third-parties. Click any disc to see its declared capabilities + trust floor + network reach.",
@@ -1945,7 +1958,7 @@ const GUIDE_PAGES = [
     cta: { label: "Done", action: null },
   },
   {
-    eyebrow: "PAGE 9 / 12",
+    eyebrow: "PAGE 10 / 13",
     chapter: "WORKSHOP",
     title: "Code + sandbox — without leaving.",
     body: "Open the Workshop from the sidebar (or press ⌘E). Pick a runtime: Python, JavaScript, or shell. Hit Run (or ⌘⏎). Code executes in a subprocess sandbox with a stripped env, an 8-second timeout, and captured stdout/stderr. Every run lands in Chronicle.",
@@ -1958,7 +1971,7 @@ const GUIDE_PAGES = [
     cta: { label: "Open Workshop · ⌘E", action: "workshop" },
   },
   {
-    eyebrow: "PAGE 10 / 12",
+    eyebrow: "PAGE 11 / 13",
     chapter: "WEB SEARCH",
     title: "Search the web — without leaving.",
     body: "Press ⌘/ to open Search. Queries route through aegis.network() to DuckDuckGo's instant-answer API by default — no tracking. Set NEXUS_BRAVE_KEY for organic results via Brave Search. Wikipedia is always a fallback so you never see an empty page.",
@@ -1970,7 +1983,7 @@ const GUIDE_PAGES = [
     cta: { label: "Open Search · ⌘/", action: "search" },
   },
   {
-    eyebrow: "PAGE 11 / 12",
+    eyebrow: "PAGE 12 / 13",
     chapter: "CATALOG",
     title: "6,745 agents · 571 runnable.",
     body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar (or press ⌘? — not yet). Filter by runnable-only to see the 571 with MCP adapters that you can launch with one click. Each card links to its source repo.",
@@ -1982,7 +1995,7 @@ const GUIDE_PAGES = [
     cta: { label: "Browse catalog →", action: "catalog" },
   },
   {
-    eyebrow: "PAGE 12 / 12",
+    eyebrow: "PAGE 13 / 13",
     chapter: "KEYBOARD",
     title: "Shortcuts you'll use every day.",
     body: "Master these and you barely touch the mouse.",
@@ -2088,6 +2101,7 @@ function renderGuide(pageIndex) {
         case "compose":         close(); document.getElementById("nx-composer-input")?.focus(); return;
         case "seed-permission": fetch("/api/permissions/seed", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ workspace_id: state.active, target: "src/test.py" }) }); close(); return;
         case "cockpit":         close(); toggleCockpitOverlay(); return;
+        case "moodpicker":      close(); setTimeout(() => openMoodPicker(), 100); return;
         case "workshop":        close(); location.hash = "#/workshop"; return;
         case "search":          close(); location.hash = "#/search"; return;
         case "catalog":         close(); location.hash = "#/catalog"; return;
