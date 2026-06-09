@@ -286,6 +286,24 @@ def dashboard(host, port):
 
 
 @main.group()
+def briefing():
+    """Daily kernel briefings — autonomous reports of where ONEXUS stands."""
+    pass
+
+
+@briefing.command("daily")
+@click.option("--dry", is_flag=True, help="Print to stdout without writing the file")
+def briefing_daily(dry):
+    """Render today's kernel briefing and write it to reports/YYYY-MM-DD.md."""
+    from nexus.briefings.daily import render_briefing, write_briefing
+    if dry:
+        click.echo(render_briefing(), nl=False)
+        return
+    path = write_briefing()
+    click.echo(f"wrote {path}")
+
+
+@main.group()
 def workflow():
     """Manage and run workflow pipelines."""
     pass

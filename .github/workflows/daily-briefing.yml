@@ -1,0 +1,84 @@
+name: Daily kernel briefing
+
+# Runs at 13:00 UTC every day — the same window AllStreets/ONEXUS-Agents
+# uses for its nightly catalog report. Commits today's briefing to
+# reports/YYYY-MM-DD.md on a bot branch and opens an auto-merge PR.
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install ONEXUS
+        run: |
+          pip install --upgrade pip
+          pip install -e . || pip install fastapi click uvicorn pydantic httpx websockets
+
+      - name: Render today's briefing
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          mkdir -p reports
+          # The kernel DB doesn't exist in CI — the briefing falls back to
+          # safe defaults (zero events / empty trust history) and just
+          # reports catalog totals if the catalog is checked out as a
+          # sibling. We checkout the catalog repo to give it real data.
+          if [ ! -d ../ONEXUS-Agents ]; then
+            git clone --depth 1 https://github.com/AllStreets/ONEXUS-Agents.git ../ONEXUS-Agents || true
+          fi
+          python -m nexus.briefings.daily
+          echo "::notice::Wrote reports/${DATE}.md"
+
+      - name: Commit + push briefing
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          if [ ! -s "reports/${DATE}.md" ]; then
+            echo "No briefing generated; nothing to commit."
+            exit 0
+          fi
+          git config user.name "onexus-bot"
+          git config user.email "bot@allstreets.dev"
+          BRANCH="bot/briefing-${DATE}"
+          git checkout -B "$BRANCH"
+          git add "reports/${DATE}.md"
+          if git diff --cached --quiet; then
+            echo "Briefing unchanged since last run; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(briefing): kernel briefing for ${DATE}"
+          git push -u origin "$BRANCH" --force
+
+      - name: Open / update PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          BRANCH="bot/briefing-${DATE}"
+          # If a PR for this branch is already open, gh will reuse it.
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(briefing): kernel briefing for ${DATE}" \
+            --body "Auto-generated daily briefing for ${DATE}. Renders kernel state, chronicle activity, trust shifts, and permission events." \
+            --label automation \
+            2>/dev/null || true
+          gh pr merge "$BRANCH" --auto --squash 2>/dev/null || true
