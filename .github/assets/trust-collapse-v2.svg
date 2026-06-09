@@ -2,12 +2,14 @@
   <title>Trust collapse</title>
 
   <defs>
-    <!-- Trust gradient: green high → amber mid → crimson low -->
+    <!-- Trust gradient: 0.00 (left) = crimson collapse, 1.00 (right) = green
+         autonomous. Matches the rest of the diagram — the < 0.50 collapse
+         callout sits on the left, the ≥ 0.75 auto-allow callout on the right. -->
     <linearGradient id="trust-meter" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#9affb6"/>
-      <stop offset="40%"  stop-color="#f8c460"/>
-      <stop offset="55%"  stop-color="#ff8868"/>
-      <stop offset="100%" stop-color="#ff5050"/>
+      <stop offset="0%"   stop-color="#ff5050"/>
+      <stop offset="45%"  stop-color="#ff8868"/>
+      <stop offset="60%"  stop-color="#f8c460"/>
+      <stop offset="100%" stop-color="#9affb6"/>
     </linearGradient>
 
     <linearGradient id="alert-glow" x1="0%" y1="0%" x2="100%" y2="0%">
