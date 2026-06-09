@@ -156,13 +156,31 @@ function renderTour(index) {
   root.querySelectorAll(".nx-tour-dot").forEach(dot => {
     dot.addEventListener("click", () => renderTour(Number(dot.dataset.i)));
   });
-  // Esc closes
+  // Keyboard: Esc closes, ←/→ navigate. The listener is bound to window so
+  // it works regardless of focus, but we must tear it down when the tour
+  // DOM goes away (user clicks Begin/Skip, or another overlay replaces it)
+  // — otherwise a later arrow-key press would re-render the tour ON TOP
+  // of whatever overlay is now showing (e.g. the help guide).
+  const overlayEl = document.getElementById("nx-tour-overlay");
   const onKey = (e) => {
-    if (e.key === "Escape") { close(); window.removeEventListener("keydown", onKey); }
-    if (e.key === "ArrowRight") { if (index < total - 1) renderTour(index + 1); }
-    if (e.key === "ArrowLeft")  { if (index > 0) renderTour(index - 1); }
+    // Self-guard: if our overlay is gone, this listener is a leftover —
+    // remove it and do nothing.
+    if (!document.body.contains(overlayEl)) {
+      window.removeEventListener("keydown", onKey);
+      return;
+    }
+    if (e.key === "Escape") { close(); }
+    else if (e.key === "ArrowRight") { if (index < total - 1) renderTour(index + 1); }
+    else if (e.key === "ArrowLeft")  { if (index > 0) renderTour(index - 1); }
   };
   window.addEventListener("keydown", onKey, { once: false });
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(overlayEl)) {
+      window.removeEventListener("keydown", onKey);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 // Tour scenes — each returns SVG with boomerang (alternate-infinite) motion.
