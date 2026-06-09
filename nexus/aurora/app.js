@@ -1727,21 +1727,21 @@ const MOOD_OPTIONS = [
   { key: "calm_focus",    name: "calm focus",    note: "violet · default · low load, eyes-down work" },
   { key: "deep_flow",     name: "deep flow",     note: "jewel green · long uninterrupted stretches" },
   { key: "routing",       name: "routing",       note: "magenta + cyan · cortex dispatching, lots of small tasks" },
-  { key: "deliberating",  name: "deliberating",  note: "amber + bronze · multi-round council weighing options" },
-  { key: "creative",      name: "creative",      note: "coral + tangerine · open-ended generation, low risk" },
+  { key: "deliberating",  name: "deliberating",  note: "amber + teal + magenta · council weighing options" },
+  { key: "creative",      name: "creative",      note: "vivid navy · open-ended generation, deep ideation" },
   { key: "reflective",    name: "reflective",    note: "plum + rose · review, summarise, look back" },
-  { key: "watchful",      name: "watchful",      note: "brass + olive · sentry on, pending alerts" },
+  { key: "watchful",      name: "watchful",      note: "teal + ember + violet · sentry on, scanning" },
   { key: "alert",         name: "alert",         note: "crimson · trust collapse, denied call, override" },
 ];
 
 function openMoodPicker() {
-  // Close existing
   const existing = document.getElementById("nx-mood-picker");
   if (existing) { existing.remove(); return; }
 
   const pill = document.getElementById("nx-mood-pill");
   const rect = pill.getBoundingClientRect();
   const current = state.mood.mood || "calm_focus";
+  const isAuto = !state.mood.override;
 
   const pop = document.createElement("div");
   pop.id = "nx-mood-picker";
@@ -1750,12 +1750,19 @@ function openMoodPicker() {
   pop.style.right = (window.innerWidth - rect.right) + "px";
   pop.innerHTML = `
     <div class="nx-mp-head">
-      <div class="nx-mp-eyebrow">CHOOSE MOOD</div>
-      <div class="nx-mp-hint">drives the whole shell · the kernel will keep updating automatically</div>
+      <div class="nx-mp-eyebrow">CHOOSE MOOD ${state.mood.override ? `· <span style="color:var(--nx-mood-primary)">OVERRIDE</span>` : `· AUTO`}</div>
+      <div class="nx-mp-hint">drives the whole shell · the kernel sees ${escapeHtml(state.mood.kernelMood || state.mood.mood || "calm_focus")} right now</div>
     </div>
+    <button class="nx-mp-auto ${isAuto ? "active" : ""}" data-action="auto">
+      <span class="nx-mp-auto-icon">∞</span>
+      <span class="nx-mp-auto-text">
+        <span class="nx-mp-auto-name">Auto · follow the kernel</span>
+        <span class="nx-mp-auto-note">${escapeHtml(`now sensing ${state.mood.kernelMood || "calm_focus"}`)}</span>
+      </span>
+    </button>
     <div class="nx-mp-grid">
       ${MOOD_OPTIONS.map(m => `
-        <button class="nx-mp-cell ${m.key === current ? "active" : ""}" data-mood="${m.key}" title="${escapeHtml(m.note)}">
+        <button class="nx-mp-cell ${m.key === current && !isAuto ? "active" : ""}" data-mood="${m.key}" title="${escapeHtml(m.note)}">
           <span class="nx-mp-swatch nx-mood-preview-${m.key.replace(/_/g, "-")}"></span>
           <span class="nx-mp-name">${escapeHtml(m.name)}</span>
           <span class="nx-mp-note">${escapeHtml(m.note)}</span>
@@ -1763,21 +1770,37 @@ function openMoodPicker() {
       `).join("")}
     </div>
     <div class="nx-mp-foot">
-      Auto mode follows kernel state. Pick one to override; the kernel will resume picking on the next observation.
+      A manual pick stays until you press Auto. The kernel keeps observing in the background.
     </div>
   `;
   document.body.appendChild(pop);
 
+  const refreshActive = () => {
+    pop.querySelectorAll(".nx-mp-cell").forEach(c => c.classList.toggle("active", !state.mood.override ? false : c.dataset.mood === state.mood.mood));
+    pop.querySelector(".nx-mp-auto").classList.toggle("active", !state.mood.override);
+    const eyebrow = pop.querySelector(".nx-mp-eyebrow");
+    if (eyebrow) eyebrow.innerHTML = `CHOOSE MOOD ${state.mood.override ? `· <span style="color:var(--nx-mood-primary)">OVERRIDE</span>` : `· AUTO`}`;
+  };
+
+  // Auto button → clear override, snap back to kernel mood
+  pop.querySelector(".nx-mp-auto").addEventListener("click", () => {
+    state.mood.override = null;
+    if (state.mood.kernelMood) {
+      state.mood.mood = state.mood.kernelMood;
+      applyMood(state.mood.kernelMood);
+    }
+    refreshActive();
+    renderMoodCard();
+  });
+
   pop.querySelectorAll(".nx-mp-cell[data-mood]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const mood = btn.dataset.mood;
-      applyMood(mood);
+      state.mood.override = mood;   // <-- key fix: WS no longer overrides
       state.mood.mood = mood;
-      // Persist the override server-side so future renders see it
+      applyMood(mood);
+      // Best-effort: nudge the engine so a future Auto-mode sees aligned signals
       try {
-        // Use observe with a synthetic signal that maps to this mood — fall
-        // back to setting trust_sliding which biases the engine. The engine
-        // is the source of truth; we just suggest a direction.
         const map = {
           calm_focus:    { kernel_cpu: 0.2, engram_busy_ratio: 0.2 },
           deep_flow:     { kernel_cpu: 0.5, engram_busy_ratio: 0.7 },
@@ -1793,10 +1816,7 @@ function openMoodPicker() {
           body: JSON.stringify(map[mood] || {}),
         });
       } catch {}
-      // Update active state in the popover
-      pop.querySelectorAll(".nx-mp-cell").forEach(c => c.classList.remove("active"));
-      btn.classList.add("active");
-      // Re-render any mood-aware cockpit pieces
+      refreshActive();
       renderMoodCard();
     });
   });
@@ -2480,15 +2500,20 @@ window.addEventListener("hashchange", () => route(location.hash));
 // ── Streams ───────────────────────────────────────────────────────────────
 function subscribeStreams() {
   const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
-  // Mood
+  // Mood — but skip the auto-apply while a manual override is active so a
+  // deliberate pick doesn't get stomped 2s later by the next WS push.
   try {
     const w = new WebSocket(`${wsProto}//${location.host}/api/mood/ws`);
     w.onmessage = (e) => {
       try {
         const body = JSON.parse(e.data);
-        state.mood.mood = body.mood;
+        // Always refresh the "current kernel mood" reason for the cockpit card
+        state.mood.kernelMood = body.mood;
         state.mood.reason = body.reason || "";
-        applyMood(body.mood);
+        if (!state.mood.override) {
+          state.mood.mood = body.mood;
+          applyMood(body.mood);
+        }
         renderMoodCard();
       } catch {}
     };

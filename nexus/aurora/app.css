@@ -1630,15 +1630,27 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   line-height: 1.4;
 }
 
-/* swatch previews — match the mood palettes from mood.css */
-.nx-mood-preview-calm-focus    { background: radial-gradient(circle at 35% 30%, #c8a8ff, #5a4ac4); }
-.nx-mood-preview-deep-flow     { background: radial-gradient(circle at 35% 30%, #6fe6c0, #1c6e5a); }
-.nx-mood-preview-routing       { background: radial-gradient(circle at 30% 30%, #56d6ff, #c83c8c); }
-.nx-mood-preview-deliberating  { background: radial-gradient(circle at 35% 30%, #ffd680, #844820); }
-.nx-mood-preview-creative      { background: radial-gradient(circle at 35% 30%, #ff8aa8, #c84830); }
-.nx-mood-preview-reflective    { background: radial-gradient(circle at 35% 30%, #c89cd8, #50245c); }
-.nx-mood-preview-watchful      { background: radial-gradient(circle at 35% 30%, #d4b860, #4c586c); }
-.nx-mood-preview-alert         { background: radial-gradient(circle at 35% 30%, #ff7474, #8c1c24); }
+/* swatch previews — match the new mood palettes (v2). Multi-tone moods
+ * use a richer 3-stop gradient so they read as "more than one color." */
+.nx-mood-preview-calm-focus    { background: radial-gradient(circle at 35% 30%, #d2b4ff 0%, #8c70d8 55%, #5a4ac4 100%); }
+.nx-mood-preview-deep-flow     { background: radial-gradient(circle at 35% 30%, #80ecc8 0%, #38a888 55%, #1c6e5a 100%); }
+.nx-mood-preview-routing       { background:
+  radial-gradient(circle at 30% 28%, #ec5cd8 0%, transparent 60%),
+  radial-gradient(circle at 70% 72%, #40dcfc 0%, transparent 60%),
+  linear-gradient(135deg, #c83c8c, #6044c8); }
+.nx-mood-preview-deliberating  { background:
+  radial-gradient(circle at 28% 28%, #ffc080 0%, transparent 60%),
+  radial-gradient(circle at 72% 30%, #50c4bc 0%, transparent 60%),
+  radial-gradient(circle at 50% 78%, #d058a0 0%, transparent 60%),
+  linear-gradient(135deg, #844820, #1c4a48); }
+.nx-mood-preview-creative      { background: radial-gradient(circle at 32% 28%, #9cc4ff 0%, #5a8cf0 50%, #2848c4 100%); }
+.nx-mood-preview-reflective    { background: radial-gradient(circle at 35% 30%, #e0c0ec 0%, #a070b8 55%, #50245c 100%); }
+.nx-mood-preview-watchful      { background:
+  radial-gradient(circle at 30% 28%, #5cd4c0 0%, transparent 60%),
+  radial-gradient(circle at 70% 30%, #f4985c 0%, transparent 60%),
+  radial-gradient(circle at 50% 78%, #8c5cd0 0%, transparent 60%),
+  linear-gradient(135deg, #1c5854, #2a2438); }
+.nx-mood-preview-alert         { background: radial-gradient(circle at 35% 30%, #ff9090 0%, #d04848 50%, #8c1c24 100%); }
 
 /* ── Multi-page guide ───────────────────────────────────────────────────── */
 .nx-guide-overlay {

@@ -52,98 +52,105 @@
 /* ── 8 mood palettes ────────────────────────────────────────────────────── */
 
 /* — calm focus — base — indigo / violet / amber */
+/* All primaries bumped +5% brightness from v1. Creative is now a vivid
+ * navy blue (was coral, too close to alert's crimson). Watchful +
+ * Deliberating are now multicolored (cool/warm contrast) instead of
+ * single-tone amber/brass — they used to read as the same mood. */
+
 .nx-mood-calm-focus {
-  --nx-mood-bg: #06040c;
-  --nx-mood-primary: #a87af5;
-  --nx-mood-mesh-1: rgba(120, 96, 200, 0.55);
-  --nx-mood-mesh-2: rgba(255, 178, 110, 0.20);
-  --nx-mood-mesh-3: rgba( 76,  92, 168, 0.42);
-  --nx-mood-mesh-4: rgba(168, 124, 232, 0.18);
-  --nx-mood-glow:   rgba(168, 122, 245, 0.55);
+  --nx-mood-bg: #08051a;
+  --nx-mood-primary: #b48bff;
+  --nx-mood-mesh-1: rgba(140, 112, 224, 0.62);
+  --nx-mood-mesh-2: rgba(255, 196, 132, 0.24);
+  --nx-mood-mesh-3: rgba( 96, 116, 200, 0.50);
+  --nx-mood-mesh-4: rgba(184, 140, 250, 0.22);
+  --nx-mood-glow:   rgba(180, 138, 250, 0.62);
   --nx-mood-drift:  24s;
 }
 
-/* — deep flow — jewel green / oceanic */
+/* — deep flow — jewel green / oceanic — brighter */
 .nx-mood-deep-flow {
-  --nx-mood-bg: #02080a;
-  --nx-mood-primary: #4ad4a8;
-  --nx-mood-mesh-1: rgba(28, 110,  90, 0.55);
-  --nx-mood-mesh-2: rgba(56, 152, 124, 0.40);
-  --nx-mood-mesh-3: rgba(16,  60,  70, 0.55);
-  --nx-mood-mesh-4: rgba(220, 184,  96, 0.16);
-  --nx-mood-glow:   rgba( 74, 212, 168, 0.55);
+  --nx-mood-bg: #021412;
+  --nx-mood-primary: #5ce0b4;
+  --nx-mood-mesh-1: rgba( 40, 152, 124, 0.62);
+  --nx-mood-mesh-2: rgba( 80, 184, 152, 0.48);
+  --nx-mood-mesh-3: rgba( 28,  92, 104, 0.62);
+  --nx-mood-mesh-4: rgba(240, 200, 116, 0.20);
+  --nx-mood-glow:   rgba( 92, 224, 180, 0.62);
   --nx-mood-drift:  38s;
 }
 
-/* — routing — electric magenta / cyan */
+/* — routing — electric magenta + cyan + indigo — brighter */
 .nx-mood-routing {
-  --nx-mood-bg: #050310;
-  --nx-mood-primary: #56d6ff;
-  --nx-mood-mesh-1: rgba(220,  60, 200, 0.55);
-  --nx-mood-mesh-2: rgba( 40, 200, 240, 0.50);
-  --nx-mood-mesh-3: rgba( 80,  50, 180, 0.55);
-  --nx-mood-mesh-4: rgba(110, 196, 240, 0.30);
-  --nx-mood-glow:   rgba( 86, 214, 255, 0.55);
+  --nx-mood-bg: #060418;
+  --nx-mood-primary: #6fdeff;
+  --nx-mood-mesh-1: rgba(236,  92, 216, 0.62);
+  --nx-mood-mesh-2: rgba( 64, 220, 252, 0.58);
+  --nx-mood-mesh-3: rgba( 96,  68, 200, 0.62);
+  --nx-mood-mesh-4: rgba(140, 220, 252, 0.34);
+  --nx-mood-glow:   rgba(111, 222, 255, 0.65);
   --nx-mood-drift:  14s;
 }
 
-/* — deliberating — amber / bronze / burgundy */
+/* — deliberating — multicolored: amber + teal + magenta (warm + cool
+ *   clash, like a panel weighing options). No longer single-tone amber. */
 .nx-mood-deliberating {
-  --nx-mood-bg: #0c0604;
-  --nx-mood-primary: #ffb86c;
-  --nx-mood-mesh-1: rgba(232, 168,  76, 0.60);
-  --nx-mood-mesh-2: rgba(184, 108,  52, 0.50);
-  --nx-mood-mesh-3: rgba(112,  40,  56, 0.45);
-  --nx-mood-mesh-4: rgba(240, 220, 168, 0.20);
-  --nx-mood-glow:   rgba(255, 184, 108, 0.55);
-  --nx-mood-drift:  30s;
+  --nx-mood-bg: #100804;
+  --nx-mood-primary: #ffc080;
+  --nx-mood-mesh-1: rgba(252, 184, 100, 0.65);
+  --nx-mood-mesh-2: rgba( 80, 196, 188, 0.50);
+  --nx-mood-mesh-3: rgba(208,  88, 160, 0.50);
+  --nx-mood-mesh-4: rgba(252, 224, 168, 0.24);
+  --nx-mood-glow:   rgba(255, 192, 132, 0.62);
+  --nx-mood-drift:  26s;
 }
 
-/* — creative — hot coral / tangerine / magenta / teal */
+/* — creative — VIVID NAVY BLUE (was coral; too close to alert) */
 .nx-mood-creative {
-  --nx-mood-bg: #0c0408;
-  --nx-mood-primary: #ff6e9c;
-  --nx-mood-mesh-1: rgba(248,  96, 120, 0.58);
-  --nx-mood-mesh-2: rgba(248, 140,  60, 0.48);
-  --nx-mood-mesh-3: rgba(216,  72, 168, 0.46);
-  --nx-mood-mesh-4: rgba( 56, 168, 184, 0.26);
-  --nx-mood-glow:   rgba(255, 110, 156, 0.55);
-  --nx-mood-drift:  20s;
+  --nx-mood-bg: #04081c;
+  --nx-mood-primary: #6fa0ff;
+  --nx-mood-mesh-1: rgba( 88, 124, 244, 0.65);
+  --nx-mood-mesh-2: rgba(100, 172, 252, 0.52);
+  --nx-mood-mesh-3: rgba( 48,  76, 196, 0.62);
+  --nx-mood-mesh-4: rgba(168, 140, 248, 0.30);
+  --nx-mood-glow:   rgba(111, 160, 255, 0.65);
+  --nx-mood-drift:  22s;
 }
 
-/* — reflective — near-monochrome plum + rose ember */
+/* — reflective — plum + rose ember — brighter */
 .nx-mood-reflective {
-  --nx-mood-bg: #050408;
-  --nx-mood-primary: #c89cd8;
-  --nx-mood-mesh-1: rgba( 80,  36,  92, 0.72);
-  --nx-mood-mesh-2: rgba( 48,  28,  76, 0.55);
-  --nx-mood-mesh-3: rgba(220, 144, 168, 0.18);
-  --nx-mood-mesh-4: rgba(100,  60, 120, 0.32);
-  --nx-mood-glow:   rgba(200, 156, 216, 0.55);
+  --nx-mood-bg: #0a0612;
+  --nx-mood-primary: #d4a8e4;
+  --nx-mood-mesh-1: rgba(112,  56, 132, 0.78);
+  --nx-mood-mesh-2: rgba( 68,  44, 108, 0.60);
+  --nx-mood-mesh-3: rgba(236, 168, 188, 0.22);
+  --nx-mood-mesh-4: rgba(132,  84, 156, 0.38);
+  --nx-mood-glow:   rgba(212, 168, 228, 0.62);
   --nx-mood-drift:  42s;
 }
 
-/* — watchful — brass / olive / slate / ember */
+/* — watchful — multicolored: teal + ember + violet (sentinel scanning
+ *   across cool/warm/deep). No longer brass-only. */
 .nx-mood-watchful {
-  --nx-mood-bg: #080808;
-  --nx-mood-primary: #d4b860;
-  --nx-mood-mesh-1: rgba(184, 152,  64, 0.50);
-  --nx-mood-mesh-2: rgba(116, 128,  60, 0.45);
-  --nx-mood-mesh-3: rgba(220, 130,  56, 0.40);
-  --nx-mood-mesh-4: rgba( 76,  88, 108, 0.45);
-  --nx-mood-glow:   rgba(212, 184,  96, 0.55);
-  --nx-mood-drift:  12s;
+  --nx-mood-bg: #050c0e;
+  --nx-mood-primary: #5cd4c0;
+  --nx-mood-mesh-1: rgba( 80, 212, 196, 0.58);
+  --nx-mood-mesh-2: rgba(244, 156,  92, 0.50);
+  --nx-mood-mesh-3: rgba(132,  92, 208, 0.50);
+  --nx-mood-mesh-4: rgba( 96, 116, 144, 0.42);
+  --nx-mood-glow:   rgba( 92, 212, 192, 0.65);
+  --nx-mood-drift:  16s;
 }
 
-/* — alert — crimson / blood-orange — overrides workspace tone */
+/* — alert — crimson / blood-orange — brighter */
 .nx-mood-alert {
-  --nx-mood-bg: #060103;
-  --nx-mood-primary: #ff6464;
-  --nx-mood-mesh-1: rgba(140,  28,  36, 0.72);
-  --nx-mood-mesh-2: rgba(248, 100,  88, 0.50);
-  --nx-mood-mesh-3: rgba( 40,   8,  12, 0.65);
-  --nx-mood-mesh-4: rgba(248,  72,  72, 0.40);
-  --nx-mood-glow:   rgba(255, 100, 100, 0.60);
+  --nx-mood-bg: #0c0306;
+  --nx-mood-primary: #ff7878;
+  --nx-mood-mesh-1: rgba(168,  44,  56, 0.78);
+  --nx-mood-mesh-2: rgba(252, 116, 100, 0.58);
+  --nx-mood-mesh-3: rgba( 52,  16,  24, 0.70);
+  --nx-mood-mesh-4: rgba(252,  92,  92, 0.46);
+  --nx-mood-glow:   rgba(255, 120, 120, 0.68);
   --nx-mood-drift:  7s;
 }
 
