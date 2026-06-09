@@ -1317,7 +1317,7 @@ function renderEmptyThreadHTML(ws) {
           See the safety model in action — fire a sample permission prompt
         </button>
         <button class="nx-tour-link" id="nx-welcome-guide" style="border-color:rgba(168,124,232,0.32);color:#c9b8ff">
-          Open the guide · 12 pages · ?
+          Open the guide · ${GUIDE_PAGES.length} pages · ?
         </button>
       </div>
     </div>
