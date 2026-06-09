@@ -2939,31 +2939,41 @@ async function toggleCockpitOverlay() {
           <button class="nx-cockpit-close" id="nx-cockpit-close">ESC</button>
         </div>
         <div class="nx-cockpit-grid">
-          <div class="nx-cockpit-panel span2 row2">
+          <!-- Row 1: Trust spans 2 cols on the left · Mood · Workspaces -->
+          <div class="nx-cockpit-panel span2">
             <div class="nx-cockpit-panel-header">
               <span class="nx-cockpit-panel-label">Trust · 60m</span>
               <span class="nx-cockpit-panel-badge">${state.trust.history.length} events</span>
             </div>
-            <svg viewBox="0 0 320 160" preserveAspectRatio="none" style="width:100%;height:160px">
+            <svg viewBox="0 0 320 110" preserveAspectRatio="none" style="width:100%;height:110px">
               ${trustSparkSVG(state.trust.history.length ? state.trust.history : [], state.trust.direction)
                   .replace('viewBox="0 0 320 92"', '')}
             </svg>
-            <div style="margin-top:8px;font-size:11px;opacity:0.7">
-              ${state.trust.delta > 0 ? "+" : ""}${state.trust.delta.toFixed(2)} · ${state.trust.direction}
+            <div style="margin-top:10px;font-family:var(--nx-font-display);font-size:22px;color:#f3ecff;">
+              ${state.trust.delta > 0 ? "+" : ""}${state.trust.delta.toFixed(2)}
+              <span style="font-family:var(--nx-font-mono);font-size:11px;opacity:0.7;letter-spacing:0.16em;margin-left:8px;text-transform:uppercase">${escapeHtml(state.trust.direction || "—")}</span>
             </div>
           </div>
           <div class="nx-cockpit-panel">
-            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Mood</span></div>
-            <div style="font-family:var(--nx-font-display);font-size:18px;color:#f3ecff;margin-bottom:4px">${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
-            <div class="nx-dim" style="font-size:11px">${escapeHtml(state.mood.reason || "")}</div>
+            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Ambient mood</span></div>
+            <div style="font-family:var(--nx-font-display);font-size:20px;color:#f3ecff;margin-bottom:6px">${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
+            <div class="nx-dim" style="font-size:11px;line-height:1.4">${escapeHtml(state.mood.reason || "")}</div>
           </div>
           <div class="nx-cockpit-panel">
-            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Workspaces</span></div>
-            <div style="font-size:11px;line-height:1.7">${state.workspaces.map(w => `<div>· ${escapeHtml(w.name)}</div>`).join("") || "<div class='nx-dim'>none</div>"}</div>
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Workspaces</span>
+              <span class="nx-cockpit-panel-badge">${state.workspaces.length}</span>
+            </div>
+            <div style="font-size:12px;line-height:1.8">${state.workspaces.map(w => `<div>· ${escapeHtml(w.name)}</div>`).join("") || "<div class='nx-dim'>none</div>"}</div>
           </div>
-          <div class="nx-cockpit-panel span2">
-            <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Recent permissions</span></div>
-            <div style="font-size:11px;line-height:1.7">
+
+          <!-- Row 2: Recent permissions spans 3 cols · Pending tickets on the right -->
+          <div class="nx-cockpit-panel span3">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Recent permissions</span>
+              <span class="nx-cockpit-panel-badge">${state.perms.recent.length}</span>
+            </div>
+            <div style="font-size:11.5px;line-height:1.7">
               ${(state.perms.recent.slice(0, 6).map(r =>
                 `<div class="nx-cockpit-tail-row">${escapeHtml(r.capability || "")} → ${escapeHtml(r.target || "—")} <span style="float:right;opacity:0.55">${escapeHtml(r.status || "")}</span></div>`
               )).join("") || "<div class='nx-dim'>no activity</div>"}
@@ -2971,7 +2981,10 @@ async function toggleCockpitOverlay() {
           </div>
           <div class="nx-cockpit-panel">
             <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Pending</span></div>
-            <div style="font-size:11px">${state.perms.pending.length} ticket${state.perms.pending.length === 1 ? "" : "s"}</div>
+            <div style="font-family:var(--nx-font-display);font-size:26px;color:#f3ecff">
+              ${state.perms.pending.length}
+            </div>
+            <div class="nx-dim" style="font-size:11px;margin-top:4px">ticket${state.perms.pending.length === 1 ? "" : "s"} awaiting decision</div>
           </div>
         </div>
       </div>
