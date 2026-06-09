@@ -1854,7 +1854,8 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
     radial-gradient(45% 55% at 95% 100%, rgba(214, 138, 58, 0.30) 0%, transparent 55%),
     rgba(6, 4, 12, 0.96);
   backdrop-filter: blur(20px);
-  animation: nx-fade 320ms var(--ease-spring) both;
+  /* No per-mount fade — view-transitions handle the crossfade between pages,
+     and a double animation produces a momentary blank flash. */
 }
 @keyframes nx-fade { from { opacity: 0; } to { opacity: 1; } }
 .nx-tour-skip {
@@ -2128,7 +2129,8 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
     rgba(6, 4, 12, 0.96);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  animation: nx-fade 240ms var(--ease-spring) both;
+  /* No per-mount fade — view-transitions handle the crossfade between
+     pages, and a double animation produces a momentary blank flash. */
   overflow-y: auto;
   /* scroll padding so the bottom nav is never obscured */
   padding: 24px 24px 96px;
@@ -2137,10 +2139,10 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   align-items: center;
 }
 .nx-guide-stage {
-  width: min(1100px, 100%);
+  width: min(900px, 100%);
   display: flex; flex-direction: column;
   /* No per-render rise — the view-transition crossfade handles smoothness. */
-  padding-top: 40px;
+  padding-top: 28px;
 }
 
 /* Narrow shots (sidebar/cockpit) — give them a side-by-side image+legend
@@ -2183,19 +2185,19 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 }
 .nx-g-title {
   font-family: var(--nx-font-display);
-  font-size: clamp(24px, 3.6vw, 38px);
+  font-size: clamp(22px, 2.4vw, 30px);
   font-weight: 700;
   color: #f3ecff;
-  letter-spacing: -0.7px;
-  margin: 0 0 16px;
-  line-height: 1.1;
+  letter-spacing: -0.4px;
+  margin: 0 0 12px;
+  line-height: 1.15;
 }
 .nx-g-body {
-  font-size: clamp(13px, 1.05vw, 15px);
+  font-size: clamp(12.5px, 0.95vw, 14px);
   color: #c0b8d4;
-  line-height: 1.6;
-  margin: 0 0 24px;
-  max-width: 760px;
+  line-height: 1.55;
+  margin: 0 0 20px;
+  max-width: 720px;
 }
 .nx-g-body code {
   font-family: var(--nx-font-mono); font-size: 12.5px;
@@ -2236,7 +2238,9 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   border: 1px solid rgba(232,222,252,0.10);
   box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02) inset;
   margin-bottom: 16px;
-  max-width: 920px;       /* cap so image leaves room for legend */
+  /* Don't let the image dominate — leaves visual breathing room around it
+     and gives the legend room without the page feeling stretched. */
+  max-width: 720px;
   align-self: center;     /* center within the stage */
   width: 100%;
 }
