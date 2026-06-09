@@ -44,15 +44,10 @@ You don't leave the OS to do anything. Code editor, web search, file drop, mood-
 ## Quickstart
 
 ```bash
-# Clone + install
+# Clone + install (Python 3.11+)
 git clone https://github.com/AllStreets/ONEXUS.git && cd ONEXUS
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[llm,api,tui,messaging]"
-
-# Configure at least one provider (or use local llama.cpp / Ollama / vLLM)
-export NEXUS_OPENAI_KEY=sk-...
-# export NEXUS_ANTHROPIC_KEY=sk-ant-...
-# export NEXUS_DEFAULT_PROVIDER=local
 
 # Start the OS — API + Aurora dashboard + WebSocket streams in one command
 onexus serve --port 8000
@@ -60,12 +55,52 @@ onexus serve --port 8000
 
 Open **http://127.0.0.1:8000/aurora** and you're in. First-time visitors get a **13-page guided tour**; hit `?` any time to re-open it.
 
+### Local LLM (recommended — keeps you sovereign + offline)
+
+The kernel ships with **Ollama** as the default inference provider. Install it once and ONEXUS picks it up automatically — no API keys, no outbound traffic, no rate limits.
+
+```bash
+# macOS
+brew install --cask ollama         # or grab the .dmg from ollama.com
+ollama serve &                      # daemon on localhost:11434
+ollama pull llama3.1:8b             # ~5 GB · M-series default
+# Smaller models that still work well:
+#   ollama pull llama3.2:3b         # ~2 GB · 8 GB Macs
+#   ollama pull qwen2.5:14b         # ~9 GB · better reasoning
+```
+
+ONEXUS auto-detects Ollama at boot — the Cortex routes natural-language questions through it, every catalog agent gets the LLM in its context, and Aegis still gates every tool call. No knobs to flip.
+
+### Cloud provider (optional override)
+
+```bash
+export NEXUS_OPENAI_KEY=sk-...
+# or
+export NEXUS_ANTHROPIC_KEY=sk-ant-...
+export NEXUS_DEFAULT_PROVIDER=openai   # or anthropic / local / ollama
+```
+
+### Keyboard shortcuts
+
 ```
 ⌘K   workspace switcher           ⌘E   workshop (code + sandbox)
 ⌘N   new workspace                ⌘/   web search
-⌘`   expanded cockpit             ⌘,   settings
+⌘0   expanded cockpit             ⌘P   settings
 ⌘⏎   send message                  ?   open the guide
 ```
+
+### Footprint
+
+| Component | Disk | RAM |
+|---|---|---|
+| Cloned repo (no build) | ~20 MB | — |
+| Python kernel + Aurora server | — | ~100 MB |
+| Standalone `.app` (Tauri shell) | 12 MB | ~150 MB (WebView2 / WKWebView) |
+| Ollama daemon | 550 MB | ~60 MB |
+| `llama3.1:8b` model loaded | 5 GB | **6–10 GB** (default 8k context) |
+| `llama3.2:3b` model loaded | 2 GB | **3–4 GB** |
+
+**Practical minimum**: 8 GB Mac with `llama3.2:3b` and the cockpit-only build; **comfortable**: 16 GB with `llama3.1:8b`; **headroom**: 32 GB+ for larger models and big context windows.
 
 ---
 
