@@ -569,11 +569,26 @@ function attachShellHandlers() {
   document.getElementById("nx-tl-focus").addEventListener("click", () => {
     document.body.classList.toggle("nx-focus-mode");
   });
-  document.getElementById("nx-tl-fullscreen").addEventListener("click", () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.().catch(() => {});
+  document.getElementById("nx-cockpit-toggle").addEventListener("click", () => {
+    document.body.classList.toggle("nx-cockpit-hidden");
+  });
+  document.getElementById("nx-tl-fullscreen").addEventListener("click", async () => {
+    try {
+      if (!document.fullscreenElement) {
+        // Vendor prefixes for Safari + older WebKit
+        const el = document.documentElement;
+        if (el.requestFullscreen) await el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+        else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+        else throw new Error("Fullscreen API not supported in this browser");
+      } else {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+      }
+    } catch (e) {
+      // Surface the real reason so users (or me) can diagnose
+      const msg = (e && e.message) || String(e);
+      alert(`Fullscreen blocked by the browser:\n\n${msg}\n\nTip: press F11 (Windows/Linux) or ⌃⌘F (macOS) to toggle native browser fullscreen.`);
     }
   });
 }
@@ -878,19 +893,26 @@ async function renderConversation(workspaceId) {
     ? `started by you · ${onDuty} on duty${(ws.resident_agents || []).length > 1 ? ` · ${(ws.resident_agents || [])[1]} listening` : ""}`
     : `started by you · council routing`;
 
+  const composerHTML = `
+    <form class="nx-composer" id="nx-composer" autocomplete="off">
+      <input id="nx-composer-input"
+             placeholder="message agents in this workspace…"
+             aria-label="Compose a message"
+             autofocus>
+      <div class="nx-composer-kbd">
+        <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
+      </div>
+    </form>
+  `;
+
   if (isEmpty) {
-    // Empty state — full-canvas welcome, no breadcrumb/title duplication
+    // Empty state — full-canvas welcome, no breadcrumb/title duplication.
+    // Composer sits OUTSIDE the scrollable inner so it always stays at the bottom.
     main.innerHTML = `
-      ${renderEmptyThreadHTML(ws)}
-      <form class="nx-composer" id="nx-composer" autocomplete="off">
-        <input id="nx-composer-input"
-               placeholder="message agents in this workspace…"
-               aria-label="Compose a message"
-               autofocus>
-        <div class="nx-composer-kbd">
-          <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
-        </div>
-      </form>
+      <div class="nx-main-inner">
+        ${renderEmptyThreadHTML(ws)}
+      </div>
+      ${composerHTML}
     `;
   } else {
     // Active conversation: show breadcrumb + title + thread
@@ -899,37 +921,31 @@ async function renderConversation(workspaceId) {
       ? truncate(firstUserMessage.body, 60)
       : `Session in ${ws.name}`;
     main.innerHTML = `
-      <div class="nx-conv-head">
-        <div class="nx-conv-head-row">
-          <div class="nx-conv-crumb">
-            <button class="crumb-link" id="nx-crumb-home" data-id="${escapeHtml(ws.workspace_id)}">
-              <span class="crumb-dim">workspace /</span>
-              <span class="crumb-strong">${escapeHtml((ws.name || ws.workspace_id).toLowerCase())}</span>
-            </button>
-            <span class="crumb-dim">— today, ${stamp}</span>
+      <div class="nx-main-inner">
+        <div class="nx-conv-head">
+          <div class="nx-conv-head-row">
+            <div class="nx-conv-crumb">
+              <button class="crumb-link" id="nx-crumb-home" data-id="${escapeHtml(ws.workspace_id)}">
+                <span class="crumb-dim">workspace /</span>
+                <span class="crumb-strong">${escapeHtml((ws.name || ws.workspace_id).toLowerCase())}</span>
+              </button>
+              <span class="crumb-dim">— today, ${stamp}</span>
+            </div>
+            <div class="nx-conv-head-actions">
+              <button class="nx-conv-action" id="nx-new-thread" title="Start a new thread in this workspace">
+                <span class="nx-plus" aria-hidden="true"></span>
+                <span>new thread</span>
+              </button>
+            </div>
           </div>
-          <div class="nx-conv-head-actions">
-            <button class="nx-conv-action" id="nx-new-thread" title="Start a new thread in this workspace">
-              <span class="nx-plus" aria-hidden="true"></span>
-              <span>new thread</span>
-            </button>
-          </div>
+          <div class="nx-conv-title">${escapeHtml(title)}</div>
+          <div class="nx-conv-meta">${escapeHtml(meta)}</div>
         </div>
-        <div class="nx-conv-title">${escapeHtml(title)}</div>
-        <div class="nx-conv-meta">${escapeHtml(meta)}</div>
-      </div>
-      <div class="nx-thread" id="nx-thread">
-        ${thread.map(renderMessageHTML).join("") + pending.map(renderPendingPermissionHTML).join("")}
-      </div>
-      <form class="nx-composer" id="nx-composer" autocomplete="off">
-        <input id="nx-composer-input"
-               placeholder="message agents in this workspace…"
-               aria-label="Compose a message"
-               autofocus>
-        <div class="nx-composer-kbd">
-          <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
+        <div class="nx-thread" id="nx-thread">
+          ${thread.map(renderMessageHTML).join("") + pending.map(renderPendingPermissionHTML).join("")}
         </div>
-      </form>
+      </div>
+      ${composerHTML}
     `;
     // Wire the home crumb and the new-thread button
     const goHome = () => {
@@ -1073,9 +1089,9 @@ async function renderConversation(workspaceId) {
     }
   });
 
-  // Scroll to bottom of thread
-  const t = document.getElementById("nx-thread");
-  if (t) t.scrollTop = t.scrollHeight;
+  // Scroll the inner container to its bottom so latest messages are visible
+  const inner = document.querySelector(".nx-main-inner");
+  if (inner) inner.scrollTop = inner.scrollHeight;
 }
 
 function renderEmptyThreadHTML(ws) {
@@ -1279,12 +1295,14 @@ function renderWorkspacesGrid() {
   const main = document.getElementById("nx-main");
   if (!state.workspaces.length) {
     main.innerHTML = `
-      <div class="nx-welcome">
-        <div class="nx-welcome-orb">${KERNEL_MARK(96)}</div>
-        <h1>Welcome to ONEXUS</h1>
-        <p>An operating system for agents. Each room — a workspace — has its own
-           agents, memory, and grants. Create your first one to get started.</p>
-        <button class="nx-welcome-cta" id="nx-welcome-create">Create your first workspace · ⌘N</button>
+      <div class="nx-main-inner">
+        <div class="nx-welcome">
+          <div class="nx-welcome-orb">${KERNEL_MARK(96)}</div>
+          <h1>Welcome to ONEXUS</h1>
+          <p>An operating system for agents. Each room — a workspace — has its own
+             agents, memory, and grants. Create your first one to get started.</p>
+          <button class="nx-welcome-cta" id="nx-welcome-create">Create your first workspace · ⌘N</button>
+        </div>
       </div>
     `;
     document.getElementById("nx-welcome-create").addEventListener("click", openNewWorkspaceForm);
@@ -1306,20 +1324,22 @@ function renderWorkspacesGrid() {
     </div>
   `).join("");
   main.innerHTML = `
-    <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:24px">
-      <div>
-        <div class="nx-eyebrow" style="margin-bottom:6px">Rooms</div>
-        <div class="nx-display" style="font-size:28px;color:#f3ecff;font-weight:700">Workspaces</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">
-          ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ⌘K to switch · ⌘N for new
+    <div class="nx-main-inner">
+      <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div class="nx-eyebrow" style="margin-bottom:6px">Rooms</div>
+          <div class="nx-display" style="font-size:28px;color:#f3ecff;font-weight:700">Workspaces</div>
+          <div class="nx-dim" style="font-size:13px;margin-top:4px">
+            ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ⌘K to switch · ⌘N for new
+          </div>
         </div>
-      </div>
-    </header>
-    <div class="nx-ws-grid">
-      ${tiles}
-      <div class="nx-ws-tile new" id="nx-inline-new-workspace">
-        ${UI.plus(22)}
-        <div style="font-size:13px;margin-top:6px">New workspace</div>
+      </header>
+      <div class="nx-ws-grid">
+        ${tiles}
+        <div class="nx-ws-tile new" id="nx-inline-new-workspace">
+          ${UI.plus(22)}
+          <div style="font-size:13px;margin-top:6px">New workspace</div>
+        </div>
       </div>
     </div>
   `;
@@ -1337,26 +1357,28 @@ function renderWorkspacesGrid() {
 // ── Main view: catalog (spatial grid) ─────────────────────────────────────
 async function renderCatalog() {
   const main = document.getElementById("nx-main");
-  main.innerHTML = `<div class="nx-empty">loading catalog…</div>`;
+  main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">loading catalog…</div></div>`;
   try {
     const r = await fetch("/api/agents?limit=32");
     if (!r.ok) throw new Error("catalog fetch failed");
     const body = await r.json();
     const agents = body.agents || [];
     main.innerHTML = `
-      <div class="nx-spatial-header">
-        <div>
-          <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
-          <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
-          <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of 7,000+ — built-ins are installed by default</div>
+      <div class="nx-main-inner">
+        <div class="nx-spatial-header">
+          <div>
+            <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
+            <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
+            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of 7,000+ — built-ins are installed by default</div>
+          </div>
         </div>
-      </div>
-      <div class="nx-spatial">
-        ${agents.map(renderCatalogCard).join("")}
+        <div class="nx-spatial">
+          ${agents.map(renderCatalogCard).join("")}
+        </div>
       </div>
     `;
   } catch (e) {
-    main.innerHTML = `<div class="nx-empty">could not load catalog: ${escapeHtml(e.message)}</div>`;
+    main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">could not load catalog: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -1381,19 +1403,21 @@ function renderCatalogCard(a) {
 async function renderSettings() {
   const main = document.getElementById("nx-main");
   main.innerHTML = `
-    <div class="nx-settings-shell">
-      <nav class="nx-settings-tabs">
-        <button class="active" data-tab="general">General</button>
-        <button data-tab="security">Security</button>
-        <button data-tab="providers">Providers</button>
-        <button data-tab="federation">Federation</button>
-        <button data-tab="moods">Moods</button>
-        <button data-tab="about">About</button>
-      </nav>
-      <section class="nx-card nx-settings-panel" id="nx-settings-panel">
-        <h3>General</h3>
-        <p class="nx-dim" style="font-size:13px">Workspace defaults, autosave, and locale.</p>
-      </section>
+    <div class="nx-main-inner">
+      <div class="nx-settings-shell">
+        <nav class="nx-settings-tabs">
+          <button class="active" data-tab="general">General</button>
+          <button data-tab="security">Security</button>
+          <button data-tab="providers">Providers</button>
+          <button data-tab="federation">Federation</button>
+          <button data-tab="moods">Moods</button>
+          <button data-tab="about">About</button>
+        </nav>
+        <section class="nx-card nx-settings-panel" id="nx-settings-panel">
+          <h3>General</h3>
+          <p class="nx-dim" style="font-size:13px">Workspace defaults, autosave, and locale.</p>
+        </section>
+      </div>
     </div>
   `;
   main.querySelectorAll(".nx-settings-tabs button").forEach(b => {
@@ -1701,7 +1725,14 @@ function attachKeybinds() {
     if (meta && e.key === "n") { e.preventDefault(); openNewWorkspaceForm(); return; }
     if (meta && e.key === "`") { e.preventDefault(); toggleCockpitOverlay(); return; }
     if (meta && e.key === ",") { e.preventDefault(); location.hash = "#/settings"; return; }
-    if (e.key === "Escape")     { closeOverlay(); return; }
+    if (e.key === "Escape") {
+      // Esc: close any overlay AND exit focus mode if it was on
+      if (document.body.classList.contains("nx-focus-mode")) {
+        document.body.classList.remove("nx-focus-mode");
+      }
+      closeOverlay();
+      return;
+    }
     if (e.key === "/" && document.activeElement === document.body) {
       e.preventDefault();
       document.getElementById("nx-search-input").focus();

@@ -14,9 +14,25 @@ router = APIRouter(tags=["aurora"])
 _STATIC_DIR = Path(__file__).parent.parent.parent / "aurora"
 
 
+# Aurora ships from disk on every request — there is no build step. To make
+# sure browsers always pick up the latest CSS/JS while iterating, send
+# Cache-Control: no-store. The cost is negligible (small files, local network).
+_NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+
+
 @router.get("/aurora", response_class=HTMLResponse)
 async def aurora_index():
-    return FileResponse(_STATIC_DIR / "index.html", media_type="text/html")
+    """Serve the Aurora shell. Asset URLs are versioned with mtime hashes so
+    browsers (whose ESM loader caches by URL) always pick up fresh CSS/JS."""
+    html = (_STATIC_DIR / "index.html").read_text()
+    # Stamp each static asset URL with the file's mtime so any change to
+    # app.js / app.css / icons.js invalidates the browser-side module cache.
+    for asset in ("tokens.css", "mood.css", "app.css", "app.js", "icons.js"):
+        path = _STATIC_DIR / asset
+        if path.exists():
+            v = int(path.stat().st_mtime)
+            html = html.replace(f"/aurora/static/{asset}", f"/aurora/static/{asset}?v={v}")
+    return HTMLResponse(content=html, headers=_NO_STORE)
 
 
 @router.get("/aurora/static/{filename:path}")
@@ -30,4 +46,4 @@ async def aurora_static(filename: str):
         ".html": "text/html",
         ".svg": "image/svg+xml",
     }.get(path.suffix, "application/octet-stream")
-    return FileResponse(path, media_type=media_type)
+    return FileResponse(path, media_type=media_type, headers=_NO_STORE)

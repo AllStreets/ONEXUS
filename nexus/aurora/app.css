@@ -141,6 +141,28 @@ body.nx-focus-mode .nx-tl-yel { background: #ffd266; }
   color: var(--nx-text-mid);
   letter-spacing: 0.04em;
 }
+.nx-chrome-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: rgba(232, 222, 252, 0.04);
+  border: 1px solid rgba(232, 222, 252, 0.10);
+  color: var(--nx-text-mid);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.nx-chrome-icon:hover {
+  background: rgba(168, 124, 232, 0.10);
+  border-color: rgba(168, 124, 232, 0.32);
+  color: #c9b8ff;
+}
+body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
+body.nx-cockpit-hidden .nx-body { grid-template-columns: 248px minmax(0, 1fr); }
+body.nx-cockpit-hidden .nx-chrome-icon#nx-cockpit-toggle {
+  background: rgba(168, 124, 232, 0.16);
+  color: #c9b8ff;
+  border-color: rgba(168, 124, 232, 0.42);
+}
 
 /* kernel mark breathes */
 .nx-chrome .nx-kernel-mark { filter: drop-shadow(0 0 6px rgba(201, 184, 255, 0.55)); }
@@ -165,6 +187,10 @@ body.nx-focus-mode .nx-tl-yel { background: #ffd266; }
 @media (max-width: 1024px) {
   .nx-body { grid-template-columns: 200px minmax(0, 1fr); }
   .nx-cockpit-rail { display: none; }
+}
+body.nx-cockpit-hidden.nx-cockpit-hidden .nx-body { grid-template-columns: 232px minmax(0, 1fr); }
+@media (max-width: 1024px) {
+  body.nx-cockpit-hidden .nx-body { grid-template-columns: 200px minmax(0, 1fr); }
 }
 
 /* ── sidebar ───────────────────────────────────────────────────────────── */
@@ -382,12 +408,21 @@ body.nx-focus-mode .nx-tl-yel { background: #ffd266; }
 /* ── main canvas ───────────────────────────────────────────────────────── */
 .nx-main {
   position: relative;
+  overflow: hidden;
+  padding: 0;
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.nx-main-inner {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 32px 40px 24px;
+  padding: 32px 40px 8px;
   display: flex; flex-direction: column;
 }
-.nx-main::-webkit-scrollbar { width: 6px; }
-.nx-main::-webkit-scrollbar-thumb { background: rgba(232,222,252,0.08); border-radius: 3px; }
+.nx-main-inner::-webkit-scrollbar { width: 6px; }
+.nx-main-inner::-webkit-scrollbar-thumb { background: rgba(232,222,252,0.08); border-radius: 3px; }
+.nx-main-inner::-webkit-scrollbar-track { background: transparent; }
 
 /* ── conversation surface ──────────────────────────────────────────────── */
 .nx-conv-head {
@@ -676,11 +711,12 @@ body.nx-focus-mode .nx-tl-yel { background: #ffd266; }
 }
 .nx-perm-btn.deny:hover { background: rgba(248, 96, 120, 0.16); }
 
-/* composer */
+/* composer (sits outside the scrollable inner so it stays put) */
 .nx-composer {
-  margin-top: auto;
+  flex: none;
   display: flex; align-items: center; gap: 12px;
   padding: 12px 18px;
+  margin: 8px 40px 24px;
   background: rgba(232, 222, 252, 0.04);
   border: 1px solid rgba(232, 222, 252, 0.08);
   border-radius: 12px;
@@ -711,9 +747,10 @@ body.nx-focus-mode .nx-tl-yel { background: #ffd266; }
 /* welcome / empty state */
 .nx-welcome {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 60vh;
+  flex: 1;
   text-align: center;
-  padding: 40px;
+  padding: 32px 16px;
+  min-height: 0;
 }
 .nx-welcome .nx-welcome-orb { margin-bottom: 24px; }
 .nx-welcome h1 {
