@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-label="ONEXUS architecture diagram">
+  <title>ONEXUS architecture</title>
+
+  <defs>
+    <!-- Shell band gradient (top) -->
+    <linearGradient id="shell" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stop-color="#1a1626"/>
+      <stop offset="50%" stop-color="#231a36"/>
+      <stop offset="100%" stop-color="#1a1626"/>
+    </linearGradient>
+
+    <!-- Kernel component gradient (the 4 inner boxes) -->
+    <linearGradient id="kernel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f1a30"/>
+      <stop offset="100%" stop-color="#160f24"/>
+    </linearGradient>
+
+    <!-- Aegis gradient (highlighted) -->
+    <linearGradient id="aegis" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#3a2868"/>
+      <stop offset="100%" stop-color="#1c0d3a"/>
+    </linearGradient>
+
+    <!-- Bottom band gradient (modules + catalog) -->
+    <linearGradient id="band" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#100c1c"/>
+      <stop offset="50%"  stop-color="#150e22"/>
+      <stop offset="100%" stop-color="#100c1c"/>
+    </linearGradient>
+
+    <!-- Arrow markers -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b48bff"/>
+    </marker>
+    <marker id="arrow-back" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b48bff"/>
+    </marker>
+
+    <!-- Subtle violet glow on the Aegis box -->
+    <filter id="aegis-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="1280" height="720" fill="#08060f"/>
+
+  <!-- ─── Shell band (top) ─────────────────────────────────────────────── -->
+  <rect x="40" y="40" width="1200" height="86" rx="14" fill="url(#shell)"
+        stroke="rgba(232,222,252,0.10)"/>
+  <text x="640" y="74" text-anchor="middle"
+        font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
+        letter-spacing="0.30em" fill="#c9b8ff">ONEXUS · SHELL</text>
+  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#e8defc" text-anchor="middle">
+    <text x="220"  y="106">chrome</text>
+    <text x="460"  y="106">sidebar</text>
+    <text x="720"  y="106">conversation</text>
+    <text x="940"  y="106">cockpit</text>
+    <text x="1140" y="106">overlays</text>
+    <!-- divider dots -->
+    <g fill="#6b6080">
+      <circle cx="335" cy="100" r="1.6"/>
+      <circle cx="585" cy="100" r="1.6"/>
+      <circle cx="835" cy="100" r="1.6"/>
+      <circle cx="1040" cy="100" r="1.6"/>
+    </g>
+  </g>
+
+  <!-- ─── Kernel band (middle) — 4 components + Aegis below ────────────── -->
+
+  <!-- 4 top kernel components -->
+  <g font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">
+    <!-- Cortex -->
+    <g>
+      <rect x="120" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
+            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
+      <text x="220" y="260" font-size="22" font-weight="700" fill="#f3ecff">Cortex</text>
+      <text x="220" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">ROUTING</text>
+      <text x="220" y="314" font-size="12" fill="#a8a0c8">pattern · semantic ·</text>
+      <text x="220" y="330" font-size="12" fill="#a8a0c8">LLM fallback</text>
+    </g>
+
+    <!-- Engram -->
+    <g>
+      <rect x="380" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
+            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
+      <text x="480" y="260" font-size="22" font-weight="700" fill="#f3ecff">Engram</text>
+      <text x="480" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">MEMORY</text>
+      <text x="480" y="314" font-size="12" fill="#a8a0c8">working · episodic ·</text>
+      <text x="480" y="330" font-size="12" fill="#a8a0c8">semantic search</text>
+    </g>
+
+    <!-- Pulse -->
+    <g>
+      <rect x="640" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
+            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
+      <text x="740" y="260" font-size="22" font-weight="700" fill="#f3ecff">Pulse</text>
+      <text x="740" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">HEARTBEAT</text>
+      <text x="740" y="314" font-size="12" fill="#a8a0c8">module ticks ·</text>
+      <text x="740" y="330" font-size="12" fill="#a8a0c8">background work</text>
+    </g>
+
+    <!-- Chronicle -->
+    <g>
+      <rect x="900" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
+            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
+      <text x="1000" y="260" font-size="22" font-weight="700" fill="#f3ecff">Chronicle</text>
+      <text x="1000" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">AUDIT</text>
+      <text x="1000" y="314" font-size="12" fill="#a8a0c8">immutable</text>
+      <text x="1000" y="330" font-size="12" fill="#a8a0c8">append-only</text>
+    </g>
+
+    <!-- Aegis — highlighted, centered below -->
+    <g filter="url(#aegis-glow)">
+      <rect x="430" y="440" width="420" height="120" rx="14" fill="url(#aegis)"
+            stroke="#b48bff" stroke-width="2"/>
+      <text x="640" y="478" font-size="26" font-weight="700" fill="#f3ecff">Aegis</text>
+      <text x="640" y="506" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.20em" fill="#b48bff">CAPABILITY ARBITER</text>
+      <text x="640" y="532" font-size="13" fill="#e8defc">every tool call passes through · class + trust</text>
+      <text x="640" y="548" font-size="13" fill="#a8a0c8">+ grants + first-use prompt + chronicle log</text>
+    </g>
+  </g>
+
+  <!-- ─── Connecting arrows ────────────────────────────────────────────── -->
+  <g stroke="#b48bff" stroke-width="2" fill="none">
+    <!-- Between top 4 -->
+    <path d="M320,280 L380,280" marker-end="url(#arrow)"/>
+    <path d="M380,290 L320,290" marker-end="url(#arrow-back)"/>
+    <path d="M580,280 L640,280" marker-end="url(#arrow)"/>
+    <path d="M640,290 L580,290" marker-end="url(#arrow-back)"/>
+    <path d="M840,280 L900,280" marker-end="url(#arrow)"/>
+    <path d="M900,290 L840,290" marker-end="url(#arrow-back)"/>
+
+    <!-- Cortex → Aegis (the gating path) -->
+    <path d="M220,340 L220,500 L430,500" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+  </g>
+
+  <!-- Label on the arrow from Cortex to Aegis -->
+  <text x="250" y="430" font-family="ui-monospace,monospace" font-size="10"
+        letter-spacing="0.10em" fill="#8a8098">routes through</text>
+
+  <!-- ─── Bottom band (modules + catalog) ──────────────────────────────── -->
+  <rect x="40" y="610" width="1200" height="90" rx="14" fill="url(#band)"
+        stroke="rgba(232,222,252,0.10)"/>
+
+  <!-- Modules column -->
+  <g>
+    <text x="70" y="640" font-family="ui-monospace,monospace" font-size="11"
+          letter-spacing="0.28em" fill="#c9b8ff">MODULES</text>
+    <text x="70" y="666" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#e8defc">
+      council · specter · oracle · wraith · echo
+    </text>
+    <text x="70" y="685" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#e8defc">
+      sentry · autonomic · legacy · consciousness · agents
+    </text>
+  </g>
+
+  <!-- vertical divider -->
+  <line x1="700" y1="625" x2="700" y2="685" stroke="rgba(232,222,252,0.10)"/>
+
+  <!-- Catalog column -->
+  <g>
+    <text x="720" y="640" font-family="ui-monospace,monospace" font-size="11"
+          letter-spacing="0.28em" fill="#c9b8ff">AGENT CATALOG · ONEXUS-AGENTS</text>
+    <text x="720" y="666" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#e8defc">
+      6,745 manifests · 571 runnable (MCP adapter)
+    </text>
+    <text x="720" y="685" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#a8a0c8">
+      nightly rebuild · vendored at build time
+    </text>
+  </g>
+
+  <!-- Bottom callout: kernel.network.io = ∅ -->
+  <g transform="translate(640 760)">
+    <text text-anchor="middle"
+          font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
+          letter-spacing="0.20em" fill="#9affb6"
+          opacity="0.9">kernel.network.io = ∅ · STATIC-VERIFIED</text>
+  </g>
+</svg>

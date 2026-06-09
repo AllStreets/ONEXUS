@@ -566,17 +566,7 @@ function attachShellHandlers() {
   document.getElementById("nx-chrome-home").addEventListener("click", goHomeOfCurrentWorkspace);
   document.getElementById("nx-chrome-context").addEventListener("click", goHomeOfCurrentWorkspace);
 
-  // Chrome traffic lights — wired so they aren't decorative
-  document.getElementById("nx-tl-close").addEventListener("click", () => {
-    // window.close() only works if the tab was opened by script. If not, give
-    // the user a clean "are you sure" path via a confirm dialog.
-    if (window.opener) { window.close(); return; }
-    if (confirm("Close ONEXUS in this tab?")) {
-      try { window.close(); } catch {}
-      // Fallback: navigate to about:blank
-      setTimeout(() => { location.href = "about:blank"; }, 50);
-    }
-  });
+  // Chrome controls (window-level controls are provided by the browser).
   document.getElementById("nx-tl-focus").addEventListener("click", () => {
     document.body.classList.toggle("nx-focus-mode");
   });
@@ -1000,7 +990,8 @@ async function renderConversation(workspaceId) {
              placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
              aria-label="Compose a message"
              autofocus>
-      <input type="file" id="nx-file-input" multiple style="display:none">
+      <input type="file" id="nx-file-input" multiple aria-hidden="true"
+             style="position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;width:1px;height:1px">
       <div class="nx-composer-kbd">
         <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
       </div>
@@ -1082,13 +1073,22 @@ async function renderConversation(workspaceId) {
   });
 
   // File attach + drag-and-drop
+  // The hidden file input lives at the document level (not inside the form)
+  // because some browsers refuse to click() on a display:none input inside a
+  // form. Lifting it out + position:absolute keeps it accessible to .click().
   const fileInput = document.getElementById("nx-file-input");
   const attachBtn = document.getElementById("nx-attach-btn");
-  attachBtn?.addEventListener("click", () => fileInput?.click());
-  fileInput?.addEventListener("change", async (e) => {
-    for (const f of e.target.files) await uploadFile(workspaceId, f);
-    e.target.value = "";
+  attachBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInput?.click();
   });
+  fileInput?.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const f of files) await uploadFile(workspaceId, f);
+    e.target.value = "";  // allow re-picking the same file
+  });
+
   // Strip chips remove an attachment
   main.querySelectorAll(".chip-x[data-id]").forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -1099,14 +1099,30 @@ async function renderConversation(workspaceId) {
       renderConversation(workspaceId);
     });
   });
-  // Drop anywhere on the main canvas
-  main.ondragover = (e) => { e.preventDefault(); main.classList.add("nx-dragover"); };
-  main.ondragleave = (e) => { if (e.target === main) main.classList.remove("nx-dragover"); };
-  main.ondrop = async (e) => {
+
+  // Drop anywhere on the main canvas — use addEventListener not the on*
+  // properties so they survive re-renders cleanly. The dragover handler MUST
+  // preventDefault for drop to fire at all.
+  const onDragOver = (e) => {
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    main.classList.add("nx-dragover");
+  };
+  const onDragLeave = (e) => {
+    // Only clear when leaving the main canvas, not when crossing inner edges
+    if (e.relatedTarget && main.contains(e.relatedTarget)) return;
+    main.classList.remove("nx-dragover");
+  };
+  const onDrop = async (e) => {
+    if (!e.dataTransfer?.files?.length) return;
     e.preventDefault();
     main.classList.remove("nx-dragover");
-    for (const item of e.dataTransfer?.files || []) await uploadFile(workspaceId, item);
+    const files = Array.from(e.dataTransfer.files);
+    for (const f of files) await uploadFile(workspaceId, f);
   };
+  main.addEventListener("dragover", onDragOver);
+  main.addEventListener("dragleave", onDragLeave);
+  main.addEventListener("drop", onDrop);
 
   // Welcome guide link — open the 12-page guide
   document.getElementById("nx-welcome-guide")?.addEventListener("click", () => renderGuide(0));

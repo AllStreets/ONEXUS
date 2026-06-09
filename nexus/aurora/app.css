@@ -113,24 +113,16 @@ body {
   position: relative; z-index: 5;
 }
 
-/* traffic lights — symbols appear on cluster hover */
-.nx-chrome-lights { display: flex; gap: 8px; align-items: center; }
-.nx-tl {
-  width: 12px; height: 12px; border-radius: 50%;
-  border: 0; padding: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.45) inset;
-  transition: filter var(--d-fast) var(--ease-spring), transform 80ms var(--ease-spring);
-  position: relative;
+/* Left chrome cluster — focus + fullscreen toggles only.
+   Window controls (close / minimize) are owned by the browser; when
+   ONEXUS is wrapped in a standalone shell the host OS provides them. */
+.nx-chrome-left { display: flex; gap: 8px; align-items: center; justify-self: start; }
+.nx-icon-focus,
+body.nx-focus-mode .nx-chrome-icon#nx-tl-focus {
+  background: color-mix(in srgb, var(--nx-mood-primary) 14%, rgba(232,222,252,0.04));
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 30%, rgba(232,222,252,0.10));
+  color: var(--nx-mood-primary);
 }
-.nx-tl:hover  { filter: brightness(1.10); }
-.nx-tl:active { transform: scale(0.92); }
-.nx-tl svg { width: 8px; height: 8px; opacity: 0; transition: opacity var(--d-fast); }
-.nx-chrome-lights:hover .nx-tl svg, .nx-tl:focus-visible svg { opacity: 1; }
-.nx-tl-red { background: #ff5f57; }
-.nx-tl-yel { background: #febc2e; }
-.nx-tl-grn { background: #28c840; }
 
 /* center title */
 .nx-chrome-center {

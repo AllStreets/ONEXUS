@@ -150,12 +150,9 @@ Aegis classifies every capability into one of four classes:
 | **Sensitive** | warm amber | always prompt — allow once / always here / deny |
 | **Privileged** | coral | never auto-grant — Settings → Security only |
 
-```
-trust < 0.50 ─────────────────────────┐
-                                       │
-   every grant the agent held         ▼
-   instantly collapses        ⚠  alert mood fires
-```
+<p align="center">
+  <img src=".github/assets/trust-collapse.svg" alt="Trust meter — at trust below 0.50 every grant collapses and alert mood fires" width="100%"/>
+</p>
 
 The kernel writes every decision to **Chronicle** (immutable append-only sqlite). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster — search any of the **590** Aegis-registered modules, click revoke to reset trust to 0.
 
@@ -184,30 +181,9 @@ Click any disc in the cockpit to see its declared tools, permission classes, tru
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                            ONEXUS  ·  shell                              │
-│   chrome  ·  sidebar  ·  conversation  ·  cockpit  ·  overlays           │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐         │
-│   │  Cortex  │◀──▶│  Engram  │◀──▶│  Pulse   │◀──▶│Chronicle │         │
-│   │ routing  │    │  memory  │    │heartbeat │    │  audit   │         │
-│   └────┬─────┘    └──────────┘    └──────────┘    └──────────┘         │
-│        │                                                                │
-│        ▼                                                                │
-│   ┌──────────┐         every tool call passes through                  │
-│   │  Aegis   │  ─────  the capability arbiter — class                  │
-│   │ permits  │         + trust + grants + first-use prompt              │
-│   └──────────┘                                                          │
-│                                                                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│   modules                              ·   agent catalog                │
-│   council · specter · oracle · wraith  ·   6,745 manifests              │
-│   echo · sentry · autonomic · legacy   ·   571 runnable (MCP adapter)   │
-│   consciousness · agents-dispatcher    ·   nightly rebuild              │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src=".github/assets/architecture.svg" alt="ONEXUS architecture — shell on top, the five kernel components (Cortex, Engram, Pulse, Chronicle, Aegis), modules + agent catalog at the bottom" width="100%"/>
+</p>
 
 **The kernel never touches the network.** Every outbound HTTP request from any built-in module goes through `aegis.network()` which logs to Chronicle, checks the agent's `net.*` capability declaration, and runs through `AegisTransport` (a wrapped httpx client). A static invariant test enforces that no kernel module other than `aegis.py` imports `httpx` or `requests`.
 

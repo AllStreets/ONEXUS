@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-label="Trust collapse — at trust below 0.50 every grant the agent held instantly collapses and the alert mood fires.">
+  <title>Trust collapse</title>
+
+  <defs>
+    <!-- Trust gradient: green high → amber mid → crimson low -->
+    <linearGradient id="trust-meter" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#9affb6"/>
+      <stop offset="40%"  stop-color="#f8c460"/>
+      <stop offset="55%"  stop-color="#ff8868"/>
+      <stop offset="100%" stop-color="#ff5050"/>
+    </linearGradient>
+
+    <linearGradient id="alert-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="rgba(255,80,80,0.0)"/>
+      <stop offset="50%"  stop-color="rgba(255,80,80,0.85)"/>
+      <stop offset="100%" stop-color="rgba(255,80,80,0.0)"/>
+    </linearGradient>
+
+    <filter id="alert-blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="1200" height="280" fill="#08060f" rx="14"/>
+
+  <!-- Meter track -->
+  <rect x="60" y="118" width="1080" height="14" rx="7" fill="rgba(232,222,252,0.06)"
+        stroke="rgba(232,222,252,0.10)"/>
+
+  <!-- Meter fill (full 1.00 → 0.00 visualisation) -->
+  <rect x="60" y="118" width="1080" height="14" rx="7" fill="url(#trust-meter)" opacity="0.95"/>
+
+  <!-- 0.50 threshold tick + label -->
+  <line x1="600" y1="100" x2="600" y2="150"
+        stroke="#ff5050" stroke-width="2" stroke-dasharray="4 4"/>
+  <text x="600" y="92" text-anchor="middle"
+        font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
+        letter-spacing="0.16em" fill="#ff8888">THRESHOLD · 0.50</text>
+
+  <!-- Score labels -->
+  <g font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
+     letter-spacing="0.12em" fill="#a8a0c8">
+    <text x="60"   y="166" text-anchor="start">0.00</text>
+    <text x="600"  y="166" text-anchor="middle">0.50</text>
+    <text x="1140" y="166" text-anchor="end">1.00</text>
+  </g>
+
+  <!-- Tier labels above the meter -->
+  <g font-family="ui-monospace,'JetBrains Mono',monospace" font-size="10"
+     letter-spacing="0.18em" text-anchor="middle">
+    <text x="170" y="80" fill="#a87870">OBSERVER</text>
+    <text x="350" y="80" fill="#c89868">ADVISOR</text>
+    <text x="500" y="80" fill="#d0c068">MONITOR</text>
+    <text x="800" y="80" fill="#a8e898">EXECUTOR</text>
+    <text x="1080" y="80" fill="#80f0a8">AUTONOMOUS</text>
+  </g>
+
+  <!-- Alert glow under the collapse zone -->
+  <ellipse cx="300" cy="125" rx="280" ry="32"
+           fill="url(#alert-glow)" filter="url(#alert-blur)" opacity="0.55"/>
+
+  <!-- Big collapse label -->
+  <g font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">
+    <!-- Lightning / warning glyph -->
+    <g transform="translate(180 220)" fill="none" stroke="#ff7878" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-12 -12 L 6 -12 L -2 0 L 12 0 L -6 16"/>
+    </g>
+    <text x="220" y="216" text-anchor="start"
+          font-size="20" font-weight="700" fill="#ff8888"
+          letter-spacing="-0.2px">trust &lt; 0.50</text>
+    <text x="220" y="240" text-anchor="start"
+          font-family="ui-monospace,'JetBrains Mono',monospace"
+          font-size="13" fill="#d8c8e0">
+      every grant the agent held instantly collapses
+    </text>
+    <text x="220" y="258" text-anchor="start"
+          font-family="ui-monospace,'JetBrains Mono',monospace"
+          font-size="13" fill="#ff8888">
+      ⚠  alert mood fires across the whole shell
+    </text>
+  </g>
+
+  <!-- Right side: high-trust state -->
+  <g transform="translate(900 200)" font-family="ui-sans-serif,system-ui,sans-serif">
+    <text x="0" y="16" font-size="20" font-weight="700" fill="#9affb6"
+          letter-spacing="-0.2px">trust ≥ 0.75</text>
+    <text x="0" y="40" font-family="ui-monospace,'JetBrains Mono',monospace"
+          font-size="13" fill="#d8c8e0">auto-allow on notable calls</text>
+    <text x="0" y="58" font-family="ui-monospace,'JetBrains Mono',monospace"
+          font-size="13" fill="#9affb6">EXECUTOR tier — agent runs faster</text>
+  </g>
+
+  <!-- Center vertical: arrow showing collapse direction -->
+  <g transform="translate(580 200)" stroke="#ff8888" stroke-width="2" fill="none"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 0 L -160 0"/>
+    <path d="M-150 -8 L -160 0 L -150 8"/>
+  </g>
+</svg>
