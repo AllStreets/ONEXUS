@@ -1912,19 +1912,36 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 }
 .nx-g-arrow:hover { background: rgba(232,222,252,0.12); border-color: rgba(232,222,252,0.25); }
 .nx-g-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
-.nx-g-next {
+.nx-g-right {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 18px;
-  font: inherit; font-size: 13px; font-weight: 600;
-  background: color-mix(in srgb, var(--nx-mood-primary) 24%, transparent);
-  border: 1px solid color-mix(in srgb, var(--nx-mood-primary) 52%, transparent);
+  justify-self: end;
+}
+.nx-g-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  background: color-mix(in srgb, var(--nx-mood-primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nx-mood-primary) 38%, transparent);
   border-radius: 999px;
-  color: #f3ecff;
+  color: var(--nx-mood-primary);
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--d-fast);
+  transition: background var(--d-fast), color var(--d-fast);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.nx-g-next:hover { background: color-mix(in srgb, var(--nx-mood-primary) 38%, transparent); }
+.nx-g-cta:hover {
+  background: color-mix(in srgb, var(--nx-mood-primary) 26%, transparent);
+  color: #f3ecff;
+}
+.nx-g-arrow-next {
+  background: color-mix(in srgb, var(--nx-mood-primary) 22%, transparent);
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 50%, transparent);
+  color: #f3ecff;
+}
+.nx-g-arrow-next:hover { background: color-mix(in srgb, var(--nx-mood-primary) 36%, transparent); }
+.nx-g-arrow-next:disabled { background: rgba(232,222,252,0.06); color: var(--nx-text-mid); }
 .nx-g-dots {
   display: flex; align-items: center; gap: 4px;
   justify-self: center;
@@ -1956,7 +1973,6 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 @media (max-width: 720px) {
   .nx-guide-stage { padding-top: 56px; }
   .nx-guide-nav { gap: 8px; padding: 8px 10px; }
-  .nx-g-next span { display: none; }
-  .nx-g-next { padding: 9px 12px; }
+  .nx-g-cta { max-width: 120px; padding: 9px 12px; font-size: 11px; }
   .nx-g-dot { min-width: 26px; height: 26px; font-size: 10px; }
 }

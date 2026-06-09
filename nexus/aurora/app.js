@@ -2078,52 +2078,78 @@ function renderGuide(pageIndex) {
       </div>
 
       <div class="nx-guide-nav">
-        <button class="nx-g-arrow" id="nx-g-prev" ${pageIndex === 0 ? "disabled" : ""} aria-label="Previous page">
+        <button class="nx-g-arrow" id="nx-g-prev" ${pageIndex === 0 ? "disabled" : ""} aria-label="Previous page" title="Previous page (←)">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 6 9l5 5"/></svg>
         </button>
         <div class="nx-g-dots">${dotsHTML}</div>
-        ${p.cta ? `
-          <button class="nx-g-next" id="nx-g-next">
-            <span>${escapeHtml(p.cta.label)}</span>
-            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5-5 5"/></svg>
+        <div class="nx-g-right">
+          ${p.cta && p.cta.action ? `
+            <button class="nx-g-cta" id="nx-g-next" title="${escapeHtml(p.cta.label)}">
+              <span>${escapeHtml(p.cta.label)}</span>
+            </button>
+          ` : ""}
+          <button class="nx-g-arrow nx-g-arrow-next" id="nx-g-advance"
+                  ${pageIndex === total - 1 ? "disabled" : ""}
+                  aria-label="${pageIndex === total - 1 ? "Last page" : "Next page"}"
+                  title="${pageIndex === total - 1 ? "Done — close the guide" : "Next page (→)"}">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5-5 5"/></svg>
           </button>
-        ` : ""}
+        </div>
       </div>
     </div>
   `;
 
   const close = () => closeOverlay();
-  const next = () => {
-    const action = p.cta?.action;
-    if (action) {
-      switch (action) {
-        case "switcher":        close(); renderSwitcher(); return;
-        case "compose":         close(); document.getElementById("nx-composer-input")?.focus(); return;
-        case "seed-permission": fetch("/api/permissions/seed", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ workspace_id: state.active, target: "src/test.py" }) }); close(); return;
-        case "cockpit":         close(); toggleCockpitOverlay(); return;
-        case "moodpicker":      close(); setTimeout(() => openMoodPicker(), 100); return;
-        case "workshop":        close(); location.hash = "#/workshop"; return;
-        case "search":          close(); location.hash = "#/search"; return;
-        case "catalog":         close(); location.hash = "#/catalog"; return;
-      }
-    }
+
+  // Advancing through the guide (arrow keys, "Continue →" cell) is its own
+  // thing — it must NEVER trigger a CTA action like "compose" or "workshop".
+  // Those should only run when the user explicitly clicks the CTA button.
+  const advance = () => {
     if (pageIndex < total - 1) renderGuide(pageIndex + 1);
     else close();
   };
+
+  // The CTA button runs the page's specific action (if any) — otherwise it
+  // just advances to the next page. Either way, after the action the guide
+  // closes only if the action requires leaving the overlay (which all the
+  // "try it" actions do).
+  const runCTA = () => {
+    const action = p.cta?.action;
+    switch (action) {
+      case "switcher":        close(); renderSwitcher(); return;
+      case "compose":         close(); document.getElementById("nx-composer-input")?.focus(); return;
+      case "seed-permission":
+        fetch("/api/permissions/seed", {
+          method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ workspace_id: state.active, target: "src/test.py" }),
+        });
+        // Don't close — show the user the result on the same page
+        return;
+      case "cockpit":         close(); toggleCockpitOverlay(); return;
+      case "moodpicker":      close(); setTimeout(() => openMoodPicker(), 100); return;
+      case "workshop":        close(); location.hash = "#/workshop"; return;
+      case "search":          close(); location.hash = "#/search"; return;
+      case "catalog":         close(); location.hash = "#/catalog"; return;
+      default:                advance(); return;  // null / unknown → just advance
+    }
+  };
+
   document.getElementById("nx-g-close").addEventListener("click", close);
   document.getElementById("nx-g-prev").addEventListener("click", () => pageIndex > 0 && renderGuide(pageIndex - 1));
-  document.getElementById("nx-g-next")?.addEventListener("click", next);
+  document.getElementById("nx-g-next")?.addEventListener("click", runCTA);
+  document.getElementById("nx-g-advance")?.addEventListener("click", advance);
   root.querySelectorAll(".nx-g-dot[data-i]").forEach(dot => {
     dot.addEventListener("click", () => renderGuide(Number(dot.dataset.i)));
   });
   const onKey = (e) => {
     if (e.key === "Escape") { close(); window.removeEventListener("keydown", onKey); }
-    else if (e.key === "ArrowRight") { next(); }
+    else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); advance(); }
     else if (e.key === "ArrowLeft")  { if (pageIndex > 0) renderGuide(pageIndex - 1); }
     else if (e.key >= "1" && e.key <= "9") {
       const i = Number(e.key) - 1;
       if (i < total) renderGuide(i);
     }
+    else if (e.key === "0") { if (total > 9) renderGuide(9); }   // 0 → page 10
   };
   window.addEventListener("keydown", onKey, { once: false });
   // Cleanup the keydown listener when the overlay is replaced
@@ -2494,7 +2520,7 @@ async function route(hash) {
   if (hash.startsWith("#/search")) { renderSearch(hash); return; }
   if (hash.startsWith("#/guide")) {
     const m = hash.match(/#\/guide\/(\d+)/);
-    const pi = m ? Math.max(0, Math.min(11, Number(m[1]))) : 0;
+    const pi = m ? Math.max(0, Math.min(GUIDE_PAGES.length - 1, Number(m[1]))) : 0;
     renderGuide(pi);
     // Keep the underlying view too — go to active conversation if there is one
     if (state.active && !document.getElementById("nx-main").innerHTML.trim()) {
