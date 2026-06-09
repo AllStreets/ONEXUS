@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/wordmark.svg" alt="ONEXUS — the operating system for agents" width="100%"/>
+<img src=".github/assets/wordmark-v2.svg" alt="ONEXUS — the operating system for agents" width="100%"/>
 
 &nbsp;
 
@@ -24,7 +24,7 @@
 ---
 
 <p align="center">
-  <img src=".github/assets/hero-calm.png" alt="ONEXUS Aurora dashboard" width="100%"/>
+  <img src=".github/assets/hero-calm-v2.png" alt="ONEXUS Aurora dashboard" width="100%"/>
 </p>
 
 <p align="center"><em>One process. Local-first. Five-component kernel. Every tool call gated by Aegis. Every event logged to Chronicle. The kernel never touches the network — there's a static test that proves it.</em></p>
@@ -75,16 +75,16 @@ The whole shell **shifts color with what's happening**. Aegis observes the kerne
 
 <table>
 <tr>
-<td width="50%"><img src=".github/assets/hero-calm.png" alt="calm focus — violet"/></td>
-<td width="50%"><img src=".github/assets/hero-creative.png" alt="creative — navy blue"/></td>
+<td width="50%"><img src=".github/assets/hero-calm-v2.png" alt="calm focus — violet"/></td>
+<td width="50%"><img src=".github/assets/hero-creative-v2.png" alt="creative — navy blue"/></td>
 </tr>
 <tr>
 <td align="center"><strong>calm focus</strong> · violet · default, low load</td>
 <td align="center"><strong>creative</strong> · vivid navy · open-ended ideation</td>
 </tr>
 <tr>
-<td width="50%"><img src=".github/assets/hero-deepflow.png" alt="deep flow — jewel green"/></td>
-<td width="50%"><img src=".github/assets/hero-alert.png" alt="alert — crimson"/></td>
+<td width="50%"><img src=".github/assets/hero-deepflow-v2.png" alt="deep flow — jewel green"/></td>
+<td width="50%"><img src=".github/assets/hero-alert-v2.png" alt="alert — crimson"/></td>
 </tr>
 <tr>
 <td align="center"><strong>deep flow</strong> · jewel green · long uninterrupted stretches</td>
@@ -151,7 +151,7 @@ Aegis classifies every capability into one of four classes:
 | **Privileged** | coral | never auto-grant — Settings → Security only |
 
 <p align="center">
-  <img src=".github/assets/trust-collapse.svg" alt="Trust meter — at trust below 0.50 every grant collapses and alert mood fires" width="100%"/>
+  <img src=".github/assets/trust-collapse-v2.svg" alt="Trust meter — at trust below 0.50 every grant collapses and alert mood fires" width="100%"/>
 </p>
 
 The kernel writes every decision to **Chronicle** (immutable append-only sqlite). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster — search any of the **590** Aegis-registered modules, click revoke to reset trust to 0.
@@ -182,7 +182,7 @@ Click any disc in the cockpit to see its declared tools, permission classes, tru
 ## Architecture
 
 <p align="center">
-  <img src=".github/assets/architecture.svg" alt="ONEXUS architecture — shell on top, the five kernel components (Cortex, Engram, Pulse, Chronicle, Aegis), modules + agent catalog at the bottom" width="100%"/>
+  <img src=".github/assets/architecture-v2.svg" alt="ONEXUS architecture — shell on top, the five kernel components (Cortex, Engram, Pulse, Chronicle, Aegis), modules + agent catalog at the bottom" width="100%"/>
 </p>
 
 **The kernel never touches the network.** Every outbound HTTP request from any built-in module goes through `aegis.network()` which logs to Chronicle, checks the agent's `net.*` capability declaration, and runs through `AegisTransport` (a wrapped httpx client). A static invariant test enforces that no kernel module other than `aegis.py` imports `httpx` or `requests`.
