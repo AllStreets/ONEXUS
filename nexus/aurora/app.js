@@ -309,22 +309,29 @@ function sceneSafety() {
         <text x="-110" y="6" font-family="ui-sans-serif,sans-serif" font-size="11"
               fill="#e8defc">oracle → src/kernel/cortex.py</text>
 
-        <!-- Row 2: three decision pills, evenly spaced, with slide-in motion -->
-        <g class="nx-tour-anim-pills" transform="translate(0 34)">
-          <rect x="-126" y="-12" width="68" height="24" rx="12"
-                fill="rgba(154,255,182,0.16)" stroke="rgba(154,255,182,0.50)"/>
-          <text x="-92" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
-                font-weight="600" fill="#a8f4c0" text-anchor="middle">allow</text>
+        <!-- Row 2: three decision pills. The outer group handles the static
+             y-shift to the second row via an SVG-attribute transform — the
+             inner group runs the slide-in CSS animation (translateX). They
+             must be separate because a CSS transform REPLACES the SVG
+             attribute transform on the same element, which would zero out
+             the y-shift mid-animation. -->
+        <g transform="translate(0 34)">
+          <g class="nx-tour-anim-pills">
+            <rect x="-126" y="-12" width="68" height="24" rx="12"
+                  fill="rgba(154,255,182,0.16)" stroke="rgba(154,255,182,0.50)"/>
+            <text x="-92" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
+                  font-weight="600" fill="#a8f4c0" text-anchor="middle">allow</text>
 
-          <rect x="-50" y="-12" width="88" height="24" rx="12"
-                fill="rgba(168,124,232,0.20)" stroke="rgba(168,124,232,0.55)"/>
-          <text x="-6" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
-                font-weight="600" fill="#e0d0ff" text-anchor="middle">always</text>
+            <rect x="-50" y="-12" width="88" height="24" rx="12"
+                  fill="rgba(168,124,232,0.20)" stroke="rgba(168,124,232,0.55)"/>
+            <text x="-6" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
+                  font-weight="600" fill="#e0d0ff" text-anchor="middle">always</text>
 
-          <rect x="46" y="-12" width="62" height="24" rx="12"
-                fill="rgba(248,96,120,0.12)" stroke="rgba(248,96,120,0.40)"/>
-          <text x="77" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
-                font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
+            <rect x="46" y="-12" width="62" height="24" rx="12"
+                  fill="rgba(248,96,120,0.12)" stroke="rgba(248,96,120,0.40)"/>
+            <text x="77" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
+                  font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
+          </g>
         </g>
       </g>
     </svg>
@@ -352,7 +359,7 @@ function sceneTrust() {
               fill="none" stroke="url(#t-line)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               class="nx-tour-anim-line"/>
         <circle cx="260" cy="50" r="4" fill="#ffe09a" class="nx-tour-anim-dot"/>
-        <text x="0" y="20" font-family="ui-monospace,monospace" font-size="18" font-weight="700" fill="#ffe09a">+0.14</text>
+        <text x="0" y="20" font-family="ui-monospace,monospace" font-size="18" font-weight="700" fill="#ffe09a">+0.12</text>
         <text x="60" y="20" font-family="ui-monospace,monospace" font-size="10" letter-spacing="2" fill="#f8c460">RISING</text>
       </g>
     </svg>
