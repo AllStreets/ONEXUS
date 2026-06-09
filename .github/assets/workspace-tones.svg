@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img"
+     aria-label="25 workspace tones available in ONEXUS: indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, mocha, coral, rose, crimson, magenta, fuchsia, plum, orchid, slate, graphite, plus a custom dot.">
+  <title>Workspace tones</title>
+  <rect width="1200" height="280" fill="#0c0820" rx="14"/>
+  <text x="60" y="42" font-family="ui-monospace,'JetBrains Mono',monospace"
+        font-size="11" letter-spacing="0.32em" fill="#c9b8ff">25 WORKSPACE TONES</text>
+  <text x="60" y="62" font-family="ui-sans-serif,system-ui,sans-serif"
+        font-size="12" fill="#8a8098">pick on create · cluster the rooms by mood, region, or project</text>
+
+  <!-- Each chip: 16px swatch + name. 5 cols × 5 rows. Cell ≈ 220×38. -->
+  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#e8defc"
+     dominant-baseline="middle">
+    <!-- ROW 1: blues / purples -->
+    <g><circle cx="78"   cy="110" r="9" fill="#5a6cd0"/><text x="98"   y="110">indigo</text></g>
+    <g><circle cx="278"  cy="110" r="9" fill="#8a6cee"/><text x="298"  y="110">violet</text></g>
+    <g><circle cx="478"  cy="110" r="9" fill="#b4a8f0"/><text x="498"  y="110">lavender</text></g>
+    <g><circle cx="678"  cy="110" r="9" fill="#4a78f0"/><text x="698"  y="110">cobalt</text></g>
+    <g><circle cx="878"  cy="110" r="9" fill="#5cb8f0"/><text x="898"  y="110">sky</text></g>
+
+    <!-- ROW 2: cyans / greens -->
+    <g><circle cx="78"   cy="146" r="9" fill="#4cb4d0"/><text x="98"   y="146">ocean</text></g>
+    <g><circle cx="278"  cy="146" r="9" fill="#4cd4c0"/><text x="298"  y="146">teal</text></g>
+    <g><circle cx="478"  cy="146" r="9" fill="#80e8a8"/><text x="498"  y="146">mint</text></g>
+    <g><circle cx="678"  cy="146" r="9" fill="#88a888"/><text x="698"  y="146">sage</text></g>
+    <g><circle cx="878"  cy="146" r="9" fill="#4cd068"/><text x="898"  y="146">emerald</text></g>
+
+    <!-- ROW 3: lime / warm -->
+    <g><circle cx="78"   cy="182" r="9" fill="#b8d860"/><text x="98"   y="182">lime</text></g>
+    <g><circle cx="278"  cy="182" r="9" fill="#e8a06c"/><text x="298"  y="182">amber</text></g>
+    <g><circle cx="478"  cy="182" r="9" fill="#f0c870"/><text x="498"  y="182">honey</text></g>
+    <g><circle cx="678"  cy="182" r="9" fill="#f08c4c"/><text x="698"  y="182">tangerine</text></g>
+    <g><circle cx="878"  cy="182" r="9" fill="#b08868"/><text x="898"  y="182">mocha</text></g>
+
+    <!-- ROW 4: pinks / reds -->
+    <g><circle cx="78"   cy="218" r="9" fill="#f06a78"/><text x="98"   y="218">coral</text></g>
+    <g><circle cx="278"  cy="218" r="9" fill="#f070a0"/><text x="298"  y="218">rose</text></g>
+    <g><circle cx="478"  cy="218" r="9" fill="#d04848"/><text x="498"  y="218">crimson</text></g>
+    <g><circle cx="678"  cy="218" r="9" fill="#c060a0"/><text x="698"  y="218">magenta</text></g>
+    <g><circle cx="878"  cy="218" r="9" fill="#d058c8"/><text x="898"  y="218">fuchsia</text></g>
+
+    <!-- ROW 5: purple / neutrals -->
+    <g><circle cx="78"   cy="254" r="9" fill="#7e5ea0"/><text x="98"   y="254">plum</text></g>
+    <g><circle cx="278"  cy="254" r="9" fill="#b070d8"/><text x="298"  y="254">orchid</text></g>
+    <g><circle cx="478"  cy="254" r="9" fill="#889098"/><text x="498"  y="254">slate</text></g>
+    <g><circle cx="678"  cy="254" r="9" fill="#5c6068"/><text x="698"  y="254">graphite</text></g>
+  </g>
+</svg>

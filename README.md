@@ -147,10 +147,13 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 <details>
 <summary><strong>Sidebar</strong> — workspaces, recent agents, in-OS tools, user footer</summary>
 
-- Workspace pills with **25 color tones** to pick from on create — indigo · violet · lavender · cobalt · sky · ocean · teal · mint · sage · emerald · lime · amber · honey · tangerine · mocha · coral · rose · crimson · magenta · fuchsia · plum · orchid · slate · graphite
+- Workspace pills with **25 color tones** to pick from on create:
+
+  <img src=".github/assets/workspace-tones.svg" alt="The 25 workspace tones — indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, mocha, coral, rose, crimson, magenta, fuchsia, plum, orchid, slate, graphite" width="100%"/>
+
 - Hover any pill → reveals a neon-red trash icon to delete that workspace
 - Recent agents block — built-in identity discs with trust tier
-- ⌘E workshop · ⌘/ web search · catalog · ⌘, settings
+- `⌘E` workshop · `⌘/` web search · catalog · `⌘P` settings
 - Persistent user footer pinned at the bottom
 
 </details>
@@ -177,7 +180,7 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 - **Built-in agents** — 10 identity discs, click any for the full capability sheet
 - Footer: `kernel.network.io = ∅ (static-verified)` — the kernel itself never touches the network
 
-Press <kbd>⌘ \`</kbd> for the expanded six-panel cockpit overlay.
+Press <kbd>⌘ 0</kbd> for the expanded six-panel cockpit overlay.
 
 </details>
 
