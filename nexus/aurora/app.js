@@ -592,6 +592,7 @@ function attachShellHandlers() {
     document.body.classList.toggle("nx-cockpit-hidden");
   });
   document.getElementById("nx-open-guide").addEventListener("click", () => renderGuide(0));
+  document.getElementById("nx-open-tour").addEventListener("click", () => renderTour(0));
   document.getElementById("nx-tl-fullscreen").addEventListener("click", async () => {
     try {
       if (!document.fullscreenElement) {
