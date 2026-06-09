@@ -14,6 +14,9 @@ const state = {
   attachments: new Map(),  // workspace_id -> array of pending file uploads
   agents: [],              // catalog/runtime metadata
   recentAgents: [],
+  // cache-bust query string appended to guide image src so users always
+  // see the latest PNGs even if their browser cached the old ones
+  _guideCacheBust: Date.now(),
   trust: {                 // last 60m aggregate
     delta: 0,
     direction: "rising",   // rising | falling | collapse
@@ -2073,7 +2076,7 @@ function renderGuide(pageIndex) {
 
         ${showShot ? `
           <div class="nx-g-shot-wrap">
-            <img class="nx-g-shot" src="${escapeHtml(p.shot)}" alt="${escapeHtml(p.title)}">
+            <img class="nx-g-shot" src="${escapeHtml(p.shot)}?v=${state._guideCacheBust}" alt="${escapeHtml(p.title)}">
             <div class="nx-g-shot-markers" aria-hidden="true">${markersHTML}</div>
           </div>
           ${legendHTML}
