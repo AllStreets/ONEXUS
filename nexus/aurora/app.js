@@ -2011,7 +2011,7 @@ const GUIDE_PAGES = [
       ["←  →",  "flip guide pages"],
       ["Esc",  "close any overlay / exit focus mode"],
     ],
-    cta: { label: "Done — start using ONEXUS", action: null },
+    cta: { label: "Done — start using ONEXUS", action: "close" },
   },
 ];
 
@@ -2046,6 +2046,9 @@ function renderGuide(pageIndex) {
           <span class="nx-g-key-desc">${escapeHtml(v)}</span>
         </div>
       `).join("")}
+    </div>
+    <div class="nx-g-dismiss-hint">
+      click anywhere · press <span class="kbd">esc</span> · or click <span class="kbd">Done</span> · arrow-left to go back
     </div>
   ` : "";
 
@@ -2101,19 +2104,20 @@ function renderGuide(pageIndex) {
 
   const close = () => closeOverlay();
 
-  // Advancing through the guide (arrow keys, "Continue →" cell) is its own
-  // thing — it must NEVER trigger a CTA action like "compose" or "workshop".
-  // Those should only run when the user explicitly clicks the CTA button.
+  const isLastPage = pageIndex === total - 1;
+
+  // Advancing through the guide (arrow keys, → button) — strictly moves to
+  // the next page. NEVER triggers a CTA action. On the LAST page, advance is
+  // a no-op: the user has to click "Done", press Esc, or click outside.
   const advance = () => {
     if (pageIndex < total - 1) renderGuide(pageIndex + 1);
-    else close();
+    // Last page: do nothing — user must explicitly close.
   };
 
-  // The CTA button runs the page's specific action (if any) — otherwise it
-  // just advances to the next page. Either way, after the action the guide
-  // closes only if the action requires leaving the overlay (which all the
-  // "try it" actions do).
+  // The CTA button runs the page's specific action. On the last page the
+  // CTA explicitly closes the guide ("Done — start using ONEXUS").
   const runCTA = () => {
+    if (isLastPage) { close(); return; }
     const action = p.cta?.action;
     switch (action) {
       case "switcher":        close(); renderSwitcher(); return;
@@ -2130,7 +2134,7 @@ function renderGuide(pageIndex) {
       case "workshop":        close(); location.hash = "#/workshop"; return;
       case "search":          close(); location.hash = "#/search"; return;
       case "catalog":         close(); location.hash = "#/catalog"; return;
-      default:                advance(); return;  // null / unknown → just advance
+      default:                advance(); return;
     }
   };
 
@@ -2138,6 +2142,19 @@ function renderGuide(pageIndex) {
   document.getElementById("nx-g-prev").addEventListener("click", () => pageIndex > 0 && renderGuide(pageIndex - 1));
   document.getElementById("nx-g-next")?.addEventListener("click", runCTA);
   document.getElementById("nx-g-advance")?.addEventListener("click", advance);
+
+  // On the LAST page, clicking anywhere outside an interactive element
+  // closes the guide — gives users a clear "I'm done" affordance.
+  if (isLastPage) {
+    const overlay = document.getElementById("nx-guide-overlay");
+    overlay.addEventListener("click", (e) => {
+      // Only close on direct clicks on the overlay backdrop OR on inert
+      // text content (stage, body) — never on buttons/dots/links.
+      const t = e.target;
+      const isInteractive = t.closest("button, a, .nx-g-dot");
+      if (!isInteractive) close();
+    });
+  }
   root.querySelectorAll(".nx-g-dot[data-i]").forEach(dot => {
     dot.addEventListener("click", () => renderGuide(Number(dot.dataset.i)));
   });

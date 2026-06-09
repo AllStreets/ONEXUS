@@ -1881,6 +1881,22 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   font-weight: 700;
 }
 .nx-g-key-desc { font-size: 13px; color: #d9d0ea; }
+.nx-g-dismiss-hint {
+  margin: 18px 0 8px;
+  font-family: var(--nx-font-mono);
+  font-size: 11px;
+  color: #8a8098;
+  text-align: center;
+}
+.nx-g-dismiss-hint .kbd {
+  display: inline-block;
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--nx-mood-primary) 16%, rgba(0,0,0,0.30));
+  color: var(--nx-mood-primary);
+  border-radius: 4px;
+  margin: 0 2px;
+}
 
 /* bottom nav — sticky so it's always reachable */
 .nx-guide-nav {
