@@ -13,8 +13,24 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
+from nexus.workspaces.manager import WorkspaceManager
+
 
 router = APIRouter(prefix="/api/files", tags=["files"])
+
+
+def _get_manager(request: Request) -> WorkspaceManager:
+    mgr = getattr(request.app.state, "workspace_manager", None)
+    if mgr is not None:
+        return mgr
+    kernel = getattr(request.app.state, "kernel", None)
+    if kernel is None:
+        raise HTTPException(503, "Kernel not initialised")
+    ws_root = Path(kernel.config.data_dir) / "workspaces"
+    ws_root.mkdir(parents=True, exist_ok=True)
+    mgr = WorkspaceManager(root=ws_root)
+    request.app.state.workspace_manager = mgr
+    return mgr
 
 
 class FileMeta(BaseModel):
@@ -38,9 +54,7 @@ async def upload_file(
     The file is stored with a hash-based id so duplicates dedupe naturally.
     """
     kernel = request.app.state.kernel
-    mgr = getattr(request.app.state, "workspace_manager", None)
-    if mgr is None:
-        raise HTTPException(503, "Workspace manager not initialised")
+    mgr = _get_manager(request)
     try:
         cfg = mgr.get(workspace_id)
     except Exception:
@@ -53,7 +67,7 @@ async def upload_file(
     if getattr(cfg, "roots", None):
         upload_root = Path(cfg.roots[0]) / ".onexus" / "uploads"
     else:
-        upload_root = Path(kernel.data_dir) / "workspaces" / workspace_id / "uploads"
+        upload_root = Path(kernel.config.data_dir) / "workspaces" / workspace_id / "uploads"
     upload_root.mkdir(parents=True, exist_ok=True)
 
     # Read + hash + store
@@ -109,9 +123,7 @@ async def upload_file(
 @router.get("/{workspace_id}")
 async def list_files(request: Request, workspace_id: str) -> dict:
     """List files uploaded into this workspace."""
-    mgr = getattr(request.app.state, "workspace_manager", None)
-    if mgr is None:
-        raise HTTPException(503, "Workspace manager not initialised")
+    mgr = _get_manager(request)
     try:
         cfg = mgr.get(workspace_id)
     except Exception:
@@ -122,7 +134,7 @@ async def list_files(request: Request, workspace_id: str) -> dict:
     if getattr(cfg, "roots", None):
         upload_root = Path(cfg.roots[0]) / ".onexus" / "uploads"
     else:
-        upload_root = Path(request.app.state.kernel.data_dir) / "workspaces" / workspace_id / "uploads"
+        upload_root = Path(request.app.state.kernel.config.data_dir) / "workspaces" / workspace_id / "uploads"
     if not upload_root.exists():
         return {"files": []}
 
