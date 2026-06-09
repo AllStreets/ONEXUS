@@ -260,6 +260,36 @@ onexus serve --port 8000
 
 Open `http://127.0.0.1:8000/aurora`. Data lives in `~/.local/share/nexus/`.
 
+### Standalone `.app` (Tauri wrapper)
+
+ONEXUS ships with a native desktop shell — a 12 MB Tauri binary that hosts the Aurora UI in a host WebView and spawns the Python kernel as a child process. Real macOS traffic lights, native menu bar, Finder drag-and-drop, file watcher that auto-reloads when you edit `nexus/` source.
+
+```bash
+brew install rust                          # one-time, if you don't have it
+cargo install tauri-cli --version "^2"     # one-time
+
+cd standalone
+cargo tauri build                          # → target/release/bundle/macos/ONEXUS.app
+cp -R target/release/bundle/macos/ONEXUS.app /Applications/
+open /Applications/ONEXUS.app
+```
+
+What the `.app` does on launch:
+- Checks if port 8000 is already serving — attaches if yes
+- Otherwise spawns `.venv/bin/onexus serve --port 8000` from your project root
+- Opens a native WebView at `http://127.0.0.1:8000/aurora`
+- Kills the spawned server on quit
+
+Built-in menu (no terminal needed for the edit loop):
+
+| Menu | Shortcut | Action |
+|---|---|---|
+| **File → Reload Backend** | `⌘⇧R` | kill + respawn the Python server, then reload the WebView (use after editing `nexus/*.py`) |
+| **View → Reload Aurora** | `⌘R` | reload just the WebView (use after editing `nexus/aurora/*.{html,css,js}`) |
+| **File → Quit** | `⌘Q` | kill the server and quit |
+
+The `.app` also runs a file watcher: save any `.py` under `nexus/` and the backend reloads automatically; save anything under `nexus/aurora/` and the WebView refreshes. No `⌘R` needed for the common edit / save / test loop. Full notes: [`standalone/README.md`](standalone/README.md).
+
 ### Docker
 
 ```bash
