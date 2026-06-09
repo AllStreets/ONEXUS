@@ -69,7 +69,7 @@ Open **http://127.0.0.1:8000/aurora** and you're in. First-time visitors get a *
 
 ---
 
-## What it does, in three pictures
+## What it does, in four pictures
 
 The whole shell **shifts color with what's happening**. Aegis observes the kernel — CPU, engram activity, trust events, time of day — and the ambient mesh, the active workspace pill, the composer focus ring, the launch buttons, the capability sheet edge **all recolor together**.
 
