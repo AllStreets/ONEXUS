@@ -156,3 +156,131 @@ export function agentDisc(slug, { trust = null, size = 44 } = {}) {
   const glyph = (GLYPHS[slug] || GLYPHS.agents)(Math.round(size * 0.45));
   return identityDisc({ size, gradient, trust, glyph });
 }
+
+/* Capability sheet for the 10 built-in agents. Each entry lists what the
+ * agent does, the tools it declares, the permission classes it touches,
+ * and the trust floor it requires. Surfaces on the catalog + agent
+ * disc hover. */
+export const BUILTIN_CAPABILITIES = {
+  council: {
+    tagline: "3-round deliberation across cognitive modules",
+    description: "Routes the question to a panel of internal agents, lets each propose an answer, scores by confidence + dissent, returns a synthesised recommendation.",
+    intents: ["deliberate", "decide", "synthesise"],
+    tools: [
+      { name: "engram.semantic.search", class: "Routine" },
+      { name: "modules.invoke",         class: "Notable" },
+    ],
+    permission_classes: ["Routine", "Notable"],
+    trust_floor: 0.25,
+    network: false,
+  },
+  oracle: {
+    tagline: "First-read analysis across whatever's in the workspace",
+    description: "Reads workspace roots, grep + AST + semantic search, and returns a 1-page summary with citations.",
+    intents: ["read", "summarise", "answer"],
+    tools: [
+      { name: "fs.read",                class: "Routine" },
+      { name: "engram.semantic.search", class: "Routine" },
+      { name: "engram.episodic.recall", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.25,
+    network: false,
+  },
+  specter: {
+    tagline: "Red-team — counter-arguments and dissenting views",
+    description: "Argues against the user's premise. Surfaces hidden assumptions, failure modes, and edge cases. No flattery.",
+    intents: ["challenge", "red-team", "stress-test"],
+    tools: [
+      { name: "engram.semantic.search", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.25,
+    network: false,
+  },
+  wraith: {
+    tagline: "Forgetting — controlled deletion + privacy hygiene",
+    description: "Removes targeted entries from Engram + Chronicle. Useful after a sensitive task. Requires explicit confirmation.",
+    intents: ["forget", "erase", "redact"],
+    tools: [
+      { name: "engram.episodic.erase",   class: "Sensitive" },
+      { name: "chronicle.redact",        class: "Privileged" },
+    ],
+    permission_classes: ["Sensitive", "Privileged"],
+    trust_floor: 0.50,
+    network: false,
+  },
+  legacy: {
+    tagline: "Crystallised memory — recall with citations",
+    description: "Returns past decisions, prior threads, and persistent context with timestamps and source.",
+    intents: ["recall", "remember", "cite"],
+    tools: [
+      { name: "engram.episodic.recall", class: "Routine" },
+      { name: "engram.semantic.search", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.25,
+    network: false,
+  },
+  echo: {
+    tagline: "Mirror — what the user just said, restated",
+    description: "Restates the active topic in the user's own words to surface contradictions and confirm understanding.",
+    intents: ["reflect", "summarise-self", "confirm"],
+    tools: [
+      { name: "engram.working.read", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.25,
+    network: false,
+  },
+  sentry: {
+    tagline: "Heartbeat — watches for risks during long tasks",
+    description: "Subscribes to Pulse + Chronicle, flags concerning patterns (trust drops, denied calls, runaway loops).",
+    intents: ["watch", "alert", "halt-on-risk"],
+    tools: [
+      { name: "pulse.subscribe",     class: "Routine" },
+      { name: "chronicle.subscribe", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.25,
+    network: false,
+  },
+  autonomic: {
+    tagline: "Autopilot — repetitive task chains, hands-off",
+    description: "Strings tools together for chores you've already approved. Re-routes around failures, asks only on new capabilities.",
+    intents: ["automate", "loop", "background"],
+    tools: [
+      { name: "modules.invoke",     class: "Notable" },
+      { name: "fs.read",            class: "Routine" },
+      { name: "fs.write",           class: "Sensitive" },
+    ],
+    permission_classes: ["Routine", "Notable", "Sensitive"],
+    trust_floor: 0.75,
+    network: false,
+  },
+  consciousness: {
+    tagline: "Inner state — moods, regulation, salience",
+    description: "Owns MoodEngine signals. Suggests transitions, flags overload, recommends pauses.",
+    intents: ["regulate", "introspect", "transition-mood"],
+    tools: [
+      { name: "mood.observe",     class: "Routine" },
+      { name: "mood.transition",  class: "Notable" },
+    ],
+    permission_classes: ["Routine", "Notable"],
+    trust_floor: 0.50,
+    network: false,
+  },
+  agents: {
+    tagline: "Dispatcher — routes to installed third-party agents",
+    description: "Looks at the installed catalog (onexus-agents) and routes to whichever runnable MCP agent best matches the intent.",
+    intents: ["dispatch", "delegate", "match-tool"],
+    tools: [
+      { name: "agents.search",    class: "Routine" },
+      { name: "agents.launch",    class: "Notable" },
+      { name: "agents.call_tool", class: "Notable" },
+    ],
+    permission_classes: ["Routine", "Notable"],
+    trust_floor: 0.50,
+    network: false,
+  },
+};

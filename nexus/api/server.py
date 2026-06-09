@@ -297,6 +297,15 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.spatial import router as spatial_router
     app.include_router(spatial_router)
 
+    from nexus.api.routes.files import router as files_router
+    app.include_router(files_router)
+
+    from nexus.api.routes.search import router as search_router
+    app.include_router(search_router)
+
+    from nexus.api.routes.workshop import router as workshop_router
+    app.include_router(workshop_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):

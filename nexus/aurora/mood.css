@@ -1,134 +1,188 @@
-/* Aurora mood meshes — 8 ambient states tied to kernel observations
- * Spec §11.
+/* Aurora mood meshes — 8 ambient states tied to kernel observations.
+ *
+ * Each mood sets a palette of CSS variables (--nx-primary, --nx-mesh-1..3,
+ * --nx-glow) that the rest of the shell consumes — so when the mood
+ * changes, the entire window shifts color: ambient mesh, active workspace
+ * pill, composer glow, accent text, feedback buttons, the kernel mark
+ * gradient — not just a small card.
  */
 
-.nx-mood {
-  position: relative;
-  overflow: hidden;
+:root {
+  /* defaults (calm focus) — overridden by each .nx-mood-* class */
+  --nx-mood-bg: #06040c;
+  --nx-mood-primary: #a87af5;
+  --nx-mood-mesh-1: rgba(120, 96, 200, 0.55);
+  --nx-mood-mesh-2: rgba(168, 122, 245, 0.22);
+  --nx-mood-mesh-3: rgba( 76,  92, 168, 0.42);
+  --nx-mood-mesh-4: rgba(  0,   0,   0, 0);
+  --nx-mood-glow:   rgba(168, 122, 245, 0.55);
+  --nx-mood-drift:  24s;
 }
-.nx-mood::before {
+
+/* The .nx-ambient div in the shell uses these vars for the background mesh,
+ * so the whole window's atmosphere shifts when mood changes. */
+.nx-ambient {
+  background:
+    radial-gradient(60% 50% at 18% -5%,  var(--nx-mood-mesh-1) 0%, transparent 60%),
+    radial-gradient(45% 55% at 95% 100%, var(--nx-mood-mesh-2) 0%, transparent 55%),
+    radial-gradient(35% 45% at 88% 8%,   var(--nx-mood-mesh-3) 0%, transparent 55%),
+    radial-gradient(40% 40% at 5% 95%,   var(--nx-mood-mesh-4) 0%, transparent 55%),
+    var(--nx-mood-bg);
+  transition: background 1.6s ease;
+}
+
+/* The ambient also drifts slowly, like an aurora. */
+.nx-ambient::before {
   content: "";
-  position: absolute; inset: -25%;
-  filter: blur(55px); opacity: 0.45;
+  position: absolute; inset: -10%;
+  background:
+    radial-gradient(40% 30% at 30% 40%, var(--nx-mood-mesh-1) 0%, transparent 70%),
+    radial-gradient(35% 30% at 70% 65%, var(--nx-mood-mesh-2) 0%, transparent 70%);
+  filter: blur(80px);
+  opacity: 0.5;
   pointer-events: none;
-  animation: nx-drift var(--nx-drift, 24s) ease-in-out infinite alternate;
+  animation: nx-drift var(--nx-mood-drift, 24s) ease-in-out infinite alternate;
+  mix-blend-mode: screen;
 }
-.nx-mood::after {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.10 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.40;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-}
-@keyframes nx-drift { to { transform: translate(2.5%, -1.5%) rotate(4deg) scale(1.04); } }
-
-/* — mood-calm-focus — base — indigo/violet/amber */
-.nx-mood-calm-focus { --nx-drift: 24s; background-color: #0c0a14; }
-.nx-mood-calm-focus::before {
-  background:
-    radial-gradient(60% 50% at 22% 22%, rgba(120, 96, 200, 0.55) 0%, transparent 70%),
-    radial-gradient(50% 45% at 78% 30%, rgba(255, 178, 110, 0.20) 0%, transparent 70%),
-    radial-gradient(55% 55% at 60% 85%, rgba(76, 92, 168, 0.42) 0%, transparent 70%);
+@keyframes nx-drift {
+  from { transform: translate(-1.5%, -1%) rotate(-2deg) scale(1.00); }
+  to   { transform: translate( 2.5%,  1.5%) rotate( 4deg) scale(1.06); }
 }
 
-/* — mood-deep-flow — jewel green / oceanic */
-.nx-mood-deep-flow { --nx-drift: 38s; background-color: #060a08; }
-.nx-mood-deep-flow::before {
-  background:
-    radial-gradient(60% 55% at 28% 25%, rgba(28, 110, 90, 0.62) 0%, transparent 70%),
-    radial-gradient(50% 50% at 76% 35%, rgba(56, 152, 124, 0.42) 0%, transparent 70%),
-    radial-gradient(45% 45% at 60% 88%, rgba(16, 60, 70, 0.60) 0%, transparent 70%),
-    radial-gradient(25% 25% at 80% 78%, rgba(220, 184, 96, 0.18) 0%, transparent 60%);
+/* ── 8 mood palettes ────────────────────────────────────────────────────── */
+
+/* — calm focus — base — indigo / violet / amber */
+.nx-mood-calm-focus {
+  --nx-mood-bg: #06040c;
+  --nx-mood-primary: #a87af5;
+  --nx-mood-mesh-1: rgba(120, 96, 200, 0.55);
+  --nx-mood-mesh-2: rgba(255, 178, 110, 0.20);
+  --nx-mood-mesh-3: rgba( 76,  92, 168, 0.42);
+  --nx-mood-mesh-4: rgba(168, 124, 232, 0.18);
+  --nx-mood-glow:   rgba(168, 122, 245, 0.55);
+  --nx-mood-drift:  24s;
 }
 
-/* — mood-routing — electric magenta / cyan */
-.nx-mood-routing { --nx-drift: 14s; background-color: #0a0612; }
-.nx-mood-routing::before {
-  background:
-    radial-gradient(55% 50% at 20% 22%, rgba(220, 60, 200, 0.55) 0%, transparent 70%),
-    radial-gradient(50% 50% at 78% 26%, rgba(40, 200, 240, 0.50) 0%, transparent 70%),
-    radial-gradient(55% 55% at 58% 86%, rgba(80, 50, 180, 0.55) 0%, transparent 70%);
+/* — deep flow — jewel green / oceanic */
+.nx-mood-deep-flow {
+  --nx-mood-bg: #02080a;
+  --nx-mood-primary: #4ad4a8;
+  --nx-mood-mesh-1: rgba(28, 110,  90, 0.55);
+  --nx-mood-mesh-2: rgba(56, 152, 124, 0.40);
+  --nx-mood-mesh-3: rgba(16,  60,  70, 0.55);
+  --nx-mood-mesh-4: rgba(220, 184,  96, 0.16);
+  --nx-mood-glow:   rgba( 74, 212, 168, 0.55);
+  --nx-mood-drift:  38s;
 }
 
-/* — mood-deliberating — fully warm: amber/bronze/burgundy */
-.nx-mood-deliberating { --nx-drift: 30s; background-color: #100806; }
-.nx-mood-deliberating::before {
-  background:
-    radial-gradient(55% 50% at 28% 26%, rgba(232, 168, 76, 0.60) 0%, transparent 70%),
-    radial-gradient(50% 50% at 76% 36%, rgba(184, 108, 52, 0.50) 0%, transparent 70%),
-    radial-gradient(48% 45% at 62% 86%, rgba(112, 40, 56, 0.45) 0%, transparent 70%),
-    radial-gradient(30% 25% at 84% 80%, rgba(240, 220, 168, 0.20) 0%, transparent 60%);
+/* — routing — electric magenta / cyan */
+.nx-mood-routing {
+  --nx-mood-bg: #050310;
+  --nx-mood-primary: #56d6ff;
+  --nx-mood-mesh-1: rgba(220,  60, 200, 0.55);
+  --nx-mood-mesh-2: rgba( 40, 200, 240, 0.50);
+  --nx-mood-mesh-3: rgba( 80,  50, 180, 0.55);
+  --nx-mood-mesh-4: rgba(110, 196, 240, 0.30);
+  --nx-mood-glow:   rgba( 86, 214, 255, 0.55);
+  --nx-mood-drift:  14s;
 }
 
-/* — mood-creative — hot coral / tangerine / magenta / teal edge */
-.nx-mood-creative { --nx-drift: 20s; background-color: #110608; }
-.nx-mood-creative::before {
-  background:
-    radial-gradient(55% 50% at 22% 22%, rgba(248, 96, 120, 0.58) 0%, transparent 65%),
-    radial-gradient(45% 45% at 78% 28%, rgba(248, 140, 60, 0.50) 0%, transparent 65%),
-    radial-gradient(50% 50% at 62% 84%, rgba(216, 72, 168, 0.48) 0%, transparent 70%),
-    radial-gradient(28% 28% at 84% 84%, rgba(56, 168, 184, 0.28) 0%, transparent 60%);
+/* — deliberating — amber / bronze / burgundy */
+.nx-mood-deliberating {
+  --nx-mood-bg: #0c0604;
+  --nx-mood-primary: #ffb86c;
+  --nx-mood-mesh-1: rgba(232, 168,  76, 0.60);
+  --nx-mood-mesh-2: rgba(184, 108,  52, 0.50);
+  --nx-mood-mesh-3: rgba(112,  40,  56, 0.45);
+  --nx-mood-mesh-4: rgba(240, 220, 168, 0.20);
+  --nx-mood-glow:   rgba(255, 184, 108, 0.55);
+  --nx-mood-drift:  30s;
 }
 
-/* — mood-reflective — near-monochrome plum + rose ember */
-.nx-mood-reflective { --nx-drift: 42s; background-color: #06040a; }
-.nx-mood-reflective::before {
-  background:
-    radial-gradient(60% 55% at 30% 30%, rgba(80, 36, 92, 0.72) 0%, transparent 70%),
-    radial-gradient(45% 45% at 72% 32%, rgba(48, 28, 76, 0.62) 0%, transparent 70%),
-    radial-gradient(22% 22% at 80% 82%, rgba(220, 144, 168, 0.18) 0%, transparent 60%);
+/* — creative — hot coral / tangerine / magenta / teal */
+.nx-mood-creative {
+  --nx-mood-bg: #0c0408;
+  --nx-mood-primary: #ff6e9c;
+  --nx-mood-mesh-1: rgba(248,  96, 120, 0.58);
+  --nx-mood-mesh-2: rgba(248, 140,  60, 0.48);
+  --nx-mood-mesh-3: rgba(216,  72, 168, 0.46);
+  --nx-mood-mesh-4: rgba( 56, 168, 184, 0.26);
+  --nx-mood-glow:   rgba(255, 110, 156, 0.55);
+  --nx-mood-drift:  20s;
 }
 
-/* — mood-watchful — brass/olive/slate/ember */
-.nx-mood-watchful { --nx-drift: 12s; background-color: #0a0a08; }
-.nx-mood-watchful::before {
-  background:
-    radial-gradient(55% 50% at 24% 28%, rgba(184, 152, 64, 0.50) 0%, transparent 70%),
-    radial-gradient(45% 45% at 70% 30%, rgba(116, 128, 60, 0.45) 0%, transparent 70%),
-    radial-gradient(40% 40% at 50% 84%, rgba(220, 130, 56, 0.40) 0%, transparent 65%),
-    radial-gradient(30% 30% at 86% 80%, rgba(76, 88, 108, 0.45) 0%, transparent 65%);
+/* — reflective — near-monochrome plum + rose ember */
+.nx-mood-reflective {
+  --nx-mood-bg: #050408;
+  --nx-mood-primary: #c89cd8;
+  --nx-mood-mesh-1: rgba( 80,  36,  92, 0.72);
+  --nx-mood-mesh-2: rgba( 48,  28,  76, 0.55);
+  --nx-mood-mesh-3: rgba(220, 144, 168, 0.18);
+  --nx-mood-mesh-4: rgba(100,  60, 120, 0.32);
+  --nx-mood-glow:   rgba(200, 156, 216, 0.55);
+  --nx-mood-drift:  42s;
 }
 
-/* — mood-alert — crimson — overrides workspace tone */
-.nx-mood-alert { --nx-drift: 7s; background-color: #0a0204; }
-.nx-mood-alert::before {
-  background:
-    radial-gradient(60% 55% at 30% 30%, rgba(140, 28, 36, 0.72) 0%, transparent 65%),
-    radial-gradient(40% 40% at 78% 32%, rgba(248, 100, 88, 0.48) 0%, transparent 65%),
-    radial-gradient(45% 40% at 60% 86%, rgba(40, 8, 12, 0.65) 0%, transparent 70%);
+/* — watchful — brass / olive / slate / ember */
+.nx-mood-watchful {
+  --nx-mood-bg: #080808;
+  --nx-mood-primary: #d4b860;
+  --nx-mood-mesh-1: rgba(184, 152,  64, 0.50);
+  --nx-mood-mesh-2: rgba(116, 128,  60, 0.45);
+  --nx-mood-mesh-3: rgba(220, 130,  56, 0.40);
+  --nx-mood-mesh-4: rgba( 76,  88, 108, 0.45);
+  --nx-mood-glow:   rgba(212, 184,  96, 0.55);
+  --nx-mood-drift:  12s;
 }
 
-/* Reduce-color users get monochrome */
+/* — alert — crimson / blood-orange — overrides workspace tone */
+.nx-mood-alert {
+  --nx-mood-bg: #060103;
+  --nx-mood-primary: #ff6464;
+  --nx-mood-mesh-1: rgba(140,  28,  36, 0.72);
+  --nx-mood-mesh-2: rgba(248, 100,  88, 0.50);
+  --nx-mood-mesh-3: rgba( 40,   8,  12, 0.65);
+  --nx-mood-mesh-4: rgba(248,  72,  72, 0.40);
+  --nx-mood-glow:   rgba(255, 100, 100, 0.60);
+  --nx-mood-drift:  7s;
+}
+
+/* When the user prefers more contrast, mute the mesh to near-flat. */
 @media (prefers-contrast: more) {
-  .nx-mood::before { background: rgba(255,255,255,0.04) !important; opacity: 0.10 !important; }
+  .nx-ambient::before { display: none !important; }
+  .nx-ambient { background: var(--nx-mood-bg) !important; }
 }
 
-/* ── Trust event temperature overlays ─────────────────────────────────────── */
+/* prefers-reduced-data: skip the mesh entirely */
+@media (prefers-reduced-data: reduce) {
+  .nx-ambient::before { display: none !important; }
+}
 
-.nx-trust-wash-rising,
-.nx-trust-wash-falling,
-.nx-trust-wash-collapse {
+/* ── Trust event temperature overlays (unchanged) ───────────────────────── */
+
+body.nx-trust-wash-rising,
+body.nx-trust-wash-falling,
+body.nx-trust-wash-collapse {
   position: relative;
 }
-.nx-trust-wash-rising::after,
-.nx-trust-wash-falling::after,
-.nx-trust-wash-collapse::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+body.nx-trust-wash-rising::after,
+body.nx-trust-wash-falling::after,
+body.nx-trust-wash-collapse::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 999;
   opacity: 0;
   animation: nx-wash-fade 1.5s ease-out forwards;
 }
-.nx-trust-wash-rising::after {
+body.nx-trust-wash-rising::after {
   background: radial-gradient(circle at 50% 50%, var(--nx-trust-rising) 0%, transparent 60%);
 }
-.nx-trust-wash-falling::after {
+body.nx-trust-wash-falling::after {
   background: radial-gradient(circle at 50% 50%, var(--nx-trust-falling) 0%, transparent 60%);
 }
-.nx-trust-wash-collapse::after {
+body.nx-trust-wash-collapse::after {
   background: radial-gradient(circle at 50% 50%, var(--nx-trust-collapse) 0%, transparent 60%);
 }
 @keyframes nx-wash-fade {
-  0% { opacity: 0; }
-  25% { opacity: 0.35; }
+  0%   { opacity: 0; }
+  25%  { opacity: 0.35; }
   100% { opacity: 0; }
 }

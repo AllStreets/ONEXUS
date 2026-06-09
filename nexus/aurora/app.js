@@ -4,13 +4,14 @@
  * Overlays for ⌘K switcher / ⌘N new workspace / ⌘` cockpit / ⌘, settings.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI } from "/aurora/static/icons.js";
+import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES } from "/aurora/static/icons.js";
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
   workspaces: [],
   active: null,
   thread: new Map(),       // workspace_id -> array of message records
+  attachments: new Map(),  // workspace_id -> array of pending file uploads
   agents: [],              // catalog/runtime metadata
   recentAgents: [],
   trust: {                 // last 60m aggregate
@@ -539,6 +540,8 @@ function attachShellHandlers() {
   document.getElementById("nx-mood-pill").addEventListener("click", toggleCockpitOverlay);
   document.getElementById("nx-open-catalog").addEventListener("click", () => location.hash = "#/catalog");
   document.getElementById("nx-open-settings").addEventListener("click", () => location.hash = "#/settings");
+  document.getElementById("nx-open-workshop").addEventListener("click", () => location.hash = "#/workshop");
+  document.getElementById("nx-open-search").addEventListener("click", () => location.hash = "#/search");
   document.getElementById("nx-search-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -861,10 +864,93 @@ function renderAgentDiscs() {
   document.getElementById("nx-agents-label").textContent =
     `${totalBuiltin} BUILT-IN · ${state.agents.length || 0} INSTALLED`;
   const overflow = Math.max(0, totalBuiltin - BUILTINS.length);
-  el.innerHTML = BUILTINS.map(slug => agentDisc(slug, { size: 28 })).join("") +
+  el.innerHTML = BUILTINS.map(slug => `<button class="nx-disc-btn" data-slug="${slug}" title="${escapeHtml(BUILTIN_CAPABILITIES[slug]?.tagline || slug)}">${agentDisc(slug, { size: 28 })}</button>`).join("") +
     (overflow > 0 ? `<button class="nx-agent-overflow" title="Browse catalog">+${overflow}</button>` : "");
   const overEl = el.querySelector(".nx-agent-overflow");
   if (overEl) overEl.addEventListener("click", () => location.hash = "#/catalog");
+  // Click any built-in disc → show its capability sheet
+  el.querySelectorAll(".nx-disc-btn[data-slug]").forEach(btn => {
+    btn.addEventListener("click", () => openCapabilitySheet(btn.dataset.slug));
+  });
+}
+
+function openCapabilitySheet(slug) {
+  const caps = BUILTIN_CAPABILITIES[slug];
+  if (!caps) return;
+  const root = document.getElementById("nx-overlay-root");
+  const gradient = GRADIENTS[slug] || ["#a87af5", "#5a4ac4"];
+  root.innerHTML = `
+    <div class="nx-cap-overlay" id="nx-cap-overlay" role="dialog" aria-modal="true">
+      <div class="nx-cap-sheet" style="--cap-grad-a:${gradient[0]};--cap-grad-b:${gradient[1]}">
+        <button class="nx-cap-close" id="nx-cap-close" aria-label="Close">×</button>
+        <div class="nx-cap-head">
+          ${agentDisc(slug, { size: 64 })}
+          <div>
+            <div class="nx-cap-eyebrow">BUILT-IN AGENT</div>
+            <div class="nx-cap-name">${escapeHtml(slug)}</div>
+            <div class="nx-cap-tag">${escapeHtml(caps.tagline)}</div>
+          </div>
+        </div>
+        <p class="nx-cap-desc">${escapeHtml(caps.description)}</p>
+
+        <div class="nx-cap-grid">
+          <div class="nx-cap-section">
+            <div class="nx-cap-label">INTENTS</div>
+            <div class="nx-cap-chips">${caps.intents.map(i => `<span class="cap-chip">${escapeHtml(i)}</span>`).join("")}</div>
+          </div>
+
+          <div class="nx-cap-section">
+            <div class="nx-cap-label">PERMISSION CLASSES</div>
+            <div class="nx-cap-chips">${caps.permission_classes.map(c => `
+              <span class="cap-chip class-${c.toLowerCase()}">${escapeHtml(c)}</span>
+            `).join("")}</div>
+          </div>
+
+          <div class="nx-cap-section nx-cap-section-tools">
+            <div class="nx-cap-label">TOOLS DECLARED</div>
+            <div class="nx-cap-tools">
+              ${caps.tools.map(t => `
+                <div class="cap-tool">
+                  <span class="cap-tool-dot class-${t.class.toLowerCase()}"></span>
+                  <span class="cap-tool-name">${escapeHtml(t.name)}</span>
+                  <span class="cap-tool-class">${escapeHtml(t.class)}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="nx-cap-section">
+            <div class="nx-cap-label">TRUST FLOOR</div>
+            <div class="nx-cap-tf">${caps.trust_floor.toFixed(2)} <span style="color:#6b6080;font-size:11px;letter-spacing:0.10em">/ 1.00</span></div>
+          </div>
+
+          <div class="nx-cap-section">
+            <div class="nx-cap-label">NETWORK</div>
+            <div class="nx-cap-net ${caps.network ? 'on' : 'off'}">${caps.network ? "REACHES NETWORK" : "LOCAL-ONLY"}</div>
+          </div>
+        </div>
+
+        <div class="nx-cap-actions">
+          <button class="nx-cap-mention" data-slug="${slug}">@${slug} — start a message</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("nx-cap-close").addEventListener("click", closeOverlay);
+  document.getElementById("nx-cap-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "nx-cap-overlay") closeOverlay();
+  });
+  document.querySelector(".nx-cap-mention").addEventListener("click", () => {
+    closeOverlay();
+    if (!state.active) return;
+    if (!location.hash.startsWith("#/conversation/")) {
+      location.hash = `#/conversation/${state.active}`;
+    }
+    setTimeout(() => {
+      const ci = document.getElementById("nx-composer-input");
+      if (ci) { ci.value = `@${slug} `; ci.focus(); }
+    }, 200);
+  });
 }
 
 // ── Main view: conversation ────────────────────────────────────────────────
@@ -893,16 +979,37 @@ async function renderConversation(workspaceId) {
     ? `started by you · ${onDuty} on duty${(ws.resident_agents || []).length > 1 ? ` · ${(ws.resident_agents || [])[1]} listening` : ""}`
     : `started by you · council routing`;
 
+  const attachedFiles = state.attachments?.get(workspaceId) || [];
   const composerHTML = `
     <form class="nx-composer" id="nx-composer" autocomplete="off">
+      <button type="button" class="nx-attach-btn" id="nx-attach-btn" title="Attach file (or drag-and-drop)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9.8 5.5 5.8 9.5a2 2 0 1 1-2.8-2.8L8 1.7a3 3 0 0 1 4.2 4.2L7.2 11a4 4 0 0 1-5.7-5.6"/>
+        </svg>
+      </button>
       <input id="nx-composer-input"
-             placeholder="message agents in this workspace…"
+             placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
              aria-label="Compose a message"
              autofocus>
+      <input type="file" id="nx-file-input" multiple style="display:none">
       <div class="nx-composer-kbd">
         <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
       </div>
     </form>
+    ${attachedFiles.length ? `
+      <div class="nx-attached-strip">
+        ${attachedFiles.map(f => `
+          <span class="nx-attached-chip" data-id="${escapeHtml(f.id)}" title="${escapeHtml(f.name)} · ${(f.size/1024).toFixed(1)} KB">
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 0h6l4 4v10H2z"/>
+              <path d="M8 0v4h4"/>
+            </svg>
+            <span class="chip-name">${escapeHtml(truncate(f.name, 24))}</span>
+            <button type="button" class="chip-x" data-id="${escapeHtml(f.id)}" aria-label="Remove">×</button>
+          </span>
+        `).join("")}
+      </div>
+    ` : ""}
   `;
 
   if (isEmpty) {
@@ -964,6 +1071,33 @@ async function renderConversation(workspaceId) {
       await sendMessage(workspaceId);
     });
   });
+
+  // File attach + drag-and-drop
+  const fileInput = document.getElementById("nx-file-input");
+  const attachBtn = document.getElementById("nx-attach-btn");
+  attachBtn?.addEventListener("click", () => fileInput?.click());
+  fileInput?.addEventListener("change", async (e) => {
+    for (const f of e.target.files) await uploadFile(workspaceId, f);
+    e.target.value = "";
+  });
+  // Strip chips remove an attachment
+  main.querySelectorAll(".chip-x[data-id]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const id = btn.dataset.id;
+      const list = state.attachments?.get(workspaceId) || [];
+      state.attachments.set(workspaceId, list.filter(f => f.id !== id));
+      renderConversation(workspaceId);
+    });
+  });
+  // Drop anywhere on the main canvas
+  main.ondragover = (e) => { e.preventDefault(); main.classList.add("nx-dragover"); };
+  main.ondragleave = (e) => { if (e.target === main) main.classList.remove("nx-dragover"); };
+  main.ondrop = async (e) => {
+    e.preventDefault();
+    main.classList.remove("nx-dragover");
+    for (const item of e.dataTransfer?.files || []) await uploadFile(workspaceId, item);
+  };
 
   // Tour link — bring the screenshot's narrative to life:
   //   1) Pre-populate the thread with user → oracle (diff cards) → user pick
@@ -1092,7 +1226,36 @@ async function renderConversation(workspaceId) {
   // Scroll the inner container to its bottom so latest messages are visible
   const inner = document.querySelector(".nx-main-inner");
   if (inner) inner.scrollTop = inner.scrollHeight;
+
+  // Restore any in-flight composer text + focus from previous render (so that
+  // when the conversation re-renders we don't blow away what the user is typing)
+  const ci = document.getElementById("nx-composer-input");
+  if (ci && state._pendingComposer && state._pendingComposer.id === workspaceId) {
+    ci.value = state._pendingComposer.value;
+    if (state._pendingComposer.focused) ci.focus();
+  }
 }
+
+// Keep the live composer state in `state._pendingComposer` so re-renders
+// don't wipe what the user is typing.
+function _wireComposerStatePreservation() {
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.id === "nx-composer-input") {
+      const id = location.hash.startsWith("#/conversation/")
+        ? decodeURIComponent(location.hash.slice("#/conversation/".length))
+        : null;
+      if (id) {
+        state._pendingComposer = { id, value: e.target.value, focused: true };
+      }
+    }
+  });
+  document.addEventListener("focusout", (e) => {
+    if (e.target && e.target.id === "nx-composer-input" && state._pendingComposer) {
+      state._pendingComposer.focused = false;
+    }
+  });
+}
+_wireComposerStatePreservation();
 
 function renderEmptyThreadHTML(ws) {
   const SUGGESTIONS = [
@@ -1130,9 +1293,27 @@ function renderEmptyThreadHTML(ws) {
 
 function renderMessageHTML(m) {
   if (m.role === "user") {
+    const atts = (m.attachments || []).filter(a => a.kind === "file");
+    const attHTML = atts.length ? `
+      <div class="nx-msg-user-files">
+        ${atts.map(a => `
+          <span class="nx-file-chip">
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 0h6l4 4v10H2z"/>
+              <path d="M8 0v4h4"/>
+            </svg>
+            <span>${escapeHtml(a.name)}</span>
+            <span class="chip-sz">${(a.size/1024).toFixed(1)} KB</span>
+          </span>
+        `).join("")}
+      </div>
+    ` : "";
     return `
       <div class="nx-msg-user">
-        <div class="nx-msg-bubble">${escapeHtml(m.body)}</div>
+        <div class="nx-msg-bubble">
+          ${m.body ? escapeHtml(m.body) : ""}
+          ${attHTML}
+        </div>
       </div>
     `;
   }
@@ -1231,16 +1412,53 @@ function renderPendingPermissionHTML(p) {
 
 function _msgId() { return "m_" + Math.random().toString(36).slice(2, 10); }
 
+async function uploadFile(workspaceId, file) {
+  if (!file) return;
+  const form = new FormData();
+  form.append("workspace_id", workspaceId);
+  form.append("file", file);
+  try {
+    const r = await fetch("/api/files", { method: "POST", body: form });
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error("upload failed:", txt);
+      return;
+    }
+    const meta = await r.json();
+    const list = state.attachments.get(workspaceId) || [];
+    list.push(meta);
+    state.attachments.set(workspaceId, list);
+    renderConversation(workspaceId);
+  } catch (e) {
+    console.error("upload error:", e);
+  }
+}
+
 async function sendMessage(workspaceId) {
   const input = document.getElementById("nx-composer-input");
   const body = input.value.trim();
-  if (!body) return;
+  const files = state.attachments.get(workspaceId) || [];
+  if (!body && files.length === 0) return;
   input.value = "";
+  if (state._pendingComposer && state._pendingComposer.id === workspaceId) {
+    state._pendingComposer = null;
+  }
+  // Move attached files into the message + clear the pending strip
+  const attachments = files.map(f => ({ kind: "file", name: f.name, size: f.size, id: f.id }));
+  state.attachments.set(workspaceId, []);
+
   // Append user message locally
   const thread = state.thread.get(workspaceId) || [];
-  thread.push({ id: _msgId(), role: "user", body, ts: new Date().toISOString() });
+  thread.push({ id: _msgId(), role: "user", body, ts: new Date().toISOString(), attachments });
   state.thread.set(workspaceId, thread);
   renderConversation(workspaceId);
+
+  // The actual message sent to the agent includes the file references
+  let messageForAgent = body;
+  if (attachments.length) {
+    const list = attachments.map(a => `- ${a.name} (${(a.size/1024).toFixed(1)} KB)`).join("\n");
+    messageForAgent = `${body || "Attached files for you to consider:"}\n\nAttached:\n${list}`;
+  }
 
   // Add a pending typing indicator message so the user sees the system thinking
   const typingId = _msgId();
@@ -1252,7 +1470,7 @@ async function sendMessage(workspaceId) {
     const r = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: body, workspace_id: workspaceId }),
+      body: JSON.stringify({ message: messageForAgent, workspace_id: workspaceId }),
     });
     // Remove the typing placeholder
     const idx = thread.findIndex(m => m.id === typingId);
@@ -1358,42 +1576,105 @@ function renderWorkspacesGrid() {
 async function renderCatalog() {
   const main = document.getElementById("nx-main");
   main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">loading catalog…</div></div>`;
+  // Parse hash for filters
+  const filters = {};
+  (location.hash.split("?")[1] || "").split("&").forEach(p => {
+    const [k,v] = p.split("=");
+    if (k && v) filters[decodeURIComponent(k)] = decodeURIComponent(v);
+  });
+  const runnableOnly = filters.runnable !== "0";
+  const category = filters.category || "";
+  const search = filters.q || "";
   try {
-    const r = await fetch("/api/agents?limit=32");
+    const params = new URLSearchParams();
+    params.set("limit", "48");
+    if (runnableOnly) params.set("runnable_only", "true");
+    if (category) params.set("category", category);
+    const endpoint = search ? `/api/agents/search?q=${encodeURIComponent(search)}&limit=48` : `/api/agents?${params}`;
+    const r = await fetch(endpoint);
     if (!r.ok) throw new Error("catalog fetch failed");
     const body = await r.json();
     const agents = body.agents || [];
+    const cats = body.categories || [];
     main.innerHTML = `
       <div class="nx-main-inner">
         <div class="nx-spatial-header">
           <div>
             <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
             <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
-            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of 7,000+ — built-ins are installed by default</div>
+            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of ${body.total} · ${runnableOnly ? "runnable (MCP adapter)" : "all"} · vendored from ONEXUS-Agents</div>
           </div>
+          <form class="nx-cat-filters" id="nx-cat-filters">
+            <input type="search" id="nx-cat-q" value="${escapeHtml(search)}" placeholder="search the catalog…">
+            <select id="nx-cat-cat">
+              <option value="">all categories</option>
+              ${cats.map(c => `<option value="${escapeHtml(c)}" ${c===category?"selected":""}>${escapeHtml(c)}</option>`).join("")}
+            </select>
+            <label class="nx-cat-toggle">
+              <input type="checkbox" id="nx-cat-runnable" ${runnableOnly?"checked":""}>
+              runnable only
+            </label>
+          </form>
         </div>
         <div class="nx-spatial">
           ${agents.map(renderCatalogCard).join("")}
         </div>
       </div>
     `;
+    // Wire filter changes
+    const applyFilters = () => {
+      const q = document.getElementById("nx-cat-q").value.trim();
+      const cat = document.getElementById("nx-cat-cat").value;
+      const run = document.getElementById("nx-cat-runnable").checked;
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (cat) params.set("category", cat);
+      params.set("runnable", run ? "1" : "0");
+      location.hash = `#/catalog?${params}`;
+    };
+    document.getElementById("nx-cat-filters").addEventListener("submit", (e) => { e.preventDefault(); applyFilters(); });
+    document.getElementById("nx-cat-cat").addEventListener("change", applyFilters);
+    document.getElementById("nx-cat-runnable").addEventListener("change", applyFilters);
+    // Wire card actions
+    main.querySelectorAll(".nx-spatial-card[data-slug]").forEach(card => {
+      const slug = card.dataset.slug;
+      card.querySelector(".launch-btn")?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.textContent = "launching…";
+        try {
+          const r = await fetch(`/api/agents/${encodeURIComponent(slug)}/launch`, { method: "POST" });
+          const body = await r.json().catch(() => ({}));
+          btn.textContent = r.ok ? "running" : (body.detail || body.message || "failed");
+          if (r.ok) btn.classList.add("on");
+        } catch (e) {
+          btn.textContent = "error";
+        } finally {
+          setTimeout(() => { btn.disabled = false; }, 1200);
+        }
+      });
+    });
   } catch (e) {
     main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">could not load catalog: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
 function renderCatalogCard(a) {
-  const sys = a.is_builtin ? "<span class='badge-system'>SYSTEM</span>" : "";
-  const status = a.running ? "active" : "sleeping";
+  const runnable = a.runnable || a.is_builtin;
   return `
     <div class="nx-spatial-card" data-slug="${escapeHtml(a.slug)}">
-      ${agentDisc(a.slug, { size: 36, trust: a.trust_score ?? null })}
-      <div class="name">${escapeHtml(a.slug)}</div>
+      ${agentDisc(a.slug, { size: 36, trust: a.trust_floor ?? null })}
+      <div class="name">${escapeHtml(a.name || a.slug)}</div>
       <div class="tagline">${escapeHtml(a.tagline || a.description || "")}</div>
       <div class="status">
-        <span class="status-dot ${status === "sleeping" ? "sleeping" : ""}"></span>
-        ${status}
-        ${sys}
+        <span class="status-dot ${runnable ? "" : "sleeping"}"></span>
+        ${runnable ? "runnable" : "manifest-only"}
+        <span class="badge-system">${escapeHtml(a.category || "")}</span>
+      </div>
+      <div class="nx-card-actions">
+        ${runnable ? `<button class="launch-btn" type="button">Launch</button>` : ""}
+        ${a.source_github ? `<a class="src-link" href="${escapeHtml(a.source_github)}" target="_blank" rel="noopener">source ↗</a>` : ""}
       </div>
     </div>
   `;
@@ -1430,6 +1711,153 @@ async function renderSettings() {
       panel.innerHTML = `<h3>${heading}</h3><p class="nx-dim" style="font-size:13px">— stub —</p>`;
     });
   });
+}
+
+// ── Workshop (in-OS code editor + sandbox runtime) ────────────────────────
+async function renderWorkshop() {
+  const main = document.getElementById("nx-main");
+  // Discover available runtimes from the server
+  let langs = {};
+  try {
+    const r = await fetch("/api/workshop/languages");
+    if (r.ok) langs = (await r.json()).languages || {};
+  } catch {}
+  const available = Object.keys(langs);
+  const defaultLang = available[0] || "python";
+  const lastCode = state._workshopCode || "";
+  const lastLang = state._workshopLang || defaultLang;
+
+  main.innerHTML = `
+    <div class="nx-main-inner">
+      <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:18px">
+        <div>
+          <div class="nx-eyebrow" style="margin-bottom:6px">Workshop</div>
+          <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Code &amp; sandbox</div>
+          <div class="nx-dim" style="font-size:13px;margin-top:4px">${available.length} runtime${available.length===1?"":"s"} available · gated by Aegis · logged to Chronicle</div>
+        </div>
+      </header>
+
+      <div class="nx-workshop">
+        <div class="nx-workshop-controls">
+          <select id="nx-workshop-lang" class="nx-input">
+            ${available.map(l => `<option value="${escapeHtml(l)}" ${l===lastLang?"selected":""}>${escapeHtml(l)}</option>`).join("")}
+          </select>
+          <button id="nx-workshop-run" class="nx-run-btn">
+            <span>Run</span>
+            <span class="run-kbd">⌘⏎</span>
+          </button>
+        </div>
+        <textarea id="nx-workshop-code" class="nx-workshop-code" spellcheck="false"
+                  placeholder="# write code — runs in a subprocess sandbox, no network access by default"
+        >${escapeHtml(lastCode)}</textarea>
+        <div class="nx-workshop-out" id="nx-workshop-out">
+          <div class="nx-empty" style="opacity:0.45;padding:18px;font-size:11.5px">Run a snippet to see stdout / stderr here.</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const codeEl = document.getElementById("nx-workshop-code");
+  const langEl = document.getElementById("nx-workshop-lang");
+  const outEl = document.getElementById("nx-workshop-out");
+  const runBtn = document.getElementById("nx-workshop-run");
+
+  const run = async () => {
+    runBtn.disabled = true;
+    const code = codeEl.value;
+    const language = langEl.value;
+    state._workshopCode = code;
+    state._workshopLang = language;
+    outEl.innerHTML = `<div class="nx-empty" style="opacity:0.55;padding:14px;font-size:11.5px">Running…</div>`;
+    try {
+      const r = await fetch("/api/workshop/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, code, workspace_id: state.active }),
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        outEl.innerHTML = `<pre class="nx-workshop-err">${escapeHtml(txt)}</pre>`;
+        return;
+      }
+      const body = await r.json();
+      outEl.innerHTML = `
+        <div class="nx-workshop-stats">
+          <span class="${body.exit_code === 0 ? 'ok' : 'fail'}">exit ${body.exit_code}</span>
+          <span>${body.elapsed_ms} ms</span>
+          ${body.truncated ? `<span class="warn">truncated</span>` : ""}
+        </div>
+        ${body.stdout ? `<div class="nx-workshop-block"><div class="nx-workshop-block-lbl">STDOUT</div><pre>${escapeHtml(body.stdout)}</pre></div>` : ""}
+        ${body.stderr ? `<div class="nx-workshop-block err"><div class="nx-workshop-block-lbl">STDERR</div><pre>${escapeHtml(body.stderr)}</pre></div>` : ""}
+      `;
+    } catch (e) {
+      outEl.innerHTML = `<pre class="nx-workshop-err">${escapeHtml(e.message)}</pre>`;
+    } finally {
+      runBtn.disabled = false;
+    }
+  };
+  runBtn.addEventListener("click", run);
+  codeEl.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); run(); }
+  });
+  codeEl.addEventListener("input", () => { state._workshopCode = codeEl.value; });
+}
+
+// ── Search (in-OS web search) ─────────────────────────────────────────────
+async function renderSearch(hash) {
+  const main = document.getElementById("nx-main");
+  const qMatch = hash.match(/[?&]q=([^&]+)/);
+  const initial = qMatch ? decodeURIComponent(qMatch[1]) : "";
+  main.innerHTML = `
+    <div class="nx-main-inner">
+      <header style="margin-bottom:18px">
+        <div class="nx-eyebrow" style="margin-bottom:6px">Search</div>
+        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Search the web — without leaving</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">Routes through aegis.network() · default provider: DuckDuckGo · no tracking</div>
+      </header>
+      <form class="nx-composer" id="nx-search-form" style="margin:0 0 18px">
+        <input id="nx-search-q" type="search" value="${escapeHtml(initial)}" autofocus
+               placeholder="what do you need to know?" style="flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:14px">
+        <button type="submit" class="nx-run-btn">Search</button>
+      </form>
+      <div class="nx-search-results" id="nx-search-results"></div>
+    </div>
+  `;
+
+  const formEl = document.getElementById("nx-search-form");
+  const qEl = document.getElementById("nx-search-q");
+  const resultsEl = document.getElementById("nx-search-results");
+
+  const doSearch = async (q) => {
+    if (!q) return;
+    resultsEl.innerHTML = `<div class="nx-empty" style="opacity:0.55;padding:18px">Searching…</div>`;
+    try {
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=12`);
+      if (!r.ok) {
+        const txt = await r.text();
+        resultsEl.innerHTML = `<div class="nx-empty">Search failed: ${escapeHtml(txt)}</div>`;
+        return;
+      }
+      const body = await r.json();
+      if (!body.hits.length) {
+        resultsEl.innerHTML = `<div class="nx-empty">No results for ${escapeHtml(q)}.</div>`;
+        return;
+      }
+      resultsEl.innerHTML = body.hits.map(h => `
+        <a class="nx-search-hit" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">
+          <div class="hit-title">${escapeHtml(h.title || h.url)}</div>
+          <div class="hit-url">${escapeHtml(h.url)}</div>
+          ${h.snippet ? `<div class="hit-snippet">${escapeHtml(h.snippet)}</div>` : ""}
+          ${h.source ? `<div class="hit-source">${escapeHtml(h.source)}</div>` : ""}
+        </a>
+      `).join("");
+    } catch (e) {
+      resultsEl.innerHTML = `<div class="nx-empty">Network error: ${escapeHtml(e.message)}</div>`;
+    }
+  };
+
+  formEl.addEventListener("submit", (e) => { e.preventDefault(); doSearch(qEl.value.trim()); });
+  if (initial) doSearch(initial);
 }
 
 // ── Overlay: workspace switcher (⌘K) ──────────────────────────────────────
@@ -1638,6 +2066,8 @@ async function route(hash) {
   if (hash === "#/workspaces") { renderWorkspacesGrid(); return; }
   if (hash.startsWith("#/catalog")) { renderCatalog(); return; }
   if (hash === "#/settings") { renderSettings(); return; }
+  if (hash === "#/workshop") { renderWorkshop(); return; }
+  if (hash.startsWith("#/search")) { renderSearch(hash); return; }
   if (hash.startsWith("#/conversation/")) {
     const id = decodeURIComponent(hash.slice("#/conversation/".length));
     await renderConversation(id);
@@ -1663,15 +2093,20 @@ function subscribeStreams() {
       } catch {}
     };
   } catch {}
-  // Permissions
+  // Permissions — only re-render conversation when the pending SET actually
+  // changes (otherwise the 2s WS push wipes focus + scroll + in-flight text).
+  let lastPendingKey = "";
   try {
     const w = new WebSocket(`${wsProto}//${location.host}/api/permissions/ws`);
     w.onmessage = (e) => {
       try {
         const body = JSON.parse(e.data);
-        state.perms.pending = body.pending || [];
+        const pending = body.pending || [];
+        const newKey = pending.map(p => p.id).sort().join(",");
+        if (newKey === lastPendingKey) return;  // no change, do nothing
+        lastPendingKey = newKey;
+        state.perms.pending = pending;
         renderCockpitRail();
-        // Refresh the conversation if we're in one
         if (location.hash.startsWith("#/conversation/")) {
           const id = decodeURIComponent(location.hash.slice("#/conversation/".length));
           renderConversation(id);
@@ -1679,11 +2114,12 @@ function subscribeStreams() {
       } catch {}
     };
   } catch {}
-  // Trust + permission log: poll every 5s (no WS yet)
+  // Trust + permission log: poll every 30s, only refresh cockpit (never the
+  // conversation) so the user's typing isn't disrupted.
   setInterval(async () => {
     await Promise.allSettled([loadTrust(), loadPermissions()]);
     renderCockpitRail();
-  }, 5000);
+  }, 30000);
   // Trust event temperature overlays — flash a brief gold/steel/crimson wash
   // on the body when a new trust_change event lands in chronicle.
   setInterval(pollTrustEvents, 2000);
@@ -1725,6 +2161,8 @@ function attachKeybinds() {
     if (meta && e.key === "n") { e.preventDefault(); openNewWorkspaceForm(); return; }
     if (meta && e.key === "`") { e.preventDefault(); toggleCockpitOverlay(); return; }
     if (meta && e.key === ",") { e.preventDefault(); location.hash = "#/settings"; return; }
+    if (meta && e.key === "e") { e.preventDefault(); location.hash = "#/workshop"; return; }
+    if (meta && e.key === "/") { e.preventDefault(); location.hash = "#/search"; return; }
     if (e.key === "Escape") {
       // Esc: close any overlay AND exit focus mode if it was on
       if (document.body.classList.contains("nx-focus-mode")) {
