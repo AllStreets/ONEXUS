@@ -183,6 +183,57 @@ class AgentDispatcherModule(NexusModule):
         if self._LIST.match(text):
             return self._summarize_catalog()
 
-        # Default: show catalog overview + running summary
+        # Natural-language fallback. The message landed on this module because
+        # Cortex matched the word "agent"/"agents" — but it isn't a command
+        # like "summon X" or "list". Treat it as a question about the catalog
+        # and extract content nouns to search by, instead of dumping the top-5.
+        topic = self._extract_topic(text)
+        if topic:
+            results = self._summarize_search(topic, limit=8)
+            return (
+                f"[Agents] Searching the catalog for: {topic}\n"
+                f"{results}\n"
+                "\n  Want a different angle? Try: agents <keyword>  ·  list  ·  running"
+            )
+
+        # Truly empty query — fall back to the catalog + running summary.
         parts = [self._summarize_catalog(limit=5), "", self._summarize_running()]
         return "\n".join(parts)
+
+    # English stop-words we drop from a natural-language question so the
+    # remaining tokens become a useful catalog search. Keep this small —
+    # the catalog's search() already does its own tokenisation; we just
+    # want to strip the obvious connectives.
+    _STOPWORDS: frozenset[str] = frozenset({
+        "what", "which", "who", "whom", "whose", "where", "when", "why", "how",
+        "is", "are", "was", "were", "be", "been", "being", "am",
+        "do", "does", "did", "doing", "done",
+        "should", "would", "could", "can", "may", "might", "must", "shall", "will",
+        "have", "has", "had",
+        "i", "me", "my", "mine", "myself",
+        "you", "your", "yours", "yourself",
+        "we", "us", "our", "ours",
+        "they", "them", "their", "theirs",
+        "it", "its", "this", "that", "these", "those",
+        "the", "a", "an", "and", "or", "but", "if", "then", "than", "so",
+        "to", "of", "in", "on", "at", "by", "for", "with", "from", "as",
+        "about", "into", "over", "under", "up", "down", "out", "off",
+        "use", "using", "used", "need", "needs", "needed", "want", "wanting", "wanted",
+        "good", "best", "better", "great", "any", "some", "few", "many",
+        "agent", "agents",   # the message is already routed here — these add no signal
+        "please", "thanks", "help",
+    })
+
+    def _extract_topic(self, text: str) -> str:
+        """Return the content words from `text` joined as a search query.
+
+        Strips punctuation, lowercases, removes English stop-words and the
+        word "agent(s)" itself (which is what caused this module to fire in
+        the first place). Returns an empty string if nothing meaningful is
+        left, which signals the caller to fall back to the default summary.
+        """
+        cleaned = re.sub(r"[^a-zA-Z0-9\s\-_]", " ", text).lower()
+        tokens = [t for t in cleaned.split() if t and t not in self._STOPWORDS]
+        # Drop tokens that are too short to carry meaning.
+        tokens = [t for t in tokens if len(t) >= 3]
+        return " ".join(tokens)
