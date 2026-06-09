@@ -2142,6 +2142,38 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   /* No per-render rise — the view-transition crossfade handles smoothness. */
   padding-top: 40px;
 }
+
+/* Narrow shots (sidebar/cockpit) — give them a side-by-side image+legend
+   layout so the tall image can use vertical space and the legend doesn't
+   compete with it. Uses :has() — fine on modern WKWebView/Chromium. */
+.nx-guide-stage:has(.nx-g-shot-narrow),
+.nx-guide-stage:has(.nx-g-shot-cockpit) {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 32px;
+  align-items: start;
+  column-gap: 36px;
+}
+.nx-guide-stage:has(.nx-g-shot-narrow) > .nx-g-eyebrow,
+.nx-guide-stage:has(.nx-g-shot-narrow) > .nx-g-title,
+.nx-guide-stage:has(.nx-g-shot-narrow) > .nx-g-body,
+.nx-guide-stage:has(.nx-g-shot-cockpit) > .nx-g-eyebrow,
+.nx-guide-stage:has(.nx-g-shot-cockpit) > .nx-g-title,
+.nx-guide-stage:has(.nx-g-shot-cockpit) > .nx-g-body {
+  grid-column: 1 / -1;
+}
+.nx-guide-stage:has(.nx-g-shot-narrow)  > .nx-g-shot-wrap,
+.nx-guide-stage:has(.nx-g-shot-cockpit) > .nx-g-shot-wrap {
+  grid-column: 1;
+  align-self: start;
+  margin-bottom: 0;
+}
+.nx-guide-stage:has(.nx-g-shot-narrow)  > .nx-g-legend,
+.nx-guide-stage:has(.nx-g-shot-cockpit) > .nx-g-legend {
+  grid-column: 2;
+  grid-template-columns: 1fr;     /* stack legend items vertically */
+  align-self: start;
+}
 .nx-g-eyebrow {
   font-family: var(--nx-font-mono);
   font-size: 10.5px; letter-spacing: 0.30em;
@@ -2212,35 +2244,38 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
    so the image renders at native aspect without letterboxing — markers
    positioned in image-percentage space then land exactly on features. */
 .nx-g-shot-wrap.nx-g-shot-narrow  { max-width: 320px; }
-.nx-g-shot-wrap.nx-g-shot-cockpit { max-width: 380px; }
+.nx-g-shot-wrap.nx-g-shot-cockpit { max-width: 320px; }
 
 .nx-g-shot {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 64vh;
-  /* No object-fit — width:100%/height:auto preserves aspect, no letterboxing.
-     The wrap matches the image's rendered box exactly so % markers align. */
+  max-height: 56vh;        /* leaves room for legend + sticky nav (~96px) */
+}
+/* Narrow shots get more height since their legend sits beside them. */
+.nx-g-shot-narrow .nx-g-shot,
+.nx-g-shot-cockpit .nx-g-shot {
+  max-height: 70vh;
 }
 .nx-g-shot-markers { position: absolute; inset: 0; pointer-events: none; }
 .nx-g-marker {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   background: var(--nx-mood-primary);
   color: #0a0712;
-  font-family: var(--nx-font-mono); font-size: 14px; font-weight: 700;
+  font-family: var(--nx-font-mono); font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   box-shadow:
-    0 0 0 4px rgba(6,4,12,0.85),
-    0 0 16px var(--nx-mood-glow),
+    0 0 0 3px rgba(6,4,12,0.85),
+    0 0 12px var(--nx-mood-glow),
     0 0 0 1px color-mix(in srgb, var(--nx-mood-primary) 60%, transparent) inset;
   pointer-events: none;
   animation: nx-g-marker-pulse 2.4s ease-in-out infinite alternate;
 }
 @keyframes nx-g-marker-pulse {
   from { transform: translate(-50%, -50%) scale(0.95); }
-  to   { transform: translate(-50%, -50%) scale(1.08); }
+  to   { transform: translate(-50%, -50%) scale(1.06); }
 }
 
 /* readable legend BELOW image — never clips */
