@@ -43,5 +43,6 @@
     <g><circle cx="278"  cy="254" r="9" fill="#b070d8"/><text x="298"  y="254">orchid</text></g>
     <g><circle cx="478"  cy="254" r="9" fill="#889098"/><text x="498"  y="254">slate</text></g>
     <g><circle cx="678"  cy="254" r="9" fill="#5c6068"/><text x="698"  y="254">graphite</text></g>
+    <g><circle cx="878"  cy="254" r="9" fill="#3a4078" stroke="rgba(232,222,252,0.20)" stroke-width="0.5"/><text x="898"  y="254">midnight</text></g>
   </g>
 </svg>

@@ -1139,6 +1139,7 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-ws-tile.nx-tone-mocha     { background: linear-gradient(135deg, var(--nx-tone-mocha-a),     var(--nx-tone-mocha-b)); }
 .nx-ws-tile.nx-tone-slate     { background: linear-gradient(135deg, var(--nx-tone-slate-a),     var(--nx-tone-slate-b)); }
 .nx-ws-tile.nx-tone-graphite  { background: linear-gradient(135deg, var(--nx-tone-graphite-a),  var(--nx-tone-graphite-b)); }
+.nx-ws-tile.nx-tone-midnight  { background: linear-gradient(135deg, var(--nx-tone-midnight-a),  var(--nx-tone-midnight-b)); }
 .nx-ws-tile.active {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-mood-primary) 70%, transparent),
               0 0 24px -4px color-mix(in srgb, var(--nx-mood-primary) 50%, transparent);

@@ -149,7 +149,7 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 
 - Workspace pills with **25 color tones** to pick from on create:
 
-  <img src=".github/assets/workspace-tones.svg" alt="The 25 workspace tones — indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, mocha, coral, rose, crimson, magenta, fuchsia, plum, orchid, slate, graphite" width="100%"/>
+  <img src=".github/assets/workspace-tones.svg" alt="The 25 workspace tones — indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, mocha, coral, rose, crimson, magenta, fuchsia, plum, orchid, slate, graphite, midnight" width="100%"/>
 
 - Hover any pill → reveals a neon-red trash icon to delete that workspace
 - Recent agents block — built-in identity discs with trust tier

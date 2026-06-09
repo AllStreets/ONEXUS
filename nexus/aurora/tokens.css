@@ -62,6 +62,7 @@
   --nx-tone-mocha-a:     #b08868;  --nx-tone-mocha-b:     #4c382c;
   --nx-tone-slate-a:     #889098;  --nx-tone-slate-b:     #383c44;
   --nx-tone-graphite-a:  #5c6068;  --nx-tone-graphite-b:  #1c2028;
+  --nx-tone-midnight-a:  #3a4078;  --nx-tone-midnight-b:   #0c1024;
 
   /* type */
   --nx-font-display: "Inter Display", "SF Pro Display", -apple-system, system-ui, sans-serif;

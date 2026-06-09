@@ -51,6 +51,7 @@ class WorkspaceTone(str, Enum):
     MOCHA     = "MOCHA"
     SLATE     = "SLATE"
     GRAPHITE  = "GRAPHITE"
+    MIDNIGHT  = "MIDNIGHT"
 
 
 class RoutingPin(BaseModel):

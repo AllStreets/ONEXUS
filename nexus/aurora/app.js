@@ -2851,7 +2851,7 @@ const WORKSPACE_TONES = [
   "amber", "honey", "tangerine", "mocha",
   "coral", "rose", "crimson",
   "magenta", "fuchsia", "plum", "orchid",
-  "slate", "graphite",
+  "slate", "graphite", "midnight",
 ];
 
 function _toneSwatchHex(tone) {
