@@ -9,15 +9,16 @@
   <link rel="stylesheet" href="/aurora/static/app.css">
 </head>
 <body class="nx-mood nx-mood-calm-focus" data-mood="calm_focus">
-  <!-- Ambient gradient mesh background (lives behind everything) -->
+  <!-- Ambient atmosphere — the mood-driven mesh that fills the whole viewport -->
   <div class="nx-ambient" aria-hidden="true"></div>
 
-  <!-- Window-style shell -->
-  <div class="nx-window">
-    <!-- chrome bar: traffic lights · center title · right cluster -->
+  <!-- Shell — a CSS Grid: row 1 = chrome, row 2 = body -->
+  <div class="nx-shell" id="nx-shell">
+
+    <!-- ── chrome bar ───────────────────────────────────────────────── -->
     <header class="nx-chrome">
       <div class="nx-chrome-lights" role="group" aria-label="Window controls">
-        <button class="nx-tl nx-tl-red" id="nx-tl-close" title="Close tab"  aria-label="Close tab">
+        <button class="nx-tl nx-tl-red" id="nx-tl-close" title="Close tab" aria-label="Close tab">
           <svg viewBox="0 0 12 12" fill="none" stroke="#5a1010" stroke-width="1.4" stroke-linecap="round"><path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/></svg>
         </button>
         <button class="nx-tl nx-tl-yel" id="nx-tl-focus" title="Focus mode — hide sidebar &amp; cockpit" aria-label="Toggle focus mode">
@@ -31,8 +32,8 @@
       <div class="nx-chrome-center">
         <span class="nx-chrome-mark" id="nx-kernel-mark"></span>
         <span class="nx-chrome-brand">ONEXUS</span>
-        <span class="nx-chrome-sep">—</span>
-        <span class="nx-chrome-context" id="nx-chrome-context">no workspace</span>
+        <span class="nx-chrome-sep">/</span>
+        <button class="nx-chrome-context" id="nx-chrome-context">no workspace</button>
       </div>
 
       <div class="nx-chrome-right">
@@ -42,7 +43,7 @@
             <path d="M9 2.5v9"/>
           </svg>
         </button>
-        <button class="nx-chrome-pill nx-mood-pill" id="nx-mood-pill" title="Ambient mood (⌘`)">
+        <button class="nx-mood-pill" id="nx-mood-pill" title="Ambient mood (⌘`)">
           <span class="nx-mood-dot"></span>
           <span class="nx-mood-label" id="nx-mood-label">calm focus</span>
         </button>
@@ -50,60 +51,63 @@
       </div>
     </header>
 
-    <!-- 3-column body -->
-    <div class="nx-body">
-      <!-- ── sidebar ───────────────────────────────────────────────── -->
-      <aside class="nx-sidebar">
-        <!-- search -->
-        <div class="nx-search">
-          <span class="nx-search-icon" aria-hidden="true"></span>
-          <input class="nx-search-input" id="nx-search-input"
-                 placeholder="search · ⌘K"
-                 aria-label="Search workspaces and agents">
-        </div>
+    <!-- ── body grid: sidebar / main / cockpit ─────────────────────── -->
+    <div class="nx-body" id="nx-body">
 
-        <!-- workspaces -->
-        <div class="nx-section">
-          <div class="nx-section-label">WORKSPACES</div>
-          <div class="nx-ws-list" id="nx-ws-list">
-            <!-- workspace pills rendered by app.js -->
+      <!-- ── sidebar ─────────────────────────────────────────────── -->
+      <aside class="nx-region nx-sidebar" id="nx-sidebar">
+        <div class="nx-region-inner nx-sidebar-inner">
+          <!-- search -->
+          <div class="nx-search">
+            <span class="nx-search-icon" aria-hidden="true"></span>
+            <input class="nx-search-input" id="nx-search-input"
+                   placeholder="search · ⌘K"
+                   aria-label="Search workspaces and agents">
           </div>
-          <button class="nx-new-ws" id="nx-new-ws" title="New workspace (⌘N)">
-            <span class="nx-new-ws-plus"></span>
-            <span>new workspace</span>
-            <span class="nx-new-ws-kbd">⌘N</span>
-          </button>
-        </div>
 
-        <!-- recent agents -->
-        <div class="nx-section">
-          <div class="nx-section-label">RECENT AGENTS</div>
-          <div class="nx-agent-list" id="nx-recent-agents">
-            <!-- rendered by app.js -->
+          <!-- workspaces -->
+          <div class="nx-section">
+            <div class="nx-section-label">WORKSPACES</div>
+            <div class="nx-ws-list" id="nx-ws-list"></div>
+            <button class="nx-new-ws" id="nx-new-ws" title="New workspace (⌘N)">
+              <span class="nx-new-ws-plus" aria-hidden="true"></span>
+              <span class="nx-new-ws-label">new workspace</span>
+              <span class="nx-new-ws-kbd">⌘N</span>
+            </button>
+          </div>
+
+          <!-- recent agents -->
+          <div class="nx-section">
+            <div class="nx-section-label">RECENT AGENTS</div>
+            <div class="nx-agent-list" id="nx-recent-agents"></div>
+          </div>
+
+          <!-- nav links -->
+          <div class="nx-section nx-section-tail">
+            <button class="nx-side-link" id="nx-open-workshop">
+              <span class="nx-side-link-icon"></span>
+              <span>workshop</span>
+              <span class="nx-side-link-kbd">⌘E</span>
+            </button>
+            <button class="nx-side-link" id="nx-open-search">
+              <span class="nx-side-link-icon search"></span>
+              <span>web search</span>
+              <span class="nx-side-link-kbd">⌘/</span>
+            </button>
+            <button class="nx-side-link" id="nx-open-catalog">
+              <span class="nx-side-link-icon catalog"></span>
+              <span>agent catalog</span>
+              <span class="nx-side-link-arrow">↗</span>
+            </button>
+            <button class="nx-side-link" id="nx-open-settings">
+              <span class="nx-side-link-icon settings"></span>
+              <span>settings</span>
+              <span class="nx-side-link-kbd">⌘,</span>
+            </button>
           </div>
         </div>
 
-        <!-- in-OS tools -->
-        <div class="nx-section nx-section-tail">
-          <button class="nx-side-link" id="nx-open-workshop">
-            <span>workshop · code &amp; sandbox</span>
-            <span class="nx-side-link-kbd">⌘E</span>
-          </button>
-          <button class="nx-side-link" id="nx-open-search">
-            <span>web search</span>
-            <span class="nx-side-link-kbd">⌘/</span>
-          </button>
-          <button class="nx-side-link" id="nx-open-catalog">
-            <span>browse agent catalog</span>
-            <span class="nx-side-link-arrow">↗</span>
-          </button>
-          <button class="nx-side-link" id="nx-open-settings">
-            <span>settings</span>
-            <span class="nx-side-link-kbd">⌘,</span>
-          </button>
-        </div>
-
-        <!-- user footer -->
+        <!-- user footer — sibling of inner so it stays pinned -->
         <div class="nx-user-footer" id="nx-user-footer">
           <div class="nx-user-avatar"><span id="nx-user-initials">CE</span></div>
           <div class="nx-user-meta">
@@ -113,58 +117,45 @@
         </div>
       </aside>
 
-      <!-- ── main canvas ───────────────────────────────────────────── -->
-      <main class="nx-main" id="nx-main">
-        <!-- main view rendered by app.js (conversation / workspaces grid / catalog / settings) -->
-      </main>
+      <!-- ── main canvas — rendered by JS per route ─────────────── -->
+      <main class="nx-region nx-main" id="nx-main"></main>
 
-      <!-- ── cockpit ───────────────────────────────────────────────── -->
-      <aside class="nx-cockpit-rail" id="nx-cockpit-rail">
-        <!-- TRUST -->
-        <div class="nx-cp-section">
-          <div class="nx-section-label">TRUST · LAST 60M</div>
-          <div class="nx-trust-card" id="nx-trust-card">
-            <!-- rendered by app.js: sparkline + readout + breakdown -->
+      <!-- ── cockpit rail ────────────────────────────────────────── -->
+      <aside class="nx-region nx-cockpit-rail" id="nx-cockpit-rail">
+        <div class="nx-region-inner nx-cockpit-inner">
+          <div class="nx-cp-section">
+            <div class="nx-section-label">TRUST · LAST 60M</div>
+            <div class="nx-trust-card" id="nx-trust-card"></div>
+          </div>
+
+          <div class="nx-cp-section">
+            <div class="nx-section-label">RECENT PERMISSIONS</div>
+            <div class="nx-perm-log" id="nx-perm-log"></div>
+          </div>
+
+          <div class="nx-cp-section">
+            <div class="nx-section-label">AMBIENT MOOD</div>
+            <div class="nx-mood-card" id="nx-mood-card"></div>
+            <div class="nx-mood-reasons nx-mono" id="nx-mood-reasons"></div>
+          </div>
+
+          <div class="nx-cp-section">
+            <div class="nx-section-label" id="nx-agents-label">10 BUILT-IN · 7K+ CATALOG</div>
+            <div class="nx-agent-discs" id="nx-agent-discs"></div>
           </div>
         </div>
 
-        <!-- PERMISSIONS -->
-        <div class="nx-cp-section">
-          <div class="nx-section-label">RECENT PERMISSIONS</div>
-          <div class="nx-perm-log" id="nx-perm-log">
-            <!-- rendered by app.js -->
-          </div>
-        </div>
-
-        <!-- AMBIENT MOOD -->
-        <div class="nx-cp-section">
-          <div class="nx-section-label">AMBIENT MOOD</div>
-          <div class="nx-mood-card" id="nx-mood-card">
-            <!-- rendered by app.js -->
-          </div>
-          <div class="nx-mood-reasons nx-mono" id="nx-mood-reasons">
-            <!-- mood reasons text -->
-          </div>
-        </div>
-
-        <!-- AGENTS row -->
-        <div class="nx-cp-section">
-          <div class="nx-section-label" id="nx-agents-label">10 BUILT-IN · 7K+ CATALOG</div>
-          <div class="nx-agent-discs" id="nx-agent-discs">
-            <!-- mini disc row rendered by app.js -->
-          </div>
-        </div>
-
-        <!-- footer -->
+        <!-- footer — sibling of inner so it stays pinned -->
         <div class="nx-cp-foot nx-mono">
           <div>v1.0 · <span id="nx-tests-line">1075 tests passing</span></div>
           <div>kernel.network.io = ∅ <span class="nx-cp-foot-sub">(static-verified)</span></div>
         </div>
       </aside>
-    </div>
-  </div>
 
-  <!-- Overlay roots (preserved for Cmd-K switcher, Cmd-` expanded cockpit, etc.) -->
+    </div><!-- /nx-body -->
+  </div><!-- /nx-shell -->
+
+  <!-- Overlay root (switcher, new-ws form, cockpit modal, tour, capability sheet, install review, first-use prompt) -->
   <div id="nx-overlay-root"></div>
 
   <script type="module" src="/aurora/static/app.js"></script>
