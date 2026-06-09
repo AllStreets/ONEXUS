@@ -267,10 +267,20 @@ For kernel / Aurora work, the [spec](docs/superpowers/specs/2026-06-06-nexus-age
 
 ---
 
+## License
+
+**Apache-2.0.** Copyright 2026 Connor Evans.
+
+The ONEXUS kernel, Aurora dashboard, modules, agents, and standalone Tauri shell in this repository are released under the Apache License 2.0 — free for commercial and non-commercial use, including the patent grant. Each bundled catalog agent retains its own upstream license; see the `license` field on every entry in [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents).
+
+Full text at [LICENSE](LICENSE).
+
+---
+
 <div align="center">
 
-<sub>Built for the era where agents are operating systems.</sub>
+<sub><strong>ONEXUS</strong> — an operating system for agents.</sub>
 
-<sub><a href="https://github.com/AllStreets/ONEXUS">github.com/AllStreets/ONEXUS</a> &nbsp;·&nbsp; <a href="https://github.com/AllStreets/ONEXUS-Agents">github.com/AllStreets/ONEXUS-Agents</a> &nbsp;·&nbsp; Apache-2.0</sub>
+<sub><a href="https://github.com/AllStreets/ONEXUS">github.com/AllStreets/ONEXUS</a> &nbsp;·&nbsp; <a href="https://github.com/AllStreets/ONEXUS-Agents">parent catalog</a> &nbsp;·&nbsp; <a href="https://github.com/AllStreets/ONEXUS/issues">issues</a></sub>
 
 </div>
