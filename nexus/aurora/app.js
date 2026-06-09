@@ -225,30 +225,37 @@ function sceneWelcome() {
 }
 
 function sceneWorkspaces() {
-  // 4 workspace tiles that drift apart and back together (boomerang)
+  // 4 workspace tiles in a 2×2 grid around a central orb. The whole group
+  // gently breathes via a CSS scale animation, so we need extra padding
+  // inside the viewBox to keep nothing clipping at the larger end of the
+  // breath cycle. Positions are absolute (no SVG-attribute transform), so
+  // the CSS transform doesn't double-apply with an SVG translate.
+  const cx = 200, cy = 145;   // viewBox centre
   const tones = [
-    { x: -70, y: -30, c1: "#5a6cd0", c2: "#2c3a78" },
-    { x:  70, y: -30, c1: "#88a888", c2: "#3e5840" },
-    { x: -70, y:  40, c1: "#c060a0", c2: "#5e2050" },
-    { x:  70, y:  40, c1: "#e8a06c", c2: "#844820" },
+    { x: cx - 70, y: cy - 36, c1: "#5a6cd0", c2: "#2c3a78" },
+    { x: cx + 70, y: cy - 36, c1: "#88a888", c2: "#3e5840" },
+    { x: cx - 70, y: cy + 36, c1: "#c060a0", c2: "#5e2050" },
+    { x: cx + 70, y: cy + 36, c1: "#e8a06c", c2: "#844820" },
   ];
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <g transform="translate(160 110)" class="nx-tour-anim-rooms">
+    <svg viewBox="0 0 400 290" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <defs>
         ${tones.map(t => `
-          <g transform="translate(${t.x} ${t.y})">
-            <rect x="-46" y="-26" width="92" height="52" rx="9"
+          <linearGradient id="g-${t.c1.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${t.c1}"/>
+            <stop offset="100%" stop-color="${t.c2}"/>
+          </linearGradient>
+        `).join("")}
+      </defs>
+      <g class="nx-tour-anim-rooms" style="transform-origin:${cx}px ${cy}px">
+        ${tones.map(t => `
+          <g>
+            <rect x="${t.x - 46}" y="${t.y - 26}" width="92" height="52" rx="9"
                   fill="url(#g-${t.c1.replace('#','')})" opacity="0.95"/>
-            <defs>
-              <linearGradient id="g-${t.c1.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${t.c1}"/>
-                <stop offset="100%" stop-color="${t.c2}"/>
-              </linearGradient>
-            </defs>
-            <circle cx="-32" cy="-14" r="3" fill="#ffffff" opacity="0.8"/>
+            <circle cx="${t.x - 32}" cy="${t.y - 14}" r="3" fill="#ffffff" opacity="0.8"/>
           </g>
         `).join("")}
-        <circle r="14" fill="url(#t-orb)"/>
+        <circle cx="${cx}" cy="${cy}" r="14" fill="url(#t-orb)"/>
       </g>
     </svg>
   `;
