@@ -103,10 +103,19 @@ def _init_kernel(config: NexusConfig) -> KernelState:
     from nexus.inference.router import ProviderRouter
     from nexus.inference.llm import LLMClient
     from nexus.inference.local import LocalProvider
+    from nexus.inference.ollama import OllamaProvider
 
     provider_router = ProviderRouter(default=config.default_provider)
 
-    # Register local provider (always available as fallback)
+    # Register Ollama FIRST so it's preferred over the llama.cpp local
+    # provider when both are running — Ollama is what most users on a Mac
+    # actually install and ONEXUS-Agents-Catalog ranks it as the easiest
+    # on-device runtime. Falls back silently if Ollama isn't running.
+    ollama = OllamaProvider()
+    provider_router.register(ollama)
+
+    # Register the llama.cpp-compatible local provider as a secondary
+    # fallback (port 8384 by default — see config.llm_port).
     local = LocalProvider(base_url=f"http://localhost:{config.llm_port}")
     provider_router.register(local)
 

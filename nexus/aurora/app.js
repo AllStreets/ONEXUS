@@ -285,24 +285,46 @@ function sceneConversation() {
 }
 
 function sceneSafety() {
-  // Amber permission prompt that pulses + pills slide in
+  // Permission prompt — two-row layout so the class label, target path,
+  // and the three decision pills each get their own line and don't
+  // overlap. The card pulses gently; the pills slide in from the left.
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <g transform="translate(160 110)">
-        <rect x="-130" y="-32" width="260" height="64" rx="12"
-              fill="rgba(248,196,96,0.08)" stroke="rgba(248,196,96,0.35)" stroke-width="1"
+    <svg viewBox="0 0 400 290" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <g transform="translate(200 145)">
+        <!-- Card (300 × 116, two rows tall) -->
+        <rect x="-150" y="-58" width="300" height="116" rx="14"
+              fill="rgba(248,196,96,0.08)"
+              stroke="rgba(248,196,96,0.40)" stroke-width="1.2"
               class="nx-tour-anim-card"/>
-        <circle cx="-110" cy="0" r="6" fill="#f8c460" class="nx-tour-anim-pulse-dot"/>
-        <circle cx="-110" cy="0" r="11" fill="none" stroke="rgba(248,196,96,0.50)" class="nx-tour-anim-ping"/>
-        <text x="-92" y="-6" font-family="ui-monospace,monospace" font-size="9" letter-spacing="2" fill="#f8c460">FS.WRITE · SENSITIVE</text>
-        <text x="-92" y="10" font-family="ui-sans-serif,sans-serif" font-size="10" fill="#e8defc">oracle → src/kernel/cortex.py</text>
-        <g class="nx-tour-anim-pills">
-          <rect x="22" y="-12" width="40" height="22" rx="11" fill="rgba(154,255,182,0.14)" stroke="rgba(154,255,182,0.40)"/>
-          <text x="42" y="2" font-family="ui-sans-serif,sans-serif" font-size="8.5" font-weight="600" fill="#a8f4c0" text-anchor="middle">allow</text>
-          <rect x="66" y="-12" width="48" height="22" rx="11" fill="rgba(168,124,232,0.18)" stroke="rgba(168,124,232,0.50)"/>
-          <text x="90" y="2" font-family="ui-sans-serif,sans-serif" font-size="8.5" font-weight="600" fill="#e0d0ff" text-anchor="middle">always</text>
-          <rect x="118" y="-12" width="32" height="22" rx="11" fill="rgba(248,96,120,0.10)" stroke="rgba(248,96,120,0.36)"/>
-          <text x="134" y="2" font-family="ui-sans-serif,sans-serif" font-size="8.5" font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
+
+        <!-- Row 1: pulse + class label + path -->
+        <circle cx="-126" cy="-28" r="6" fill="#f8c460" class="nx-tour-anim-pulse-dot"/>
+        <circle cx="-126" cy="-28" r="11" fill="none" stroke="rgba(248,196,96,0.55)" stroke-width="1.2"
+                class="nx-tour-anim-ping"/>
+        <text x="-110" y="-32" font-family="ui-monospace,monospace" font-size="11"
+              letter-spacing="2.4" fill="#f8c460" font-weight="700">FS.WRITE</text>
+        <text x="-110" y="-18" font-family="ui-monospace,monospace" font-size="9"
+              letter-spacing="2" fill="rgba(248,196,96,0.78)">SENSITIVE</text>
+
+        <text x="-110" y="6" font-family="ui-sans-serif,sans-serif" font-size="11"
+              fill="#e8defc">oracle → src/kernel/cortex.py</text>
+
+        <!-- Row 2: three decision pills, evenly spaced, with slide-in motion -->
+        <g class="nx-tour-anim-pills" transform="translate(0 34)">
+          <rect x="-126" y="-12" width="68" height="24" rx="12"
+                fill="rgba(154,255,182,0.16)" stroke="rgba(154,255,182,0.50)"/>
+          <text x="-92" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
+                font-weight="600" fill="#a8f4c0" text-anchor="middle">allow</text>
+
+          <rect x="-50" y="-12" width="88" height="24" rx="12"
+                fill="rgba(168,124,232,0.20)" stroke="rgba(168,124,232,0.55)"/>
+          <text x="-6" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
+                font-weight="600" fill="#e0d0ff" text-anchor="middle">always</text>
+
+          <rect x="46" y="-12" width="62" height="24" rx="12"
+                fill="rgba(248,96,120,0.12)" stroke="rgba(248,96,120,0.40)"/>
+          <text x="77" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
+                font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
         </g>
       </g>
     </svg>
@@ -1745,7 +1767,7 @@ function renderCatalogCard(a) {
       </div>
       <div class="nx-card-actions">
         ${runnable ? `<button class="launch-btn" type="button">Launch</button>` : ""}
-        ${a.source_github ? `<a class="src-link" href="${escapeHtml(a.source_github)}" target="_blank" rel="noopener">source ↗</a>` : ""}
+        ${a.source_github ? `<a class="src-link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener noreferrer">source ↗</a>` : ""}
       </div>
     </div>
   `;

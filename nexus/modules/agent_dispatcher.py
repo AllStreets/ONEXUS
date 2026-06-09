@@ -185,9 +185,59 @@ class AgentDispatcherModule(NexusModule):
 
         # Natural-language fallback. The message landed on this module because
         # Cortex matched the word "agent"/"agents" — but it isn't a command
-        # like "summon X" or "list". Treat it as a question about the catalog
-        # and extract content nouns to search by, instead of dumping the top-5.
+        # like "summon X" or "list". Treat it as a question about the catalog.
         topic = self._extract_topic(text)
+        catalog_hits = self._catalog.search(topic, limit=10) if topic else []
+
+        # If the kernel has an LLM available, hand it the user's exact
+        # question plus a compact catalog excerpt and let it write a real
+        # recommendation. This is what makes "what agents should I use
+        # for X" actually return a useful answer.
+        llm = context.get("llm") if isinstance(context, dict) else None
+        if llm is not None and topic:
+            candidates_block = "\n".join(
+                f"- `{e.slug}` — {e.tagline[:140] if getattr(e, 'tagline', None) else e.name} (category: {e.category})"
+                for e in catalog_hits[:8]
+            )
+            if catalog_hits:
+                prompt = (
+                    "You are the dispatcher for the ONEXUS-Agents catalog. The "
+                    "user is asking about which agents to use. Reply in 2–4 "
+                    "sentences of plain prose.\n\n"
+                    f"User question: {text}\n\n"
+                    "Available agents in the catalog that match the user's "
+                    f"keywords ({topic!r}):\n{candidates_block}\n\n"
+                    "STRICT RULES:\n"
+                    "  • You MAY ONLY mention agents from the list above. Quote "
+                    "their slugs in backticks.\n"
+                    "  • You MUST NOT invent agent names. Do NOT write things "
+                    "like `agent:logistics` — that is not a real catalog entry.\n"
+                    "  • If none of the agents above are a good fit for the user's "
+                    "task, say so plainly and suggest a better search keyword.\n"
+                )
+            else:
+                # No catalog hits — be honest, suggest a better keyword search.
+                prompt = (
+                    "You are the dispatcher for the ONEXUS-Agents catalog. The "
+                    "user is asking about which agents to use, but a keyword "
+                    f"search for {topic!r} returned NO results in the catalog "
+                    "of 8,000+ agents.\n\n"
+                    f"User question: {text}\n\n"
+                    "Reply in 1–3 sentences. Tell them no matching catalog "
+                    "agent was found. Suggest 1–2 different keywords they could "
+                    "try with `agents <keyword>` that might surface relevant "
+                    "agents. Do NOT invent agent names."
+                )
+            try:
+                response = await llm(prompt)
+                if response and response.strip():
+                    return f"[Agents] {response.strip()}"
+            except Exception as exc:  # pragma: no cover - best-effort fallback
+                # LLM failed (network, model not loaded, etc.) — fall through
+                # to the keyword-search response below.
+                pass
+
+        # Keyword-only fallback (no LLM available, or LLM call failed).
         if topic:
             results = self._summarize_search(topic, limit=8)
             return (

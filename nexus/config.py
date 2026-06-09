@@ -31,7 +31,11 @@ def _default_log_level() -> str:
 
 
 def _default_provider() -> str:
-    return os.environ.get("NEXUS_DEFAULT_PROVIDER", "local")
+    # Ollama is the easiest local LLM runtime on macOS/Linux and the
+    # one the kernel autostarts against. Override with NEXUS_DEFAULT_PROVIDER
+    # if you prefer llama.cpp ("local") or a cloud provider ("openai" /
+    # "anthropic").
+    return os.environ.get("NEXUS_DEFAULT_PROVIDER", "ollama")
 
 def _default_openai_key() -> Optional[str]:
     return os.environ.get("NEXUS_OPENAI_KEY")
