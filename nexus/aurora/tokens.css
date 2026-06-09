@@ -28,17 +28,41 @@
   --nx-trust-falling:  #8cb8d4; /* cool steel */
   --nx-trust-collapse: #f8643c; /* hot crimson */
 
-  /* workspace home tones (5 named) */
-  --nx-tone-indigo-a:  #5a6cd0;
-  --nx-tone-indigo-b:  #2c3a78;
-  --nx-tone-magenta-a: #c060a0;
-  --nx-tone-magenta-b: #5e2050;
-  --nx-tone-sage-a:    #88a888;
-  --nx-tone-sage-b:    #3e5840;
-  --nx-tone-plum-a:    #7e5ea0;
-  --nx-tone-plum-b:    #2c1c44;
-  --nx-tone-amber-a:   #e8a06c;
-  --nx-tone-amber-b:   #844820;
+  /* workspace home tones — 25 across the spectrum */
+  /* cool — blues / violets / teals */
+  --nx-tone-indigo-a:    #5a6cd0;  --nx-tone-indigo-b:    #2c3a78;
+  --nx-tone-violet-a:    #8a6cee;  --nx-tone-violet-b:    #3a2868;
+  --nx-tone-lavender-a:  #b4a8f0;  --nx-tone-lavender-b:  #5a4d8c;
+  --nx-tone-cobalt-a:    #4a78f0;  --nx-tone-cobalt-b:    #1c3878;
+  --nx-tone-sky-a:       #5cb8f0;  --nx-tone-sky-b:       #1c5078;
+  --nx-tone-ocean-a:     #4cb4d0;  --nx-tone-ocean-b:     #1c4858;
+  --nx-tone-teal-a:      #4cd4c0;  --nx-tone-teal-b:      #1c5854;
+
+  /* fresh — greens / mints */
+  --nx-tone-mint-a:      #80e8a8;  --nx-tone-mint-b:      #2c6840;
+  --nx-tone-sage-a:      #88a888;  --nx-tone-sage-b:      #3e5840;
+  --nx-tone-emerald-a:   #4cd068;  --nx-tone-emerald-b:   #1c5024;
+  --nx-tone-lime-a:      #b8d860;  --nx-tone-lime-b:      #4c5818;
+
+  /* warm — yellows / oranges / reds */
+  --nx-tone-amber-a:     #e8a06c;  --nx-tone-amber-b:     #844820;
+  --nx-tone-honey-a:     #f0c870;  --nx-tone-honey-b:     #84541c;
+  --nx-tone-tangerine-a: #f08c4c;  --nx-tone-tangerine-b: #843818;
+  --nx-tone-coral-a:     #f06a78;  --nx-tone-coral-b:     #842830;
+  --nx-tone-rose-a:      #f070a0;  --nx-tone-rose-b:      #842854;
+  --nx-tone-crimson-a:   #d04848;  --nx-tone-crimson-b:   #581c1c;
+
+  /* pinks + magentas */
+  --nx-tone-magenta-a:   #c060a0;  --nx-tone-magenta-b:   #5e2050;
+  --nx-tone-fuchsia-a:   #d058c8;  --nx-tone-fuchsia-b:   #5c1c54;
+  --nx-tone-plum-a:      #7e5ea0;  --nx-tone-plum-b:      #2c1c44;
+  --nx-tone-orchid-a:    #b070d8;  --nx-tone-orchid-b:    #4c2868;
+
+  /* neutrals */
+  --nx-tone-slate-a:     #889098;  --nx-tone-slate-b:     #383c44;
+  --nx-tone-graphite-a:  #5c6068;  --nx-tone-graphite-b:  #1c2028;
+  --nx-tone-bone-a:      #d4ccc0;  --nx-tone-bone-b:      #645c50;
+  --nx-tone-mocha-a:     #b08868;  --nx-tone-mocha-b:     #4c382c;
 
   /* type */
   --nx-font-display: "Inter Display", "SF Pro Display", -apple-system, system-ui, sans-serif;

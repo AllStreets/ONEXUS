@@ -21,11 +21,37 @@ _WORKSPACE_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 
 
 class WorkspaceTone(str, Enum):
-    INDIGO = "INDIGO"
-    MAGENTA = "MAGENTA"
-    SAGE = "SAGE"
-    PLUM = "PLUM"
-    AMBER = "AMBER"
+    """25 home-tone palettes — gradient swatches in the new-workspace picker."""
+    # cool
+    INDIGO    = "INDIGO"
+    VIOLET    = "VIOLET"
+    LAVENDER  = "LAVENDER"
+    COBALT    = "COBALT"
+    SKY       = "SKY"
+    OCEAN     = "OCEAN"
+    TEAL      = "TEAL"
+    # fresh
+    MINT      = "MINT"
+    SAGE      = "SAGE"
+    EMERALD   = "EMERALD"
+    LIME      = "LIME"
+    # warm
+    AMBER     = "AMBER"
+    HONEY     = "HONEY"
+    TANGERINE = "TANGERINE"
+    CORAL     = "CORAL"
+    ROSE      = "ROSE"
+    CRIMSON   = "CRIMSON"
+    # pinks + magentas
+    MAGENTA   = "MAGENTA"
+    FUCHSIA   = "FUCHSIA"
+    PLUM      = "PLUM"
+    ORCHID    = "ORCHID"
+    # neutrals
+    SLATE     = "SLATE"
+    GRAPHITE  = "GRAPHITE"
+    BONE      = "BONE"
+    MOCHA     = "MOCHA"
 
 
 class RoutingPin(BaseModel):

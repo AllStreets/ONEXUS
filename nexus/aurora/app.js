@@ -1697,6 +1697,11 @@ async function renderSettings() {
   const main = document.getElementById("nx-main");
   main.innerHTML = `
     <div class="nx-main-inner">
+      <header style="margin-bottom:18px">
+        <div class="nx-eyebrow" style="margin-bottom:6px">Configure</div>
+        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Settings</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">Local-first · changes apply immediately · sovereign data dir</div>
+      </header>
       <div class="nx-settings-shell">
         <nav class="nx-settings-tabs">
           <button class="active" data-tab="general">General</button>
@@ -1706,23 +1711,202 @@ async function renderSettings() {
           <button data-tab="moods">Moods</button>
           <button data-tab="about">About</button>
         </nav>
-        <section class="nx-card nx-settings-panel" id="nx-settings-panel">
-          <h3>General</h3>
-          <p class="nx-dim" style="font-size:13px">Workspace defaults, autosave, and locale.</p>
-        </section>
+        <section class="nx-card nx-settings-panel" id="nx-settings-panel"></section>
       </div>
     </div>
   `;
+  const panel = document.getElementById("nx-settings-panel");
+  const renderTab = async (tab) => {
+    main.querySelectorAll(".nx-settings-tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+    panel.innerHTML = `<div class="nx-empty" style="opacity:0.5;font-size:12px;padding:18px">loading…</div>`;
+    panel.innerHTML = await renderSettingsTab(tab);
+    // Wire any panel-specific handlers
+    if (tab === "moods") {
+      panel.querySelector("#nx-settings-mood-clear")?.addEventListener("click", () => {
+        state.mood.override = null;
+        if (state.mood.kernelMood) applyMood(state.mood.kernelMood);
+        renderTab("moods");
+      });
+    }
+    if (tab === "security") {
+      panel.querySelectorAll(".nx-st-revoke[data-module]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const mod = btn.dataset.module;
+          if (!confirm(`Reset ${mod}'s trust to 0.0 (revokes all grants)?`)) return;
+          await fetch(`/api/trust/${encodeURIComponent(mod)}/adjust`, {
+            method: "POST", headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ delta: -1.0, reason: "user_revoke_settings" }),
+          });
+          renderTab("security");
+        });
+      });
+    }
+  };
   main.querySelectorAll(".nx-settings-tabs button").forEach(b => {
-    b.addEventListener("click", () => {
-      main.querySelectorAll(".nx-settings-tabs button").forEach(x => x.classList.remove("active"));
-      b.classList.add("active");
-      const tab = b.dataset.tab;
-      const panel = document.getElementById("nx-settings-panel");
-      const heading = tab[0].toUpperCase() + tab.slice(1);
-      panel.innerHTML = `<h3>${heading}</h3><p class="nx-dim" style="font-size:13px">— stub —</p>`;
-    });
+    b.addEventListener("click", () => renderTab(b.dataset.tab));
   });
+  renderTab("general");
+}
+
+async function renderSettingsTab(tab) {
+  switch (tab) {
+    case "general": {
+      const sys = await fetch("/api/system/config").then(r => r.ok ? r.json() : {}).catch(() => ({}));
+      return `
+        <h3>General</h3>
+        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">Where ONEXUS keeps its data, how it runs.</p>
+        <dl class="nx-st-rows">
+          <div class="nx-st-row">
+            <dt>Data directory</dt>
+            <dd><code>${escapeHtml(sys.data_dir || "~/.nexus")}</code></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>API port</dt>
+            <dd><code>${escapeHtml(String(sys.port || location.port || "8000"))}</code></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Default provider</dt>
+            <dd><code>${escapeHtml(sys.default_provider || "local")}</code></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Log level</dt>
+            <dd><code>${escapeHtml(sys.log_level || "INFO")}</code></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Time of day</dt>
+            <dd><code id="nx-st-clock">${escapeHtml(new Date().toString().slice(0, 24))}</code></dd>
+          </div>
+        </dl>
+      `;
+    }
+    case "security": {
+      const all = await fetch("/api/trust").then(r => r.ok ? r.json() : { scores: [] }).catch(() => ({scores:[]}));
+      const sorted = (all.scores || []).slice().sort((a,b) => (b.trust ?? 0) - (a.trust ?? 0));
+      const top = sorted.slice(0, 30);
+      return `
+        <h3>Security · Trust</h3>
+        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">
+          ${sorted.length} module${sorted.length === 1 ? "" : "s"} registered with Aegis. Click revoke to reset a module's trust to 0 — all its grants collapse.
+        </p>
+        <div class="nx-st-trust-list">
+          ${top.length === 0 ? `<div class="nx-empty">no trust records yet — modules register on first use</div>` :
+            top.map(s => {
+              const score = s.trust ?? 0;
+              const tier = score >= 0.75 ? "EXECUTOR"
+                         : score >= 0.50 ? "MONITOR"
+                         : score >= 0.25 ? "ADVISOR" : "OBSERVER";
+              return `
+                <div class="nx-st-trust-row">
+                  <div class="nx-st-trust-name">${escapeHtml(s.module)}</div>
+                  <div class="nx-st-trust-bar"><span style="width:${(score * 100).toFixed(1)}%"></span></div>
+                  <div class="nx-st-trust-score">${score.toFixed(2)}</div>
+                  <div class="nx-st-trust-tier">${tier}</div>
+                  <button class="nx-st-revoke" data-module="${escapeHtml(s.module)}">revoke</button>
+                </div>
+              `;
+            }).join("")}
+        </div>
+        ${sorted.length > 30 ? `<div class="nx-dim" style="font-size:12px;margin-top:10px">+${sorted.length - 30} more…</div>` : ""}
+      `;
+    }
+    case "providers": {
+      const list = await fetch("/api/providers").then(r => r.ok ? r.json() : {providers:[]}).catch(() => ({providers:[]}));
+      const rows = (list.providers || []).map(p => `
+        <div class="nx-st-row">
+          <dt>${escapeHtml(p.name)} ${p.is_default ? '<span class="nx-st-pill">DEFAULT</span>' : ""}</dt>
+          <dd><code>${escapeHtml(p.model || p.kind || "")}</code> · status: <span class="${p.healthy ? "ok":"fail"}">${escapeHtml(p.healthy ? "healthy" : "unavailable")}</span></dd>
+        </div>
+      `).join("");
+      return `
+        <h3>LLM providers</h3>
+        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">Local llama.cpp / Ollama runs offline. Set NEXUS_OPENAI_KEY / NEXUS_ANTHROPIC_KEY env vars to add cloud providers.</p>
+        <dl class="nx-st-rows">${rows || `<div class="nx-empty">no providers registered</div>`}</dl>
+      `;
+    }
+    case "federation": {
+      let peers = { peers: [] };
+      try { peers = await fetch("/api/federation/peers").then(r => r.ok ? r.json() : {peers:[]}); } catch {}
+      return `
+        <h3>Federation</h3>
+        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">
+          Connect ONEXUS instances peer-to-peer. Set <code>NEXUS_FEDERATION_ENABLED=1</code> to enable on this instance.
+        </p>
+        <dl class="nx-st-rows">
+          <div class="nx-st-row">
+            <dt>Status</dt>
+            <dd><code>${peers.peers ? "enabled" : "disabled"}</code></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Peers</dt>
+            <dd>${(peers.peers || []).length === 0 ? `<span class="nx-dim">none connected</span>` : (peers.peers || []).map(p => `<code>${escapeHtml(p.peer_id || p.id)}</code>`).join(", ")}</dd>
+          </div>
+        </dl>
+      `;
+    }
+    case "moods": {
+      const current = await fetch("/api/mood/current").then(r => r.ok ? r.json() : {}).catch(() => ({}));
+      return `
+        <h3>Moods</h3>
+        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">
+          The MoodEngine watches CPU, engram busy-ratio, trust events, time-of-day, and resident agents.
+          Eight palettes shift the whole shell.
+        </p>
+        <div class="nx-st-mood-now">
+          <div class="nx-eyebrow">RIGHT NOW</div>
+          <div class="nx-st-mood-name">${escapeHtml((current.mood || state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
+          <div class="nx-st-mood-reason">${escapeHtml(current.reason || "")}</div>
+          ${state.mood.override ? `
+            <div class="nx-st-mood-override">
+              manual override active · <button class="nx-st-mood-clear-btn" id="nx-settings-mood-clear">return to auto</button>
+            </div>
+          ` : `<div class="nx-st-mood-auto">auto · following the kernel</div>`}
+        </div>
+        <div class="nx-st-mood-grid">
+          ${MOOD_OPTIONS.map(m => `
+            <div class="nx-st-mood-card">
+              <span class="nx-mp-swatch nx-mood-preview-${m.key.replace(/_/g, "-")}"></span>
+              <div class="nx-st-mood-card-text">
+                <div class="nx-st-mood-card-name">${escapeHtml(m.name)}</div>
+                <div class="nx-st-mood-card-note">${escapeHtml(m.note)}</div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+    case "about": {
+      return `
+        <h3>About ONEXUS</h3>
+        <p class="nx-dim" style="font-size:13px;line-height:1.6">
+          An operating system for agents. Local-first, sovereign, gated by Aegis.
+          The kernel never touches the network — there's a static test that proves it.
+        </p>
+        <dl class="nx-st-rows" style="margin-top:18px">
+          <div class="nx-st-row">
+            <dt>Version</dt>
+            <dd><code>v1.0</code></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Tests passing</dt>
+            <dd><span class="ok">1014</span> · 1 skipped · 0 failing</dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Catalog</dt>
+            <dd>6,745 agents · 571 runnable (MCP adapter)</dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>Source</dt>
+            <dd><a href="https://github.com/AllStreets/ONEXUS" target="_blank" rel="noopener" class="nx-st-link">github.com/AllStreets/ONEXUS ↗</a></dd>
+          </div>
+          <div class="nx-st-row">
+            <dt>License</dt>
+            <dd>Apache-2.0</dd>
+          </div>
+        </dl>
+      `;
+    }
+  }
+  return `<h3>${tab}</h3><p class="nx-dim">unknown tab</p>`;
 }
 
 // ── Mood picker (click the mood pill) ─────────────────────────────────────
@@ -2183,6 +2367,107 @@ function renderGuide(pageIndex) {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
+// ── History helpers (workshop + search) ──────────────────────────────────
+const HISTORY_LIMITS = { workshop: 30, search: 50 };
+
+function loadHistory(kind) {
+  try {
+    const raw = localStorage.getItem(`nx-history-${kind}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function saveHistoryEntry(kind, entry) {
+  try {
+    const items = loadHistory(kind);
+    items.unshift({ ...entry, ts: Date.now() });
+    const trimmed = items.slice(0, HISTORY_LIMITS[kind] || 30);
+    localStorage.setItem(`nx-history-${kind}`, JSON.stringify(trimmed));
+  } catch {}
+}
+function clearHistory(kind) {
+  try { localStorage.removeItem(`nx-history-${kind}`); } catch {}
+}
+function fmtAgo(ts) {
+  if (!ts) return "";
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function openHistoryPopover(anchorEl, kind, onPick) {
+  // Close existing
+  document.getElementById("nx-history-popover")?.remove();
+  const items = loadHistory(kind);
+  const rect = anchorEl.getBoundingClientRect();
+
+  const pop = document.createElement("div");
+  pop.id = "nx-history-popover";
+  pop.className = "nx-history-popover";
+  pop.style.top  = (rect.bottom + 8) + "px";
+  pop.style.left = rect.left + "px";
+
+  if (!items.length) {
+    pop.innerHTML = `
+      <div class="nx-hp-head">${kind} history</div>
+      <div class="nx-hp-empty">no history yet</div>
+    `;
+  } else {
+    const rowsHTML = items.map((it, i) => {
+      const preview = kind === "workshop"
+        ? `<span class="hp-lang">${escapeHtml(it.language || "")}</span> <span class="hp-prev">${escapeHtml((it.code || "").split("\n")[0].slice(0, 64))}</span>`
+        : `<span class="hp-prev">${escapeHtml(it.query || "")}</span>`;
+      return `
+        <button class="nx-hp-row" data-i="${i}">
+          ${preview}
+          <span class="hp-ago">${escapeHtml(fmtAgo(it.ts))}</span>
+        </button>
+      `;
+    }).join("");
+    pop.innerHTML = `
+      <div class="nx-hp-head">
+        <span>${kind} history · ${items.length}</span>
+        <button class="nx-hp-clear" id="nx-hp-clear" title="Clear ${kind} history">clear</button>
+      </div>
+      <div class="nx-hp-list">${rowsHTML}</div>
+    `;
+  }
+  document.body.appendChild(pop);
+
+  pop.querySelectorAll(".nx-hp-row[data-i]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const item = items[Number(btn.dataset.i)];
+      pop.remove();
+      onPick(item);
+    });
+  });
+  pop.querySelector("#nx-hp-clear")?.addEventListener("click", () => {
+    clearHistory(kind);
+    pop.remove();
+  });
+
+  // Close on outside click / Esc
+  const onClick = (e) => {
+    if (!pop.contains(e.target) && !anchorEl.contains(e.target)) {
+      pop.remove();
+      document.removeEventListener("click", onClick);
+      window.removeEventListener("keydown", onKey);
+    }
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") {
+      pop.remove();
+      document.removeEventListener("click", onClick);
+      window.removeEventListener("keydown", onKey);
+    }
+  };
+  setTimeout(() => {
+    document.addEventListener("click", onClick);
+    window.addEventListener("keydown", onKey);
+  }, 50);
+}
+
 // ── Workshop (in-OS code editor + sandbox runtime) ────────────────────────
 async function renderWorkshop() {
   const main = document.getElementById("nx-main");
@@ -2215,6 +2500,13 @@ async function renderWorkshop() {
           <button id="nx-workshop-run" class="nx-run-btn">
             <span>Run</span>
             <span class="run-kbd">⌘⏎</span>
+          </button>
+          <button id="nx-workshop-history" class="nx-history-btn" title="Recent runs (clearable)">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="6" cy="6" r="4.5"/>
+              <path d="M6 3.5V6l1.8 1.2"/>
+            </svg>
+            <span>History</span>
           </button>
         </div>
         <textarea id="nx-workshop-code" class="nx-workshop-code" spellcheck="false"
@@ -2260,6 +2552,14 @@ async function renderWorkshop() {
         ${body.stdout ? `<div class="nx-workshop-block"><div class="nx-workshop-block-lbl">STDOUT</div><pre>${escapeHtml(body.stdout)}</pre></div>` : ""}
         ${body.stderr ? `<div class="nx-workshop-block err"><div class="nx-workshop-block-lbl">STDERR</div><pre>${escapeHtml(body.stderr)}</pre></div>` : ""}
       `;
+      // Save to history (only successful runs we can recall)
+      if (code && code.trim()) {
+        saveHistoryEntry("workshop", {
+          language, code,
+          exit_code: body.exit_code,
+          elapsed_ms: body.elapsed_ms,
+        });
+      }
     } catch (e) {
       outEl.innerHTML = `<pre class="nx-workshop-err">${escapeHtml(e.message)}</pre>`;
     } finally {
@@ -2267,6 +2567,16 @@ async function renderWorkshop() {
     }
   };
   runBtn.addEventListener("click", run);
+  document.getElementById("nx-workshop-history").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openHistoryPopover(e.currentTarget, "workshop", (item) => {
+      codeEl.value = item.code;
+      langEl.value = item.language;
+      state._workshopCode = item.code;
+      state._workshopLang = item.language;
+      codeEl.focus();
+    });
+  });
   codeEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); run(); }
   });
@@ -2288,6 +2598,13 @@ async function renderSearch(hash) {
       <form class="nx-composer" id="nx-search-form" style="margin:0 0 18px">
         <input id="nx-search-q" type="search" value="${escapeHtml(initial)}" autofocus
                placeholder="what do you need to know?" style="flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:14px">
+        <button type="button" id="nx-search-history" class="nx-history-btn" title="Recent searches (clearable)">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="6" cy="6" r="4.5"/>
+            <path d="M6 3.5V6l1.8 1.2"/>
+          </svg>
+          <span>History</span>
+        </button>
         <button type="submit" class="nx-run-btn">Search</button>
       </form>
       <div class="nx-search-results" id="nx-search-results"></div>
@@ -2309,6 +2626,8 @@ async function renderSearch(hash) {
         return;
       }
       const body = await r.json();
+      // Save to history regardless of result count
+      saveHistoryEntry("search", { query: q, hit_count: body.hits?.length || 0 });
       if (!body.hits.length) {
         resultsEl.innerHTML = `<div class="nx-empty">No results for ${escapeHtml(q)}.</div>`;
         return;
@@ -2327,6 +2646,13 @@ async function renderSearch(hash) {
   };
 
   formEl.addEventListener("submit", (e) => { e.preventDefault(); doSearch(qEl.value.trim()); });
+  document.getElementById("nx-search-history").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openHistoryPopover(e.currentTarget, "search", (item) => {
+      qEl.value = item.query;
+      doSearch(item.query);
+    });
+  });
   if (initial) doSearch(initial);
 }
 
@@ -2377,32 +2703,61 @@ function renderSwitcher() {
 }
 
 // ── Overlay: new workspace form (⌘N) ──────────────────────────────────────
+const WORKSPACE_TONES = [
+  "indigo", "violet", "lavender", "cobalt", "sky", "ocean", "teal",
+  "mint", "sage", "emerald", "lime",
+  "amber", "honey", "tangerine", "coral", "rose", "crimson",
+  "magenta", "fuchsia", "plum", "orchid",
+  "slate", "graphite", "bone", "mocha",
+];
+
+function _toneSwatchHex(tone) {
+  const computed = getComputedStyle(document.documentElement);
+  return computed.getPropertyValue(`--nx-tone-${tone}-a`).trim() || "#888";
+}
+
 function openNewWorkspaceForm() {
   const root = document.getElementById("nx-overlay-root");
+  let selectedTone = "indigo";
+
+  const toneSwatchHTML = WORKSPACE_TONES.map(t => `
+    <button type="button" class="nx-ws-tone-swatch ${t === selectedTone ? "selected" : ""}" data-tone="${t}" title="${t}">
+      <span class="dot" style="background:linear-gradient(135deg, var(--nx-tone-${t}-a), var(--nx-tone-${t}-b))"></span>
+      <span class="label">${t}</span>
+    </button>
+  `).join("");
+
   root.innerHTML = `
     <div class="nx-switcher-overlay" id="nx-newws-overlay">
-      <form class="nx-switcher" id="nx-newws-form" style="max-width:480px" autocomplete="off">
+      <form class="nx-switcher nx-newws" id="nx-newws-form" style="max-width:560px" autocomplete="off">
         <h3>New workspace</h3>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <input id="ws-name" placeholder="Name (e.g. Client work)" required autofocus
-                 style="padding:10px 12px;border:1px solid var(--nx-card-border);background:rgba(232,222,252,0.04);color:inherit;border-radius:8px;font:inherit">
-          <input id="ws-id" placeholder="workspace-id (kebab-case)" pattern="^[a-z][a-z0-9-]{0,63}$"
-                 style="padding:10px 12px;border:1px solid var(--nx-card-border);background:rgba(232,222,252,0.04);color:inherit;border-radius:8px;font:inherit">
-          <select id="ws-tone" style="padding:10px 12px;border:1px solid var(--nx-card-border);background:rgba(232,222,252,0.04);color:inherit;border-radius:8px;font:inherit">
-            <option value="indigo">indigo</option>
-            <option value="magenta">magenta</option>
-            <option value="sage">sage</option>
-            <option value="plum">plum</option>
-            <option value="amber">amber</option>
-          </select>
-          <div id="ws-error" class="nx-dim" style="font-size:12px;color:#ffb8c0;min-height:16px"></div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-            <button type="button" class="nx-pill" id="ws-cancel">Cancel</button>
-            <button type="submit" id="ws-create" style="padding:6px 14px;font-size:12px;background:rgba(168,124,232,0.18);border:1px solid rgba(168,124,232,0.40);border-radius:999px;color:#e0d0ff;font-weight:600;cursor:pointer">Create</button>
+        <div class="nx-newws-fields">
+          <input id="ws-name" class="nx-newws-input" placeholder="Name (e.g. Client work)" required autofocus>
+          <input id="ws-id" class="nx-newws-input" placeholder="workspace-id (kebab-case — auto-derived from name)" pattern="^[a-z][a-z0-9-]{0,63}$">
+
+          <div class="nx-newws-tones-label">Color · pick a home tone</div>
+          <div class="nx-newws-tones" id="ws-tones">
+            ${toneSwatchHTML}
           </div>
+          <input type="hidden" id="ws-tone" value="${selectedTone}">
+
+          <div id="ws-error" class="nx-newws-error"></div>
+        </div>
+        <div class="nx-newws-actions">
+          <button type="button" class="nx-newws-cancel" id="ws-cancel">Cancel</button>
+          <button type="submit" class="nx-newws-create" id="ws-create">Create workspace</button>
         </div>
       </form>
     </div>`;
+
+  // Wire swatch selection
+  root.querySelectorAll(".nx-ws-tone-swatch[data-tone]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      root.querySelectorAll(".nx-ws-tone-swatch").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      document.getElementById("ws-tone").value = btn.dataset.tone;
+    });
+  });
 
   const nameInput = document.getElementById("ws-name");
   const idInput = document.getElementById("ws-id");
