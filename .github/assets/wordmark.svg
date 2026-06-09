@@ -1,181 +1,160 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-label="ONEXUS — the operating system for agents">
-  <title>ONEXUS</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" role="img"
+     aria-label="ONEXUS — the operating system for agents"
+     preserveAspectRatio="xMidYMid meet">
+  <title>ONEXUS — the operating system for agents</title>
 
   <defs>
-    <!-- Primary face gradient: top-bright violet → bottom-deep -->
-    <linearGradient id="face" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"   stop-color="#d8c4ff"/>
-      <stop offset="35%"  stop-color="#b48bff"/>
-      <stop offset="75%"  stop-color="#7a5fd4"/>
-      <stop offset="100%" stop-color="#4a3590"/>
-    </linearGradient>
-
-    <!-- Side-face gradient (extrusion sides): darker, cooler -->
-    <linearGradient id="side" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"  stop-color="#2c1e58"/>
-      <stop offset="100%" stop-color="#1a0f3a"/>
-    </linearGradient>
-
-    <!-- Top bevel highlight -->
-    <linearGradient id="bevel" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#f3e8ff" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#f3e8ff" stop-opacity="0"/>
-    </linearGradient>
-
-    <!-- Ambient halo behind the wordmark -->
-    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"  stop-color="#a87af5" stop-opacity="0.55"/>
-      <stop offset="60%" stop-color="#5a4ac4" stop-opacity="0.20"/>
-      <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0"/>
+    <!-- Canvas vignette — near-black centre fading to deeper ink at the edges -->
+    <radialGradient id="canvas" cx="50%" cy="50%" r="75%">
+      <stop offset="0%"  stop-color="#0c0820"/>
+      <stop offset="55%" stop-color="#070418"/>
+      <stop offset="100%" stop-color="#03020a"/>
     </radialGradient>
 
-    <!-- Soft glow filter for the kernel orb -->
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="b"/>
+    <!-- Wordmark gradient: cool violet → bright lavender → warm rose-lavender -->
+    <linearGradient id="word" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#8a76e0"/>
+      <stop offset="30%"  stop-color="#cbb6ff"/>
+      <stop offset="55%"  stop-color="#e7d9ff"/>
+      <stop offset="80%"  stop-color="#d2bfff"/>
+      <stop offset="100%" stop-color="#9a7fff"/>
+    </linearGradient>
+
+    <!-- Top-edge highlight (a thin bright sliver above the letterforms) -->
+    <linearGradient id="top-hi" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.65)"/>
+      <stop offset="50%"  stop-color="rgba(255,255,255,0.10)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+
+    <!-- Halo behind the wordmark — soft violet bloom -->
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="rgba(180,139,255,0.45)"/>
+      <stop offset="55%"  stop-color="rgba(122, 95,212,0.13)"/>
+      <stop offset="100%" stop-color="rgba(122, 95,212,0)"/>
+    </radialGradient>
+
+    <filter id="halo-blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+
+    <filter id="word-glow" x="-10%" y="-30%" width="120%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
       <feMerge>
         <feMergeNode in="b"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
 
-    <!-- Drop shadow for the letters -->
-    <filter id="extrude" x="-10%" y="-10%" width="120%" height="130%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
-      <feOffset dy="14"/>
-      <feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <!-- Status pulse dot — heartbeat -->
+    <radialGradient id="pulse" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#9affb6" stop-opacity="1"/>
+      <stop offset="60%"  stop-color="#5cd4c0" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#5cd4c0" stop-opacity="0"/>
+    </radialGradient>
 
-    <!-- Letter shape clip path for the bevel highlight -->
-    <clipPath id="clip-O">
-      <path d="M150,90 a70,70 0 1 1 0,140 a70,70 0 1 1 0,-140 z M150,130 a30,30 0 1 0 0,60 a30,30 0 1 0 0,-60 z" fill-rule="evenodd"/>
-    </clipPath>
+    <!-- Background dot grid pattern — subtle technical texture -->
+    <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="rgba(180,139,255,0.07)"/>
+    </pattern>
   </defs>
 
-  <!-- Ambient halo behind everything -->
-  <rect width="1280" height="320" fill="url(#halo)" opacity="0.8"/>
+  <!-- ── canvas ────────────────────────────────────────────────────────────── -->
+  <rect width="1280" height="360" fill="url(#canvas)"/>
+  <rect width="1280" height="360" fill="url(#dots)"/>
 
-  <!-- Letters group — each letter is drawn with:
-       (1) deep "side" extrusion offset by (+10, +14) for depth
-       (2) primary "face" with face gradient
-       (3) thin bevel highlight at the top edge
+  <!-- ── violet halo behind the wordmark ──────────────────────────────────── -->
+  <ellipse cx="640" cy="200" rx="520" ry="120"
+           fill="url(#halo)" filter="url(#halo-blur)"/>
 
-       Letter spacing: 170px stride, 90→1230 across the canvas.
-       Letter cap height: 140px (y=90 to y=230).
-  -->
-
-  <g filter="url(#extrude)">
-
-    <!-- O — at x=80..220 -->
-    <g>
-      <!-- side extrusion -->
-      <path d="M165,104 a70,70 0 1 1 0,140 a70,70 0 1 1 0,-140 z
-               M165,144 a30,30 0 1 0 0,60 a30,30 0 1 0 0,-60 z"
-            fill="url(#side)" fill-rule="evenodd"/>
-      <!-- face -->
-      <path d="M150,90 a70,70 0 1 1 0,140 a70,70 0 1 1 0,-140 z
-               M150,130 a30,30 0 1 0 0,60 a30,30 0 1 0 0,-60 z"
-            fill="url(#face)" fill-rule="evenodd"/>
-      <!-- top bevel highlight -->
-      <path d="M150,90 a70,70 0 0 1 60,35 l-12,8 a55,55 0 0 0 -48,-28 z"
-            fill="url(#bevel)" opacity="0.75"/>
-    </g>
-
-    <!-- N — at x=250..390 -->
-    <g>
-      <!-- side -->
-      <path d="M265,104 v140 h25 v-90 l60,90 h25 v-140 h-25 v90 l-60,-90 z" fill="url(#side)"/>
-      <!-- face -->
-      <path d="M250,90 v140 h25 v-90 l60,90 h25 v-140 h-25 v90 l-60,-90 z" fill="url(#face)"/>
-      <!-- bevel -->
-      <path d="M250,90 h25 l60,90 v-90 h25 l-12,12 h-1 v6 l-60,-90 z" fill="url(#bevel)" opacity="0.55"/>
-    </g>
-
-    <!-- E — at x=415..530 -->
-    <g>
-      <!-- side -->
-      <path d="M430,104 v140 h115 v-25 h-90 v-32 h80 v-25 h-80 v-33 h90 v-25 z" fill="url(#side)"/>
-      <!-- face -->
-      <path d="M415,90 v140 h115 v-25 h-90 v-32 h80 v-25 h-80 v-33 h90 v-25 z" fill="url(#face)"/>
-      <!-- bevel -->
-      <path d="M415,90 h115 l-12,12 h-90 v-1 z" fill="url(#bevel)" opacity="0.55"/>
-    </g>
-
-    <!-- X — at x=555..695 -->
-    <g>
-      <!-- side -->
-      <path d="M570,104 l50,68 -55,72 h30 l40,-52 40,52 h30 l-55,-72 50,-68 h-30 l-35,46 -35,-46 z" fill="url(#side)"/>
-      <!-- face -->
-      <path d="M555,90 l50,68 -55,72 h30 l40,-52 40,52 h30 l-55,-72 50,-68 h-30 l-35,46 -35,-46 z" fill="url(#face)"/>
-      <!-- bevel -->
-      <path d="M555,90 h30 l30,40 -10,10 -25,-33 z" fill="url(#bevel)" opacity="0.55"/>
-    </g>
-
-    <!-- U — at x=720..860 -->
-    <g>
-      <!-- side -->
-      <path d="M735,104 v90 a55,55 0 0 0 110,0 v-90 h-25 v90 a30,30 0 0 1 -60,0 v-90 z" fill="url(#side)"/>
-      <!-- face -->
-      <path d="M720,90 v90 a55,55 0 0 0 110,0 v-90 h-25 v90 a30,30 0 0 1 -60,0 v-90 z" fill="url(#face)"/>
-      <!-- bevel -->
-      <path d="M720,90 h25 v6 l-13,12 h-12 z M805,90 h25 v6 l-13,12 h-12 z" fill="url(#bevel)" opacity="0.55"/>
-    </g>
-
-    <!-- S — at x=885..1020 -->
-    <g>
-      <!-- side -->
-      <path d="M915,104
-               c -40,0 -60,20 -60,40
-               c 0,22 18,35 50,42
-               c 22,5 35,8 35,18
-               c 0,8 -10,16 -32,16
-               c -23,0 -38,-10 -45,-22
-               l -18,16
-               c 12,18 36,32 63,32
-               c 38,0 60,-20 60,-43
-               c 0,-25 -22,-36 -52,-43
-               c -22,-5 -33,-9 -33,-18
-               c 0,-8 9,-14 28,-14
-               c 18,0 30,7 38,16
-               l 18,-16
-               c -12,-15 -32,-24 -52,-24 z" fill="url(#side)"/>
-      <!-- face -->
-      <path d="M900,90
-               c -40,0 -60,20 -60,40
-               c 0,22 18,35 50,42
-               c 22,5 35,8 35,18
-               c 0,8 -10,16 -32,16
-               c -23,0 -38,-10 -45,-22
-               l -18,16
-               c 12,18 36,32 63,32
-               c 38,0 60,-20 60,-43
-               c 0,-25 -22,-36 -52,-43
-               c -22,-5 -33,-9 -33,-18
-               c 0,-8 9,-14 28,-14
-               c 18,0 30,7 38,16
-               l 18,-16
-               c -12,-15 -32,-24 -52,-24 z" fill="url(#face)"/>
-      <!-- bevel -->
-      <path d="M900,90 c 18,0 33,8 45,20 l-15,12 c -8,-7 -19,-12 -30,-12 z" fill="url(#bevel)" opacity="0.55"/>
-    </g>
+  <!-- ── corner HUD brackets ──────────────────────────────────────────────── -->
+  <g stroke="rgba(180,139,255,0.45)" stroke-width="1" fill="none" stroke-linecap="square">
+    <path d="M28 28 L28 60 M28 28 L60 28"/>
+    <path d="M1252 28 L1252 60 M1252 28 L1220 28"/>
+    <path d="M28 332 L28 300 M28 332 L60 332"/>
+    <path d="M1252 332 L1252 300 M1252 332 L1220 332"/>
   </g>
 
-  <!-- Subtle grain overlay -->
-  <rect width="1280" height="320"
-        fill="url(#face)"
-        opacity="0.0"
-        style="mix-blend-mode: overlay"/>
+  <!-- ── status row (top centre) ──────────────────────────────────────────── -->
+  <g font-family="ui-monospace,'JetBrains Mono','SF Mono',Menlo,monospace"
+     font-size="10" letter-spacing="0.32em">
+    <circle cx="480" cy="65" r="3" fill="#9affb6"/>
+    <circle cx="480" cy="65" r="7" fill="url(#pulse)">
+      <animate attributeName="r"       values="5;9;5"       dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.9;0.2;0.9" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <text x="500" y="69" text-anchor="start" fill="#9affb6">KERNEL ONLINE</text>
+    <text x="640" y="69" text-anchor="middle" fill="#6b6080">·</text>
+    <text x="700" y="69" text-anchor="start" fill="#a8a0c8">NETWORK.IO  ∅</text>
+    <text x="852" y="69" text-anchor="middle" fill="#6b6080">·</text>
+    <text x="912" y="69" text-anchor="start" fill="#c9b8ff">6,745 AGENTS</text>
+  </g>
 
-  <!-- Tagline below the wordmark -->
-  <g transform="translate(640 295)">
-    <text text-anchor="middle"
-          font-family="ui-monospace, 'JetBrains Mono', monospace"
-          font-size="14"
-          letter-spacing="0.42em"
-          fill="#c9b8ff"
-          opacity="0.85">THE&#160;&#160;OPERATING&#160;&#160;SYSTEM&#160;&#160;FOR&#160;&#160;AGENTS</text>
+  <!-- ── wordmark "ONEXUS" — converted to paths (Arial Black) so it renders
+       identically on every viewer, regardless of installed fonts ──────────── -->
+
+  <!-- Drop shadow (very subtle) -->
+  <g fill="rgba(0,0,0,0.55)" transform="translate(0 4)" filter="url(#word-glow)">
+    <g transform="translate(298.13 220.00) scale(0.072266 -0.072266)"><path d="M93 732Q93 1091 293.0 1291.0Q493 1491 850 1491Q1216 1491 1414.0 1294.5Q1612 1098 1612 744Q1612 487 1525.5 322.5Q1439 158 1275.5 66.5Q1112 -25 868 -25Q620 -25 457.5 54.0Q295 133 194.0 304.0Q93 475 93 732ZM546 730Q546 508 628.5 411.0Q711 314 853 314Q999 314 1079.0 409.0Q1159 504 1159 750Q1159 957 1075.5 1052.5Q992 1148 849 1148Q712 1148 629.0 1051.0Q546 954 546 730Z"/></g>
+    <g transform="translate(418.42 220.00) scale(0.072266 -0.072266)"><path d="M153 1466H576L1128 655V1466H1555V0H1128L579 805V0H153Z"/></g>
+    <g transform="translate(538.70 220.00) scale(0.072266 -0.072266)"><path d="M149 1466H1363V1153H603V920H1308V621H603V332H1385V0H149Z"/></g>
+    <g transform="translate(642.58 220.00) scale(0.072266 -0.072266)"><path d="M49 1466H548L808 1015L1060 1466H1554L1098 756L1597 0H1088L799 471L509 0H3L509 764Z"/></g>
+    <g transform="translate(754.70 220.00) scale(0.072266 -0.072266)"><path d="M1104 1466H1556V592Q1556 462 1515.5 346.5Q1475 231 1388.5 144.5Q1302 58 1207 23Q1075 -26 890 -26Q783 -26 656.5 -11.0Q530 4 445.0 48.5Q360 93 289.5 175.0Q219 257 193 344Q151 484 151 592V1466H603V571Q603 451 669.5 383.5Q736 316 854 316Q971 316 1037.5 382.5Q1104 449 1104 571Z"/></g>
+    <g transform="translate(874.99 220.00) scale(0.072266 -0.072266)"><path d="M71 485 502 512Q516 407 559 352Q629 263 759 263Q856 263 908.5 308.5Q961 354 961 414Q961 471 911 516Q861 561 679 601Q381 668 254 779Q126 890 126 1062Q126 1175 191.5 1275.5Q257 1376 388.5 1433.5Q520 1491 749 1491Q1030 1491 1177.5 1386.5Q1325 1282 1353 1054L926 1029Q909 1128 854.5 1173.0Q800 1218 704 1218Q625 1218 585.0 1184.5Q545 1151 545 1103Q545 1068 578 1040Q610 1011 730 986Q1027 922 1155.5 856.5Q1284 791 1342.5 694.0Q1401 597 1401 477Q1401 336 1323.0 217.0Q1245 98 1105.0 36.5Q965 -25 752 -25Q378 -25 234.0 119.0Q90 263 71 485Z"/></g>
+  </g>
+
+  <!-- Main face -->
+  <g fill="url(#word)" filter="url(#word-glow)">
+    <g transform="translate(298.13 220.00) scale(0.072266 -0.072266)"><path d="M93 732Q93 1091 293.0 1291.0Q493 1491 850 1491Q1216 1491 1414.0 1294.5Q1612 1098 1612 744Q1612 487 1525.5 322.5Q1439 158 1275.5 66.5Q1112 -25 868 -25Q620 -25 457.5 54.0Q295 133 194.0 304.0Q93 475 93 732ZM546 730Q546 508 628.5 411.0Q711 314 853 314Q999 314 1079.0 409.0Q1159 504 1159 750Q1159 957 1075.5 1052.5Q992 1148 849 1148Q712 1148 629.0 1051.0Q546 954 546 730Z"/></g>
+    <g transform="translate(418.42 220.00) scale(0.072266 -0.072266)"><path d="M153 1466H576L1128 655V1466H1555V0H1128L579 805V0H153Z"/></g>
+    <g transform="translate(538.70 220.00) scale(0.072266 -0.072266)"><path d="M149 1466H1363V1153H603V920H1308V621H603V332H1385V0H149Z"/></g>
+    <g transform="translate(642.58 220.00) scale(0.072266 -0.072266)"><path d="M49 1466H548L808 1015L1060 1466H1554L1098 756L1597 0H1088L799 471L509 0H3L509 764Z"/></g>
+    <g transform="translate(754.70 220.00) scale(0.072266 -0.072266)"><path d="M1104 1466H1556V592Q1556 462 1515.5 346.5Q1475 231 1388.5 144.5Q1302 58 1207 23Q1075 -26 890 -26Q783 -26 656.5 -11.0Q530 4 445.0 48.5Q360 93 289.5 175.0Q219 257 193 344Q151 484 151 592V1466H603V571Q603 451 669.5 383.5Q736 316 854 316Q971 316 1037.5 382.5Q1104 449 1104 571Z"/></g>
+    <g transform="translate(874.99 220.00) scale(0.072266 -0.072266)"><path d="M71 485 502 512Q516 407 559 352Q629 263 759 263Q856 263 908.5 308.5Q961 354 961 414Q961 471 911 516Q861 561 679 601Q381 668 254 779Q126 890 126 1062Q126 1175 191.5 1275.5Q257 1376 388.5 1433.5Q520 1491 749 1491Q1030 1491 1177.5 1386.5Q1325 1282 1353 1054L926 1029Q909 1128 854.5 1173.0Q800 1218 704 1218Q625 1218 585.0 1184.5Q545 1151 545 1103Q545 1068 578 1040Q610 1011 730 986Q1027 922 1155.5 856.5Q1284 791 1342.5 694.0Q1401 597 1401 477Q1401 336 1323.0 217.0Q1245 98 1105.0 36.5Q965 -25 752 -25Q378 -25 234.0 119.0Q90 263 71 485Z"/></g>
+  </g>
+
+  <!-- Top-edge specular highlight -->
+  <g fill="url(#top-hi)" style="mix-blend-mode:screen" opacity="0.85">
+    <g transform="translate(298.13 220.00) scale(0.072266 -0.072266)"><path d="M93 732Q93 1091 293.0 1291.0Q493 1491 850 1491Q1216 1491 1414.0 1294.5Q1612 1098 1612 744Q1612 487 1525.5 322.5Q1439 158 1275.5 66.5Q1112 -25 868 -25Q620 -25 457.5 54.0Q295 133 194.0 304.0Q93 475 93 732ZM546 730Q546 508 628.5 411.0Q711 314 853 314Q999 314 1079.0 409.0Q1159 504 1159 750Q1159 957 1075.5 1052.5Q992 1148 849 1148Q712 1148 629.0 1051.0Q546 954 546 730Z"/></g>
+    <g transform="translate(418.42 220.00) scale(0.072266 -0.072266)"><path d="M153 1466H576L1128 655V1466H1555V0H1128L579 805V0H153Z"/></g>
+    <g transform="translate(538.70 220.00) scale(0.072266 -0.072266)"><path d="M149 1466H1363V1153H603V920H1308V621H603V332H1385V0H149Z"/></g>
+    <g transform="translate(642.58 220.00) scale(0.072266 -0.072266)"><path d="M49 1466H548L808 1015L1060 1466H1554L1098 756L1597 0H1088L799 471L509 0H3L509 764Z"/></g>
+    <g transform="translate(754.70 220.00) scale(0.072266 -0.072266)"><path d="M1104 1466H1556V592Q1556 462 1515.5 346.5Q1475 231 1388.5 144.5Q1302 58 1207 23Q1075 -26 890 -26Q783 -26 656.5 -11.0Q530 4 445.0 48.5Q360 93 289.5 175.0Q219 257 193 344Q151 484 151 592V1466H603V571Q603 451 669.5 383.5Q736 316 854 316Q971 316 1037.5 382.5Q1104 449 1104 571Z"/></g>
+    <g transform="translate(874.99 220.00) scale(0.072266 -0.072266)"><path d="M71 485 502 512Q516 407 559 352Q629 263 759 263Q856 263 908.5 308.5Q961 354 961 414Q961 471 911 516Q861 561 679 601Q381 668 254 779Q126 890 126 1062Q126 1175 191.5 1275.5Q257 1376 388.5 1433.5Q520 1491 749 1491Q1030 1491 1177.5 1386.5Q1325 1282 1353 1054L926 1029Q909 1128 854.5 1173.0Q800 1218 704 1218Q625 1218 585.0 1184.5Q545 1151 545 1103Q545 1068 578 1040Q610 1011 730 986Q1027 922 1155.5 856.5Q1284 791 1342.5 694.0Q1401 597 1401 477Q1401 336 1323.0 217.0Q1245 98 1105.0 36.5Q965 -25 752 -25Q378 -25 234.0 119.0Q90 263 71 485Z"/></g>
+  </g>
+
+  <!-- ── horizontal kernel signal line beneath the wordmark ──────────────── -->
+  <g>
+    <line x1="380" y1="262" x2="900" y2="262"
+          stroke="rgba(180,139,255,0.30)" stroke-width="1"/>
+    <rect x="378" y="259" width="4" height="6" fill="#b48bff"/>
+    <rect x="898" y="259" width="4" height="6" fill="#b48bff"/>
+    <rect x="0" y="259" width="3" height="6" fill="#e7d9ff" opacity="0.85">
+      <animate attributeName="x" values="380;896;380" dur="6s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- ── tagline ──────────────────────────────────────────────────────────── -->
+  <text x="640" y="294" text-anchor="middle"
+        font-family="ui-monospace,'JetBrains Mono','SF Mono',Menlo,monospace"
+        font-size="13" letter-spacing="0.42em" fill="#c9b8ff"
+        font-weight="500">AN OPERATING SYSTEM FOR AGENTS</text>
+
+  <!-- ── version chip (bottom-right) ──────────────────────────────────────── -->
+  <g transform="translate(1188 314)"
+     font-family="ui-monospace,'JetBrains Mono','SF Mono',Menlo,monospace"
+     font-size="9" letter-spacing="0.18em">
+    <rect x="-46" y="-12" width="92" height="20" rx="3"
+          fill="rgba(180,139,255,0.10)" stroke="rgba(180,139,255,0.32)"/>
+    <text x="0" y="2" text-anchor="middle" fill="#c9b8ff">V1.0.0 · STATIC</text>
+  </g>
+
+  <!-- ── label chip (bottom-left) ─────────────────────────────────────────── -->
+  <g transform="translate(92 314)"
+     font-family="ui-monospace,'JetBrains Mono','SF Mono',Menlo,monospace"
+     font-size="9" letter-spacing="0.18em">
+    <rect x="-46" y="-12" width="92" height="20" rx="3"
+          fill="rgba(154,255,182,0.06)" stroke="rgba(154,255,182,0.22)"/>
+    <text x="0" y="2" text-anchor="middle" fill="#9affb6">SOVEREIGN · LOCAL</text>
   </g>
 </svg>

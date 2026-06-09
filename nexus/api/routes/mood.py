@@ -7,6 +7,8 @@ WS   /api/mood/ws        — push mood snapshots every 2s
 from __future__ import annotations
 
 import asyncio
+import time
+from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict
@@ -15,6 +17,59 @@ from nexus.workspaces.mood import MoodEngine, MoodSignals
 
 
 router = APIRouter(prefix="/api/mood", tags=["mood"])
+
+
+# Mood severity — higher = more urgent. Lower-severity moods cannot displace
+# a higher-severity mood until its hold period expires; the dashboard would
+# otherwise flicker between e.g. alert and calm_focus when one signal source
+# clears trust_collapsed before another reaffirms it.
+_SEVERITY: dict[str, int] = {
+    "alert": 6,
+    "watchful": 5,
+    "routing": 4,
+    "deliberating": 3,
+    "creative": 2,
+    "deep_flow": 1,
+    "reflective": 1,
+    "calm_focus": 0,
+}
+
+# How long each mood holds before allowing a step-down (seconds).
+_HOLD_SECONDS: dict[str, float] = {
+    "alert": 10.0,
+    "watchful": 6.0,
+    "routing": 4.0,
+    "deliberating": 4.0,
+    "creative": 4.0,
+    "deep_flow": 3.0,
+    "reflective": 3.0,
+    "calm_focus": 0.0,
+}
+
+
+@dataclass
+class _MoodHold:
+    """Tracks the last mood emitted and when it was set, for hold-down logic."""
+    mood: str
+    set_at: float
+
+
+def _apply_hold(request_app_state, new_mood: str) -> str:
+    """Return `new_mood`, unless a higher-severity mood is still inside its
+    hold window — in which case keep emitting the held mood."""
+    held: _MoodHold | None = getattr(request_app_state, "mood_hold", None)
+    now = time.monotonic()
+    if held is not None:
+        elapsed = now - held.set_at
+        hold_for = _HOLD_SECONDS.get(held.mood, 0.0)
+        new_sev = _SEVERITY.get(new_mood, 0)
+        held_sev = _SEVERITY.get(held.mood, 0)
+        if held_sev > new_sev and elapsed < hold_for:
+            # Step-down attempted too soon — keep the held mood.
+            return held.mood
+    # Either escalating, equal, or past the hold window: latch the new mood.
+    request_app_state.mood_hold = _MoodHold(mood=new_mood, set_at=now)
+    return new_mood
 
 # Known observe-body fields and how they map to MoodSignals kwargs.
 # Keys are what the surface sends; values are the MoodSignals field name.
@@ -140,7 +195,8 @@ async def current(request: Request) -> dict:
     engine = _get_engine(request)
     signals = _get_signals(request)
     result = engine.evaluate(signals)
-    mood_key = result.mood.name.lower()  # e.g. CALM_FOCUS -> "calm_focus"
+    raw_mood = result.mood.name.lower()
+    mood_key = _apply_hold(request.app.state, raw_mood)
     return {
         "mood": mood_key,
         "tone": result.overlay.value if result.overlay is not None else None,
@@ -157,8 +213,10 @@ async def mood_ws(websocket: WebSocket):
         while True:
             engine = _get_engine(websocket)
             snap = engine.evaluate(getattr(websocket.app.state, "mood_signals", MoodSignals()))
+            raw_mood = snap.mood.name.lower()
+            mood_key = _apply_hold(websocket.app.state, raw_mood)
             await websocket.send_json({
-                "mood": snap.mood.name.lower(),
+                "mood": mood_key,
                 "tone": snap.overlay.value if snap.overlay is not None else None,
                 "drift_seconds": snap.spec.drift_seconds,
                 "reason": snap.spec.description,
@@ -180,5 +238,6 @@ async def observe(request: Request, body: ObserveBody) -> dict:
     # Persist updated signals
     request.app.state.mood_signals = new_signals
     result = engine.evaluate(new_signals)
-    mood_key = result.mood.name.lower()
+    raw_mood = result.mood.name.lower()
+    mood_key = _apply_hold(request.app.state, raw_mood)
     return {"mood": mood_key, "reason": result.spec.description}
