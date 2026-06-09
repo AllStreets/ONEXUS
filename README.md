@@ -4,7 +4,7 @@
 
 &nbsp;
 
-<a href="https://github.com/AllStreets/ONEXUS/releases/tag/v1.0"><img alt="release" src="https://img.shields.io/github/v/release/AllStreets/ONEXUS?style=for-the-badge&color=b48bff&labelColor=0a0712&label=release"/></a>
+<a href="https://github.com/AllStreets/ONEXUS/releases/tag/v1.0"><img alt="release" src="https://img.shields.io/badge/release-v1.0-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1014_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="catalog" src="https://img.shields.io/badge/catalog-6%2C745_agents-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="runnable" src="https://img.shields.io/badge/runnable_(MCP)-571-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
