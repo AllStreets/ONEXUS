@@ -979,19 +979,22 @@ async function renderConversation(workspaceId) {
     : `started by you · council routing`;
 
   const attachedFiles = state.attachments?.get(workspaceId) || [];
+  // Use a <label for="..."> wrapping the paperclip — clicking a label for a
+  // file input is a native browser primitive and opens the picker without any
+  // JS click chain. Works in every browser, including Safari which is picky
+  // about programmatic .click() on hidden inputs.
   const composerHTML = `
     <form class="nx-composer" id="nx-composer" autocomplete="off">
-      <button type="button" class="nx-attach-btn" id="nx-attach-btn" title="Attach file (or drag-and-drop)">
+      <label class="nx-attach-btn" id="nx-attach-btn" for="nx-file-input" title="Attach file (or drag-and-drop)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9.8 5.5 5.8 9.5a2 2 0 1 1-2.8-2.8L8 1.7a3 3 0 0 1 4.2 4.2L7.2 11a4 4 0 0 1-5.7-5.6"/>
         </svg>
-      </button>
+        <input type="file" id="nx-file-input" multiple aria-hidden="true" class="nx-file-input-vis">
+      </label>
       <input id="nx-composer-input"
              placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
              aria-label="Compose a message"
              autofocus>
-      <input type="file" id="nx-file-input" multiple aria-hidden="true"
-             style="position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;width:1px;height:1px">
       <div class="nx-composer-kbd">
         <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
       </div>
@@ -1072,17 +1075,9 @@ async function renderConversation(workspaceId) {
     });
   });
 
-  // File attach + drag-and-drop
-  // The hidden file input lives at the document level (not inside the form)
-  // because some browsers refuse to click() on a display:none input inside a
-  // form. Lifting it out + position:absolute keeps it accessible to .click().
+  // File attach: the paperclip is a <label for="nx-file-input">, so clicking
+  // it opens the picker natively. We only need to handle the change event.
   const fileInput = document.getElementById("nx-file-input");
-  const attachBtn = document.getElementById("nx-attach-btn");
-  attachBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    fileInput?.click();
-  });
   fileInput?.addEventListener("change", async (e) => {
     const files = Array.from(e.target.files || []);
     for (const f of files) await uploadFile(workspaceId, f);

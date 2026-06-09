@@ -47,16 +47,17 @@
 }
 
 /* ── reset to fill the viewport without body scroll ──────────────────────── */
-/* Safari + older Chrome don't all support 100dvh; fall back gracefully.    */
+/* html/body fill their containing block (the viewport). Don't use 100vw on
+   the body — on macOS / always-show-scrollbars Chrome, 100vw INCLUDES the
+   scrollbar gutter, which makes the page wider than the visible area and
+   produces a "dead band" on the right. width:100% inherits the actual
+   viewport width minus the scrollbar. */
 html, body {
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
-  width: 100dvw;
+  height: 100%;
+  width: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  /* keep a scrollbar gutter so layout doesn't shift when content overflows */
-  scrollbar-gutter: stable;
 }
 body {
   background: #08060f;
@@ -87,15 +88,15 @@ body {
 }
 
 /* ── shell grid ──────────────────────────────────────────────────────────── */
+/* Pin the shell to all four viewport edges. position:fixed + inset:0 is the
+   most robust way to fill the visible area — it ignores scrollbar quirks,
+   notches, and zoom levels. */
 .nx-shell {
-  position: relative;
+  position: fixed;
+  inset: 0;
   z-index: 1;
   display: grid;
   grid-template-rows: var(--chrome-h) minmax(0, 1fr);
-  height: 100vh;          /* fallback */
-  height: 100dvh;
-  width: 100%;
-  max-width: 100vw;
   overflow: hidden;
 }
 
@@ -810,6 +811,17 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   color: var(--nx-mood-primary);
   background: color-mix(in srgb, var(--nx-mood-primary) 12%, transparent);
   border-color: color-mix(in srgb, var(--nx-mood-primary) 34%, transparent);
+}
+/* Visually hide the file input nested inside the label — the label itself
+   is the clickable target (browser-native behaviour). */
+.nx-file-input-vis {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .nx-composer-kbd {
   display: flex; align-items: center; gap: 4px;
