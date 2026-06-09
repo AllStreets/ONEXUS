@@ -1,70 +1,155 @@
 // ONEXUS standalone — Tauri shell library.
 //
-// Boots the FastAPI server, waits for /api/health, opens the WebView, and
-// tears down the child process when the shell window closes.
+// Boots the FastAPI server, waits for it to accept TCP, opens the WebView,
+// and tears down the child process when the shell window closes.
+//
+// Project-root resolution:
+//   1) $ONEXUS_PROJECT_ROOT environment variable
+//   2) ~/Library/Application Support/com.allstreets.onexus/project_root
+//      (written automatically the first time the binary runs from inside
+//      a checkout that contains nexus/__init__.py)
+//   3) Walk up from the executable looking for nexus/__init__.py
+//   4) The current working directory
+//   5) The parent of the current working directory
+//
+// Once resolved, the path is cached on disk so /Applications/ONEXUS.app can
+// find your code from anywhere it's launched.
 
-use std::io::{BufRead, BufReader};
+use std::fs;
+use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use tauri::{Manager, RunEvent, WindowEvent};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 
 const HOST: &str = "127.0.0.1";
 const PORT: u16 = 8000;
 const HEALTH_TIMEOUT_SECS: u64 = 20;
+const BUNDLE_ID: &str = "com.allstreets.onexus";
 
-/// Wrapper around the spawned Python child so we can kill it on shutdown.
+/// Wrapper around the spawned Python child so we can kill it on shutdown
+/// and on demand (e.g. the File → Reload Backend menu item).
 struct ServerChild(Mutex<Option<Child>>);
 
 impl ServerChild {
     fn take(&self) -> Option<Child> {
         self.0.lock().ok().and_then(|mut g| g.take())
     }
+    fn replace(&self, new: Option<Child>) {
+        if let Ok(mut g) = self.0.lock() {
+            if let Some(old) = g.take() {
+                drop(old); // Drop closes pipes; kill is the caller's job.
+            }
+            *g = new;
+        }
+    }
 }
 
-/// Resolve where ONEXUS lives on disk so we can `cd` there and run the server.
-/// We look for a `nexus/__init__.py` walking up from the executable, falling
-/// back to the current working directory for `cargo tauri dev`.
-fn resolve_project_root() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let mut cursor = exe.parent().map(PathBuf::from)?;
+// ── Project-root resolution + persistence ────────────────────────────────────
 
-    for _ in 0..8 {
-        if cursor.join("nexus").join("__init__.py").exists() {
+fn config_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME").map(PathBuf::from)?;
+    Some(home.join("Library").join("Application Support").join(BUNDLE_ID))
+}
+
+fn config_file() -> Option<PathBuf> {
+    config_dir().map(|d| d.join("project_root"))
+}
+
+fn read_cached_root() -> Option<PathBuf> {
+    let path = config_file()?;
+    let contents = fs::read_to_string(&path).ok()?;
+    let trimmed = contents.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let candidate = PathBuf::from(trimmed);
+    if is_valid_project_root(&candidate) {
+        Some(candidate)
+    } else {
+        None
+    }
+}
+
+fn write_cached_root(root: &Path) {
+    let Some(dir) = config_dir() else { return };
+    if fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let Some(path) = config_file() else { return };
+    if let Ok(mut f) = fs::File::create(&path) {
+        let _ = writeln!(f, "{}", root.display());
+    }
+}
+
+fn is_valid_project_root(path: &Path) -> bool {
+    path.join("nexus").join("__init__.py").exists()
+}
+
+fn walk_up_for_project(start: &Path, max_steps: usize) -> Option<PathBuf> {
+    let mut cursor = start.to_path_buf();
+    for _ in 0..max_steps {
+        if is_valid_project_root(&cursor) {
             return Some(cursor);
         }
         if !cursor.pop() {
             break;
         }
     }
-
-    let cwd = std::env::current_dir().ok()?;
-    if cwd.join("nexus").join("__init__.py").exists() {
-        return Some(cwd);
-    }
-    // dev runs from standalone/ — walk up one
-    if let Some(parent) = cwd.parent() {
-        if parent.join("nexus").join("__init__.py").exists() {
-            return Some(parent.to_path_buf());
-        }
-    }
     None
 }
 
-/// Spawn `python -m nexus.api.server` and return the child. Stdout / stderr
-/// are inherited so logs surface in `cargo tauri dev` and can be redirected
-/// in production launches.
+fn resolve_project_root() -> Option<PathBuf> {
+    // 1. Environment variable.
+    if let Some(env) = std::env::var_os("ONEXUS_PROJECT_ROOT") {
+        let path = PathBuf::from(env);
+        if is_valid_project_root(&path) {
+            return Some(path);
+        }
+    }
+
+    // 2. Cached config file.
+    if let Some(cached) = read_cached_root() {
+        return Some(cached);
+    }
+
+    // 3. Walk up from executable.
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            if let Some(root) = walk_up_for_project(parent, 8) {
+                write_cached_root(&root);
+                return Some(root);
+            }
+        }
+    }
+
+    // 4. Walk up from cwd.
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Some(root) = walk_up_for_project(&cwd, 8) {
+            write_cached_root(&root);
+            return Some(root);
+        }
+    }
+
+    None
+}
+
+// ── Server lifecycle ─────────────────────────────────────────────────────────
+
 fn spawn_python_server() -> Result<Child, String> {
     let root = resolve_project_root()
-        .ok_or_else(|| "could not locate ONEXUS project root (no nexus/__init__.py found)".to_string())?;
+        .ok_or_else(|| {
+            "could not locate ONEXUS project root.\n\
+             Set $ONEXUS_PROJECT_ROOT, run the .app once from inside a checkout, \
+             or place nexus/__init__.py in a parent dir of the binary."
+                .to_string()
+        })?;
 
-    // Prefer the project-local virtualenv if it exists (production-typical),
-    // otherwise look for `onexus` on PATH (pipx / pip install --user),
-    // and as a final fallback shell out to python3 -m nexus.cli serve.
     let mut command = if root.join(".venv/bin/onexus").exists() {
         let mut c = Command::new(root.join(".venv/bin/onexus"));
         c.arg("serve").arg("--port").arg(PORT.to_string());
@@ -91,7 +176,6 @@ fn spawn_python_server() -> Result<Child, String> {
         .spawn()
         .map_err(|e| format!("failed to spawn ONEXUS server: {e}"))?;
 
-    // Mirror child stdout/stderr to ours so logs are visible.
     if let Some(out) = child.stdout.take() {
         thread::spawn(move || {
             for line in BufReader::new(out).lines().flatten() {
@@ -110,9 +194,6 @@ fn spawn_python_server() -> Result<Child, String> {
     Ok(child)
 }
 
-/// Poll the API server's TCP port until it accepts a connection or the
-/// timeout elapses. Cheap and dependency-free — we don't need an HTTP probe
-/// because the kernel doesn't bind until it's ready to serve.
 fn wait_for_server() -> Result<(), String> {
     let deadline = Instant::now() + Duration::from_secs(HEALTH_TIMEOUT_SECS);
     let addr = format!("{HOST}:{PORT}");
@@ -130,14 +211,73 @@ fn wait_for_server() -> Result<(), String> {
     Err(format!("server never came up on {addr} within {HEALTH_TIMEOUT_SECS}s"))
 }
 
-pub fn run() {
-    // If something is already listening on 8000 (user ran `python -m nexus.api.server`
-    // themselves) we don't double-launch it — just attach.
-    let already_up = TcpStream::connect_timeout(
+fn port_is_listening() -> bool {
+    TcpStream::connect_timeout(
         &format!("{HOST}:{PORT}").parse().unwrap(),
         Duration::from_millis(200),
     )
-    .is_ok();
+    .is_ok()
+}
+
+/// Reload the backend: kill any child we spawned, kill any other onexus
+/// server we can find on the port, then spawn a fresh one. Used by the
+/// File → Reload Backend menu item.
+fn reload_backend(app: &AppHandle) {
+    eprintln!("[onexus] Reload Backend requested");
+    // 1) Kill our spawned child if any.
+    if let Some(state) = app.try_state::<ServerChild>() {
+        if let Some(mut child) = state.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+
+    // 2) Kill any leftover onexus process on the port (in case the user
+    //    started one themselves from a terminal).
+    #[cfg(target_os = "macos")]
+    {
+        let _ = Command::new("pkill")
+            .args(["-9", "-f", "onexus serve"])
+            .status();
+    }
+
+    // 3) Wait briefly for the port to free, then spawn a fresh server.
+    for _ in 0..10 {
+        if !port_is_listening() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+
+    match spawn_python_server() {
+        Ok(child) => {
+            if let Err(e) = wait_for_server() {
+                eprintln!("[onexus] reload: {e}");
+            }
+            if let Some(state) = app.try_state::<ServerChild>() {
+                state.replace(Some(child));
+            }
+            // Tell the WebView to reload now that the new server is up.
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.eval("location.reload()");
+            }
+        }
+        Err(e) => {
+            eprintln!("[onexus] reload failed: {e}");
+        }
+    }
+}
+
+fn reload_aurora(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.eval("location.reload()");
+    }
+}
+
+// ── App bootstrap ────────────────────────────────────────────────────────────
+
+pub fn run() {
+    let already_up = port_is_listening();
 
     let server: Option<Child> = if already_up {
         eprintln!("[onexus] server already listening on {HOST}:{PORT}, attaching");
@@ -162,13 +302,51 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(server_state)
-        .setup(|_app| Ok(()))
+        .setup(|app| {
+            // Native macOS menu — File → Reload Backend / View → Reload Aurora.
+            let handle = app.handle().clone();
+
+            let reload_backend_item = MenuItemBuilder::new("Reload Backend")
+                .id("reload_backend")
+                .accelerator("CmdOrCtrl+Shift+R")
+                .build(app)?;
+            let reload_aurora_item = MenuItemBuilder::new("Reload Aurora")
+                .id("reload_aurora")
+                .accelerator("CmdOrCtrl+R")
+                .build(app)?;
+            let quit_item = MenuItemBuilder::new("Quit ONEXUS")
+                .id("quit")
+                .accelerator("CmdOrCtrl+Q")
+                .build(app)?;
+
+            let file_menu = SubmenuBuilder::new(app, "File")
+                .item(&reload_backend_item)
+                .separator()
+                .item(&quit_item)
+                .build()?;
+            let view_menu = SubmenuBuilder::new(app, "View")
+                .item(&reload_aurora_item)
+                .build()?;
+            let menu = MenuBuilder::new(app)
+                .item(&file_menu)
+                .item(&view_menu)
+                .build()?;
+            app.set_menu(menu)?;
+
+            app.on_menu_event(move |_app, event| match event.id().as_ref() {
+                "reload_backend" => reload_backend(&handle),
+                "reload_aurora" => reload_aurora(&handle),
+                "quit" => handle.exit(0),
+                _ => {}
+            });
+
+            Ok(())
+        })
         .build(tauri::generate_context!())
         .expect("error building ONEXUS tauri app");
 
     app.run(|app_handle, event| match event {
         RunEvent::ExitRequested { .. } | RunEvent::Exit => {
-            // Tear the server down on quit.
             if let Some(state) = app_handle.try_state::<ServerChild>() {
                 if let Some(mut child) = state.take() {
                     let _ = child.kill();
@@ -180,7 +358,6 @@ pub fn run() {
             event: WindowEvent::CloseRequested { .. },
             ..
         } => {
-            // Closing the main window also exits — kill the server too.
             if let Some(state) = app_handle.try_state::<ServerChild>() {
                 if let Some(mut child) = state.take() {
                     let _ = child.kill();
