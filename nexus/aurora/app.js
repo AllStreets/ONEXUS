@@ -1,7 +1,7 @@
 /* ───────────────────────────────────────────────────────────────────────────
  * ONEXUS Aurora — application bootstrap and renderers.
  * Layout: persistent window shell with sidebar + main + cockpit rail.
- * Overlays for ⌘K switcher / ⌘N new workspace / ⌘` cockpit / ⌘, settings.
+ * Overlays for ⌘K switcher / ⌘N new workspace / ⌘0 cockpit / ⌘P settings.
  * ─────────────────────────────────────────────────────────────────────────── */
 
 import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES } from "/aurora/static/icons.js";
@@ -99,7 +99,7 @@ const TOUR_SCENES = [
   {
     eyebrow: "05 · COCKPIT",
     title: "See what the kernel sees.",
-    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Press ⌘\` for the expanded six-panel cockpit.",
+    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Press ⌘0 for the expanded six-panel cockpit.",
     diagram: () => sceneCockpit(),
   },
   {
@@ -111,7 +111,7 @@ const TOUR_SCENES = [
   {
     eyebrow: "READY",
     title: "Your turn.",
-    body: "⌘K switch · ⌘N new workspace · ⌘\` cockpit · ⌘, settings · click the trash on any workspace to delete it. Have fun.",
+    body: "⌘K switch · ⌘N new workspace · ⌘0 cockpit · ⌘P settings · click the trash on any workspace to delete it. Have fun.",
     diagram: () => sceneReady(),
   },
 ];
@@ -2194,7 +2194,7 @@ const GUIDE_PAGES = [
     eyebrow: "PAGE 7 / 13",
     chapter: "COCKPIT",
     title: "Watch what the kernel sees.",
-    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Toggle it with the chrome icon (top-right). Press ⌘` for the expanded six-panel cockpit. Every panel auto-refreshes as the kernel runs.",
+    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Toggle it with the chrome icon (top-right). Press ⌘0 for the expanded six-panel cockpit. Every panel auto-refreshes as the kernel runs.",
     shot: "/aurora/static/guide/08-cockpit.png",
     cockpitOnly: true,
     callouts: [
@@ -2203,7 +2203,7 @@ const GUIDE_PAGES = [
       { x: 50, y: 62, label: "3", note: "AMBIENT MOOD — drives the whole shell." },
       { x: 50, y: 82, label: "4", note: "Built-in agents — click any disc for capabilities." },
     ],
-    cta: { label: "Open the expanded cockpit · ⌘`", action: "cockpit" },
+    cta: { label: "Open the expanded cockpit · ⌘0", action: "cockpit" },
   },
   {
     eyebrow: "PAGE 8 / 13",
@@ -2277,10 +2277,10 @@ const GUIDE_PAGES = [
     keys: [
       ["⌘K",   "open workspace switcher"],
       ["⌘N",   "new workspace"],
-      ["⌘`",   "expanded cockpit"],
+      ["⌘0",   "expanded cockpit"],
       ["⌘E",   "open workshop"],
       ["⌘/",   "web search"],
-      ["⌘,",   "settings"],
+      ["⌘P",   "settings"],
       ["⌘⏎",   "send message"],
       ["←  →",  "flip guide pages"],
       ["Esc",  "close any overlay / exit focus mode"],
@@ -2907,7 +2907,7 @@ function closeOverlay() {
   document.getElementById("nx-overlay-root").innerHTML = "";
 }
 
-// ── Overlay: expanded cockpit (⌘`) ─────────────────────────────────────────
+// ── Overlay: expanded cockpit (⌘0) ─────────────────────────────────────────
 async function toggleCockpitOverlay() {
   const root = document.getElementById("nx-overlay-root");
   if (root.querySelector(".nx-cockpit-overlay")) { closeOverlay(); return; }
@@ -3087,8 +3087,8 @@ function attachKeybinds() {
     const meta = e.metaKey || e.ctrlKey;
     if (meta && e.key === "k") { e.preventDefault(); loadWorkspaces().then(renderSwitcher); return; }
     if (meta && e.key === "n") { e.preventDefault(); openNewWorkspaceForm(); return; }
-    if (meta && e.key === "`") { e.preventDefault(); toggleCockpitOverlay(); return; }
-    if (meta && e.key === ",") { e.preventDefault(); location.hash = "#/settings"; return; }
+    if (meta && e.key === "0") { e.preventDefault(); toggleCockpitOverlay(); return; }
+    if (meta && (e.key === "p" || e.key === "P")) { e.preventDefault(); location.hash = "#/settings"; return; }
     if (meta && e.key === "e") { e.preventDefault(); location.hash = "#/workshop"; return; }
     if (meta && e.key === "/") { e.preventDefault(); location.hash = "#/search"; return; }
     if (e.key === "?" && document.activeElement === document.body) {
