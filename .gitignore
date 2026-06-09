@@ -36,3 +36,6 @@ standalone/target/
 standalone/Cargo.lock
 standalone/gen/
 no-stoplight-*.png
+
+# Local-only handoff notes between agents (delete after consumed — see file header)
+_HANDOFF_*.md
