@@ -17,3 +17,16 @@ node_modules/
 models/
 .superpowers/
 .worktrees/
+.DS_Store
+**/.DS_Store
+.playwright-mcp/
+*.baseline_failures.txt
+aurora-*.png
+guide-*.png
+mood-*.png
+tour-*.png
+trash-*.png
+workshop-*.png
+v3-*.png
+dashboard-*.png
+Screenshot*.png

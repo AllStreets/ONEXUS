@@ -114,6 +114,25 @@ async def search(request: Request, q: str, limit: int = 10) -> SearchResponse:
         except Exception as exc:
             raise HTTPException(502, f"DuckDuckGo search failed: {exc}")
 
+    # If the provider returned no structured hits (DuckDuckGo's IAB is
+    # only good for topic pages), surface useful fallbacks so the user
+    # always gets actionable results instead of an empty page.
+    if not hits and provider == "duckduckgo":
+        hits.extend([
+            SearchHit(
+                title=f"DuckDuckGo — full results for “{q}”",
+                url=f"https://duckduckgo.com/?q={quote_plus(q)}",
+                snippet=f"Open DuckDuckGo in a new tab for full organic results. (The instant-answer API only covers topic pages — set NEXUS_SEARCH_PROVIDER=brave with NEXUS_BRAVE_KEY for inline organic search.)",
+                source="duckduckgo",
+            ),
+            SearchHit(
+                title=f"Wikipedia — “{q}”",
+                url=f"https://en.wikipedia.org/wiki/Special:Search?search={quote_plus(q)}",
+                snippet="Search Wikipedia for this topic.",
+                source="wikipedia",
+            ),
+        ])
+
     # Log the search to chronicle so it shows in the cockpit
     try:
         kernel.chronicle.log("search", "query", {

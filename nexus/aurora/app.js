@@ -575,6 +575,7 @@ function attachShellHandlers() {
   document.getElementById("nx-cockpit-toggle").addEventListener("click", () => {
     document.body.classList.toggle("nx-cockpit-hidden");
   });
+  document.getElementById("nx-open-guide").addEventListener("click", () => renderGuide(0));
   document.getElementById("nx-tl-fullscreen").addEventListener("click", async () => {
     try {
       if (!document.fullscreenElement) {
@@ -1099,6 +1100,9 @@ async function renderConversation(workspaceId) {
     for (const item of e.dataTransfer?.files || []) await uploadFile(workspaceId, item);
   };
 
+  // Welcome guide link — open the 12-page guide
+  document.getElementById("nx-welcome-guide")?.addEventListener("click", () => renderGuide(0));
+
   // Tour link — bring the screenshot's narrative to life:
   //   1) Pre-populate the thread with user → oracle (diff cards) → user pick
   //   2) Bump some trust scores so the cockpit sparkline shows real motion
@@ -1284,9 +1288,14 @@ function renderEmptyThreadHTML(ws) {
           </button>
         `).join("")}
       </div>
-      <button class="nx-tour-link" id="nx-tour-link" data-workspace="${escapeHtml(ws.workspace_id)}">
-        See the safety model in action — fire a sample permission prompt
-      </button>
+      <div class="nx-welcome-links">
+        <button class="nx-tour-link" id="nx-tour-link" data-workspace="${escapeHtml(ws.workspace_id)}">
+          See the safety model in action — fire a sample permission prompt
+        </button>
+        <button class="nx-tour-link" id="nx-welcome-guide" style="border-color:rgba(168,124,232,0.32);color:#c9b8ff">
+          Open the guide · 12 pages · ?
+        </button>
+      </div>
     </div>
   `;
 }
@@ -1713,6 +1722,294 @@ async function renderSettings() {
   });
 }
 
+// ── Guide (multi-page walkthrough) ────────────────────────────────────────
+const GUIDE_PAGES = [
+  {
+    eyebrow: "PAGE 1 / 12",
+    chapter: "WELCOME",
+    title: "An operating system for agents.",
+    body: "ONEXUS runs agents the way iOS runs apps — workspaces with their own memory, agents with their own trust, and every tool call gated by Aegis. This guide walks every surface in eight minutes. Use ← → to flip pages, click any dot to jump, press Esc to leave.",
+    shot: "/aurora/static/guide/01-welcome.png",
+    callouts: [
+      { x: 12, y: 14, label: "1", note: "Sidebar — workspaces, recent agents, in-OS tools." },
+      { x: 58, y: 50, label: "2", note: "Main canvas — workspace home with agent prompts." },
+      { x: 88, y: 32, label: "3", note: "Cockpit rail — trust meter, permissions, mood." },
+    ],
+    cta: { label: "Continue →", action: null },
+  },
+  {
+    eyebrow: "PAGE 2 / 12",
+    chapter: "WORKSPACES",
+    title: "Each workspace is its own room.",
+    body: "Rooms have their own agents, memory, grants, and home tone. Switch between them with ⌘K. Create new ones with ⌘N. Delete by hovering the row and clicking the neon-red trash icon. Each room stays private to itself — what's remembered here doesn't leak there.",
+    shot: "/aurora/static/guide/09-sidebar.png",
+    fullSidebar: true,
+    callouts: [
+      { x: 50, y: 20, label: "1", note: "Workspace pills — click to switch, click active again for home." },
+      { x: 75, y: 36, label: "2", note: "Hover any row to reveal the delete trash." },
+      { x: 50, y: 50, label: "3", note: "+ new workspace · ⌘N." },
+    ],
+    cta: { label: "Try it · ⌘K", action: "switcher" },
+  },
+  {
+    eyebrow: "PAGE 3 / 12",
+    chapter: "CONVERSATION",
+    title: "Talk to a room of agents at once.",
+    body: "Send a message and Cortex routes it to whoever is best placed to answer. @ mention an agent (@oracle, @council) to call them directly. Press ⌘⏎ to send. The composer stays pinned at the bottom; the thread scrolls above it.",
+    shot: "/aurora/static/guide/02-conversation.png",
+    callouts: [
+      { x: 40, y: 30, label: "1", note: "Agent identity disc + module name." },
+      { x: 50, y: 60, label: "2", note: "Inline permission prompt — fires on first sensitive call." },
+      { x: 50, y: 92, label: "3", note: "Composer · type, paste, drop files, hit ⌘⏎." },
+    ],
+    cta: { label: "Try it · type to a room", action: "compose" },
+  },
+  {
+    eyebrow: "PAGE 4 / 12",
+    chapter: "FILES",
+    title: "Drag, drop, attach.",
+    body: "Drop any file anywhere on the conversation surface to attach it. The blue glow overlay confirms drop. Files are stored in <code>.onexus/uploads/</code> under the workspace root, hashed for dedup, registered with Engram so the agent can recall them, and logged to Chronicle. The composer's + button does the same with a file picker.",
+    shot: "/aurora/static/guide/02-conversation.png",
+    callouts: [
+      { x: 18, y: 92, label: "1", note: "The + button opens a file picker." },
+      { x: 50, y: 50, label: "2", note: "Drag a file anywhere on the canvas — the overlay glows mood-color." },
+      { x: 60, y: 88, label: "3", note: "Attached files appear as chips above the composer." },
+    ],
+    cta: { label: "Done", action: null },
+  },
+  {
+    eyebrow: "PAGE 5 / 12",
+    chapter: "SAFETY MODEL",
+    title: "Every sensitive call asks first.",
+    body: "Aegis classifies every capability — routine / notable / sensitive / privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always for this workspace, or deny. The cockpit log keeps a record of every decision with a colored class dot.",
+    shot: "/aurora/static/guide/02-conversation.png",
+    callouts: [
+      { x: 38, y: 64, label: "1", note: "Amber pulse — sensitive permission requested." },
+      { x: 60, y: 64, label: "2", note: "Three pill buttons: allow once · always · here · deny." },
+      { x: 87, y: 36, label: "3", note: "Cockpit log records the decision." },
+    ],
+    cta: { label: "See it in action", action: "seed-permission" },
+  },
+  {
+    eyebrow: "PAGE 6 / 12",
+    chapter: "TRUST",
+    title: "Trust is earned, asymmetrically.",
+    body: "Click the thumb-up or thumb-down icon under any agent message to mark it useful or wrong. Useful = +0.12 to that agent's Aegis trust. Wrong = −0.22. Above 0.75 the agent auto-grants its Notable capabilities. Below 0.50, every grant collapses instantly. The cockpit's trust meter shows the rolling 60-minute delta.",
+    shot: "/aurora/static/guide/08-cockpit.png",
+    cockpitOnly: true,
+    callouts: [
+      { x: 50, y: 12, label: "1", note: "Trust meter — gold rising / steel falling / crimson collapse." },
+      { x: 50, y: 22, label: "2", note: "Class breakdown by colored dot." },
+    ],
+    cta: { label: "Done", action: null },
+  },
+  {
+    eyebrow: "PAGE 7 / 12",
+    chapter: "COCKPIT",
+    title: "Watch what the kernel sees.",
+    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Toggle it with the chrome icon (top-right). Press ⌘` for the expanded six-panel cockpit. Every panel auto-refreshes as the kernel runs.",
+    shot: "/aurora/static/guide/08-cockpit.png",
+    cockpitOnly: true,
+    callouts: [
+      { x: 50, y: 12, label: "1", note: "TRUST · last 60 minutes." },
+      { x: 50, y: 38, label: "2", note: "RECENT PERMISSIONS log." },
+      { x: 50, y: 62, label: "3", note: "AMBIENT MOOD — drives the whole shell." },
+      { x: 50, y: 82, label: "4", note: "Built-in agents — click any disc for capabilities." },
+    ],
+    cta: { label: "Open the expanded cockpit · ⌘`", action: "cockpit" },
+  },
+  {
+    eyebrow: "PAGE 8 / 12",
+    chapter: "AGENTS",
+    title: "Ten built-in. Click any disc.",
+    body: "Council deliberates. Specter red-teams. Oracle reads. Legacy remembers. Wraith forgets. Sentry watches. Autonomic automates. Echo mirrors. Consciousness regulates mood. Agents-dispatcher routes to installed third-parties. Click any disc to see its declared capabilities + trust floor + network reach.",
+    shot: "/aurora/static/guide/03-capability-sheet.png",
+    callouts: [
+      { x: 38, y: 22, label: "1", note: "Identity disc + name." },
+      { x: 50, y: 52, label: "2", note: "Tools declared + class color." },
+      { x: 50, y: 72, label: "3", note: "Trust floor + network reach." },
+    ],
+    cta: { label: "Done", action: null },
+  },
+  {
+    eyebrow: "PAGE 9 / 12",
+    chapter: "WORKSHOP",
+    title: "Code + sandbox — without leaving.",
+    body: "Open the Workshop from the sidebar (or press ⌘E). Pick a runtime: Python, JavaScript, or shell. Hit Run (or ⌘⏎). Code executes in a subprocess sandbox with a stripped env, an 8-second timeout, and captured stdout/stderr. Every run lands in Chronicle.",
+    shot: "/aurora/static/guide/04-workshop.png",
+    callouts: [
+      { x: 17, y: 28, label: "1", note: "Language selector." },
+      { x: 50, y: 50, label: "2", note: "Code editor — JetBrains Mono, 12.5px." },
+      { x: 50, y: 88, label: "3", note: "Output panel — exit code, elapsed ms, stdout + stderr." },
+    ],
+    cta: { label: "Open Workshop · ⌘E", action: "workshop" },
+  },
+  {
+    eyebrow: "PAGE 10 / 12",
+    chapter: "WEB SEARCH",
+    title: "Search the web — without leaving.",
+    body: "Press ⌘/ to open Search. Queries route through aegis.network() to DuckDuckGo's instant-answer API by default — no tracking. Set NEXUS_BRAVE_KEY for organic results via Brave Search. Wikipedia is always a fallback so you never see an empty page.",
+    shot: "/aurora/static/guide/05-search.png",
+    callouts: [
+      { x: 50, y: 24, label: "1", note: "Search input — ⌘/ to focus from anywhere." },
+      { x: 50, y: 56, label: "2", note: "Hits — title + URL + snippet + source." },
+    ],
+    cta: { label: "Open Search · ⌘/", action: "search" },
+  },
+  {
+    eyebrow: "PAGE 11 / 12",
+    chapter: "CATALOG",
+    title: "6,745 agents · 571 runnable.",
+    body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar (or press ⌘? — not yet). Filter by runnable-only to see the 571 with MCP adapters that you can launch with one click. Each card links to its source repo.",
+    shot: "/aurora/static/guide/06-catalog.png",
+    callouts: [
+      { x: 50, y: 16, label: "1", note: "Filters: search · category · runnable-only." },
+      { x: 50, y: 56, label: "2", note: "Each card has Launch + source link." },
+    ],
+    cta: { label: "Browse catalog →", action: "catalog" },
+  },
+  {
+    eyebrow: "PAGE 12 / 12",
+    chapter: "KEYBOARD",
+    title: "Shortcuts you'll use every day.",
+    body: "Master these and you barely touch the mouse.",
+    shot: null,
+    keys: [
+      ["⌘K",   "open workspace switcher"],
+      ["⌘N",   "new workspace"],
+      ["⌘`",   "expanded cockpit"],
+      ["⌘E",   "open workshop"],
+      ["⌘/",   "web search"],
+      ["⌘,",   "settings"],
+      ["⌘⏎",   "send message"],
+      ["←  →",  "flip guide pages"],
+      ["Esc",  "close any overlay / exit focus mode"],
+    ],
+    cta: { label: "Done — start using ONEXUS", action: null },
+  },
+];
+
+function renderGuide(pageIndex) {
+  const root = document.getElementById("nx-overlay-root");
+  const p = GUIDE_PAGES[pageIndex];
+  if (!p) return closeOverlay();
+  const total = GUIDE_PAGES.length;
+
+  // Numbered MARKERS land on the screenshot; the explanatory NOTES live
+  // in a readable legend below the image. No more floating tooltips that
+  // clip off the right edge.
+  const markersHTML = (p.callouts || []).map(c => `
+    <span class="nx-g-marker" style="left:${c.x}%;top:${c.y}%" data-i="${escapeHtml(c.label)}">${escapeHtml(c.label)}</span>
+  `).join("");
+  const legendHTML = (p.callouts || []).length ? `
+    <ol class="nx-g-legend">
+      ${p.callouts.map(c => `
+        <li>
+          <span class="num">${escapeHtml(c.label)}</span>
+          <span class="text">${escapeHtml(c.note)}</span>
+        </li>
+      `).join("")}
+    </ol>
+  ` : "";
+
+  const keysHTML = p.keys ? `
+    <div class="nx-g-keys">
+      ${p.keys.map(([k, v]) => `
+        <div class="nx-g-key-row">
+          <span class="nx-g-key-kbd">${escapeHtml(k)}</span>
+          <span class="nx-g-key-desc">${escapeHtml(v)}</span>
+        </div>
+      `).join("")}
+    </div>
+  ` : "";
+
+  const dotsHTML = GUIDE_PAGES.map((_, i) =>
+    `<button class="nx-g-dot ${i === pageIndex ? "active" : (i < pageIndex ? "done" : "")}" data-i="${i}" aria-label="Page ${i+1}: ${escapeHtml(GUIDE_PAGES[i].chapter)}" title="Page ${i+1} · ${escapeHtml(GUIDE_PAGES[i].chapter)}">${i+1}</button>`
+  ).join("");
+
+  const showShot = p.shot && !p.keys;
+
+  root.innerHTML = `
+    <div class="nx-guide-overlay" id="nx-guide-overlay" role="dialog" aria-modal="true">
+      <button class="nx-g-close-btn" id="nx-g-close" aria-label="Close guide">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+        <span>Close</span>
+        <span class="kbd">esc</span>
+      </button>
+
+      <div class="nx-guide-stage">
+        <div class="nx-g-eyebrow">${escapeHtml(p.eyebrow)} · ${escapeHtml(p.chapter)}</div>
+        <h2 class="nx-g-title">${escapeHtml(p.title)}</h2>
+        <div class="nx-g-body">${p.body}</div>
+
+        ${showShot ? `
+          <div class="nx-g-shot-wrap">
+            <img class="nx-g-shot" src="${escapeHtml(p.shot)}" alt="${escapeHtml(p.title)}">
+            <div class="nx-g-shot-markers" aria-hidden="true">${markersHTML}</div>
+          </div>
+          ${legendHTML}
+        ` : keysHTML}
+      </div>
+
+      <div class="nx-guide-nav">
+        <button class="nx-g-arrow" id="nx-g-prev" ${pageIndex === 0 ? "disabled" : ""} aria-label="Previous page">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 6 9l5 5"/></svg>
+        </button>
+        <div class="nx-g-dots">${dotsHTML}</div>
+        ${p.cta ? `
+          <button class="nx-g-next" id="nx-g-next">
+            <span>${escapeHtml(p.cta.label)}</span>
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5-5 5"/></svg>
+          </button>
+        ` : ""}
+      </div>
+    </div>
+  `;
+
+  const close = () => closeOverlay();
+  const next = () => {
+    const action = p.cta?.action;
+    if (action) {
+      switch (action) {
+        case "switcher":        close(); renderSwitcher(); return;
+        case "compose":         close(); document.getElementById("nx-composer-input")?.focus(); return;
+        case "seed-permission": fetch("/api/permissions/seed", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ workspace_id: state.active, target: "src/test.py" }) }); close(); return;
+        case "cockpit":         close(); toggleCockpitOverlay(); return;
+        case "workshop":        close(); location.hash = "#/workshop"; return;
+        case "search":          close(); location.hash = "#/search"; return;
+        case "catalog":         close(); location.hash = "#/catalog"; return;
+      }
+    }
+    if (pageIndex < total - 1) renderGuide(pageIndex + 1);
+    else close();
+  };
+  document.getElementById("nx-g-close").addEventListener("click", close);
+  document.getElementById("nx-g-prev").addEventListener("click", () => pageIndex > 0 && renderGuide(pageIndex - 1));
+  document.getElementById("nx-g-next")?.addEventListener("click", next);
+  root.querySelectorAll(".nx-g-dot[data-i]").forEach(dot => {
+    dot.addEventListener("click", () => renderGuide(Number(dot.dataset.i)));
+  });
+  const onKey = (e) => {
+    if (e.key === "Escape") { close(); window.removeEventListener("keydown", onKey); }
+    else if (e.key === "ArrowRight") { next(); }
+    else if (e.key === "ArrowLeft")  { if (pageIndex > 0) renderGuide(pageIndex - 1); }
+    else if (e.key >= "1" && e.key <= "9") {
+      const i = Number(e.key) - 1;
+      if (i < total) renderGuide(i);
+    }
+  };
+  window.addEventListener("keydown", onKey, { once: false });
+  // Cleanup the keydown listener when the overlay is replaced
+  const overlayEl = document.getElementById("nx-guide-overlay");
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(overlayEl)) {
+      window.removeEventListener("keydown", onKey);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 // ── Workshop (in-OS code editor + sandbox runtime) ────────────────────────
 async function renderWorkshop() {
   const main = document.getElementById("nx-main");
@@ -2068,6 +2365,16 @@ async function route(hash) {
   if (hash === "#/settings") { renderSettings(); return; }
   if (hash === "#/workshop") { renderWorkshop(); return; }
   if (hash.startsWith("#/search")) { renderSearch(hash); return; }
+  if (hash.startsWith("#/guide")) {
+    const m = hash.match(/#\/guide\/(\d+)/);
+    const pi = m ? Math.max(0, Math.min(11, Number(m[1]))) : 0;
+    renderGuide(pi);
+    // Keep the underlying view too — go to active conversation if there is one
+    if (state.active && !document.getElementById("nx-main").innerHTML.trim()) {
+      renderConversation(state.active);
+    }
+    return;
+  }
   if (hash.startsWith("#/conversation/")) {
     const id = decodeURIComponent(hash.slice("#/conversation/".length));
     await renderConversation(id);
@@ -2163,6 +2470,9 @@ function attachKeybinds() {
     if (meta && e.key === ",") { e.preventDefault(); location.hash = "#/settings"; return; }
     if (meta && e.key === "e") { e.preventDefault(); location.hash = "#/workshop"; return; }
     if (meta && e.key === "/") { e.preventDefault(); location.hash = "#/search"; return; }
+    if (e.key === "?" && document.activeElement === document.body) {
+      e.preventDefault(); renderGuide(0); return;
+    }
     if (e.key === "Escape") {
       // Esc: close any overlay AND exit focus mode if it was on
       if (document.body.classList.contains("nx-focus-mode")) {
