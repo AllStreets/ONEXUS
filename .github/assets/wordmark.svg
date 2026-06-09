@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-label="ONEXUS — the operating system for agents">
+  <title>ONEXUS</title>
+
+  <defs>
+    <!-- Primary face gradient: top-bright violet → bottom-deep -->
+    <linearGradient id="face" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#d8c4ff"/>
+      <stop offset="35%"  stop-color="#b48bff"/>
+      <stop offset="75%"  stop-color="#7a5fd4"/>
+      <stop offset="100%" stop-color="#4a3590"/>
+    </linearGradient>
+
+    <!-- Side-face gradient (extrusion sides): darker, cooler -->
+    <linearGradient id="side" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stop-color="#2c1e58"/>
+      <stop offset="100%" stop-color="#1a0f3a"/>
+    </linearGradient>
+
+    <!-- Top bevel highlight -->
+    <linearGradient id="bevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f3e8ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f3e8ff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Ambient halo behind the wordmark -->
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#a87af5" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#5a4ac4" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft glow filter for the kernel orb -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Drop shadow for the letters -->
+    <filter id="extrude" x="-10%" y="-10%" width="120%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dy="14"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Letter shape clip path for the bevel highlight -->
+    <clipPath id="clip-O">
+      <path d="M150,90 a70,70 0 1 1 0,140 a70,70 0 1 1 0,-140 z M150,130 a30,30 0 1 0 0,60 a30,30 0 1 0 0,-60 z" fill-rule="evenodd"/>
+    </clipPath>
+  </defs>
+
+  <!-- Ambient halo behind everything -->
+  <rect width="1280" height="320" fill="url(#halo)" opacity="0.8"/>
+
+  <!-- Letters group — each letter is drawn with:
+       (1) deep "side" extrusion offset by (+10, +14) for depth
+       (2) primary "face" with face gradient
+       (3) thin bevel highlight at the top edge
+
+       Letter spacing: 170px stride, 90→1230 across the canvas.
+       Letter cap height: 140px (y=90 to y=230).
+  -->
+
+  <g filter="url(#extrude)">
+
+    <!-- O — at x=80..220 -->
+    <g>
+      <!-- side extrusion -->
+      <path d="M165,104 a70,70 0 1 1 0,140 a70,70 0 1 1 0,-140 z
+               M165,144 a30,30 0 1 0 0,60 a30,30 0 1 0 0,-60 z"
+            fill="url(#side)" fill-rule="evenodd"/>
+      <!-- face -->
+      <path d="M150,90 a70,70 0 1 1 0,140 a70,70 0 1 1 0,-140 z
+               M150,130 a30,30 0 1 0 0,60 a30,30 0 1 0 0,-60 z"
+            fill="url(#face)" fill-rule="evenodd"/>
+      <!-- top bevel highlight -->
+      <path d="M150,90 a70,70 0 0 1 60,35 l-12,8 a55,55 0 0 0 -48,-28 z"
+            fill="url(#bevel)" opacity="0.75"/>
+    </g>
+
+    <!-- N — at x=250..390 -->
+    <g>
+      <!-- side -->
+      <path d="M265,104 v140 h25 v-90 l60,90 h25 v-140 h-25 v90 l-60,-90 z" fill="url(#side)"/>
+      <!-- face -->
+      <path d="M250,90 v140 h25 v-90 l60,90 h25 v-140 h-25 v90 l-60,-90 z" fill="url(#face)"/>
+      <!-- bevel -->
+      <path d="M250,90 h25 l60,90 v-90 h25 l-12,12 h-1 v6 l-60,-90 z" fill="url(#bevel)" opacity="0.55"/>
+    </g>
+
+    <!-- E — at x=415..530 -->
+    <g>
+      <!-- side -->
+      <path d="M430,104 v140 h115 v-25 h-90 v-32 h80 v-25 h-80 v-33 h90 v-25 z" fill="url(#side)"/>
+      <!-- face -->
+      <path d="M415,90 v140 h115 v-25 h-90 v-32 h80 v-25 h-80 v-33 h90 v-25 z" fill="url(#face)"/>
+      <!-- bevel -->
+      <path d="M415,90 h115 l-12,12 h-90 v-1 z" fill="url(#bevel)" opacity="0.55"/>
+    </g>
+
+    <!-- X — at x=555..695 -->
+    <g>
+      <!-- side -->
+      <path d="M570,104 l50,68 -55,72 h30 l40,-52 40,52 h30 l-55,-72 50,-68 h-30 l-35,46 -35,-46 z" fill="url(#side)"/>
+      <!-- face -->
+      <path d="M555,90 l50,68 -55,72 h30 l40,-52 40,52 h30 l-55,-72 50,-68 h-30 l-35,46 -35,-46 z" fill="url(#face)"/>
+      <!-- bevel -->
+      <path d="M555,90 h30 l30,40 -10,10 -25,-33 z" fill="url(#bevel)" opacity="0.55"/>
+    </g>
+
+    <!-- U — at x=720..860 -->
+    <g>
+      <!-- side -->
+      <path d="M735,104 v90 a55,55 0 0 0 110,0 v-90 h-25 v90 a30,30 0 0 1 -60,0 v-90 z" fill="url(#side)"/>
+      <!-- face -->
+      <path d="M720,90 v90 a55,55 0 0 0 110,0 v-90 h-25 v90 a30,30 0 0 1 -60,0 v-90 z" fill="url(#face)"/>
+      <!-- bevel -->
+      <path d="M720,90 h25 v6 l-13,12 h-12 z M805,90 h25 v6 l-13,12 h-12 z" fill="url(#bevel)" opacity="0.55"/>
+    </g>
+
+    <!-- S — at x=885..1020 -->
+    <g>
+      <!-- side -->
+      <path d="M915,104
+               c -40,0 -60,20 -60,40
+               c 0,22 18,35 50,42
+               c 22,5 35,8 35,18
+               c 0,8 -10,16 -32,16
+               c -23,0 -38,-10 -45,-22
+               l -18,16
+               c 12,18 36,32 63,32
+               c 38,0 60,-20 60,-43
+               c 0,-25 -22,-36 -52,-43
+               c -22,-5 -33,-9 -33,-18
+               c 0,-8 9,-14 28,-14
+               c 18,0 30,7 38,16
+               l 18,-16
+               c -12,-15 -32,-24 -52,-24 z" fill="url(#side)"/>
+      <!-- face -->
+      <path d="M900,90
+               c -40,0 -60,20 -60,40
+               c 0,22 18,35 50,42
+               c 22,5 35,8 35,18
+               c 0,8 -10,16 -32,16
+               c -23,0 -38,-10 -45,-22
+               l -18,16
+               c 12,18 36,32 63,32
+               c 38,0 60,-20 60,-43
+               c 0,-25 -22,-36 -52,-43
+               c -22,-5 -33,-9 -33,-18
+               c 0,-8 9,-14 28,-14
+               c 18,0 30,7 38,16
+               l 18,-16
+               c -12,-15 -32,-24 -52,-24 z" fill="url(#face)"/>
+      <!-- bevel -->
+      <path d="M900,90 c 18,0 33,8 45,20 l-15,12 c -8,-7 -19,-12 -30,-12 z" fill="url(#bevel)" opacity="0.55"/>
+    </g>
+  </g>
+
+  <!-- Subtle grain overlay -->
+  <rect width="1280" height="320"
+        fill="url(#face)"
+        opacity="0.0"
+        style="mix-blend-mode: overlay"/>
+
+  <!-- Tagline below the wordmark -->
+  <g transform="translate(640 295)">
+    <text text-anchor="middle"
+          font-family="ui-monospace, 'JetBrains Mono', monospace"
+          font-size="14"
+          letter-spacing="0.42em"
+          fill="#c9b8ff"
+          opacity="0.85">THE&#160;&#160;OPERATING&#160;&#160;SYSTEM&#160;&#160;FOR&#160;&#160;AGENTS</text>
+  </g>
+</svg>

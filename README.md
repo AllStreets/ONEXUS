@@ -1,31 +1,43 @@
 <div align="center">
 
-<a href="https://github.com/AllStreets/ONEXUS"><img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=68&duration=1&pause=99999&color=A87AF5&center=true&vCenter=true&width=820&height=110&lines=O+N+E+X+U+S" alt="ONEXUS"/></a>
-
-### The operating system for agents.
-
-*Local-first. Sovereign. Built so the kernel never touches the network — and there's a static test that proves it.*
+<img src=".github/assets/wordmark.svg" alt="ONEXUS — the operating system for agents" width="100%"/>
 
 &nbsp;
 
-<a href="https://github.com/AllStreets/ONEXUS/releases/tag/v1.0"><img alt="release" src="https://img.shields.io/github/v/release/AllStreets/ONEXUS?style=for-the-badge&color=a87af5&labelColor=0c0a14"/></a>
-<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1075_passing-9affb6?style=for-the-badge&labelColor=0c0a14"/></a>
-<a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="catalog" src="https://img.shields.io/badge/catalog-7%2C000%2B_agents-a87af5?style=for-the-badge&labelColor=0c0a14"/></a>
-<a href="https://github.com/AllStreets/ONEXUS/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-a87af5?style=for-the-badge&labelColor=0c0a14"/></a>
+<a href="https://github.com/AllStreets/ONEXUS/releases/tag/v1.0"><img alt="release" src="https://img.shields.io/github/v/release/AllStreets/ONEXUS?style=for-the-badge&color=b48bff&labelColor=0a0712&label=release"/></a>
+<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1014_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="catalog" src="https://img.shields.io/badge/catalog-6%2C745_agents-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="runnable" src="https://img.shields.io/badge/runnable_(MCP)-571-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="https://github.com/AllStreets/ONEXUS/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+
+&nbsp;
 
 <a href="#quickstart"><kbd> &nbsp; <strong>Quickstart</strong> &nbsp; </kbd></a> &nbsp;
-<a href="#the-four-surfaces"><kbd> &nbsp; <strong>The OS</strong> &nbsp; </kbd></a> &nbsp;
+<a href="#the-shell"><kbd> &nbsp; <strong>The Shell</strong> &nbsp; </kbd></a> &nbsp;
 <a href="#the-safety-model"><kbd> &nbsp; <strong>Safety</strong> &nbsp; </kbd></a> &nbsp;
-<a href="docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md"><kbd> &nbsp; <strong>Architecture</strong> &nbsp; </kbd></a> &nbsp;
+<a href="#built-in-agents"><kbd> &nbsp; <strong>Agents</strong> &nbsp; </kbd></a> &nbsp;
+<a href="#deploy"><kbd> &nbsp; <strong>Deploy</strong> &nbsp; </kbd></a> &nbsp;
 <a href="https://github.com/AllStreets/ONEXUS-Agents"><kbd> &nbsp; <strong>Agents catalog ↗</strong> &nbsp; </kbd></a>
 
 </div>
 
 ---
 
-<p align="center"><img src=".github/assets/hero.svg" alt="ONEXUS — the operating system for agents" width="100%" /></p>
+<p align="center">
+  <img src=".github/assets/hero-calm.png" alt="ONEXUS Aurora dashboard" width="100%"/>
+</p>
 
-NEXUS runs agents the way iOS runs apps. Built-in cognitive modules (Council, Specter, Wraith, Echo, …) and third-party catalog agents (aider, cline, browser-use, …) share **one runtime, one manifest, one trust model, one set of surfaces.** Workspaces are rooms with their own roster, memory, grants, and home tone. Every tool call routes through a capability arbiter that gates against the agent's declared permissions, surfaces a first-use prompt when something needs your approval, and writes every byte to an immutable audit ledger.
+<p align="center"><em>One process. Local-first. Five-component kernel. Every tool call gated by Aegis. Every event logged to Chronicle. The kernel never touches the network — there's a static test that proves it.</em></p>
+
+---
+
+## What this is
+
+**ONEXUS runs agents the way iOS runs apps.** Built-in cognitive modules (Council, Specter, Wraith, Echo, Oracle, Legacy, Consciousness, Sentry, Autonomic, Agents-dispatcher) and **6,745 third-party agents** from [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) — **571 with MCP adapters** — share one runtime, one manifest, one trust model, one set of surfaces.
+
+A workspace is a room: it owns its own agents, memory, file grants, and home tone. Every tool call routes through a **capability arbiter** that gates against the agent's declared permissions, surfaces a first-use prompt when something needs your approval, and writes every byte to an immutable audit ledger.
+
+You don't leave the OS to do anything. Code editor, web search, file drop, mood-driven atmosphere, agent capability sheets — all in-shell.
 
 ---
 
@@ -46,343 +58,243 @@ export NEXUS_OPENAI_KEY=sk-...
 onexus serve --port 8000
 ```
 
-Open **http://127.0.0.1:8000/aurora** and you're in. Press **⌘K** for workspaces · **⌘N** for new · **⌘\`** for the cockpit · **⌘,** for settings · **Esc** to close any overlay.
+Open **http://127.0.0.1:8000/aurora** and you're in. First-time visitors get a **13-page guided tour**; hit `?` any time to re-open it.
+
+```
+⌘K   workspace switcher           ⌘E   workshop (code + sandbox)
+⌘N   new workspace                ⌘/   web search
+⌘`   expanded cockpit             ⌘,   settings
+⌘⏎   send message                  ?   open the guide
+```
 
 ---
 
-## What it does, in 30 seconds
+## What it does, in three pictures
+
+The whole shell **shifts color with what's happening**. Aegis observes the kernel — CPU, engram activity, trust events, time of day — and the ambient mesh, the active workspace pill, the composer focus ring, the launch buttons, the capability sheet edge **all recolor together**.
 
 <table>
 <tr>
-<td valign="top" width="33%">
-
-#### 🜂 &nbsp; Runs agents safely
-
-Every tool call routes through Aegis — checked against the agent's declared `network.outbound.<domain>` capability, rate-limited, and written to Chronicle. Notable / Sensitive actions raise a calm first-use prompt; you decide once.
-
-</td>
-<td valign="top" width="33%">
-
-#### 🝢 &nbsp; Works in rooms
-
-Workspaces own their filesystem scope, memory, agent roster, permission grants, and home tone. Switching feels like walking through a door — agents pause, mood transitions, pins activate.
-
-</td>
-<td valign="top" width="33%">
-
-#### ⌖ &nbsp; Stays yours
-
-The kernel makes **zero** direct network I/O — enforced by a static test, not by policy. All outbound traffic flows through `aegis.network()`. Your conversation, memory, and audit log live in one SQLite file on your machine.
-
-</td>
+<td width="50%"><img src=".github/assets/hero-calm.png" alt="calm focus — violet"/></td>
+<td width="50%"><img src=".github/assets/hero-creative.png" alt="creative — navy blue"/></td>
+</tr>
+<tr>
+<td align="center"><strong>calm focus</strong> · violet · default, low load</td>
+<td align="center"><strong>creative</strong> · vivid navy · open-ended ideation</td>
+</tr>
+<tr>
+<td width="50%"><img src=".github/assets/hero-deepflow.png" alt="deep flow — jewel green"/></td>
+<td width="50%"><img src=".github/assets/hero-alert.png" alt="alert — crimson"/></td>
+</tr>
+<tr>
+<td align="center"><strong>deep flow</strong> · jewel green · long uninterrupted stretches</td>
+<td align="center"><strong>alert</strong> · crimson · trust collapse or denied call</td>
 </tr>
 </table>
 
+Eight palettes total: calm focus · deep flow · routing · deliberating · creative · reflective · watchful · alert. Pick one manually from the chrome's mood pill, or let the kernel pick from observations.
+
 ---
 
-## The four surfaces
+## The shell
 
-Aurora — the new dashboard — lives at `/aurora`. Eight ambient mood meshes drift behind every view; the body class follows the kernel's current state. The classic dashboard at `/dashboard` is preserved for backward compatibility.
+Aurora is a **persistent three-column workspace** — sidebar, conversation, cockpit. Glass chrome. macOS-style traffic lights that actually work (red closes the tab, yellow toggles focus mode, green toggles fullscreen).
 
-| | Surface | Open with | What you do here |
-|---|---|---|---|
-| ⌬ | **Conversational** | default | Type to NEXUS in plain English. Cortex routes to the right agent; attribution shows what it picked and why. |
-| ⌘ | **Workspaces switcher** | `⌘K` | Tile grid of every room, each in its home tone (indigo · magenta · sage · plum · amber). Click to enter. |
-| ⌗ | **Cockpit** | `⌘\`` | Observability overlay — live Pulse waveform, trust gradient, last route trace, Chronicle tail, network gateway. |
-| ⌑ | **Spatial** | header | Catalog grid — system + installed agents in one space, each with a bespoke identity glyph and trust ring. |
-| ⌥ | **Settings** | `⌘,` | General · Workspaces · Agents · Security · Providers · About. |
+<details>
+<summary><strong>Sidebar</strong> — workspaces, recent agents, in-OS tools, user footer</summary>
 
-> *Every glyph is custom SVG. **Zero emojis** — enforced by an automated invariant test.*
+- Workspace pills with **25 color tones** to pick from on create — indigo · violet · lavender · cobalt · sky · ocean · teal · mint · sage · emerald · lime · amber · honey · tangerine · mocha · coral · rose · crimson · magenta · fuchsia · plum · orchid · slate · graphite
+- Hover any pill → reveals a neon-red trash icon to delete that workspace
+- Recent agents block — built-in identity discs with trust tier
+- ⌘E workshop · ⌘/ web search · catalog · ⌘, settings
+- Persistent user footer pinned at the bottom
+
+</details>
+
+<details>
+<summary><strong>Conversation</strong> — the talk surface</summary>
+
+- Send a message and **Cortex routes** it: pattern + semantic + structure + workspace pin + LLM fallback
+- `@oracle`, `@specter`, `@council` mention any agent directly
+- Drag-and-drop files anywhere on the canvas — they're stored in workspace Engram, hashed for dedup, logged to Chronicle
+- Inline permission prompts for sensitive calls: allow once · always · here · deny
+- Trust feedback buttons under every agent response: thumb-up = +0.12 to that agent's trust; thumb-down = −0.22
+- File diff cards when an agent proposes a refactor
+- Composer pinned at the bottom regardless of thread length
+
+</details>
+
+<details>
+<summary><strong>Cockpit rail</strong> — live observability</summary>
+
+- **TRUST · last 60 minutes** — sparkline + delta + class breakdown (routine / notable / sensitive / denied)
+- **Recent permissions** — color-coded by class, with capability + target + status + time
+- **Ambient mood** — mood mesh thumbnail with the kernel's current reading and contributing reasons
+- **Built-in agents** — 10 identity discs, click any for the full capability sheet
+- Footer: `kernel.network.io = ∅ (static-verified)` — the kernel itself never touches the network
+
+Press <kbd>⌘ \`</kbd> for the expanded six-panel cockpit overlay.
+
+</details>
 
 ---
 
 ## The safety model
 
-Four permission classes. The class decides who asks, how often, and what happens on trust collapse.
+Aegis classifies every capability into one of four classes:
+
+| Class | Color | Behavior |
+|---|---|---|
+| **Routine** | jewel green | always allowed, silent forever |
+| **Notable** | calm violet-blue | auto-allow at trust ≥ 0.75, otherwise prompt |
+| **Sensitive** | warm amber | always prompt — allow once / always here / deny |
+| **Privileged** | coral | never auto-grant — Settings → Security only |
 
 ```
-Routine     ████████████████████  silent forever (approved at install)
-Notable     ████████████████      first-use prompt → auto-grants at Executor (≥0.75 trust)
-Sensitive   ████████              first-use prompt + 30-day re-confirm
-Privileged  ████                  Settings → Security only — never automatic
+trust < 0.50 ─────────────────────────┐
+                                       │
+   every grant the agent held         ▼
+   instantly collapses        ⚠  alert mood fires
 ```
 
-When an agent reaches for a Notable / Sensitive capability for the first time, a card slides in *inside* the conversation — never a blocking modal:
-
-<details>
-<summary><strong>See what a first-use prompt looks like</strong></summary>
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  ◐  aider wants  fs.write.workspace                     │
-│      in payments-redesign / src/auth/rotate.py          │
-│                                                Notable  │
-├─────────────────────────────────────────────────────────┤
-│  + async def callback(req):                             │
-│  +     try:                                             │
-│  +         return await handle(req)                     │
-│  …                                                      │
-├─────────────────────────────────────────────────────────┤
-│  [  Allow once                                       ]  │
-│  [  Always in Client work                            ]  │
-│  [  Always for aider, everywhere                     ]  │
-│  [  Don't allow                                      ]  │
-└─────────────────────────────────────────────────────────┘
-```
-
-Allow → call resumes. Always-in-workspace → grant lands durably in `aegis.db`, scoped to that room. Always-everywhere → global. Don't allow → `PermissionDenied` raised before any side effect.
-
-</details>
-
-Trust is a **float**, not a flag. Correct outcomes earn `+0.12`; failures lose `−0.22`. Asymmetric on purpose: easy to lose, hard to earn. Trust below 0.50 instantly revokes every auto-grant for that agent across every workspace.
+The kernel writes every decision to **Chronicle** (immutable append-only sqlite). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster — search any of the **590** Aegis-registered modules, click revoke to reset trust to 0.
 
 ---
 
-## Local-first, by static invariant
+## Built-in agents
 
-> *"The kernel never touches the network."*
+Ten cognitive modules ship with ONEXUS. Each declares its own capabilities and trust floor.
 
-```bash
-$ pytest tests/inference/test_phase_6_smoke.py::test_kernel_never_directly_imports_httpx_in_kernel_modules
-PASSED
-```
+| Agent | Glyph | What it does |
+|---|---|---|
+| **Council** | compass | 3-round deliberation across the cognitive modules |
+| **Oracle** | eye | first-read analysis across whatever's in the workspace |
+| **Specter** | warning triangle | red-team — counter-arguments and dissenting views, no flattery |
+| **Wraith** | wisp | controlled forgetting — privacy hygiene, sensitive deletion |
+| **Legacy** | open book | crystallized memory — recall with citations |
+| **Echo** | nested arcs | mirror — restates the user's words to surface contradictions |
+| **Sentry** | heartbeat | watches for runaway loops, trust drops, denied calls |
+| **Autonomic** | concentric rings | autopilot — repeats approved tool chains hands-off |
+| **Consciousness** | spiral | inner state — moods, regulation, salience |
+| **Agents-dispatcher** | tile grid | routes to installed third-party MCP agents |
 
-This test scans `nexus/kernel/*.py` and fails CI if any module other than Aegis imports `httpx`, `urllib`, or `requests`. The promise survives refactors because the test outlives the prose.
-
-All outbound HTTP — LLM providers, federation peers, anything else — flows through `aegis.network()`, which gates on the agent's declared `network.outbound.<domain>` capability, rate-limits per agent (60 rpm default), and logs `{agent, url, method, status, bytes_in, workspace_id, ts}` to Chronicle.
-
----
-
-## Built-in agents — ten ship in the box
-
-Each has a unique geometric SVG glyph in a tone-coloured gradient disc with a trust ring drawn around it. System agents and third-party catalog agents share the same visual language in the Spatial grid — they're siblings, not separate species.
-
-<table>
-<tr>
-<td valign="top" width="50%">
-
-#### Cognitive
-
-| Slug | Role |
-|---|---|
-| `council` | Four-lens deliberation (ethical, verification, lateral, synthesis) |
-| `specter` | Adversarial red-team review |
-| `autonomic` | Earned-autonomy routines |
-| `oracle` | Anticipatory pattern detection |
-| `legacy` | Knowledge crystallization |
-
-</td>
-<td valign="top" width="50%">
-
-#### Reflective + orchestration
-
-| Slug | Role |
-|---|---|
-| `consciousness` | Self-reflection, journaling |
-| `sentry` | Cognitive load / flow detection |
-| `wraith` | Ephemeral sub-agents with death clocks |
-| `echo` | Behavioural fingerprinting (the only built-in with a Privileged grant) |
-| `agents` | Catalog dispatcher → ONEXUS-Agents |
-
-</td>
-</tr>
-</table>
-
----
-
-## Compared to other agent frameworks
-
-| | NEXUS | LangChain / LlamaIndex | AutoGen / CrewAI | Ollama |
-|---|---|---|---|---|
-| **OS metaphor** (workspaces, surfaces, install lifecycle) | ◆ | — | — | — |
-| **Unified runtime** for built-ins + third-party agents | ◆ | — | partial | — |
-| **Capability gating** on every tool call | ◆ | — | — | — |
-| **First-use prompt** UX with durable grants | ◆ | — | — | — |
-| **Zero-network-kernel invariant** (static-tested) | ◆ | — | — | local model serving only |
-| **Ambient mood UI** wired to kernel state | ◆ | — | — | — |
-| **Multi-provider routing** at runtime | ◆ | ◆ | ◆ | local |
-| **Immutable audit ledger** | ◆ | — | — | — |
-| Production-ready in v1 | 1075 tests passing | yes | yes | yes |
-
-NEXUS isn't a library — it's a host. LangChain composes calls inside one Python process; NEXUS runs each agent as its own process, gates its filesystem and network, partitions its memory, and gives you a surface to see what it's doing.
-
----
-
-## Agents
-
-```bash
-onexus agent list                                # installed
-onexus agent install <manifest.json> [--dry-run] # preview the install plan
-onexus agent uninstall <slug> [--yes]
-```
-
-`--dry-run` shows the **install plan** — exactly what the agent will be able to do, grouped by class — before any state lands on disk. No legalese, no 12-item entitlements list, no surprises.
-
-<details>
-<summary><strong>The v1 manifest format</strong></summary>
-
-Every agent (built-in or third-party) declares the same shape:
-
-```jsonc
-{
-  "manifest_version": 1,
-  "slug": "aider",
-  "name": "aider",
-  "tagline": "Pair-programming in your terminal, git-aware.",
-  "version": "0.74.0",
-  "system": false,
-  "publisher": { "type": "org", "handle": "Aider-AI" },
-  "category": "coding",
-  "license": "Apache-2.0",
-
-  "identity": {
-    "mark": { "kind": "svg", "path": "./icon.svg",
-              "gradient": ["#9aa8ff", "#4d5bcf"] }
-  },
-
-  "intents": [
-    { "name": "CODE",
-      "patterns": ["edit", "refactor", "fix.*bug"],
-      "semantic_signals": ["fix this", "edit this file"],
-      "weight": 1.0 }
-  ],
-
-  "capabilities": {
-    "tools": [
-      { "name": "edit_file",   "class": "Notable",
-        "scope": "fs.write.workspace" },
-      { "name": "run_command", "class": "Sensitive",
-        "scope": "process.shell" }
-    ],
-    "declared": {
-      "Routine":    ["fs.read.workspace"],
-      "Notable":    ["fs.write.workspace", "network.outbound.openai.com"],
-      "Sensitive":  ["process.shell"],
-      "Privileged": []
-    }
-  },
-
-  "runtime": {
-    "transport": "stdio",
-    "command":   "aider-mcp",
-    "args":      [],
-    "env_keys":  ["OPENAI_API_KEY"]
-  },
-
-  "trust": { "floor": 0.55, "default_tier": "ADVISOR" }
-}
-```
-
-Cortex reads `intents`. Aegis reads `capabilities`. The runtime reads `runtime`. The surfaces read `identity`. One document, four readers — no schema drift. JSON Schema: [`nexus/schemas/manifest.v1.json`](nexus/schemas/manifest.v1.json).
-
-</details>
+Click any disc in the cockpit to see its declared tools, permission classes, trust floor, and network reach.
 
 ---
 
 ## Architecture
 
-<details>
-<summary><strong>Four layers · each only talks to its neighbours</strong></summary>
-
-```mermaid
-flowchart TB
-  classDef you fill:#0c0a14,stroke:#a87af5,stroke-width:2px,color:#f0e9ff
-  classDef surf fill:#1a1428,stroke:#a87af5,stroke-width:1px,color:#e6e9ee
-  classDef ws fill:#0c1218,stroke:#9aa8ff,stroke-width:1px,color:#e6e9ee
-  classDef rt fill:#0a0612,stroke:#7e5ea0,stroke-width:1px,color:#e6e9ee
-  classDef ker fill:#06040a,stroke:#5a4ac4,stroke-width:1.5px,color:#c9b8ff
-  classDef out fill:#07090c,stroke:#6b7382,stroke-width:1px,color:#9aa3b1,stroke-dasharray: 4 3
-
-  YOU([YOU]):::you
-
-  subgraph S["Surfaces"]
-    direction LR
-    S1[Conversational]:::surf --- S2["Cockpit ⌘\`"]:::surf --- S3[Spatial]:::surf --- S4["Settings ⌘,"]:::surf
-  end
-
-  subgraph W["Workspace layer · room manager · mood engine · pins · grants"]
-    direction LR
-    W1[ ]:::ws
-  end
-
-  subgraph R["Agent runtime · one process per agent per workspace"]
-    direction LR
-    R1[supervisor]:::rt --- R2[MCP client]:::rt --- R3[capability filter]:::rt --- R4[chronicle bridge]:::rt
-  end
-
-  subgraph K["Kernel · 5 components · zero network I/O"]
-    direction LR
-    K1[Cortex]:::ker --- K2[Engram]:::ker --- K3[Pulse]:::ker --- K4[Chronicle]:::ker --- K5[Aegis]:::ker
-  end
-
-  OUT[(Filesystem · Network · Federation peers)]:::out
-
-  YOU --> S --> W --> R --> K
-  K5 -.->|aegis.fs · aegis.network| OUT
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            ONEXUS  ·  shell                              │
+│   chrome  ·  sidebar  ·  conversation  ·  cockpit  ·  overlays           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐         │
+│   │  Cortex  │◀──▶│  Engram  │◀──▶│  Pulse   │◀──▶│Chronicle │         │
+│   │ routing  │    │  memory  │    │heartbeat │    │  audit   │         │
+│   └────┬─────┘    └──────────┘    └──────────┘    └──────────┘         │
+│        │                                                                │
+│        ▼                                                                │
+│   ┌──────────┐         every tool call passes through                  │
+│   │  Aegis   │  ─────  the capability arbiter — class                  │
+│   │ permits  │         + trust + grants + first-use prompt              │
+│   └──────────┘                                                          │
+│                                                                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│   modules                              ·   agent catalog                │
+│   council · specter · oracle · wraith  ·   6,745 manifests              │
+│   echo · sentry · autonomic · legacy   ·   571 runnable (MCP adapter)   │
+│   consciousness · agents-dispatcher    ·   nightly rebuild              │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Aegis is the only kernel component that touches the network.** A static test scans `nexus/kernel/*.py` and fails CI if any other module imports `httpx`, `urllib`, or `requests`. The local-first promise isn't policy — it's an invariant.
-
-</details>
-
-<details>
-<summary><strong>The eight moods</strong></summary>
-
-| | Mood | Hue family | Drift | Triggers |
-|---|---|---|---|---|
-| ⬡ | **Calm Focus** | indigo / violet / warm amber | 24s | Default — nothing demanding attention |
-| ⬡ | **Deep Flow** | jewel green / pine / oceanic | 38s | Sustained focus from Sentry |
-| ⬡ | **Routing** | electric magenta / cyan / indigo | 14s | High pulse rate, multiple agents working |
-| ⬡ | **Deliberating** | amber / bronze / burgundy / cream | 30s | Council, Specter, or Legacy is active |
-| ⬡ | **Creative** | hot coral / tangerine / magenta + teal edge | 20s | Generative agents resident |
-| ⬡ | **Reflective** | near-monochrome plum + rose ember | 42s | Consciousness module, late hour, low pulse |
-| ⬡ | **Watchful** | brass / olive / slate / ember | 12s | Oracle flagged a pattern, trust sliding |
-| ⬡ | **Alert** | crimson / coral / ember | 7s | Trust collapse, breach, permission denial — *sacred, used only when it matters* |
-
-Trust events layer a 1.5s temperature wash on top of the mood without replacing it: **warm gold** rising, **cool steel** falling, **hot crimson** collapse.
-
-</details>
+**The kernel never touches the network.** Every outbound HTTP request from any built-in module goes through `aegis.network()` which logs to Chronicle, checks the agent's `net.*` capability declaration, and runs through `AegisTransport` (a wrapped httpx client). A static invariant test enforces that no kernel module other than `aegis.py` imports `httpx` or `requests`.
 
 ---
 
-## Workspaces
+## In-OS tools
+
+You don't leave the OS to write code, search the web, or store files.
+
+### Workshop · code + sandbox
+
+Open with `⌘E`. Pick a runtime (Python · JavaScript · shell). Hit Run (`⌘⏎`). Code executes in a **subprocess sandbox**: stripped env (`ONEXUS_SANDBOX=1`), 8-second timeout, captured stdout/stderr (max 32 KB per stream), exit code + elapsed time, logged to Chronicle. History popover keeps the last 30 runs — click to reload, clear to wipe.
+
+### Web search
+
+Open with `⌘/`. Routes through `aegis.network()` to DuckDuckGo's instant-answer API by default (no tracking). Configure `NEXUS_BRAVE_KEY` to use Brave Search for organic results. Wikipedia is always a fallback so you never see an empty page. History popover with last 50 queries.
+
+### File drop
+
+Drag any file anywhere on the conversation canvas — the surface gets a mood-tinted "Drop files into this workspace" overlay. Files are stored under `<workspace_root>/.onexus/uploads/`, hashed for dedup, registered with Engram episodic memory, logged to Chronicle.
+
+---
+
+## Catalog
+
+ONEXUS ships with the [AllStreets/ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) catalog bundled — every entry is a single JSON manifest under `catalog/<category>/<slug>.json`. **6,745 agents** across 40 categories, **571 runnable** via MCP adapters. Browse from the sidebar's *agent catalog* link, filter by category / runnable-only / search, click Launch on any runnable card.
+
+The catalog rebuilds nightly via a [GitHub Actions cron](.github/workflows/nightly-catalog.yml) that reads the catalog repo's head SHA and pushes a fresh Docker image to GHCR.
+
+---
+
+## Deploy
+
+### Local
 
 ```bash
-onexus workspace new <id> --name "Client work" --template coding   # or design · research · writing · personal · blank
-onexus workspace list
-onexus workspace switch <id>
-onexus workspace destroy <id> --yes
+onexus serve --port 8000
 ```
 
-Each room owns **six things, in isolation:** filesystem roots · resident agents · memory partition (its own SQLite Engram) · permission grants · home tone + mood biases · routing pins (`intent → preferred agent`). Switching rooms with `⌘K` pauses the old room's agents (`SIGSTOP` for external subprocesses, a flag for in-process), animates the mesh to the new home tone, and loads the new pins into Cortex.
+Open `http://127.0.0.1:8000/aurora`. Data lives in `~/.local/share/nexus/`.
+
+### Docker
+
+```bash
+docker build -t onexus:local .
+docker run -p 8000:8000 -v $(pwd)/.data:/data onexus:local
+```
+
+### Railway (one-click)
+
+A `railway.json` is included. From the Railway dashboard:
+1. **New Project → Deploy from GitHub repo → AllStreets/ONEXUS**
+2. Railway reads `railway.json` and builds with the Dockerfile
+3. Add a volume mounted at `/data` for persistent workspace storage
+4. Health probe is automatic via `/api/system/health`
+
+Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
 
-## Documentation
+## What's verified
 
-- **[Architecture spec](docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md)** — the design that drove v1 (730 lines, every decision)
-- **[Phase docs](docs/agents/)** — Foundation · Workspaces · Safety UX · Surfaces · Network Gateway
-- **[Release notes v1.0](docs/RELEASE_NOTES_v1.md)** — phase-by-phase summary
-- **[Agents catalog ↗](https://github.com/AllStreets/ONEXUS-Agents)** — sibling repo: 7,000+ discoverable agents, 660+ runnable via MCP
+| Property | Mechanism |
+|---|---|
+| Kernel never touches network | static test on every kernel module's imports |
+| Aurora ships zero emojis | regex test on every served HTML/JS/CSS asset |
+| Every overlay surface has a close affordance | accessibility tests in `tests/aurora/` |
+| Mood engine reacts to signals | `tests/aurora/test_mood_wiring.py` |
+| Cockpit panels stay live | `tests/aurora/test_websockets.py` |
+| Permission inbox round-trips | `tests/aurora/test_permissions_routes.py` |
+
+**1014 passed, 1 skipped** at v1.0.
 
 ---
 
-## License
+## Contribute
 
-**Apache-2.0.** Use it, fork it, ship it. The core will always be open. Each catalogued third-party agent retains its own upstream license — see the `license` field on every manifest.
+The catalog is the right place to add an agent — open an issue at [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) with the agent's repo URL and a one-liner. The nightly pipeline does the rest.
+
+For kernel / Aurora work, the [spec](docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md) is the source of truth. Plans live under `docs/superpowers/plans/`.
+
+---
 
 <div align="center">
 
-&nbsp;
+<sub>Built for the era where agents are operating systems.</sub>
 
-<sub>
-  Built by <a href="https://github.com/AllStreets">Connor Evans</a> · Designed in a single brainstorming session against the spec at <code>docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md</code>, then built across seven phases.
-</sub>
-
-&nbsp;
-
-<sub>
-  <a href="https://github.com/AllStreets/ONEXUS">parent</a> · <a href="https://github.com/AllStreets/ONEXUS-Agents">catalog</a> · <a href="https://github.com/AllStreets/ONEXUS/issues">issues</a> · <a href="https://github.com/AllStreets/ONEXUS/releases">releases</a>
-</sub>
+<sub><a href="https://github.com/AllStreets/ONEXUS">github.com/AllStreets/ONEXUS</a> &nbsp;·&nbsp; <a href="https://github.com/AllStreets/ONEXUS-Agents">github.com/AllStreets/ONEXUS-Agents</a> &nbsp;·&nbsp; Apache-2.0</sub>
 
 </div>

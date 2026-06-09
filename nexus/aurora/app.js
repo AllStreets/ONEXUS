@@ -552,14 +552,19 @@ function attachShellHandlers() {
       if (q) location.hash = `#/catalog?q=${encodeURIComponent(q)}`;
     }
   });
-  // Click the workspace name in the chrome → return to that workspace's home
+  // Click the ONEXUS brand OR the workspace context → return to home
   // (clears the active thread and shows the welcome state + prompt cards).
-  document.getElementById("nx-chrome-context").addEventListener("click", () => {
-    if (!state.active) return;
+  const goHomeOfCurrentWorkspace = () => {
+    if (!state.active) {
+      location.hash = "#/workspaces";
+      return;
+    }
     state.thread.set(state.active, []);
     location.hash = `#/conversation/${state.active}`;
     renderConversation(state.active);
-  });
+  };
+  document.getElementById("nx-chrome-home").addEventListener("click", goHomeOfCurrentWorkspace);
+  document.getElementById("nx-chrome-context").addEventListener("click", goHomeOfCurrentWorkspace);
 
   // Chrome traffic lights — wired so they aren't decorative
   document.getElementById("nx-tl-close").addEventListener("click", () => {

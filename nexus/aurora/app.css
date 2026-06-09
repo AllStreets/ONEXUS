@@ -139,6 +139,19 @@ body {
   font-family: var(--nx-font-mono);
   font-size: 12px;
 }
+.nx-chrome-home {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: transparent; border: 0; padding: 4px 8px;
+  border-radius: 7px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--d-fast), filter var(--d-fast);
+}
+.nx-chrome-home:hover {
+  background: color-mix(in srgb, var(--nx-mood-primary) 10%, transparent);
+  filter: drop-shadow(0 0 8px var(--nx-mood-glow));
+}
 .nx-chrome-mark { display: inline-flex; }
 .nx-chrome-mark .nx-kernel-mark { filter: drop-shadow(0 0 6px var(--nx-mood-glow, rgba(201,184,255,0.55))); }
 .nx-chrome-brand {
