@@ -24,6 +24,8 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use notify::RecursiveMode;
+use notify_debouncer_mini::new_debouncer;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 
@@ -274,6 +276,125 @@ fn reload_aurora(app: &AppHandle) {
     }
 }
 
+// ── File watcher ─────────────────────────────────────────────────────────────
+
+/// Categorise a changed path. Paths we don't care about (caches, build output,
+/// editor backup files) return `None` so the watcher ignores them.
+enum ChangeKind {
+    Backend,  // .py — needs full server restart
+    Aurora,   // html/css/js in nexus/aurora/ — just reload the WebView
+}
+
+fn classify_change(path: &Path) -> Option<ChangeKind> {
+    let s = path.to_string_lossy();
+
+    // Skip caches, vcs, virtualenv, target output.
+    for skip in [
+        "__pycache__",
+        "/.git/",
+        "/.venv/",
+        "/target/",
+        "/.worktrees/",
+        "/node_modules/",
+        "/site-packages/",
+        ".pyc",
+        ".pyo",
+        ".swp",
+        ".swo",
+        "~",      // editor backups
+        ".DS_Store",
+    ] {
+        if s.contains(skip) {
+            return None;
+        }
+    }
+
+    let aurora_marker = format!("{}aurora{}", std::path::MAIN_SEPARATOR, std::path::MAIN_SEPARATOR);
+    let is_aurora_subtree = s.contains(&aurora_marker);
+
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    // Aurora subtree → frontend reload (any html/css/js/svg/png edit there is
+    // visible after a WebView refresh).
+    if is_aurora_subtree {
+        if matches!(ext.as_str(), "html" | "css" | "js" | "svg" | "png" | "jpg" | "jpeg") {
+            return Some(ChangeKind::Aurora);
+        }
+        return None;
+    }
+
+    // Anything else .py → backend restart.
+    if ext == "py" {
+        return Some(ChangeKind::Backend);
+    }
+    None
+}
+
+/// Spawn a background thread that watches `project_root/nexus/` and triggers
+/// the appropriate reload when files change. Uses a debouncer so a batch
+/// save (e.g. find-and-replace across 12 files) coalesces into one reload.
+fn start_watcher(app: AppHandle, project_root: PathBuf) {
+    let watch_dir = project_root.join("nexus");
+    if !watch_dir.exists() {
+        eprintln!("[onexus] watcher: {} does not exist; auto-reload disabled", watch_dir.display());
+        return;
+    }
+
+    thread::spawn(move || {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let mut debouncer = match new_debouncer(Duration::from_millis(800), tx) {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("[onexus] watcher: failed to create debouncer: {e}");
+                return;
+            }
+        };
+
+        if let Err(e) = debouncer.watcher().watch(&watch_dir, RecursiveMode::Recursive) {
+            eprintln!("[onexus] watcher: failed to watch {}: {e}", watch_dir.display());
+            return;
+        }
+        eprintln!("[onexus] watcher: watching {}", watch_dir.display());
+
+        for batch in rx {
+            let Ok(events) = batch else { continue };
+
+            // Decide what kind of reload this batch warrants. Backend wins
+            // over Aurora because restarting the server also reloads the
+            // WebView at the end of the cycle.
+            let mut need_backend = false;
+            let mut need_aurora = false;
+            let mut paths_changed: Vec<PathBuf> = Vec::new();
+
+            for ev in events {
+                let path = ev.path;
+                paths_changed.push(path.clone());
+                match classify_change(&path) {
+                    Some(ChangeKind::Backend) => need_backend = true,
+                    Some(ChangeKind::Aurora) => need_aurora = true,
+                    None => {}
+                }
+            }
+
+            if need_backend {
+                eprintln!("[onexus] watcher: backend change detected ({} path{}); reloading server",
+                          paths_changed.len(),
+                          if paths_changed.len() == 1 { "" } else { "s" });
+                reload_backend(&app);
+            } else if need_aurora {
+                eprintln!("[onexus] watcher: aurora change detected ({} path{}); reloading WebView",
+                          paths_changed.len(),
+                          if paths_changed.len() == 1 { "" } else { "s" });
+                reload_aurora(&app);
+            }
+        }
+    });
+}
+
 // ── App bootstrap ────────────────────────────────────────────────────────────
 
 pub fn run() {
@@ -339,6 +460,13 @@ pub fn run() {
                 "quit" => handle.exit(0),
                 _ => {}
             });
+
+            // Auto-reload: watch the resolved project_root for code changes
+            // and trigger the right reload kind (backend vs aurora).
+            if let Some(root) = resolve_project_root() {
+                let watcher_handle = app.handle().clone();
+                start_watcher(watcher_handle, root);
+            }
 
             Ok(())
         })
