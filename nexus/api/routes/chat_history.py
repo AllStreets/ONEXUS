@@ -134,6 +134,79 @@ async def list_workspaces_with_history(request: Request) -> dict:
     return {"workspaces": workspaces, "total": len(workspaces)}
 
 
+@router.get("/recent-agents")
+async def list_recent_agents(request: Request, limit: int = 12) -> dict:
+    """Agents the user has actually interacted with, newest-first.
+
+    Aggregated across all workspaces from chronicle's `messages.exchange`
+    events (the home composer) plus the multi-launch `cortex.multi_run`
+    and `cortex.continue` events (the Cortex launcher). Returns enough
+    metadata for the sidebar to render each row (slug + kind + last-used
+    timestamp + chat count + last workspace) and route the click target
+    (built-in → cortex launcher, catalog → catalog focus page).
+    """
+    kernel = _get_kernel(request)
+    mgr = _get_workspace_manager(request)
+    cat = getattr(request.app.state, "agent_catalog", None)
+
+    bucket: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {"count": 0, "last_at": None, "last_workspace": None}
+    )
+
+    # Pull the same kinds of events the chat-history page surfaces, plus
+    # the Cortex launcher's per-run events so multi-agent dispatches show up.
+    sources_and_actions = [
+        ("messages",  "exchange"),
+        ("cortex",    "multi_run"),
+        ("cortex",    "continue"),
+    ]
+    try:
+        for source, action in sources_and_actions:
+            for row in kernel.chronicle.query(source=source, action=action, limit=_FETCH_CAP):
+                payload = row.get("payload") or {}
+                slug = (payload.get("module") or "").strip()
+                if not slug:
+                    continue
+                b = bucket[slug]
+                b["count"] += 1
+                if b["last_at"] is None or row["timestamp"] > b["last_at"]:
+                    b["last_at"] = row["timestamp"]
+                    if payload.get("workspace_id"):
+                        b["last_workspace"] = payload["workspace_id"]
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"chronicle query failed: {exc}")
+
+    # Resolve kind (built-in vs catalog vs unknown) + workspace name + tone
+    cortex_modules = set(kernel.cortex._modules.keys()) if kernel.cortex else set()
+    out: list[dict[str, Any]] = []
+    for slug, b in bucket.items():
+        kind = "builtin" if slug in cortex_modules else "unknown"
+        category = None
+        tagline = None
+        if kind == "unknown" and cat is not None:
+            try:
+                entry = cat.get_agent(slug)
+            except Exception:
+                entry = None
+            if entry is not None:
+                kind = "catalog"
+                category = entry.category
+                tagline = entry.tagline
+        out.append({
+            "slug": slug,
+            "kind": kind,
+            "category": category,
+            "tagline": tagline,
+            "chat_count": b["count"],
+            "last_active_at": b["last_at"],
+            "last_workspace": b["last_workspace"],
+            "last_workspace_name": _workspace_name(mgr, b["last_workspace"]) if b["last_workspace"] else None,
+            "last_workspace_tone": _workspace_tone(mgr, b["last_workspace"]) if b["last_workspace"] else None,
+        })
+    out.sort(key=lambda a: a["last_active_at"] or "", reverse=True)
+    return {"agents": out[:limit], "total": len(out)}
+
+
 @router.get("/workspaces/{workspace_id}/agents")
 async def list_agents_in_workspace(workspace_id: str, request: Request) -> dict:
     """Agents the user has exchanged messages with inside a single workspace."""

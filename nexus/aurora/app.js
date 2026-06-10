@@ -472,6 +472,26 @@ async function loadWorkspaces() {
 }
 
 async function loadAgents() {
+  // Recent agents = the ones you've actually USED (from chronicle). This
+  // takes priority over the catalog/system list — the sidebar should
+  // reflect your activity, not a generic curated set.
+  try {
+    const r = await fetch("/api/chat-history/recent-agents?limit=12");
+    if (r.ok) {
+      const body = await r.json();
+      state.recentAgents = (body.agents || []).map(a => ({
+        slug: a.slug,
+        kind: a.kind,
+        category: a.category || (a.kind === "builtin" ? "built-in" : ""),
+        tagline: a.tagline || "",
+        chat_count: a.chat_count,
+        last_active_at: a.last_active_at,
+        last_workspace: a.last_workspace,
+        last_workspace_name: a.last_workspace_name,
+        last_workspace_tone: a.last_workspace_tone,
+      }));
+    }
+  } catch {}
   try {
     // Pull built-in / system agents first (these are the resident set).
     const r = await fetch("/api/agents?category=system&limit=20");
@@ -480,20 +500,21 @@ async function loadAgents() {
       state.agents = body.agents || [];
     }
   } catch {}
-  // Recent = running agents first, then top of system catalog
-  try {
-    const r = await fetch("/api/agents/running");
-    if (r.ok) {
-      const running = await r.json();
-      const runningSet = new Set(running.map(a => a.slug));
-      state.recentAgents = [
-        ...running.map(a => ({ ...a, is_running: true })),
-        ...state.agents.filter(a => !runningSet.has(a.slug)),
-      ].slice(0, 3);
-      return;
-    }
-  } catch {}
-  state.recentAgents = state.agents.slice(0, 3);
+  // If chronicle had no usage yet, fall back to listing running MCP
+  // subprocess agents so the sidebar still has something to show on a
+  // fresh install. Real usage replaces this as soon as the user dispatches.
+  if (state.recentAgents.length === 0) {
+    try {
+      const r = await fetch("/api/agents/running");
+      if (r.ok) {
+        const running = await r.json();
+        state.recentAgents = running.slice(0, 6).map(a => ({
+          slug: a.slug, kind: "catalog", category: a.category || "running",
+          chat_count: 0, last_active_at: null, is_running: true,
+        }));
+      }
+    } catch {}
+  }
 }
 
 async function loadTrust() {
@@ -774,31 +795,43 @@ function renderSidebar() {
     });
   }
 
-  // Recent agents
+  // Recent agents — sourced from /api/chat-history/recent-agents.
+  // Replaces the prior "top 3 catalog" placeholder with agents you've
+  // actually USED, scrollable, with relative timestamps and smart click
+  // targets (built-in → Cortex launcher pre-selected; catalog → Cortex
+  // launcher too since multi-launch handles catalog agents now).
   const recentEl = document.getElementById("nx-recent-agents");
   if (!state.recentAgents.length) {
-    recentEl.innerHTML = `<div class="nx-empty" style="opacity:0.45;padding:8px 4px;font-size:11px">no installed agents yet</div>`;
+    recentEl.innerHTML = `<div class="nx-empty" style="opacity:0.45;padding:8px 4px;font-size:11px">no agents used yet — try cortex launch (⌘L)</div>`;
   } else {
     recentEl.innerHTML = state.recentAgents.map(a => {
-      const floor = typeof a.trust_floor === "number" ? a.trust_floor : null;
-      const trustLabel = a.is_running ? "running"
-        : floor == null ? "—"
-        : floor >= 0.75 ? "trusted"
-        : floor >= 0.50 ? "executor"
-        : "probationary";
+      const lastTxt = a.last_active_at
+        ? chatHistoryRelative(a.last_active_at)
+        : (a.is_running ? "running" : "—");
+      const kindBadge = a.kind === "catalog"
+        ? `<span class="nx-recent-kind cat">cat</span>`
+        : (a.kind === "builtin" ? `<span class="nx-recent-kind">core</span>` : "");
+      const displayName = a.kind === "catalog" && a.slug.length > 18
+        ? a.slug.slice(0, 16) + "…"
+        : a.slug;
       return `
-        <div class="nx-agent-row" data-slug="${a.slug}">
-          ${agentDisc(a.slug, { size: 28, trust: floor })}
-          <div>
-            <div class="ag-name">${escapeHtml(a.slug)}</div>
-            <div class="ag-sub">${escapeHtml(a.category || "")}</div>
+        <button class="nx-agent-row" data-slug="${escapeHtml(a.slug)}" data-kind="${escapeHtml(a.kind || "builtin")}" data-workspace="${escapeHtml(a.last_workspace || "")}" title="${escapeHtml(a.tagline || a.category || a.slug)} · click to resume">
+          ${agentDisc(a.slug, { size: 26, trust: typeof a.trust_floor === "number" ? a.trust_floor : null })}
+          <div class="nx-recent-meta">
+            <div class="ag-name">${escapeHtml(displayName)} ${kindBadge}</div>
+            <div class="ag-sub">${escapeHtml(a.chat_count ? `${a.chat_count} ${a.chat_count === 1 ? "chat" : "chats"} · ${lastTxt}` : lastTxt)}</div>
           </div>
-          <div class="ag-status">${escapeHtml(trustLabel)}</div>
-        </div>
+        </button>
       `;
     }).join("");
     recentEl.querySelectorAll(".nx-agent-row").forEach(row => {
-      row.addEventListener("click", () => location.hash = `#/catalog?focus=${encodeURIComponent(row.dataset.slug)}`);
+      row.addEventListener("click", () => {
+        const slug = row.dataset.slug;
+        // Built-in and catalog agents both work in the Cortex launcher
+        // (multi-launch can pick from either). Pre-select the chip via
+        // the agent hash param so the chosen one is ready to dispatch.
+        location.hash = `#/cortex?agent=${encodeURIComponent(slug)}`;
+      });
     });
   }
 
@@ -1160,12 +1193,19 @@ async function renderConversation(workspaceId) {
     document.getElementById("nx-new-thread")?.addEventListener("click", goHome);
   }
 
-  // Wire prompt suggestion cards (empty state)
+  // Wire prompt suggestion cards (empty state) — two variants:
+  // data-prompt   = seed the composer with a starter prompt and send
+  // data-resume-agent = open the Cortex launcher with that agent pre-selected
   main.querySelectorAll(".nx-prompt-card[data-prompt]").forEach(card => {
     card.addEventListener("click", async () => {
       const input = document.getElementById("nx-composer-input");
       if (input) input.value = card.dataset.prompt;
       await sendMessage(workspaceId);
+    });
+  });
+  main.querySelectorAll(".nx-prompt-card[data-resume-agent]").forEach(card => {
+    card.addEventListener("click", () => {
+      location.hash = `#/cortex?agent=${encodeURIComponent(card.dataset.resumeAgent)}`;
     });
   });
 
@@ -1375,12 +1415,47 @@ function _wireComposerStatePreservation() {
 _wireComposerStatePreservation();
 
 function renderEmptyThreadHTML(ws) {
-  const SUGGESTIONS = [
-    { glyph: "council",       label: "Convene the council",  hint: "Get a 3-round deliberation across the cognitive modules.", prompt: "Council: I'm refactoring my kernel runtime — what should I be careful about?" },
-    { glyph: "oracle",        label: "Ask the oracle",        hint: "A first read across whatever is in this workspace.",      prompt: "Oracle: read this repo and summarise its architecture in 5 bullets." },
-    { glyph: "specter",       label: "Red-team a plan",       hint: "Counter-arguments and dissenting views, no flattery.",     prompt: "Specter: red-team my decision to switch from postgres to sqlite." },
-    { glyph: "legacy",        label: "Pull from memory",      hint: "Recall what was decided last time, with citations.",       prompt: "Legacy: what have I tried for this problem before?" },
-  ];
+  // If the user has actually used any agents recently, swap the four
+  // generic prompt cards for cards that resume those agents (Cortex
+  // launcher with chip pre-selected). Falls back to the original
+  // curated suggestions when there's no usage history yet.
+  const recent = (state.recentAgents || []).slice(0, 4);
+  const cards = recent.length >= 1
+    ? recent.map(a => {
+        const last = a.last_active_at ? chatHistoryRelative(a.last_active_at) : "ready";
+        const hint = a.tagline
+          ? a.tagline
+          : (a.kind === "catalog"
+              ? `catalog · ${a.category || "agent"}`
+              : `${a.chat_count || 0} prior ${(a.chat_count || 0) === 1 ? "chat" : "chats"} · ${last}`);
+        const label = a.kind === "catalog" ? a.slug : `Talk to ${a.slug}`;
+        return `
+          <button class="nx-prompt-card" data-resume-agent="${escapeHtml(a.slug)}" title="Resume ${escapeHtml(a.slug)} in the Cortex launcher">
+            <div class="nx-prompt-glyph">${agentDisc(a.slug, { size: 32 })}</div>
+            <div class="nx-prompt-text">
+              <div class="nx-prompt-label">${escapeHtml(label)}</div>
+              <div class="nx-prompt-hint">${escapeHtml(hint)}</div>
+            </div>
+            <div class="nx-prompt-arrow">↗</div>
+          </button>
+        `;
+      }).join("")
+    : [
+        { glyph: "council",       label: "Convene the council",  hint: "Get a 3-round deliberation across the cognitive modules.", prompt: "Council: I'm refactoring my kernel runtime — what should I be careful about?" },
+        { glyph: "oracle",        label: "Ask the oracle",        hint: "A first read across whatever is in this workspace.",      prompt: "Oracle: read this repo and summarise its architecture in 5 bullets." },
+        { glyph: "specter",       label: "Red-team a plan",       hint: "Counter-arguments and dissenting views, no flattery.",     prompt: "Specter: red-team my decision to switch from postgres to sqlite." },
+        { glyph: "legacy",        label: "Pull from memory",      hint: "Recall what was decided last time, with citations.",       prompt: "Legacy: what have I tried for this problem before?" },
+      ].map(s => `
+          <button class="nx-prompt-card" data-prompt="${escapeHtml(s.prompt)}">
+            <div class="nx-prompt-glyph">${agentDisc(s.glyph, { size: 32 })}</div>
+            <div class="nx-prompt-text">
+              <div class="nx-prompt-label">${escapeHtml(s.label)}</div>
+              <div class="nx-prompt-hint">${escapeHtml(s.hint)}</div>
+            </div>
+            <div class="nx-prompt-arrow">↩</div>
+          </button>
+        `).join("");
+
   return `
     <div class="nx-welcome">
       <div class="nx-welcome-orb">${KERNEL_MARK(72)}</div>
@@ -1390,16 +1465,7 @@ function renderEmptyThreadHTML(ws) {
          through <span class="nx-mono" style="color:#c9b8ff">Aegis</span>, every event lands in
          <span class="nx-mono" style="color:#c9b8ff">Chronicle</span>.</p>
       <div class="nx-prompt-grid" id="nx-prompt-grid">
-        ${SUGGESTIONS.map(s => `
-          <button class="nx-prompt-card" data-prompt="${escapeHtml(s.prompt)}">
-            <div class="nx-prompt-glyph">${agentDisc(s.glyph, { size: 32 })}</div>
-            <div class="nx-prompt-text">
-              <div class="nx-prompt-label">${escapeHtml(s.label)}</div>
-              <div class="nx-prompt-hint">${escapeHtml(s.hint)}</div>
-            </div>
-            <div class="nx-prompt-arrow">↩</div>
-          </button>
-        `).join("")}
+        ${cards}
       </div>
       <div class="nx-welcome-links">
         <button class="nx-tour-link" id="nx-tour-link" data-workspace="${escapeHtml(ws.workspace_id)}">
@@ -1952,15 +2018,32 @@ const _cortexState = {
 };
 
 async function renderCortexLauncher(hash) {
-  // Parse ?prompt= out of the hash, if present.
+  // Parse ?prompt= and ?agent= out of the hash.
   const qi = hash.indexOf("?");
   let prefill = "";
+  let preselectAgent = "";
   if (qi >= 0) {
     const params = new URLSearchParams(hash.slice(qi + 1));
     prefill = params.get("prompt") || "";
+    preselectAgent = params.get("agent") || "";
   }
   if (prefill && !_cortexState.prompt) {
     _cortexState.prompt = prefill;
+  }
+  // Pre-tick a single agent (from the sidebar's "resume this agent" click).
+  // We need its metadata in catalogMeta so the chip renders even before
+  // the prompt-driven candidates load — fetch the catalog entry if needed.
+  if (preselectAgent) {
+    _cortexState.selected.add(preselectAgent);
+    if (!_cortexState.catalogMeta.has(preselectAgent)) {
+      try {
+        const r = await fetch(`/api/cortex/agent-search?q=${encodeURIComponent(preselectAgent)}&limit=5`);
+        if (r.ok) {
+          const data = await r.json();
+          (data.matches || []).forEach(c => _cortexState.catalogMeta.set(c.slug, c));
+        }
+      } catch {}
+    }
   }
 
   const main = document.getElementById("nx-main");
@@ -3901,6 +3984,12 @@ async function renderWorkshop() {
 }
 
 // ── Search (in-OS web search) ─────────────────────────────────────────────
+// Web search keeps a continuous thread of queries during the session
+// rather than blowing away prior results on each new search. Each query
+// appends a new section to the thread; "ask cortex about this" routes
+// the results into the Cortex launcher pre-filled.
+const _searchThread = { entries: [] /* [{query, hits, ts, error}] */ };
+
 async function renderSearch(hash) {
   const main = document.getElementById("nx-main");
   const qMatch = hash.match(/[?&]q=([^&]+)/);
@@ -3910,11 +3999,11 @@ async function renderSearch(hash) {
       <header style="margin-bottom:18px">
         <div class="nx-eyebrow" style="margin-bottom:6px">Search</div>
         <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Search the web — without leaving</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">Routes through aegis.network() · default provider: DuckDuckGo · no tracking</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">Routes through aegis.network() · default provider: DuckDuckGo · no tracking · continuous thread keeps prior queries visible</div>
       </header>
       <form class="nx-composer" id="nx-search-form" style="margin:0 0 18px">
         <input id="nx-search-q" type="search" value="${escapeHtml(initial)}" autofocus
-               placeholder="what do you need to know?" style="flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:14px">
+               placeholder="what do you need to know? (prior results stay visible below)" style="flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:14px">
         <button type="button" id="nx-search-history" class="nx-history-btn" title="Recent searches (clearable)">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="6" cy="6" r="4.5"/>
@@ -3922,44 +4011,114 @@ async function renderSearch(hash) {
           </svg>
           <span>History</span>
         </button>
+        <button type="button" id="nx-search-clear" class="nx-history-btn" title="Clear this thread">
+          <span>Clear thread</span>
+        </button>
         <button type="submit" class="nx-run-btn">Search</button>
       </form>
-      <div class="nx-search-results" id="nx-search-results"></div>
+      <div class="nx-search-thread" id="nx-search-thread"></div>
     </div>
   `;
 
   const formEl = document.getElementById("nx-search-form");
   const qEl = document.getElementById("nx-search-q");
-  const resultsEl = document.getElementById("nx-search-results");
+  const threadEl = document.getElementById("nx-search-thread");
+
+  const repaint = () => {
+    if (_searchThread.entries.length === 0) {
+      threadEl.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:32px;text-align:center;font-size:13px">No searches yet — type a query above. Subsequent searches stack here so you can compare results across queries.</div>`;
+      return;
+    }
+    threadEl.innerHTML = _searchThread.entries.slice().reverse().map((e, revIdx) => {
+      const idx = _searchThread.entries.length - 1 - revIdx;
+      if (e.pending) {
+        return `
+          <section class="nx-search-section pending" data-idx="${idx}">
+            <header class="nx-search-section-head">
+              <div class="nx-eyebrow">QUERY · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
+              <div class="nx-search-section-q">${escapeHtml(e.query)}</div>
+            </header>
+            <div class="nx-empty" style="padding:14px;opacity:0.55">Searching…</div>
+          </section>
+        `;
+      }
+      if (e.error) {
+        return `
+          <section class="nx-search-section fail" data-idx="${idx}">
+            <header class="nx-search-section-head">
+              <div class="nx-eyebrow">QUERY · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
+              <div class="nx-search-section-q">${escapeHtml(e.query)}</div>
+            </header>
+            <div class="nx-empty" style="color:#f86078;padding:14px">${escapeHtml(e.error)}</div>
+          </section>
+        `;
+      }
+      const resultsHTML = e.hits.length === 0
+        ? `<div class="nx-empty" style="padding:14px;opacity:0.55">No results for ${escapeHtml(e.query)}.</div>`
+        : e.hits.map(h => `
+            <a class="nx-search-hit" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">
+              <div class="hit-title">${escapeHtml(h.title || h.url)}</div>
+              <div class="hit-url">${escapeHtml(h.url)}</div>
+              ${h.snippet ? `<div class="hit-snippet">${escapeHtml(h.snippet)}</div>` : ""}
+              ${h.source ? `<div class="hit-source">${escapeHtml(h.source)}</div>` : ""}
+            </a>
+          `).join("");
+      return `
+        <section class="nx-search-section" data-idx="${idx}">
+          <header class="nx-search-section-head">
+            <div class="nx-search-section-meta">
+              <div class="nx-eyebrow">QUERY · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
+              <div class="nx-search-section-q">${escapeHtml(e.query)}</div>
+            </div>
+            <div class="nx-search-section-actions">
+              <span class="nx-dim" style="font-size:11px">${e.hits.length} ${e.hits.length === 1 ? "result" : "results"}</span>
+              <button class="nx-search-ask-cortex" data-ask-cortex="${idx}">↗ ask cortex about these</button>
+            </div>
+          </header>
+          <div class="nx-search-results">${resultsHTML}</div>
+        </section>
+      `;
+    }).join("");
+    // Wire ask-cortex buttons
+    threadEl.querySelectorAll("[data-ask-cortex]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = parseInt(btn.dataset.askCortex, 10);
+        const e = _searchThread.entries[i];
+        if (!e) return;
+        const summary = e.hits.slice(0, 5).map((h, j) =>
+          `${j + 1}. ${h.title || h.url} — ${h.url}${h.snippet ? `\n   ${h.snippet}` : ""}`
+        ).join("\n");
+        const prompt = `I searched the web for "${e.query}" and got these top results:\n\n${summary}\n\nWhat should I take away from this?`;
+        location.hash = `#/cortex?prompt=${encodeURIComponent(prompt)}`;
+      });
+    });
+  };
 
   const doSearch = async (q) => {
     if (!q) return;
-    resultsEl.innerHTML = `<div class="nx-empty" style="opacity:0.55;padding:18px">Searching…</div>`;
+    const entry = { query: q, hits: [], ts: new Date().toISOString(), pending: true };
+    _searchThread.entries.push(entry);
+    repaint();
     try {
       const r = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=12`);
+      entry.pending = false;
       if (!r.ok) {
-        const txt = await r.text();
-        resultsEl.innerHTML = `<div class="nx-empty">Search failed: ${escapeHtml(txt)}</div>`;
+        entry.error = `Search failed: ${await r.text()}`;
+        repaint();
         return;
       }
       const body = await r.json();
-      // Save to history regardless of result count
-      saveHistoryEntry("search", { query: q, hit_count: body.hits?.length || 0 });
-      if (!body.hits.length) {
-        resultsEl.innerHTML = `<div class="nx-empty">No results for ${escapeHtml(q)}.</div>`;
-        return;
-      }
-      resultsEl.innerHTML = body.hits.map(h => `
-        <a class="nx-search-hit" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">
-          <div class="hit-title">${escapeHtml(h.title || h.url)}</div>
-          <div class="hit-url">${escapeHtml(h.url)}</div>
-          ${h.snippet ? `<div class="hit-snippet">${escapeHtml(h.snippet)}</div>` : ""}
-          ${h.source ? `<div class="hit-source">${escapeHtml(h.source)}</div>` : ""}
-        </a>
-      `).join("");
-    } catch (e) {
-      resultsEl.innerHTML = `<div class="nx-empty">Network error: ${escapeHtml(e.message)}</div>`;
+      entry.hits = body.hits || [];
+      saveHistoryEntry("search", { query: q, hit_count: entry.hits.length });
+      repaint();
+    } catch (err) {
+      entry.pending = false;
+      entry.error = `Network error: ${err.message}`;
+      repaint();
     }
+    // Clear the input so the next query is fresh — keeps the thread feeling continuous.
+    qEl.value = "";
+    qEl.focus();
   };
 
   formEl.addEventListener("submit", (e) => { e.preventDefault(); doSearch(qEl.value.trim()); });
@@ -3970,6 +4129,13 @@ async function renderSearch(hash) {
       doSearch(item.query);
     });
   });
+  document.getElementById("nx-search-clear").addEventListener("click", () => {
+    if (_searchThread.entries.length && !confirm("Clear all queries from this thread?")) return;
+    _searchThread.entries = [];
+    repaint();
+  });
+
+  repaint();
   if (initial) doSearch(initial);
 }
 

@@ -423,30 +423,61 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-new-ws-label { font-family: var(--nx-font-mono); font-size: 11px; }
 .nx-new-ws-kbd   { font-family: var(--nx-font-mono); font-size: 10px; opacity: 0.55; }
 
-/* recent agents */
-.nx-agent-list { display: flex; flex-direction: column; gap: 8px; }
+/* recent agents — scrollable list of agents you've actually used */
+.nx-agent-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.nx-agent-list::-webkit-scrollbar {
+  width: 6px;
+}
+.nx-agent-list::-webkit-scrollbar-thumb {
+  background: rgba(232,222,252,0.10);
+  border-radius: 3px;
+}
+.nx-agent-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(232,222,252,0.18);
+}
 .nx-agent-row {
   display: grid;
-  grid-template-columns: 28px 1fr auto;
-  align-items: center; gap: 12px;
-  padding: 4px 4px 4px 6px;
-  border-radius: 8px;
+  grid-template-columns: 28px 1fr;
+  align-items: center; gap: 10px;
+  padding: 6px;
+  border-radius: 7px;
   cursor: pointer;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
   transition: background var(--d-fast);
 }
-.nx-agent-row:hover { background: rgba(232, 222, 252, 0.035); }
+.nx-agent-row:hover { background: rgba(232, 222, 252, 0.05); }
+.nx-recent-meta { min-width: 0; }
 .nx-agent-row .ag-name {
-  font-size: 12.5px; font-weight: 500; color: #d9d0ea;
+  font-size: 12px; font-weight: 600; color: #d9d0ea;
   line-height: 1.2;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
 }
 .nx-agent-row .ag-sub {
-  font-family: var(--nx-font-mono); font-size: 10px; color: #6b6080;
+  font-family: var(--nx-font-mono); font-size: 9.5px; color: #6b6080;
   margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.nx-agent-row .ag-status {
-  font-family: var(--nx-font-mono); font-size: 9.5px;
-  letter-spacing: 0.10em; color: #6b6080;
+.nx-recent-kind {
+  font-family: var(--nx-font-mono); font-size: 8.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--nx-mood-primary) 18%, transparent);
+  color: var(--nx-mood-primary);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.nx-recent-kind.cat {
+  background: rgba(154, 184, 232, 0.18);
+  color: #b4c4f0;
 }
 
 .nx-side-link {
@@ -1400,6 +1431,48 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-workshop-err { margin: 0; white-space: pre-wrap; color: #f8a0a0; }
 
 /* ── search view ─────────────────────────────────────────────────────────── */
+/* Continuous search-thread: queries stack newest-first, each as its own section. */
+.nx-search-thread { display: flex; flex-direction: column; gap: 14px; }
+.nx-search-section {
+  background: rgba(232,222,252,0.025);
+  border: 1px solid rgba(232,222,252,0.07);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.nx-search-section.pending { opacity: 0.7; }
+.nx-search-section.fail {
+  border-color: rgba(248, 96, 120, 0.30);
+  background: color-mix(in srgb, #f86078 6%, rgba(232,222,252,0.025) 94%);
+}
+.nx-search-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(232,222,252,0.07);
+}
+.nx-search-section-q {
+  font-size: 15px; font-weight: 600; color: #f3ecff;
+  margin-top: 4px;
+}
+.nx-search-section-actions {
+  display: flex; align-items: center; gap: 10px;
+}
+.nx-search-ask-cortex {
+  background: color-mix(in srgb, var(--nx-mood-primary) 16%, transparent);
+  color: var(--nx-mood-primary);
+  border: 1px solid color-mix(in srgb, var(--nx-mood-primary) 45%, transparent);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  transition: background var(--d-fast);
+}
+.nx-search-ask-cortex:hover {
+  background: color-mix(in srgb, var(--nx-mood-primary) 28%, transparent);
+}
 .nx-search-results { display: flex; flex-direction: column; gap: 10px; }
 .nx-search-hit {
   display: block;
