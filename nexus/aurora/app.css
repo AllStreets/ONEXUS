@@ -1467,6 +1467,17 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 }
 .nx-st-row .ok   { color: #9affb6; font-family: var(--nx-font-mono); font-size: 11px; letter-spacing: 0.10em; }
 .nx-st-row .fail { color: #f86078; font-family: var(--nx-font-mono); font-size: 11px; letter-spacing: 0.10em; }
+/* status indicator dot for provider rows */
+.nx-st-status-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: -1px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.30), 0 0 10px currentColor;
+}
+.nx-st-status-dot.ok   { background: #9affb6; color: #9affb6; }
+.nx-st-status-dot.fail { background: #f86078; color: #f86078; }
 .nx-st-link { color: var(--nx-mood-primary); text-decoration: none; }
 .nx-st-link:hover { text-decoration: underline; }
 .nx-st-pill {
@@ -2453,3 +2464,268 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   .nx-g-cta { max-width: 120px; padding: 9px 12px; font-size: 11px; }
   .nx-g-dot { min-width: 26px; height: 26px; font-size: 10px; }
 }
+
+/* ── Settings · Chat history ──────────────────────────────────────────── */
+
+.nx-ch-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.nx-ch-live {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--nx-font-mono); font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: #9affb6;
+  background: rgba(154, 255, 182, 0.08);
+  border: 1px solid rgba(154, 255, 182, 0.20);
+  border-radius: 999px;
+  padding: 3px 10px 3px 8px;
+}
+.nx-ch-live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #9affb6;
+  box-shadow: 0 0 8px #9affb6;
+  animation: nx-ch-pulse 2.4s ease-in-out infinite;
+}
+@keyframes nx-ch-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.95); }
+  50%      { opacity: 1.0; transform: scale(1.05); }
+}
+
+.nx-ch-crumbs {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  margin: 6px 0 4px;
+}
+.nx-ch-crumb-link {
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--nx-mood-primary);
+  font: inherit; letter-spacing: inherit; text-transform: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background var(--d-fast);
+}
+.nx-ch-crumb-link:hover { background: rgba(232,222,252,0.06); }
+.nx-ch-crumb-sep { color: #5a5167; }
+.nx-ch-crumb-here { color: #d9d0ea; }
+
+/* workspace cards grid */
+.nx-ch-ws-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.nx-ch-ws-card {
+  display: grid;
+  grid-template-columns: 36px 1fr 14px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(232,222,252,0.04);
+  border: 1px solid rgba(232,222,252,0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--d-fast), border-color var(--d-fast), transform var(--d-fast);
+}
+.nx-ch-ws-card:hover {
+  background: rgba(232,222,252,0.07);
+  border-color: rgba(232,222,252,0.18);
+  transform: translateY(-1px);
+}
+.nx-ch-ws-swatch {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #4d5bcf, #9aa8ff);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+}
+.nx-ch-ws-name {
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #f3ecff;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.nx-ch-ws-meta {
+  font-size: 12px; color: #c5bbdc;
+  display: flex; gap: 6px; align-items: center;
+}
+.nx-ch-ws-meta b { color: #f3ecff; font-weight: 600; }
+.nx-ch-sep { color: #5a5167; }
+.nx-ch-ws-last {
+  font-family: var(--nx-font-mono); font-size: 10px;
+  color: #8a8098;
+  margin-top: 3px;
+  letter-spacing: 0.06em;
+}
+.nx-ch-chev {
+  color: #6a6178; font-size: 18px; line-height: 1;
+  align-self: center;
+}
+
+/* agent list rows */
+.nx-ch-agent-list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.nx-ch-agent-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto 14px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(232,222,252,0.03);
+  border: 1px solid rgba(232,222,252,0.07);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--d-fast), border-color var(--d-fast);
+}
+.nx-ch-agent-row:hover {
+  background: rgba(232,222,252,0.06);
+  border-color: rgba(232,222,252,0.16);
+}
+.nx-ch-agent-icon {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nx-ch-agent-icon svg { width: 32px; height: 32px; display: block; }
+.nx-ch-agent-fallback {
+  width: 32px; height: 32px; border-radius: 50%;
+}
+.nx-ch-agent-name {
+  font-family: var(--nx-font-mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #f3ecff; font-weight: 600;
+  margin-bottom: 3px;
+}
+.nx-ch-agent-preview {
+  font-size: 12.5px; color: #9b91ad;
+  font-style: italic;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 100%;
+}
+.nx-ch-agent-stats {
+  text-align: right;
+}
+.nx-ch-agent-count {
+  font-size: 11.5px; color: #d9d0ea;
+  font-family: var(--nx-font-mono); letter-spacing: 0.06em;
+}
+.nx-ch-agent-count b { color: #f3ecff; font-weight: 700; }
+.nx-ch-agent-last {
+  font-family: var(--nx-font-mono); font-size: 10px;
+  color: #8a8098; letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+/* chat panels — readable transcript blocks */
+.nx-ch-chat-list {
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.nx-ch-chat {
+  background: rgba(232,222,252,0.025);
+  border: 1px solid rgba(232,222,252,0.07);
+  border-radius: 12px;
+  padding: 14px 16px;
+  position: relative;
+}
+.nx-ch-chat::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 14px; bottom: 14px;
+  width: 2px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--nx-mood-primary) 60%, transparent) 0%,
+    color-mix(in srgb, var(--nx-mood-primary) 20%, transparent) 100%);
+  border-radius: 2px;
+}
+.nx-ch-chat-head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(232,222,252,0.07);
+}
+.nx-ch-chat-time {
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: #c5bbdc;
+}
+.nx-ch-chat-rel { font-size: 10.5px; }
+
+.nx-ch-msg {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  padding: 6px 0;
+}
+.nx-ch-msg + .nx-ch-msg { margin-top: 2px; padding-top: 8px; }
+.nx-ch-msg-tag {
+  font-family: var(--nx-font-mono); font-size: 9.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  align-self: start;
+  padding: 4px 7px;
+  border-radius: 4px;
+  text-align: center;
+  user-select: none;
+}
+.nx-ch-msg-you .nx-ch-msg-tag {
+  background: rgba(154, 168, 255, 0.16);
+  color: #c5cbff;
+}
+.nx-ch-msg-agent .nx-ch-msg-tag {
+  background: color-mix(in srgb, var(--nx-mood-primary) 18%, transparent);
+  color: var(--nx-mood-primary);
+}
+.nx-ch-msg-text {
+  font-size: 13.5px; line-height: 1.55;
+  color: #e8e0fa;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+.nx-ch-msg-you .nx-ch-msg-text { color: #f3ecff; }
+.nx-ch-msg-agent .nx-ch-msg-text {
+  color: #d9d0ea;
+  font-family: var(--nx-font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* pagination */
+.nx-ch-pager {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 18px;
+  padding: 10px 14px;
+  background: rgba(232,222,252,0.03);
+  border: 1px solid rgba(232,222,252,0.07);
+  border-radius: 10px;
+}
+.nx-ch-pager-btn {
+  font-family: var(--nx-font-mono); font-size: 11px;
+  letter-spacing: 0.10em;
+  padding: 7px 12px;
+  background: rgba(232,222,252,0.05);
+  color: #f3ecff;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background var(--d-fast), border-color var(--d-fast);
+}
+.nx-ch-pager-btn:hover:not(:disabled) {
+  background: rgba(232,222,252,0.10);
+  border-color: rgba(232,222,252,0.20);
+}
+.nx-ch-pager-btn:disabled {
+  opacity: 0.30; cursor: not-allowed;
+}
+.nx-ch-pager-status {
+  font-family: var(--nx-font-mono); font-size: 11px;
+  letter-spacing: 0.08em;
+  display: flex; align-items: center; gap: 6px;
+  color: #d9d0ea;
+}
+.nx-ch-pager-status .nx-dim { color: #7a7188; }
+.nx-ch-pager-page { color: #f3ecff; font-weight: 600; }
+.nx-ch-pager-total { color: #f3ecff; }

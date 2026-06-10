@@ -319,6 +319,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.workshop import router as workshop_router
     app.include_router(workshop_router)
 
+    from nexus.api.routes.chat_history import router as chat_history_router
+    app.include_router(chat_history_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):

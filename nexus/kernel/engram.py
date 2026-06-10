@@ -100,6 +100,22 @@ class EpisodicMemory:
         conn.close()
         return [{"id": r["id"], "timestamp": r["timestamp"], "source": r["source"], "content": r["content"]} for r in rows]
 
+    def get(self, entry_id: str) -> dict[str, Any] | None:
+        """Fetch a single episodic entry by id. Returns None if not found.
+
+        Used by the chat-history settings page to resolve full transcripts
+        from the memory_id stored on each chronicle messages.exchange event.
+        """
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT id, timestamp, source, content FROM episodic WHERE id = ?",
+            (entry_id,),
+        ).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return {"id": row["id"], "timestamp": row["timestamp"], "source": row["source"], "content": row["content"]}
+
 
 class SemanticMemory:
     def __init__(self, db_path: Path, dim: int = 64) -> None:

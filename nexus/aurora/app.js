@@ -1793,6 +1793,7 @@ async function renderSettings() {
       <div class="nx-settings-shell">
         <nav class="nx-settings-tabs">
           <button class="active" data-tab="general">General</button>
+          <button data-tab="chat-history">Chat history</button>
           <button data-tab="security">Security</button>
           <button data-tab="providers">Providers</button>
           <button data-tab="federation">Federation</button>
@@ -1806,7 +1807,13 @@ async function renderSettings() {
   const panel = document.getElementById("nx-settings-panel");
   const renderTab = async (tab) => {
     main.querySelectorAll(".nx-settings-tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+    // Stop chat-history's polling timer whenever we navigate away from it.
+    stopChatHistoryRefresh();
     panel.innerHTML = `<div class="nx-empty" style="opacity:0.5;font-size:12px;padding:18px">loading…</div>`;
+    if (tab === "chat-history") {
+      await renderChatHistory(panel);
+      return;
+    }
     panel.innerHTML = await renderSettingsTab(tab);
     // Wire any panel-specific handlers
     if (tab === "moods") {
@@ -1883,6 +1890,324 @@ function renderTrustRows(rows) {
   }).join("");
 }
 
+// ── Chat history (settings tab) ───────────────────────────────────────────
+// Three nested views: workspaces → agents → chats. The page polls every 5s
+// while open so new exchanges appear without a manual refresh.
+
+const chatHistoryState = {
+  view: "workspaces",         // "workspaces" | "agents" | "chats"
+  workspace_id: null,
+  workspace_name: null,
+  workspace_tone: null,
+  module: null,
+  offset: 0,
+  pageSize: 50,
+  refreshTimer: null,
+  // Cached last-fetched payloads, so a poll re-render doesn't flash blank
+  // while the fetch is in flight.
+  _last: null,
+};
+
+function stopChatHistoryRefresh() {
+  if (chatHistoryState.refreshTimer) {
+    clearInterval(chatHistoryState.refreshTimer);
+    chatHistoryState.refreshTimer = null;
+  }
+}
+
+async function renderChatHistory(panel) {
+  stopChatHistoryRefresh();
+  await paintChatHistory(panel);
+  // Poll for new chats every 5s. Stop if the panel was removed (user
+  // navigated away to another route / closed settings entirely).
+  chatHistoryState.refreshTimer = setInterval(() => {
+    if (!document.body.contains(panel)) {
+      stopChatHistoryRefresh();
+      return;
+    }
+    paintChatHistory(panel, { silent: true }).catch(() => {});
+  }, 5000);
+}
+
+async function paintChatHistory(panel, { silent = false } = {}) {
+  if (!silent) {
+    panel.innerHTML = `<div class="nx-empty" style="opacity:0.5;font-size:12px;padding:18px">loading…</div>`;
+  }
+  const view = chatHistoryState.view;
+  let html;
+  if (view === "workspaces") html = await renderChatHistoryWorkspaces();
+  else if (view === "agents") html = await renderChatHistoryAgents();
+  else html = await renderChatHistoryChats();
+  panel.innerHTML = html;
+  wireChatHistoryHandlers(panel);
+}
+
+function chatHistoryRelative(ts) {
+  if (!ts) return "—";
+  const then = Date.parse(ts);
+  if (!Number.isFinite(then)) return "—";
+  const s = Math.floor((Date.now() - then) / 1000);
+  if (s < 60) return s <= 1 ? "just now" : `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(mo / 12)}y ago`;
+}
+
+function chatHistoryFmtTime(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  // e.g. "Jun 9 · 8:42 PM"
+  const month = d.toLocaleString(undefined, { month: "short" });
+  const day = d.getDate();
+  const time = d.toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${month} ${day} · ${time}`;
+}
+
+async function renderChatHistoryWorkspaces() {
+  let body;
+  try {
+    body = await fetch("/api/chat-history/workspaces").then(r => r.ok ? r.json() : { workspaces: [] });
+  } catch {
+    body = { workspaces: [] };
+  }
+  const ws = body.workspaces || [];
+  chatHistoryState._last = body;
+
+  const totalChats = ws.reduce((a, w) => a + (w.chat_count || 0), 0);
+  const totalAgents = ws.reduce((a, w) => a + (w.agent_count || 0), 0);
+
+  const cards = ws.map(w => {
+    const tone = (w.tone || "indigo").toLowerCase();
+    return `
+      <button class="nx-ch-ws-card" data-workspace="${escapeHtml(w.workspace_id || "_unscoped")}" data-name="${escapeHtml(w.name)}" data-tone="${escapeHtml(tone)}">
+        <div class="nx-ch-ws-swatch nx-tone-${escapeHtml(tone)}"></div>
+        <div class="nx-ch-ws-body">
+          <div class="nx-ch-ws-name">${escapeHtml(w.name)}</div>
+          <div class="nx-ch-ws-meta">
+            <span><b>${w.chat_count}</b> ${w.chat_count === 1 ? "chat" : "chats"}</span>
+            <span class="nx-ch-sep">·</span>
+            <span><b>${w.agent_count}</b> ${w.agent_count === 1 ? "agent" : "agents"}</span>
+          </div>
+          <div class="nx-ch-ws-last">last · ${chatHistoryRelative(w.last_active_at)}</div>
+        </div>
+        <div class="nx-ch-chev" aria-hidden="true">›</div>
+      </button>
+    `;
+  }).join("");
+
+  return `
+    <div class="nx-ch-head">
+      <h3 style="margin:0">Chat history</h3>
+      <div class="nx-ch-live"><span class="nx-ch-live-dot"></span> live</div>
+    </div>
+    <p class="nx-dim" style="font-size:13px;margin:6px 0 18px">
+      <b>${totalChats}</b> ${totalChats === 1 ? "chat" : "chats"}
+      across <b>${ws.length}</b> ${ws.length === 1 ? "workspace" : "workspaces"}
+      with <b>${totalAgents}</b> ${totalAgents === 1 ? "agent slot" : "agent slots"}.
+      Click a workspace to see who you've been talking to.
+    </p>
+    ${ws.length === 0
+      ? `<div class="nx-empty" style="padding:32px;text-align:center;font-size:13px;opacity:0.6">no chats yet — send a message from the home screen to start your history</div>`
+      : `<div class="nx-ch-ws-grid">${cards}</div>`}
+  `;
+}
+
+async function renderChatHistoryAgents() {
+  const wsId = chatHistoryState.workspace_id;
+  let body;
+  try {
+    body = await fetch(`/api/chat-history/workspaces/${encodeURIComponent(wsId)}/agents`)
+      .then(r => r.ok ? r.json() : { agents: [] });
+  } catch {
+    body = { agents: [] };
+  }
+  const agents = body.agents || [];
+  chatHistoryState._last = body;
+
+  const rows = agents.map(a => {
+    const slug = a.module || "unknown";
+    const gradient = (typeof GRADIENTS !== "undefined" && GRADIENTS[slug]) || ["#9aa8ff", "#4d5bcf"];
+    const disc = (typeof agentDisc === "function")
+      ? agentDisc(slug, { size: 32 })
+      : `<div class="nx-ch-agent-fallback" style="background:linear-gradient(135deg,${gradient[0]},${gradient[1]})"></div>`;
+    return `
+      <button class="nx-ch-agent-row" data-module="${escapeHtml(slug)}">
+        <div class="nx-ch-agent-icon">${disc}</div>
+        <div class="nx-ch-agent-body">
+          <div class="nx-ch-agent-name">${escapeHtml(slug)}</div>
+          <div class="nx-ch-agent-preview">${escapeHtml(a.last_preview || "")}</div>
+        </div>
+        <div class="nx-ch-agent-stats">
+          <div class="nx-ch-agent-count"><b>${a.chat_count}</b> ${a.chat_count === 1 ? "chat" : "chats"}</div>
+          <div class="nx-ch-agent-last">${chatHistoryRelative(a.last_active_at)}</div>
+        </div>
+        <div class="nx-ch-chev" aria-hidden="true">›</div>
+      </button>
+    `;
+  }).join("");
+
+  return `
+    <div class="nx-ch-head">
+      <h3 style="margin:0">Chat history</h3>
+      <div class="nx-ch-live"><span class="nx-ch-live-dot"></span> live</div>
+    </div>
+    <div class="nx-ch-crumbs">
+      <button class="nx-ch-crumb-link" data-nav="workspaces">All workspaces</button>
+      <span class="nx-ch-crumb-sep">›</span>
+      <span class="nx-ch-crumb-here">${escapeHtml(chatHistoryState.workspace_name || wsId)}</span>
+    </div>
+    <p class="nx-dim" style="font-size:13px;margin:6px 0 18px">
+      <b>${agents.length}</b> ${agents.length === 1 ? "agent" : "agents"} you've spoken to in this workspace. Click one to read full transcripts.
+    </p>
+    ${agents.length === 0
+      ? `<div class="nx-empty" style="padding:32px;text-align:center;font-size:13px;opacity:0.6">no chats yet in this workspace</div>`
+      : `<div class="nx-ch-agent-list">${rows}</div>`}
+  `;
+}
+
+async function renderChatHistoryChats() {
+  const wsId = chatHistoryState.workspace_id;
+  const module = chatHistoryState.module;
+  const offset = chatHistoryState.offset || 0;
+  const limit = chatHistoryState.pageSize || 50;
+  let body;
+  try {
+    const url = `/api/chat-history/workspaces/${encodeURIComponent(wsId)}/agents/${encodeURIComponent(module)}/chats?offset=${offset}&limit=${limit}`;
+    body = await fetch(url).then(r => r.ok ? r.json() : { chats: [], total: 0 });
+  } catch {
+    body = { chats: [], total: 0 };
+  }
+  const chats = body.chats || [];
+  const total = body.total || 0;
+  chatHistoryState._last = body;
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const currentPage = Math.floor(offset / limit) + 1;
+  const showingFrom = total === 0 ? 0 : offset + 1;
+  const showingTo = Math.min(offset + limit, total);
+
+  const panels = chats.map(c => {
+    const t = c.transcript || {};
+    const truncatedHint = t.truncated
+      ? `<div class="nx-ch-msg-truncated nx-dim" style="font-size:11px;margin-top:6px">transcript memory not found — showing chronicle preview (${t.agent_response_chars || 0} char response)</div>`
+      : "";
+    return `
+      <article class="nx-ch-chat">
+        <header class="nx-ch-chat-head">
+          <span class="nx-ch-chat-time">${escapeHtml(chatHistoryFmtTime(c.timestamp))}</span>
+          <span class="nx-ch-chat-rel nx-dim">${chatHistoryRelative(c.timestamp)}</span>
+        </header>
+        <div class="nx-ch-msg nx-ch-msg-you">
+          <span class="nx-ch-msg-tag">you</span>
+          <div class="nx-ch-msg-text">${escapeHtml(t.user || "")}</div>
+        </div>
+        <div class="nx-ch-msg nx-ch-msg-agent">
+          <span class="nx-ch-msg-tag">${escapeHtml(module)}</span>
+          <div class="nx-ch-msg-text">${escapeHtml(t.agent || "")}</div>
+        </div>
+        ${truncatedHint}
+      </article>
+    `;
+  }).join("");
+
+  const prevDisabled = offset <= 0;
+  const nextDisabled = !body.has_more;
+  const pagination = total > limit ? `
+    <nav class="nx-ch-pager">
+      <button class="nx-ch-pager-btn" data-pager="prev" ${prevDisabled ? "disabled" : ""}>← prev</button>
+      <div class="nx-ch-pager-status">
+        <span class="nx-ch-pager-page">${showingFrom}–${showingTo}</span>
+        <span class="nx-dim">of</span>
+        <span class="nx-ch-pager-total">${total}</span>
+        <span class="nx-dim">·</span>
+        <span class="nx-dim">page ${currentPage} / ${totalPages}</span>
+      </div>
+      <button class="nx-ch-pager-btn" data-pager="next" ${nextDisabled ? "disabled" : ""}>next →</button>
+    </nav>
+  ` : "";
+
+  return `
+    <div class="nx-ch-head">
+      <h3 style="margin:0">Chat history</h3>
+      <div class="nx-ch-live"><span class="nx-ch-live-dot"></span> live</div>
+    </div>
+    <div class="nx-ch-crumbs">
+      <button class="nx-ch-crumb-link" data-nav="workspaces">All workspaces</button>
+      <span class="nx-ch-crumb-sep">›</span>
+      <button class="nx-ch-crumb-link" data-nav="agents">${escapeHtml(chatHistoryState.workspace_name || wsId)}</button>
+      <span class="nx-ch-crumb-sep">›</span>
+      <span class="nx-ch-crumb-here">${escapeHtml(module)}</span>
+    </div>
+    <p class="nx-dim" style="font-size:13px;margin:6px 0 18px">
+      ${total === 0
+        ? "no chats with this agent yet"
+        : `showing <b>${showingFrom}–${showingTo}</b> of <b>${total}</b> ${total === 1 ? "chat" : "chats"} · newest first · 50 per page`}
+    </p>
+    ${chats.length === 0
+      ? `<div class="nx-empty" style="padding:32px;text-align:center;font-size:13px;opacity:0.6">no chats on this page</div>`
+      : `<div class="nx-ch-chat-list">${panels}</div>`}
+    ${pagination}
+  `;
+}
+
+function wireChatHistoryHandlers(panel) {
+  // Workspace cards → drill into agents
+  panel.querySelectorAll(".nx-ch-ws-card").forEach(btn => {
+    btn.addEventListener("click", () => {
+      chatHistoryState.workspace_id = btn.dataset.workspace;
+      chatHistoryState.workspace_name = btn.dataset.name;
+      chatHistoryState.workspace_tone = btn.dataset.tone;
+      chatHistoryState.module = null;
+      chatHistoryState.offset = 0;
+      chatHistoryState.view = "agents";
+      paintChatHistory(panel);
+    });
+  });
+  // Agent rows → drill into chats
+  panel.querySelectorAll(".nx-ch-agent-row").forEach(btn => {
+    btn.addEventListener("click", () => {
+      chatHistoryState.module = btn.dataset.module;
+      chatHistoryState.offset = 0;
+      chatHistoryState.view = "chats";
+      paintChatHistory(panel);
+    });
+  });
+  // Breadcrumb nav
+  panel.querySelectorAll(".nx-ch-crumb-link").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.nav;
+      if (target === "workspaces") {
+        chatHistoryState.view = "workspaces";
+        chatHistoryState.workspace_id = null;
+        chatHistoryState.workspace_name = null;
+        chatHistoryState.module = null;
+      } else if (target === "agents") {
+        chatHistoryState.view = "agents";
+        chatHistoryState.module = null;
+      }
+      chatHistoryState.offset = 0;
+      paintChatHistory(panel);
+    });
+  });
+  // Pagination
+  panel.querySelectorAll(".nx-ch-pager-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const dir = btn.dataset.pager;
+      const size = chatHistoryState.pageSize || 50;
+      if (dir === "prev") chatHistoryState.offset = Math.max(0, (chatHistoryState.offset || 0) - size);
+      else if (dir === "next") chatHistoryState.offset = (chatHistoryState.offset || 0) + size;
+      paintChatHistory(panel);
+    });
+  });
+}
+
 async function renderSettingsTab(tab) {
   switch (tab) {
     case "general": {
@@ -1939,12 +2264,18 @@ async function renderSettingsTab(tab) {
     }
     case "providers": {
       const list = await fetch("/api/providers").then(r => r.ok ? r.json() : {providers:[]}).catch(() => ({providers:[]}));
-      const rows = (list.providers || []).map(p => `
+      const rows = (list.providers || []).map(p => {
+        const sub = p.model || p.kind || "";
+        const subBlock = sub ? `<code>${escapeHtml(sub)}</code> · ` : "";
+        const dotClass = p.healthy ? "ok" : "fail";
+        const statusText = p.healthy ? "healthy" : "unavailable";
+        return `
         <div class="nx-st-row">
           <dt>${escapeHtml(p.name)} ${p.is_default ? '<span class="nx-st-pill">DEFAULT</span>' : ""}</dt>
-          <dd><code>${escapeHtml(p.model || p.kind || "")}</code> · status: <span class="${p.healthy ? "ok":"fail"}">${escapeHtml(p.healthy ? "healthy" : "unavailable")}</span></dd>
+          <dd>${subBlock}<span class="nx-st-status-dot ${dotClass}" aria-hidden="true"></span><span class="${dotClass}">${escapeHtml(statusText)}</span></dd>
         </div>
-      `).join("");
+      `;
+      }).join("");
       return `
         <h3>LLM providers</h3>
         <p class="nx-dim" style="font-size:13px;margin-bottom:18px">Local llama.cpp / Ollama runs offline. Set NEXUS_OPENAI_KEY / NEXUS_ANTHROPIC_KEY env vars to add cloud providers.</p>
