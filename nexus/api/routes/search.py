@@ -35,6 +35,105 @@ class SearchResponse(BaseModel):
     hits: list[SearchHit]
 
 
+class ReaderResponse(BaseModel):
+    url: str
+    title: str = ""
+    text: str = ""
+    digest: str = ""
+    truncated: bool = False
+    error: str | None = None
+
+
+@router.get("/reader", response_model=ReaderResponse)
+async def reader(request: Request, url: str, max_chars: int = 12000, digest: bool = True) -> ReaderResponse:
+    """Open a search result in-app.
+
+    Fetches the URL, strips scripts/styles/nav chrome, returns clean
+    plaintext plus an optional LLM-generated digest. Goes through the same
+    httpx path the search provider uses so the page load is auditable.
+    """
+    target = (url or "").strip()
+    if not target.startswith(("http://", "https://")):
+        raise HTTPException(400, "url must be http(s)")
+
+    kernel = request.app.state.kernel
+    title = ""
+    text = ""
+    truncated = False
+    error: str | None = None
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0) AppleWebKit/605.1.15 Safari/605.1.15 ONEXUS-Reader/1.0",
+        }) as client:
+            r = await client.get(target)
+            try:
+                kernel.chronicle.log("search", "reader_fetch", {
+                    "url": target,
+                    "status": r.status_code,
+                    "content_type": r.headers.get("content-type", ""),
+                })
+            except Exception:
+                pass
+            r.raise_for_status()
+            html = r.text or ""
+    except Exception as exc:
+        return ReaderResponse(url=target, error=f"fetch failed: {exc}")
+
+    # Very small reader — pull <title> + text outside <script>/<style>/<nav>/<footer>.
+    # Keeps the dependency surface zero. Good enough for an inline summary.
+    import re as _re
+    m_title = _re.search(r"<title[^>]*>(.*?)</title>", html, _re.IGNORECASE | _re.DOTALL)
+    if m_title:
+        title = _re.sub(r"\s+", " ", m_title.group(1)).strip()[:200]
+    cleaned = _re.sub(r"<(script|style|nav|footer|aside|head)[^>]*>.*?</\1>", " ", html, flags=_re.IGNORECASE | _re.DOTALL)
+    cleaned = _re.sub(r"<!--.*?-->", " ", cleaned, flags=_re.DOTALL)
+    cleaned = _re.sub(r"<br\s*/?>", "\n", cleaned, flags=_re.IGNORECASE)
+    cleaned = _re.sub(r"</(p|li|h[1-6]|div|section|article|tr)>", "\n", cleaned, flags=_re.IGNORECASE)
+    cleaned = _re.sub(r"<[^>]+>", " ", cleaned)
+    # Collapse whitespace + decode common entities the cheap way
+    cleaned = (
+        cleaned
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", '"')
+        .replace("&#39;", "'")
+    )
+    cleaned = _re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = _re.sub(r"\n\s*\n+", "\n\n", cleaned).strip()
+    if len(cleaned) > max_chars:
+        cleaned = cleaned[:max_chars]
+        truncated = True
+    text = cleaned
+
+    out = ReaderResponse(url=target, title=title, text=text, truncated=truncated)
+
+    # LLM digest — optional; gracefully degrades when no provider is up.
+    if digest:
+        router_ = getattr(kernel, "provider_router", None)
+        if router_ is not None and text:
+            prompt_text = text[:8000]
+            messages = [
+                {"role": "system", "content": (
+                    "You are a fast reader. Given a web page, output a tight 4-6 bullet "
+                    "summary of what it actually says — facts only, no praise, no filler. "
+                    "If the page is mostly navigation or login wall, say so in one bullet."
+                )},
+                {"role": "user", "content": f"URL: {target}\nTitle: {title}\n\nPAGE TEXT:\n{prompt_text}"},
+            ]
+            try:
+                digest_text = await router_.infer(messages=messages, max_tokens=500, temperature=0.3)
+                out.digest = (digest_text or "").strip()
+            except Exception as exc:
+                out.error = f"digest failed: {exc}"
+        elif router_ is None:
+            out.error = "no LLM provider — install ollama for digests"
+
+    return out
+
+
 @router.get("", response_model=SearchResponse)
 async def search(request: Request, q: str, limit: int = 10) -> SearchResponse:
     """Search the web through the kernel's network broker.
