@@ -2124,59 +2124,196 @@ async function renderCortexLauncher(hash) {
     const { runs = [], succeeded = 0, failed = 0 } = _cortexState.runs;
     resultsEl.innerHTML = `
       <header class="nx-cortex-results-head">
-        <div class="nx-eyebrow">RESULTS</div>
+        <div class="nx-eyebrow">RESULTS · click a card to continue the conversation</div>
         <div class="nx-cortex-summary">
           <span class="ok">${succeeded} succeeded</span>
           ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}
         </div>
       </header>
       <div class="nx-cortex-runlist">
-        ${runs.map(r => `
-          <article class="nx-cortex-run-card ${r.success ? "ok" : "fail"}" data-module="${escapeHtml(r.module)}">
-            <header class="nx-cortex-run-head">
-              <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
-              <span class="nx-cortex-run-meta">
-                <span class="nx-cortex-run-status ${r.success ? "ok" : "fail"}">${r.success ? "ok" : "error"}</span>
-                <span class="nx-dim">· ${r.elapsed_ms}ms</span>
-                ${r.llm_augmented ? `<span class="nx-cortex-llm-pill" title="The agent's native handler returned a canned/empty response, so Cortex re-asked the LLM to answer as this agent.">LLM</span>` : ""}
-              </span>
-            </header>
-            <div class="nx-cortex-run-body">
-              ${r.success
-                ? escapeHtml(r.response).replace(/\n/g, "<br>")
-                : `<span class="fail">${escapeHtml(r.error || "unknown error")}</span>`}
-            </div>
-            ${r.success ? `
-              <footer class="nx-cortex-run-fb" data-fb-state="${r._feedback || ""}">
-                <button type="button" class="nx-cortex-fb-btn ${r._feedback === "up" ? "active" : ""}" data-fb="up" aria-label="Useful — +0.12 to ${escapeHtml(r.module)}'s trust">
-                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M3 8h2v6H3V8zm3 6V8l3-5c.5 0 1 .5 1 1v3h3c.6 0 1 .4 1 1l-1 5c-.1.4-.5.7-1 .7H6z"/></svg>
-                  <span>useful</span>
-                </button>
-                <button type="button" class="nx-cortex-fb-btn ${r._feedback === "down" ? "active down" : ""}" data-fb="down" aria-label="Not useful — −0.22 from ${escapeHtml(r.module)}'s trust">
-                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 8h-2V2h2v6zm-3-6v6l-3 5c-.5 0-1-.5-1-1v-3H3c-.6 0-1-.4-1-1L3 3c.1-.4.5-.7 1-.7h6z"/></svg>
-                  <span>wrong</span>
-                </button>
-                <span class="nx-cortex-fb-hint nx-dim">${r._feedback === "up"
-                  ? "+0.12 applied — trust ↑"
-                  : r._feedback === "down"
-                    ? "−0.22 applied — trust ↓"
-                    : "rate this response · feeds Aegis trust"}</span>
-              </footer>
-            ` : ""}
-          </article>
-        `).join("")}
+        ${runs.map((r, idx) => renderRunCard(r, idx)).join("")}
       </div>
     `;
-    // Wire feedback buttons. Every action goes through the same endpoint
-    // the main composer uses, so the cockpit's trust meter ticks in real
-    // time exactly as it does for normal chats.
-    resultsEl.querySelectorAll(".nx-cortex-run-card").forEach(card => {
+    wireRunCards();
+  };
+
+  // Each turn in a card is rendered as a chat bubble. The "thread" is the
+  // run's `_messages` array (built up across continue calls). When the
+  // dispatch first lands `_messages` is initialized as
+  // [{role:'user', content: original_prompt}, {role:'assistant', content: r.response}].
+  const renderTurn = (m) => {
+    if (m.role === "user") {
+      return `
+        <div class="nx-cortex-turn user">
+          <span class="nx-cortex-turn-tag">you</span>
+          <div class="nx-cortex-turn-body">${escapeHtml(m.content)}</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="nx-cortex-turn agent">
+        <span class="nx-cortex-turn-tag">agent</span>
+        <div class="nx-cortex-turn-body">${escapeHtml(m.content).replace(/\n/g, "<br>")}</div>
+      </div>
+    `;
+  };
+
+  const renderRunCard = (r, idx) => {
+    if (!r.success) {
+      return `
+        <article class="nx-cortex-run-card fail" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
+          <header class="nx-cortex-run-head">
+            <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
+            <span class="nx-cortex-run-meta">
+              <span class="nx-cortex-run-status fail">error</span>
+              <span class="nx-dim">· ${r.elapsed_ms}ms</span>
+            </span>
+          </header>
+          <div class="nx-cortex-run-body">
+            <span class="fail">${escapeHtml(r.error || "unknown error")}</span>
+          </div>
+        </article>
+      `;
+    }
+    // Initialize _messages on first render so the very first response is part of the thread.
+    if (!r._messages) {
+      r._messages = [
+        { role: "user", content: _cortexState.prompt },
+        { role: "assistant", content: r.response || "" },
+      ];
+    }
+    const handoffPill = r.suggested_handoff
+      ? `<button class="nx-cortex-handoff-pill" data-handoff="${escapeHtml(r.suggested_handoff)}" title="The agent suggested handing the next turn to ${escapeHtml(r.suggested_handoff)}. Click to accept.">↗ hand off to ${escapeHtml(r.suggested_handoff)}</button>`
+      : "";
+    const turning = r._continuing
+      ? `<div class="nx-cortex-turn agent typing"><span class="nx-cortex-turn-tag">${escapeHtml(r._next_agent || r.module)}</span><div class="nx-cortex-turn-body nx-dim">thinking…</div></div>`
+      : "";
+    return `
+      <article class="nx-cortex-run-card ok" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
+        <header class="nx-cortex-run-head">
+          <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
+          <span class="nx-cortex-run-meta">
+            <span class="nx-cortex-run-status ok">ok</span>
+            <span class="nx-dim">· ${r.elapsed_ms}ms · ${r._messages.filter(m => m.role === "assistant").length} turn${r._messages.filter(m => m.role === "assistant").length === 1 ? "" : "s"}</span>
+            ${r.llm_augmented ? `<span class="nx-cortex-llm-pill" title="The agent's native handler returned a canned response, so Cortex re-asked the LLM to answer as this agent.">LLM</span>` : ""}
+          </span>
+        </header>
+        <div class="nx-cortex-turns">
+          ${r._messages.map(renderTurn).join("")}
+          ${turning}
+        </div>
+
+        <footer class="nx-cortex-run-fb" data-fb-state="${r._feedback || ""}">
+          <button type="button" class="nx-cortex-fb-btn ${r._feedback === "up" ? "active" : ""}" data-fb="up" aria-label="Useful — +0.12 to ${escapeHtml(r.module)}'s trust">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M3 8h2v6H3V8zm3 6V8l3-5c.5 0 1 .5 1 1v3h3c.6 0 1 .4 1 1l-1 5c-.1.4-.5.7-1 .7H6z"/></svg>
+            <span>useful</span>
+          </button>
+          <button type="button" class="nx-cortex-fb-btn ${r._feedback === "down" ? "active down" : ""}" data-fb="down" aria-label="Not useful — −0.22 from ${escapeHtml(r.module)}'s trust">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 8h-2V2h2v6zm-3-6v6l-3 5c-.5 0-1-.5-1-1v-3H3c-.6 0-1-.4-1-1L3 3c.1-.4.5-.7 1-.7h6z"/></svg>
+            <span>wrong</span>
+          </button>
+          ${handoffPill}
+          <button type="button" class="nx-cortex-handoff-btn" data-pick-handoff="${escapeHtml(r.module)}">↗ hand off…</button>
+          <span class="nx-cortex-fb-hint nx-dim">${r._feedback === "up" ? "+0.12 applied — trust ↑" : r._feedback === "down" ? "−0.22 applied — trust ↓" : "rate this response · feeds Aegis trust"}</span>
+        </footer>
+
+        <form class="nx-cortex-followup" data-followup="${escapeHtml(r.module)}">
+          <input class="nx-cortex-followup-input" type="text" placeholder="ask a follow-up… (or '@<agent>' to hand off mid-message)" autocomplete="off">
+          <button type="submit" class="nx-cortex-followup-send" ${r._continuing ? "disabled" : ""}>${r._continuing ? "…" : "send"}</button>
+        </form>
+
+        ${r._handoffPickerOpen ? `
+          <div class="nx-cortex-handoff-picker">
+            <input class="nx-cortex-handoff-search" type="search" placeholder="search agents to hand off to…" autocomplete="off">
+            <div class="nx-cortex-handoff-results">
+              ${renderHandoffOptions(r)}
+            </div>
+            <button type="button" class="nx-cortex-handoff-close" data-close-handoff="${escapeHtml(r.module)}">close</button>
+          </div>
+        ` : ""}
+      </article>
+    `;
+  };
+
+  const renderHandoffOptions = (r) => {
+    const cands = _cortexState.candidates || { all_modules: [] };
+    const filter = (r._handoffSearch || "").toLowerCase();
+    const builtins = (cands.all_modules || []).filter(s => !filter || s.includes(filter));
+    const catalog = (r._handoffCatalogResults && r._handoffCatalogResults.length > 0)
+      ? r._handoffCatalogResults
+      : (cands.catalog_matches || []);
+    return `
+      <div class="nx-cortex-handoff-group">
+        <div class="nx-eyebrow nx-cortex-handoff-eyebrow">BUILT-IN</div>
+        <div class="nx-cortex-handoff-chips">
+          ${builtins.map(s => `<button class="nx-cortex-handoff-chip" data-handoff-to="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
+        </div>
+      </div>
+      ${catalog.length ? `
+        <div class="nx-cortex-handoff-group">
+          <div class="nx-eyebrow nx-cortex-handoff-eyebrow">CATALOG</div>
+          <div class="nx-cortex-handoff-chips">
+            ${catalog.slice(0, 16).map(c => `<button class="nx-cortex-handoff-chip catalog" data-handoff-to="${escapeHtml(c.slug)}" title="${escapeHtml(c.tagline || "")}">${escapeHtml(c.name || c.slug)}</button>`).join("")}
+          </div>
+        </div>
+      ` : ""}
+    `;
+  };
+
+  const continueOnCard = async (cardIdx, nextMessage, opts = {}) => {
+    const r = _cortexState.runs.runs[cardIdx];
+    if (!r) return;
+    const targetModule = opts.targetModule || r.module;
+    r._messages = r._messages || [];
+    r._messages.push({ role: "user", content: nextMessage });
+    r._continuing = true;
+    r._next_agent = targetModule;
+    renderRuns();
+    try {
+      const resp = await fetch("/api/cortex/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          module: targetModule,
+          history: r._messages.slice(0, -1),  // everything BEFORE the new user turn
+          message: nextMessage,
+          workspace_id: state.active || null,
+        }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        // If we handed off, update the card's module so subsequent turns
+        // continue with the new agent. History is preserved.
+        if (targetModule !== r.module) {
+          r.module = targetModule;
+          r.llm_augmented = true;   // continue endpoint always uses LLM
+        }
+        r._messages.push({ role: "assistant", content: data.response || "" });
+        r.suggested_handoff = data.suggested_handoff || null;
+        r.elapsed_ms = data.elapsed_ms;
+      } else {
+        const detail = await resp.text();
+        r._messages.push({ role: "assistant", content: `[error] ${resp.status}: ${detail}` });
+      }
+    } catch (err) {
+      r._messages.push({ role: "assistant", content: `[network error] ${err.message}` });
+    } finally {
+      r._continuing = false;
+      r._next_agent = null;
+      renderRuns();
+    }
+  };
+
+  const wireRunCards = () => {
+    resultsEl.querySelectorAll(".nx-cortex-run-card[data-idx]").forEach(card => {
+      const idx = parseInt(card.dataset.idx, 10);
       const moduleSlug = card.dataset.module;
+      const runEntry = _cortexState.runs.runs[idx];
+
+      // Feedback buttons — same Aegis +0.12/−0.22 loop as the main composer
       card.querySelectorAll(".nx-cortex-fb-btn[data-fb]").forEach(btn => {
         btn.addEventListener("click", async () => {
           const accepted = btn.dataset.fb === "up";
-          // Optimistically lock the run's feedback state so re-renders persist it.
-          const runEntry = (_cortexState.runs.runs || []).find(x => x.module === moduleSlug);
           if (runEntry) runEntry._feedback = accepted ? "up" : "down";
           renderRuns();
           try {
@@ -2184,16 +2321,92 @@ async function renderCortexLauncher(hash) {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ module: moduleSlug, accepted }),
             });
-            // Reload trust + repaint the cockpit immediately
             if (typeof loadTrust === "function") {
               await loadTrust();
               if (typeof renderCockpitRail === "function") renderCockpitRail();
             }
           } catch {
-            // Roll back on network failure
             if (runEntry) runEntry._feedback = "";
             renderRuns();
           }
+        });
+      });
+
+      // Follow-up composer — sends next message to the SAME agent unless
+      // the message starts with @<slug>, in which case we hand off.
+      const form = card.querySelector(".nx-cortex-followup");
+      if (form && !runEntry._continuing) {
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const input = form.querySelector(".nx-cortex-followup-input");
+          const raw = (input?.value || "").trim();
+          if (!raw) return;
+          input.value = "";
+          // Detect @<slug> hand-off prefix
+          const handoffMatch = raw.match(/^@([a-z0-9][a-z0-9_.-]*)\s+(.*)$/i);
+          if (handoffMatch) {
+            const target = handoffMatch[1].toLowerCase();
+            const remainder = handoffMatch[2];
+            await continueOnCard(idx, remainder, { targetModule: target });
+          } else {
+            await continueOnCard(idx, raw);
+          }
+        });
+      }
+
+      // Inline accept of agent-suggested handoff
+      card.querySelectorAll("[data-handoff]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const target = btn.dataset.handoff;
+          if (!target) return;
+          // Compose a tiny "continue" prompt that lets the new agent pick up
+          await continueOnCard(idx, "(continuing from where the previous agent left off — please proceed)", { targetModule: target });
+        });
+      });
+
+      // Explicit hand-off picker toggle
+      card.querySelectorAll("[data-pick-handoff]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          runEntry._handoffPickerOpen = !runEntry._handoffPickerOpen;
+          runEntry._handoffSearch = "";
+          renderRuns();
+        });
+      });
+      card.querySelectorAll("[data-close-handoff]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          runEntry._handoffPickerOpen = false;
+          renderRuns();
+        });
+      });
+
+      // Hand-off picker search + chip click
+      const pickerSearch = card.querySelector(".nx-cortex-handoff-search");
+      if (pickerSearch) {
+        pickerSearch.value = runEntry._handoffSearch || "";
+        pickerSearch.focus();
+        const debSearch = debounceCortexInput(async (e) => {
+          const q = (e?.target?.value || e || "").trim();
+          runEntry._handoffSearch = q;
+          if (q) {
+            try {
+              const r2 = await fetch(`/api/cortex/agent-search?q=${encodeURIComponent(q)}&limit=24`);
+              if (r2.ok) {
+                const data = await r2.json();
+                runEntry._handoffCatalogResults = data.matches || [];
+              }
+            } catch {}
+          } else {
+            runEntry._handoffCatalogResults = [];
+          }
+          renderRuns();
+        }, 220);
+        pickerSearch.addEventListener("input", debSearch);
+      }
+      card.querySelectorAll("[data-handoff-to]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const target = btn.dataset.handoffTo;
+          runEntry._handoffPickerOpen = false;
+          await continueOnCard(idx, "(handed off to you with full prior context — please continue)", { targetModule: target });
         });
       });
     });

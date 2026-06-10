@@ -487,6 +487,160 @@ async def candidates(
     }
 
 
+class ContinueBody(BaseModel):
+    module: str = Field(..., min_length=1)
+    history: list[dict] = Field(default_factory=list, description="prior turns: [{role: 'user'|'assistant', content: '...'}]")
+    message: str = Field(..., min_length=1)
+    workspace_id: str | None = None
+
+
+_HANDOFF_INSTRUCTION = (
+    "\n\nIf another ONEXUS agent would handle the user's next step better "
+    "than you can, end your reply with a single line of the form "
+    "[handoff: <agent-slug>] naming that agent — the user gets a one-click "
+    "button to dispatch the conversation there with full history preserved. "
+    "Only suggest hand-off when you are genuinely outside your domain; don't "
+    "punt to another agent for things you should answer yourself."
+)
+
+
+def _resolve_persona(kernel, request: Request, slug: str) -> tuple[str, str]:
+    """Return (persona_prompt, kind) for a given agent slug.
+
+    Built-ins use the curated _AGENT_PERSONAS map; catalog agents derive
+    persona from their catalog entry. Falls back to a generic prompt for
+    anything we don't recognize. Every persona is suffixed with the
+    hand-off instruction so any agent can route the next turn elsewhere
+    when it's the right call."""
+    cortex = kernel.cortex
+    base: str
+    kind: str
+    if slug in cortex._modules:
+        base = _AGENT_PERSONAS.get(
+            slug,
+            f"You are {slug}, an agent in the ONEXUS operating system. "
+            f"Respond helpfully and concisely to the user's request.",
+        )
+        kind = "builtin"
+    else:
+        cat = _get_catalog(request)
+        entry = None
+        if cat is not None:
+            try:
+                entry = cat.get_agent(slug)
+            except Exception:
+                entry = None
+        if entry is not None:
+            base = _catalog_persona(entry)
+            kind = "catalog"
+        else:
+            base = (
+                f"You are {slug}, an agent in the ONEXUS operating system. "
+                f"Respond helpfully and concisely to the user's request."
+            )
+            kind = "unknown"
+    return base + _HANDOFF_INSTRUCTION, kind
+
+
+# Pattern an agent can emit to suggest a hand-off, e.g.:
+#   "[handoff: oracle] — let Oracle take it from here"
+# Or naturally: "you should ask @oracle about this"
+_HANDOFF_PATTERNS = (
+    # Explicit marker (preferred — added to the system prompt as an option)
+    (r"\[handoff:\s*([a-z0-9][a-z0-9_.-]*)\s*\]", 1.0),
+    # Natural @mention
+    (r"@([a-z0-9][a-z0-9_.-]{2,})", 0.7),
+)
+
+
+def _detect_handoff_suggestion(response: str, known_slugs: set[str]) -> str | None:
+    """Find an agent slug the response suggests handing off to.
+
+    Returns the slug only if it matches a known registered agent or catalog
+    slug (so we don't surface garbage like "@username" that the LLM made up)."""
+    import re as _re
+    for pattern, _confidence in _HANDOFF_PATTERNS:
+        for m in _re.finditer(pattern, response, _re.IGNORECASE):
+            candidate = m.group(1).lower().strip()
+            if candidate in known_slugs:
+                return candidate
+    return None
+
+
+@router.post("/continue")
+async def continue_thread(body: ContinueBody, request: Request) -> dict:
+    """Continue an in-flight Cortex thread.
+
+    The launcher tracks per-card history client-side and POSTs the full
+    transcript here so the agent (LLM persona) sees the whole conversation
+    on every turn, not just the latest message. Same persona resolution
+    for built-in and catalog agents — handoff to a different agent is just
+    a new POST with the next module slug; history is preserved across
+    the swap.
+    """
+    kernel = _get_kernel(request)
+    cortex = kernel.cortex
+
+    slug = body.module.strip().lower()
+    persona, kind = _resolve_persona(kernel, request, slug)
+
+    router_ = getattr(kernel, "provider_router", None)
+    if router_ is None:
+        raise HTTPException(status_code=503, detail="no LLM provider available")
+
+    # Build the message stream: persona system + clean history + user message.
+    messages: list[dict] = [{"role": "system", "content": persona}]
+    for turn in (body.history or [])[-20:]:  # cap to last 20 turns for safety
+        role = turn.get("role")
+        content = (turn.get("content") or "").strip()
+        if not content:
+            continue
+        if role not in ("user", "assistant"):
+            continue
+        messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": body.message})
+
+    start = time.perf_counter()
+    try:
+        text = await router_.infer(messages=messages, max_tokens=900, temperature=0.6)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"LLM error: {exc}")
+    elapsed = int((time.perf_counter() - start) * 1000)
+    response_text = (text or "").strip()
+
+    # Hand-off detection — look for known slugs (built-ins + catalog) so we
+    # never recommend something that can't actually be dispatched.
+    cat = _get_catalog(request)
+    known: set[str] = set(cortex._modules.keys())
+    if cat is not None:
+        try:
+            known.update(e.slug for e in cat._entries.values())
+        except Exception:
+            pass
+    handoff = _detect_handoff_suggestion(response_text, known)
+
+    try:
+        kernel.chronicle.log("cortex", "continue", {
+            "module": slug,
+            "kind": kind,
+            "elapsed_ms": elapsed,
+            "history_turns": len([m for m in messages if m["role"] != "system"]) - 1,
+            "response_preview": response_text[:160],
+            "suggested_handoff": handoff,
+            "workspace_id": body.workspace_id,
+        })
+    except Exception:
+        pass
+
+    return {
+        "module": slug,
+        "kind": kind,
+        "response": response_text,
+        "elapsed_ms": elapsed,
+        "suggested_handoff": handoff,
+    }
+
+
 @router.get("/agent-search")
 async def cortex_agent_search(
     request: Request,

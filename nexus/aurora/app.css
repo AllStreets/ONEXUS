@@ -2774,6 +2774,183 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   word-wrap: break-word;
 }
 
+/* threaded turns inside each run card */
+.nx-cortex-turns {
+  display: flex; flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.nx-cortex-turn {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 6px 0;
+}
+.nx-cortex-turn + .nx-cortex-turn {
+  padding-top: 8px;
+  border-top: 1px dashed rgba(232,222,252,0.06);
+}
+.nx-cortex-turn-tag {
+  font-family: var(--nx-font-mono); font-size: 9.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 3px 6px; border-radius: 4px;
+  align-self: start;
+  user-select: none;
+}
+.nx-cortex-turn.user .nx-cortex-turn-tag {
+  background: rgba(154, 168, 255, 0.18);
+  color: #c5cbff;
+}
+.nx-cortex-turn.agent .nx-cortex-turn-tag {
+  background: color-mix(in srgb, var(--nx-mood-primary) 18%, transparent);
+  color: var(--nx-mood-primary);
+}
+.nx-cortex-turn-body {
+  font-size: 13.5px; line-height: 1.55;
+  color: #e8e0fa;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.nx-cortex-turn.agent .nx-cortex-turn-body {
+  color: #d9d0ea;
+  font-family: var(--nx-font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.nx-cortex-turn.typing .nx-cortex-turn-body {
+  font-style: italic; opacity: 0.55;
+  font-family: inherit; font-size: 13px;
+}
+
+/* follow-up composer at the bottom of each card */
+.nx-cortex-followup {
+  display: flex; gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(232,222,252,0.07);
+}
+.nx-cortex-followup-input {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.30);
+  color: #f3ecff;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 7px;
+  font-size: 13px; font-family: inherit;
+  outline: none;
+  transition: border-color var(--d-fast), box-shadow var(--d-fast);
+}
+.nx-cortex-followup-input:focus {
+  border-color: var(--nx-mood-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-mood-primary) 18%, transparent);
+}
+.nx-cortex-followup-send {
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--nx-mood-primary) 28%, transparent);
+  color: #f3ecff;
+  border: 1px solid color-mix(in srgb, var(--nx-mood-primary) 60%, transparent);
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono);
+  font-size: 11px; letter-spacing: 0.10em;
+  transition: background var(--d-fast);
+}
+.nx-cortex-followup-send:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nx-mood-primary) 45%, transparent);
+}
+.nx-cortex-followup-send:disabled { opacity: 0.40; cursor: not-allowed; }
+
+/* hand-off affordances */
+.nx-cortex-handoff-pill {
+  margin-left: 8px;
+  padding: 5px 10px;
+  background: color-mix(in srgb, #f8c460 18%, transparent);
+  color: #f8c460;
+  border: 1px dashed rgba(248, 196, 96, 0.45);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono); font-size: 10px;
+  letter-spacing: 0.10em;
+  transition: background var(--d-fast);
+}
+.nx-cortex-handoff-pill:hover {
+  background: color-mix(in srgb, #f8c460 30%, transparent);
+}
+.nx-cortex-handoff-btn {
+  margin-left: 6px;
+  padding: 5px 10px;
+  background: transparent;
+  color: #9b91ad;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono);
+  font-size: 10.5px; letter-spacing: 0.08em;
+}
+.nx-cortex-handoff-btn:hover {
+  color: #d9d0ea;
+  background: rgba(232,222,252,0.06);
+}
+.nx-cortex-handoff-picker {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(232,222,252,0.025);
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 10px;
+}
+.nx-cortex-handoff-search {
+  width: 100%;
+  padding: 7px 10px;
+  background: rgba(0,0,0,0.30);
+  color: #f3ecff;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 6px;
+  font-family: var(--nx-font-mono); font-size: 12px;
+  outline: none;
+  margin-bottom: 10px;
+}
+.nx-cortex-handoff-group + .nx-cortex-handoff-group { margin-top: 10px; }
+.nx-cortex-handoff-eyebrow { margin-bottom: 6px; }
+.nx-cortex-handoff-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.nx-cortex-handoff-chip {
+  padding: 4px 9px;
+  background: rgba(232,222,252,0.04);
+  color: #c5bbdc;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+.nx-cortex-handoff-chip:hover {
+  color: #f3ecff;
+  border-color: var(--nx-mood-primary);
+}
+.nx-cortex-handoff-chip.catalog {
+  text-transform: none; letter-spacing: 0.02em;
+  font-family: inherit; font-size: 11.5px;
+  max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nx-cortex-handoff-close {
+  margin-top: 10px;
+  padding: 5px 12px;
+  background: transparent;
+  color: #9b91ad;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+.nx-cortex-handoff-close:hover {
+  background: rgba(232,222,252,0.06);
+  color: #d9d0ea;
+}
+
 /* per-run feedback footer — wires the same +0.12 / −0.22 Aegis loop the
    main composer's thumb buttons use, so every Cortex-launched response
    feeds the trust meter exactly like a one-on-one chat. */
