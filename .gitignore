@@ -39,3 +39,6 @@ no-stoplight-*.png
 
 # Local-only handoff notes between agents (delete after consumed — see file header)
 _HANDOFF_*.md
+
+# Astro local build cache (site/.astro/data-store.json, settings.json, etc.)
+site/.astro/
