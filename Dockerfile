@@ -38,6 +38,14 @@ ENV NEXUS_AGENTS_CATALOG=/opt/onexus/catalog \
     NEXUS_DATA_DIR=/data \
     PORT=8000
 
+# Run as an unprivileged user. The workshop runtime spawns subprocesses; a
+# sandbox escape under a non-root uid cannot touch the rest of the image or
+# the host. The data volume and baked catalog are owned by this user.
+RUN useradd --system --uid 10001 --create-home --home-dir /home/onexus onexus \
+ && mkdir -p /data \
+ && chown -R onexus:onexus /opt/onexus /data
+USER onexus
+
 VOLUME ["/data"]
 
 EXPOSE 8000

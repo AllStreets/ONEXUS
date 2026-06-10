@@ -372,8 +372,8 @@ Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 | Mood engine reacts to signals | `tests/aurora/test_mood_wiring.py` |
 | Cockpit panels stay live | `tests/aurora/test_websockets.py` |
 | Permission inbox round-trips | `tests/aurora/test_permissions_routes.py` |
-
-**1014 passed, 1 skipped** at v1.0.
+| Optional API token gate (HTTP + WS) | `tests/api_safety/test_api_token.py` |
+| Agent launch command allowlist | `tests/agents/test_launcher_allowlist.py` |
 
 ---
 
