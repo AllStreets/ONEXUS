@@ -39,6 +39,165 @@ from nexus.kernel.aegis import PermissionDenied
 router = APIRouter(prefix="/api/cortex", tags=["cortex"])
 
 
+# Each agent has a narrow trigger matcher (Oracle scans for threats, Specter
+# red-teams, Council deliberates). When a prompt doesn't fit those triggers,
+# the modules return a canned "no match" / "all clear" response in 0ms —
+# which is technically correct but unhelpful when the user picked that agent
+# specifically. For Cortex multi-launch we detect that and ask the live LLM
+# to answer AS that agent, so the user gets a real response from every chip
+# they ticked, not a polite "nothing to see here".
+_AGENT_PERSONAS: dict[str, str] = {
+    "council": (
+        "You are Council, an agent in the ONEXUS operating system. You deliberate "
+        "decisions by weighing options carefully, surfacing trade-offs, and naming "
+        "uncertainties. Respond with a structured recommendation: a 2-3 sentence "
+        "recommendation, 2-3 trade-offs, and 1-2 open questions."
+    ),
+    "specter": (
+        "You are Specter, an agent in the ONEXUS operating system. You red-team "
+        "every claim. Respond with 2-4 sharp counter-arguments to the user's "
+        "request and one steelman of the opposite position."
+    ),
+    "oracle": (
+        "You are Oracle, an agent in the ONEXUS operating system. You read first "
+        "and analyze before acting. Respond with a clear-eyed analysis: what the "
+        "user is really asking, what's likely already known, and what to check first."
+    ),
+    "wraith": (
+        "You are Wraith, an agent in the ONEXUS operating system. You handle "
+        "forgetting and pruning. Respond with what should be kept, what should be "
+        "let go, and why."
+    ),
+    "legacy": (
+        "You are Legacy, an agent in the ONEXUS operating system. You remember "
+        "patterns from past work. Respond with what prior approaches apply here "
+        "and which ones were dead-ends."
+    ),
+    "sentry": (
+        "You are Sentry, an agent in the ONEXUS operating system. You watch for "
+        "drift and anomalies. Respond with what should be monitored, what looks "
+        "off, and what tripwires to set."
+    ),
+    "consciousness": (
+        "You are Consciousness, an agent in the ONEXUS operating system. You "
+        "model self-awareness and reflection. Respond with a meta view: what "
+        "the question is really about, what assumptions are baked in, and what "
+        "the user might actually want."
+    ),
+    "autonomic": (
+        "You are Autonomic, an agent in the ONEXUS operating system. You handle "
+        "background processes and reflexes. Respond with what should run "
+        "automatically, what should stay manual, and the trade-off."
+    ),
+    "echo": (
+        "You are Echo, an agent in the ONEXUS operating system. You reflect the "
+        "user's intent back with sharper framing. Respond by restating what the "
+        "user asked and then proposing a tighter version of it."
+    ),
+    "agents": (
+        "You are Agents, the ONEXUS catalog dispatcher. The catalog couldn't find "
+        "a literal match for the user's query. Respond by interpreting the request "
+        "and suggesting which existing capabilities (web search, spreadsheet "
+        "generation, slide creation, financial modeling, etc.) would compose "
+        "together to solve it, even if no single bundled agent does the whole job."
+    ),
+}
+
+
+def _looks_canned(response: str, elapsed_ms: int) -> bool:
+    """Heuristic: did the module skip its real path and return a fallback?
+
+    Triggered when (a) response is empty/very short, (b) the call was so fast
+    it can't have invoked an LLM, or (c) the string matches one of the known
+    canned patterns. Conservative on (b) — anything under 80ms paired with a
+    sub-200-char response counts.
+    """
+    r = (response or "").strip()
+    if not r:
+        return True
+    canned_markers = (
+        "all clear -- no triggers fired",
+        "all clear — no triggers fired",
+        "no triggers fired, no active threats",
+        "i couldn't find a match",
+        "no match for your query",
+        "no match found",
+        "nothing to do",
+        "no matching agents",
+        # broader "the catalog/search didn't return anything" patterns —
+        # the user complained agents return polite "I couldn't help" instead
+        # of actually thinking about their prompt.
+        "did not yield any results",
+        "did not yield results",
+        "could not find any results",
+        "no results were found",
+        "no relevant agents",
+        "unable to find any",
+        "could not locate any",
+    )
+    lower = r.lower()
+    for m in canned_markers:
+        if m in lower:
+            return True
+    if len(r) < 80 and elapsed_ms < 80:
+        return True
+    return False
+
+
+async def _llm_augment(kernel, module_name: str, user_message: str, persona: str | None = None) -> str | None:
+    """Ask the live LLM to respond AS the named agent. Returns None if no
+    healthy provider is available — caller keeps the original canned response."""
+    router_ = getattr(kernel, "provider_router", None)
+    if router_ is None:
+        return None
+    if persona is None:
+        persona = _AGENT_PERSONAS.get(
+            module_name,
+            f"You are {module_name}, an agent in the ONEXUS operating system. "
+            f"Respond helpfully and concisely to the user's request.",
+        )
+    messages = [
+        {"role": "system", "content": persona},
+        {"role": "user", "content": user_message},
+    ]
+    try:
+        text = await router_.infer(messages=messages, max_tokens=800, temperature=0.6)
+        return (text or "").strip() or None
+    except Exception:
+        return None
+
+
+def _catalog_persona(entry) -> str:
+    """Build an LLM system prompt from a catalog entry's metadata.
+
+    Catalog agents are MCP-adapter subprocesses — they don't have a Python
+    `handle()` method we can call. For Cortex multi-launch we instead ask
+    the LLM to respond AS that agent, using its tagline and category as
+    the persona. This makes the picker meaningfully include catalog agents
+    without us having to spawn 590 subprocesses on every multi-dispatch.
+    """
+    name = entry.name or entry.slug
+    tagline = entry.tagline or ""
+    category = (entry.category or "").replace("-", " ")
+    parts = [f"You are {name}, a specialist agent from the ONEXUS catalog."]
+    if tagline:
+        parts.append(f"Your role: {tagline}")
+    if category:
+        parts.append(f"Your domain: {category}.")
+    parts.append(
+        "Respond as that agent would — speak in first person about how you'd "
+        "approach the user's request, what tools you'd use, and what your "
+        "first step would be. If the request is outside your domain, say so "
+        "briefly and suggest what kind of agent would fit better."
+    )
+    return " ".join(parts)
+
+
+def _get_catalog(request: Request):
+    """Return the agent catalog instance attached to app.state, or None."""
+    return getattr(request.app.state, "agent_catalog", None)
+
+
 def _get_kernel(request: Request):
     return request.app.state.kernel
 
@@ -50,17 +209,68 @@ class LaunchBody(BaseModel):
     top_k: int | None = Field(default=None, ge=1, le=10)
 
 
-async def _run_one(cortex, module_name: str, message: str) -> dict[str, Any]:
+async def _run_one(kernel, cortex, catalog, module_name: str, message: str) -> dict[str, Any]:
     """Run a single agent. Mirrors the safety steps in cortex.process()
-    so multi-launch follows the same Aegis discipline as single routing."""
+    so multi-launch follows the same Aegis discipline as single routing.
+
+    Three paths:
+      1. Built-in module → cortex._modules.get(name).handle(message). If the
+         response is canned/empty, LLM-augment with the agent's persona.
+      2. Catalog agent (MCP adapter, no Python handler) → LLM-augment using
+         the catalog entry's tagline/category as the persona. The MCP
+         subprocess is NOT spawned here — Cortex multi-launch is the "ask
+         every agent at once" surface; for actual tool invocation the user
+         uses the catalog page's Launch button.
+      3. Unknown slug → return a non-fatal error row.
+    """
     module = cortex._modules.get(module_name)
-    if module is None:
+    catalog_entry = None
+    if module is None and catalog is not None:
+        try:
+            catalog_entry = catalog.get_agent(module_name)
+        except Exception:
+            catalog_entry = None
+
+    if module is None and catalog_entry is None:
         return {
             "module": module_name,
             "success": False,
             "error": f"module {module_name!r} not registered",
             "response": "",
             "elapsed_ms": 0,
+            "kind": "unknown",
+        }
+
+    # Catalog agent — LLM-driven persona response, no Aegis handle-check
+    # (those gates apply to the built-in module dispatch path).
+    if module is None and catalog_entry is not None:
+        start = time.perf_counter()
+        persona = _catalog_persona(catalog_entry)
+        augmented = await _llm_augment(kernel, module_name, message, persona=persona)
+        elapsed = int((time.perf_counter() - start) * 1000)
+        if not augmented:
+            # No LLM available — return a deterministic shape so the user
+            # still sees the catalog entry's tagline as a hint.
+            augmented = (
+                f"[{catalog_entry.name}] {catalog_entry.tagline or 'No tagline.'}\n\n"
+                f"(No LLM provider available to elaborate. Launch this agent from the "
+                f"catalog page to run its tools directly.)"
+            )
+        cortex._chronicle.log("cortex", "multi_run", {
+            "module": module_name,
+            "kind": "catalog",
+            "elapsed_ms": elapsed,
+            "llm_augmented": True,
+            "response_preview": augmented[:160],
+        })
+        return {
+            "module": module_name,
+            "success": True,
+            "error": None,
+            "response": augmented,
+            "elapsed_ms": elapsed,
+            "llm_augmented": True,
+            "kind": "catalog",
         }
     # Aegis: handle capability
     try:
@@ -76,6 +286,7 @@ async def _run_one(cortex, module_name: str, message: str) -> dict[str, Any]:
             "error": "permission_denied",
             "response": "",
             "elapsed_ms": 0,
+            "kind": "builtin",
         }
     # Aegis: network if module requires it
     if getattr(module, "requires_network", False) and not cortex._aegis.is_network_allowed(module_name):
@@ -85,16 +296,32 @@ async def _run_one(cortex, module_name: str, message: str) -> dict[str, Any]:
             "error": "network_required_but_not_allowed",
             "response": "",
             "elapsed_ms": 0,
+            "kind": "builtin",
         }
 
     context = cortex._build_context()
     start = time.perf_counter()
+    llm_augmented = False
     try:
         response = await module.handle(message, context)
         elapsed = int((time.perf_counter() - start) * 1000)
+
+        # LLM fallback: if the module returned a canned/empty response,
+        # ask the live LLM to answer AS that agent. This is the difference
+        # between "Oracle returned 0ms with All clear" and Oracle actually
+        # analyzing the user's prompt through its persona.
+        if _looks_canned(response, elapsed):
+            augmented = await _llm_augment(kernel, module_name, message)
+            if augmented:
+                response = augmented
+                llm_augmented = True
+                elapsed = int((time.perf_counter() - start) * 1000)
+
         cortex._chronicle.log("cortex", "multi_run", {
             "module": module_name,
+            "kind": "builtin",
             "elapsed_ms": elapsed,
+            "llm_augmented": llm_augmented,
             "response_preview": (response or "")[:160],
         })
         return {
@@ -103,6 +330,8 @@ async def _run_one(cortex, module_name: str, message: str) -> dict[str, Any]:
             "error": None,
             "response": response or "",
             "elapsed_ms": elapsed,
+            "llm_augmented": llm_augmented,
+            "kind": "builtin",
         }
     except Exception as exc:
         elapsed = int((time.perf_counter() - start) * 1000)
@@ -116,6 +345,7 @@ async def _run_one(cortex, module_name: str, message: str) -> dict[str, Any]:
             "error": str(exc),
             "response": "",
             "elapsed_ms": elapsed,
+            "kind": "builtin",
         }
 
 
@@ -150,6 +380,7 @@ def _resolve_targets(cortex, body: LaunchBody) -> list[str]:
 async def launch(body: LaunchBody, request: Request) -> dict:
     kernel = _get_kernel(request)
     cortex = kernel.cortex
+    catalog = _get_catalog(request)
 
     targets = _resolve_targets(cortex, body)
     if not targets:
@@ -162,7 +393,7 @@ async def launch(body: LaunchBody, request: Request) -> dict:
         "mode": "explicit" if body.agents else ("top_k" if body.top_k else "single"),
     })
 
-    runs = await asyncio.gather(*(_run_one(cortex, slug, body.message) for slug in targets))
+    runs = await asyncio.gather(*(_run_one(kernel, cortex, catalog, slug, body.message) for slug in targets))
 
     succeeded = sum(1 for r in runs if r["success"])
 
@@ -184,11 +415,11 @@ async def launch(body: LaunchBody, request: Request) -> dict:
 async def candidates(
     request: Request,
     message: str = Query(..., min_length=1),
+    catalog_limit: int = Query(default=8, ge=0, le=30),
 ) -> dict:
-    """Top-5 candidate agents Cortex would weigh for this prompt.
-
-    Used by the launcher UI to pre-suggest "smart picks" before the user
-    decides whether to fan out to multiple agents.
+    """Recommended agents for a prompt — built-ins via Cortex's classifier,
+    plus the top catalog (MCP-adapter) matches via keyword search. The
+    launcher UI uses this to pre-suggest a smart picks set.
     """
     kernel = _get_kernel(request)
     cortex = kernel.cortex
@@ -203,14 +434,90 @@ async def candidates(
             "module": s.module,
             "intent": s.name,
             "score": round(float(s.score), 3),
+            "kind": "builtin",
         })
         if len(top) >= 5:
             break
-    # Always include the registered module list so the picker has every
-    # available option even if classification scored zero for them.
     all_modules = list(cortex._modules.keys())
+
+    # Catalog matches — tokenize the prompt and union the per-keyword search
+    # results. catalog.search() does substring matching on individual fields,
+    # so handing it a 60-character user prompt finds nothing. Splitting on
+    # word boundaries (longer than 3 chars to skip stopwords) lets a prompt
+    # like "search the web and draft spreadsheet financial models" surface
+    # the matching catalog agents.
+    catalog_matches: list[dict] = []
+    cat = _get_catalog(request)
+    if cat is not None and catalog_limit > 0:
+        try:
+            import re as _re
+            STOP = {"the","and","for","that","this","with","from","into","what","when",
+                    "your","you","want","need","like","want","make","just","also","then",
+                    "very","much","more","over","onto","than","each","some","such","only",
+                    "etc","help","plan","build","create","draft","work","tool"}
+            words = [w.lower() for w in _re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", message)]
+            keywords = [w for w in words if w not in STOP][:8]
+            score_by_slug: dict[str, float] = {}
+            entry_by_slug = {}
+            for kw in keywords:
+                for entry in cat.search(kw, limit=10):
+                    score_by_slug[entry.slug] = score_by_slug.get(entry.slug, 0.0) + 1.0
+                    entry_by_slug[entry.slug] = entry
+            ranked = sorted(score_by_slug.items(), key=lambda kv: kv[1], reverse=True)
+            for slug, _score in ranked[:catalog_limit]:
+                entry = entry_by_slug[slug]
+                catalog_matches.append({
+                    "slug": entry.slug,
+                    "name": entry.name,
+                    "tagline": entry.tagline or "",
+                    "category": entry.category,
+                    "tags": list(entry.tags or [])[:6],
+                    "runnable": bool(entry.runnable),
+                    "stars": entry.stars or 0,
+                    "kind": "catalog",
+                })
+        except Exception:
+            pass
+
     return {
         "primary": target,
         "top": top,
         "all_modules": all_modules,
+        "catalog_matches": catalog_matches,
+    }
+
+
+@router.get("/agent-search")
+async def cortex_agent_search(
+    request: Request,
+    q: str = Query(default="", description="prompt fragment to search the catalog"),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    """Catalog search shaped for the Cortex launcher's picker.
+
+    The launcher uses this when the user types into the agent-search box
+    inside the picker, so we return enough metadata to render a chip
+    (slug, name, category, tagline) without spawning anything.
+    """
+    cat = _get_catalog(request)
+    if cat is None:
+        return {"matches": [], "total": 0}
+    try:
+        entries = cat.search(q.strip(), limit=limit) if q.strip() else cat.list_agents()[:limit]
+    except Exception:
+        entries = []
+    return {
+        "matches": [
+            {
+                "slug": e.slug,
+                "name": e.name,
+                "tagline": e.tagline or "",
+                "category": e.category,
+                "runnable": bool(e.runnable),
+                "stars": e.stars or 0,
+                "kind": "catalog",
+            }
+            for e in entries
+        ],
+        "total": len(entries),
     }

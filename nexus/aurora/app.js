@@ -1942,10 +1942,13 @@ function renderTrustRows(rows) {
 
 const _cortexState = {
   prompt: "",
-  candidates: null,         // { primary, top: [{module, intent, score}], all_modules }
-  selected: new Set(),      // module slugs the user has ticked
+  candidates: null,         // { primary, top, all_modules, catalog_matches }
+  selected: new Set(),      // agent slugs the user has ticked (built-in OR catalog)
+  catalogSearch: "",        // live search text inside the picker
+  catalogSearchResults: [], // chips fetched on demand via /api/cortex/agent-search
+  catalogMeta: new Map(),   // slug → catalog entry metadata (for chip rendering)
   running: false,
-  runs: null,               // last result envelope
+  runs: null,
 };
 
 async function renderCortexLauncher(hash) {
@@ -1981,9 +1984,21 @@ async function renderCortexLauncher(hash) {
           autofocus>${escapeHtml(_cortexState.prompt)}</textarea>
 
         <div class="nx-cortex-pickers">
-          <div class="nx-eyebrow" style="margin-bottom:8px">AGENTS · pick one or many</div>
-          <div class="nx-cortex-chips" id="nx-cortex-chips">
+          <div class="nx-cortex-pickers-head">
+            <div class="nx-eyebrow">AGENTS · pick one or many</div>
+            <div class="nx-cortex-search">
+              <input id="nx-cortex-agent-search" type="search"
+                     placeholder="search 590+ catalog agents…"
+                     autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <div class="nx-eyebrow nx-cortex-sub-eyebrow">BUILT-IN</div>
+          <div class="nx-cortex-chips" id="nx-cortex-chips-builtin">
             <div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">loading agents…</div>
+          </div>
+          <div id="nx-cortex-catalog-section" style="display:none">
+            <div class="nx-eyebrow nx-cortex-sub-eyebrow" id="nx-cortex-catalog-heading">CATALOG · matches</div>
+            <div class="nx-cortex-chips" id="nx-cortex-chips-catalog"></div>
           </div>
         </div>
 
@@ -2020,11 +2035,12 @@ async function renderCortexLauncher(hash) {
   };
 
   const renderChips = () => {
-    const cands = _cortexState.candidates || { top: [], all_modules: [], primary: null };
+    const cands = _cortexState.candidates || { top: [], all_modules: [], primary: null, catalog_matches: [] };
     const topModules = new Set((cands.top || []).map(c => c.module));
     const all = cands.all_modules || [];
     const topMap = Object.fromEntries((cands.top || []).map(c => [c.module, c]));
-    chipsEl.innerHTML = all.map(slug => {
+
+    const builtinChips = all.map(slug => {
       const selected = _cortexState.selected.has(slug);
       const t = topMap[slug];
       const scoreText = t ? `· ${(t.score * 100).toFixed(0)}%` : "";
@@ -2034,7 +2050,7 @@ async function renderCortexLauncher(hash) {
         ? agentDisc(slug, { size: 24 })
         : `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,${gradient[0]},${gradient[1]})"></span>`;
       return `
-        <button type="button" class="nx-cortex-chip ${selected ? "selected" : ""} ${topModules.has(slug) ? "top" : ""}" data-slug="${escapeHtml(slug)}">
+        <button type="button" class="nx-cortex-chip ${selected ? "selected" : ""} ${topModules.has(slug) ? "top" : ""}" data-slug="${escapeHtml(slug)}" data-kind="builtin">
           <span class="nx-cortex-chip-icon">${disc}</span>
           <span class="nx-cortex-chip-name">${escapeHtml(slug)}</span>
           ${isPrimary ? `<span class="nx-cortex-chip-pill">PRIMARY</span>` : ""}
@@ -2042,7 +2058,54 @@ async function renderCortexLauncher(hash) {
         </button>
       `;
     }).join("") || `<div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">no agents registered</div>`;
-    chipsEl.querySelectorAll(".nx-cortex-chip").forEach(c => {
+    document.getElementById("nx-cortex-chips-builtin").innerHTML = builtinChips;
+
+    // Catalog chips: union of (candidates.catalog_matches from prompt) and
+    // (catalogSearchResults from the search input). Cache metadata so the
+    // dispatch payload includes whichever slugs the user ticked.
+    const catalogSource = _cortexState.catalogSearch
+      ? _cortexState.catalogSearchResults
+      : (cands.catalog_matches || []);
+
+    catalogSource.forEach(c => _cortexState.catalogMeta.set(c.slug, c));
+    // Always include any ALREADY-SELECTED catalog chips even if they aren't in
+    // the current visible source — otherwise selecting a chip then changing
+    // the search would visually drop the selection.
+    const selectedCatalog = [..._cortexState.selected]
+      .filter(slug => !all.includes(slug))
+      .map(slug => _cortexState.catalogMeta.get(slug))
+      .filter(Boolean);
+    const dedupMap = new Map();
+    [...selectedCatalog, ...catalogSource].forEach(c => {
+      if (!dedupMap.has(c.slug)) dedupMap.set(c.slug, c);
+    });
+    const catalogList = [...dedupMap.values()].slice(0, 24);
+
+    const catalogSection = document.getElementById("nx-cortex-catalog-section");
+    const catalogHeading = document.getElementById("nx-cortex-catalog-heading");
+    const catalogEl = document.getElementById("nx-cortex-chips-catalog");
+
+    if (catalogList.length === 0 && !_cortexState.catalogSearch) {
+      catalogSection.style.display = "none";
+    } else {
+      catalogSection.style.display = "";
+      catalogHeading.textContent = _cortexState.catalogSearch
+        ? `CATALOG · "${_cortexState.catalogSearch}" — ${catalogList.length} match${catalogList.length === 1 ? "" : "es"}`
+        : `CATALOG · ${catalogList.length} prompt match${catalogList.length === 1 ? "" : "es"}`;
+      catalogEl.innerHTML = catalogList.map(c => {
+        const selected = _cortexState.selected.has(c.slug);
+        return `
+          <button type="button" class="nx-cortex-chip catalog ${selected ? "selected" : ""}" data-slug="${escapeHtml(c.slug)}" data-kind="catalog" title="${escapeHtml(c.tagline || c.name)}">
+            <span class="nx-cortex-chip-icon nx-cortex-chip-cat-icon"></span>
+            <span class="nx-cortex-chip-name">${escapeHtml(c.name || c.slug)}</span>
+            <span class="nx-cortex-chip-cat">${escapeHtml((c.category || "").replace(/-/g, " "))}</span>
+          </button>
+        `;
+      }).join("") || `<div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">no catalog matches</div>`;
+    }
+
+    // Wire all chips (both lists)
+    document.querySelectorAll(".nx-cortex-chip[data-slug]").forEach(c => {
       c.addEventListener("click", () => {
         const slug = c.dataset.slug;
         if (_cortexState.selected.has(slug)) _cortexState.selected.delete(slug);
@@ -2069,12 +2132,13 @@ async function renderCortexLauncher(hash) {
       </header>
       <div class="nx-cortex-runlist">
         ${runs.map(r => `
-          <article class="nx-cortex-run-card ${r.success ? "ok" : "fail"}">
+          <article class="nx-cortex-run-card ${r.success ? "ok" : "fail"}" data-module="${escapeHtml(r.module)}">
             <header class="nx-cortex-run-head">
               <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
               <span class="nx-cortex-run-meta">
                 <span class="nx-cortex-run-status ${r.success ? "ok" : "fail"}">${r.success ? "ok" : "error"}</span>
                 <span class="nx-dim">· ${r.elapsed_ms}ms</span>
+                ${r.llm_augmented ? `<span class="nx-cortex-llm-pill" title="The agent's native handler returned a canned/empty response, so Cortex re-asked the LLM to answer as this agent.">LLM</span>` : ""}
               </span>
             </header>
             <div class="nx-cortex-run-body">
@@ -2082,10 +2146,57 @@ async function renderCortexLauncher(hash) {
                 ? escapeHtml(r.response).replace(/\n/g, "<br>")
                 : `<span class="fail">${escapeHtml(r.error || "unknown error")}</span>`}
             </div>
+            ${r.success ? `
+              <footer class="nx-cortex-run-fb" data-fb-state="${r._feedback || ""}">
+                <button type="button" class="nx-cortex-fb-btn ${r._feedback === "up" ? "active" : ""}" data-fb="up" aria-label="Useful — +0.12 to ${escapeHtml(r.module)}'s trust">
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M3 8h2v6H3V8zm3 6V8l3-5c.5 0 1 .5 1 1v3h3c.6 0 1 .4 1 1l-1 5c-.1.4-.5.7-1 .7H6z"/></svg>
+                  <span>useful</span>
+                </button>
+                <button type="button" class="nx-cortex-fb-btn ${r._feedback === "down" ? "active down" : ""}" data-fb="down" aria-label="Not useful — −0.22 from ${escapeHtml(r.module)}'s trust">
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 8h-2V2h2v6zm-3-6v6l-3 5c-.5 0-1-.5-1-1v-3H3c-.6 0-1-.4-1-1L3 3c.1-.4.5-.7 1-.7h6z"/></svg>
+                  <span>wrong</span>
+                </button>
+                <span class="nx-cortex-fb-hint nx-dim">${r._feedback === "up"
+                  ? "+0.12 applied — trust ↑"
+                  : r._feedback === "down"
+                    ? "−0.22 applied — trust ↓"
+                    : "rate this response · feeds Aegis trust"}</span>
+              </footer>
+            ` : ""}
           </article>
         `).join("")}
       </div>
     `;
+    // Wire feedback buttons. Every action goes through the same endpoint
+    // the main composer uses, so the cockpit's trust meter ticks in real
+    // time exactly as it does for normal chats.
+    resultsEl.querySelectorAll(".nx-cortex-run-card").forEach(card => {
+      const moduleSlug = card.dataset.module;
+      card.querySelectorAll(".nx-cortex-fb-btn[data-fb]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const accepted = btn.dataset.fb === "up";
+          // Optimistically lock the run's feedback state so re-renders persist it.
+          const runEntry = (_cortexState.runs.runs || []).find(x => x.module === moduleSlug);
+          if (runEntry) runEntry._feedback = accepted ? "up" : "down";
+          renderRuns();
+          try {
+            await fetch("/api/messages/feedback", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ module: moduleSlug, accepted }),
+            });
+            // Reload trust + repaint the cockpit immediately
+            if (typeof loadTrust === "function") {
+              await loadTrust();
+              if (typeof renderCockpitRail === "function") renderCockpitRail();
+            }
+          } catch {
+            // Roll back on network failure
+            if (runEntry) runEntry._feedback = "";
+            renderRuns();
+          }
+        });
+      });
+    });
   };
 
   // Fetch initial candidates (if there's a prefill)
@@ -2096,13 +2207,41 @@ async function renderCortexLauncher(hash) {
       return;
     }
     try {
-      const r = await fetch(`/api/cortex/candidates?message=${encodeURIComponent(msg)}`);
+      const r = await fetch(`/api/cortex/candidates?message=${encodeURIComponent(msg)}&catalog_limit=6`);
       if (r.ok) {
-        _cortexState.candidates = await r.json();
+        const data = await r.json();
+        _cortexState.candidates = data;
+        // Pre-populate catalogMeta so selecting these chips before doing a
+        // search still works in the dispatch payload.
+        (data.catalog_matches || []).forEach(c => _cortexState.catalogMeta.set(c.slug, c));
         renderChips();
       }
     } catch {}
   };
+
+  // Live catalog search inside the picker — fetches /api/cortex/agent-search
+  // and replaces the visible catalog chips with matches as the user types.
+  const debouncedCatalogSearch = debounceCortexInput(async (q) => {
+    _cortexState.catalogSearch = q;
+    if (!q.trim()) {
+      _cortexState.catalogSearchResults = [];
+      renderChips();
+      return;
+    }
+    try {
+      const r = await fetch(`/api/cortex/agent-search?q=${encodeURIComponent(q)}&limit=24`);
+      if (r.ok) {
+        const data = await r.json();
+        _cortexState.catalogSearchResults = data.matches || [];
+        (data.matches || []).forEach(c => _cortexState.catalogMeta.set(c.slug, c));
+      } else {
+        _cortexState.catalogSearchResults = [];
+      }
+    } catch {
+      _cortexState.catalogSearchResults = [];
+    }
+    renderChips();
+  }, 200);
 
   // Wire prompt textarea
   promptEl.addEventListener("input", debounceCortexInput((e) => {
@@ -2115,11 +2254,27 @@ async function renderCortexLauncher(hash) {
     refreshRunBtn();
   });
 
+  // Wire catalog search input
+  const catSearchEl = document.getElementById("nx-cortex-agent-search");
+  catSearchEl?.addEventListener("input", (e) => {
+    debouncedCatalogSearch(e.target.value);
+  });
+
   // Pick-helper buttons
   document.getElementById("nx-cortex-top3").addEventListener("click", () => {
-    const tops = (_cortexState.candidates?.top || []).slice(0, 3).map(c => c.module);
-    if (!tops.length && _cortexState.candidates?.primary) tops.push(_cortexState.candidates.primary);
-    _cortexState.selected = new Set(tops);
+    // Build up to 3 picks: classifier's scored top → primary → fill with the
+    // first registered modules. The classifier often returns top=[] when the
+    // prompt doesn't match any narrow trigger, but "pick 3 for me" should
+    // still hand the user 3 actual choices rather than just whichever module
+    // the classifier defaulted to (which was the user's complaint).
+    const picks = [];
+    const add = (slug) => {
+      if (slug && !picks.includes(slug)) picks.push(slug);
+    };
+    (_cortexState.candidates?.top || []).forEach(c => add(c.module));
+    add(_cortexState.candidates?.primary);
+    (_cortexState.candidates?.all_modules || []).forEach(add);
+    _cortexState.selected = new Set(picks.slice(0, 3));
     renderChips();
     refreshRunBtn();
   });

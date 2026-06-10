@@ -2558,6 +2558,34 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-mood-primary) 20%, transparent);
 }
 .nx-cortex-pickers { margin-top: 14px; }
+.nx-cortex-pickers-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.nx-cortex-sub-eyebrow {
+  margin: 12px 0 6px;
+}
+.nx-cortex-search {
+  flex: 0 1 260px;
+}
+.nx-cortex-search input[type="search"] {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.30);
+  color: #f3ecff;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 8px;
+  font-family: var(--nx-font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  outline: none;
+  transition: border-color var(--d-fast), box-shadow var(--d-fast);
+}
+.nx-cortex-search input[type="search"]:focus {
+  border-color: var(--nx-mood-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-mood-primary) 18%, transparent);
+}
 .nx-cortex-chips {
   display: flex; flex-wrap: wrap; gap: 8px;
 }
@@ -2608,6 +2636,44 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   color: #9b91ad;
 }
 .nx-cortex-chip.selected .nx-cortex-chip-score { color: #d9d0ea; }
+
+/* Catalog chips — smaller icon + category subtitle so 590 fit gracefully */
+.nx-cortex-chip.catalog {
+  padding: 6px 10px 6px 8px;
+  max-width: 360px;
+}
+.nx-cortex-chip.catalog .nx-cortex-chip-name {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 11.5px;
+  font-family: inherit;
+  font-weight: 600;
+  color: #e8e0fa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.nx-cortex-chip-cat-icon {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--nx-mood-primary) 70%, #4d5bcf 30%), #4d5bcf);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+}
+.nx-cortex-chip-cat {
+  font-family: var(--nx-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a8098;
+  padding: 1px 6px;
+  background: rgba(232,222,252,0.05);
+  border-radius: 4px;
+}
+.nx-cortex-chip.catalog.selected .nx-cortex-chip-cat {
+  color: var(--nx-mood-primary);
+  background: color-mix(in srgb, var(--nx-mood-primary) 14%, transparent);
+}
 
 .nx-cortex-actions {
   display: flex; align-items: center; gap: 10px;
@@ -2690,11 +2756,66 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 }
 .nx-cortex-run-status.ok   { color: #9affb6; }
 .nx-cortex-run-status.fail { color: #f86078; }
+.nx-cortex-llm-pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-family: var(--nx-font-mono);
+  font-size: 9px; letter-spacing: 0.16em;
+  background: color-mix(in srgb, var(--nx-mood-primary) 22%, transparent);
+  color: var(--nx-mood-primary);
+  border-radius: 4px;
+  cursor: help;
+}
 .nx-cortex-run-body {
   font-size: 13.5px; line-height: 1.55;
   color: #d9d0ea;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* per-run feedback footer — wires the same +0.12 / −0.22 Aegis loop the
+   main composer's thumb buttons use, so every Cortex-launched response
+   feeds the trust meter exactly like a one-on-one chat. */
+.nx-cortex-run-fb {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(232,222,252,0.07);
+}
+.nx-cortex-fb-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: rgba(232,222,252,0.04);
+  color: #c5bbdc;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--nx-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  transition: background var(--d-fast), border-color var(--d-fast), color var(--d-fast);
+}
+.nx-cortex-fb-btn:hover {
+  background: rgba(232,222,252,0.08);
+  color: #f3ecff;
+  border-color: rgba(232,222,252,0.22);
+}
+.nx-cortex-fb-btn.active {
+  background: color-mix(in srgb, #9affb6 18%, transparent);
+  border-color: color-mix(in srgb, #9affb6 55%, transparent);
+  color: #9affb6;
+}
+.nx-cortex-fb-btn.active.down {
+  background: color-mix(in srgb, #f86078 18%, transparent);
+  border-color: color-mix(in srgb, #f86078 55%, transparent);
+  color: #f86078;
+}
+.nx-cortex-fb-hint {
+  font-size: 10.5px;
+  font-family: var(--nx-font-mono);
+  letter-spacing: 0.06em;
+  margin-left: 6px;
 }
 
 /* ── Settings · Chat history ──────────────────────────────────────────── */
