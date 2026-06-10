@@ -1467,6 +1467,77 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 }
 .nx-st-row .ok   { color: #9affb6; font-family: var(--nx-font-mono); font-size: 11px; letter-spacing: 0.10em; }
 .nx-st-row .fail { color: #f86078; font-family: var(--nx-font-mono); font-size: 11px; letter-spacing: 0.10em; }
+/* provider-key add flow */
+.nx-st-keyadd {
+  font-family: var(--nx-font-mono); font-size: 11px;
+  letter-spacing: 0.10em;
+  background: rgba(232,222,252,0.05);
+  color: var(--nx-mood-primary);
+  border: 1px dashed rgba(168, 134, 255, 0.30);
+  border-radius: 7px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: background var(--d-fast), border-color var(--d-fast);
+}
+.nx-st-keyadd:hover {
+  background: rgba(168, 134, 255, 0.08);
+  border-color: rgba(168, 134, 255, 0.55);
+}
+.nx-st-keyform {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+}
+.nx-st-keyinput {
+  flex: 1 1 auto;
+  font-family: var(--nx-font-mono); font-size: 12px;
+  background: rgba(0,0,0,0.30);
+  color: #f3ecff;
+  border: 1px solid rgba(168, 134, 255, 0.32);
+  border-radius: 6px;
+  padding: 7px 10px;
+  outline: none;
+}
+.nx-st-keyinput:focus {
+  border-color: var(--nx-mood-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-mood-primary) 20%, transparent);
+}
+.nx-st-keysave, .nx-st-keycancel, .nx-st-keyremove {
+  font-family: var(--nx-font-mono); font-size: 11px;
+  letter-spacing: 0.10em;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--d-fast), border-color var(--d-fast);
+}
+.nx-st-keysave {
+  background: color-mix(in srgb, var(--nx-mood-primary) 22%, transparent);
+  color: #f3ecff;
+  border: 1px solid color-mix(in srgb, var(--nx-mood-primary) 50%, transparent);
+}
+.nx-st-keysave:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nx-mood-primary) 35%, transparent);
+}
+.nx-st-keysave:disabled { opacity: 0.5; cursor: not-allowed; }
+.nx-st-keycancel {
+  background: transparent;
+  color: #9b91ad;
+  border: 1px solid rgba(232,222,252,0.10);
+}
+.nx-st-keycancel:hover {
+  background: rgba(232,222,252,0.06);
+  color: #d9d0ea;
+}
+.nx-st-keyremove {
+  background: transparent;
+  color: #f86078;
+  border: 1px solid rgba(248, 96, 120, 0.30);
+  margin-left: 10px;
+}
+.nx-st-keyremove:hover {
+  background: rgba(248, 96, 120, 0.10);
+  border-color: rgba(248, 96, 120, 0.55);
+}
+
 /* status indicator dot for provider rows */
 .nx-st-status-dot {
   display: inline-block;
@@ -2640,6 +2711,24 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
     color-mix(in srgb, var(--nx-mood-primary) 60%, transparent) 0%,
     color-mix(in srgb, var(--nx-mood-primary) 20%, transparent) 100%);
   border-radius: 2px;
+}
+/* When a workspace tone is active, swap the rail + agent-tag accent to that
+   workspace's color so chats in different workspaces are visually
+   distinguishable at a glance. */
+.nx-ch-toned .nx-ch-chat::before {
+  background: linear-gradient(180deg,
+    var(--ch-tone-a) 0%,
+    var(--ch-tone-b) 100%);
+}
+.nx-ch-toned .nx-ch-msg-agent .nx-ch-msg-tag {
+  background: color-mix(in srgb, var(--ch-tone-a) 22%, transparent);
+  color: color-mix(in srgb, var(--ch-tone-a) 70%, white 30%);
+}
+.nx-ch-toned .nx-ch-crumb-link {
+  color: color-mix(in srgb, var(--ch-tone-a) 80%, white 20%);
+}
+.nx-ch-toned .nx-ch-agent-row:hover {
+  border-color: color-mix(in srgb, var(--ch-tone-a) 35%, rgba(232,222,252,0.18) 65%);
 }
 .nx-ch-chat-head {
   display: flex; align-items: baseline; gap: 10px;

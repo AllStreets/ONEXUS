@@ -285,6 +285,14 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(system_router)
     app.include_router(dashboard_router)
     app.include_router(providers_router)
+
+    from nexus.api.routes.provider_keys import router as provider_keys_router, load_keys_into_router
+    app.include_router(provider_keys_router)
+    # Hydrate any keys saved in a previous run so cloud providers survive restart.
+    try:
+        load_keys_into_router(kernel)
+    except Exception as exc:
+        print(f"[onexus] provider-keys hydrate failed: {exc}")
     app.include_router(replay_router)
     app.include_router(federation_router)
     app.include_router(multimodal_router)

@@ -10,6 +10,7 @@ import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CA
 const state = {
   workspaces: [],
   active: null,
+  workspaceAgentCounts: {}, // workspace_id -> distinct-agents-you've-chatted-with
   thread: new Map(),       // workspace_id -> array of message records
   attachments: new Map(),  // workspace_id -> array of pending file uploads
   agents: [],              // catalog/runtime metadata
@@ -454,6 +455,20 @@ async function loadWorkspaces() {
     state.workspaces = body.workspaces || [];
     state.active = body.active || null;
   } catch {}
+  // Overlay "agents you've actually talked to" counts from chronicle.
+  // The /api/workspaces feed only knows about cfg.resident_agents (empty by
+  // default), so without this the sidebar tile would always say "0 agents".
+  try {
+    const r = await fetch("/api/chat-history/workspaces");
+    if (r.ok) {
+      const body = await r.json();
+      const counts = {};
+      (body.workspaces || []).forEach(w => {
+        if (w.workspace_id) counts[w.workspace_id] = w.agent_count || 0;
+      });
+      state.workspaceAgentCounts = counts;
+    }
+  } catch {}
 }
 
 async function loadAgents() {
@@ -681,9 +696,15 @@ function renderSidebar() {
         plum: "#c8a0ff",    magenta: "#f86078", "calm-focus": "#a87af5",
       };
       const dotColor = colorMap[(tone || "").toLowerCase()] || "#a87af5";
+      // Agent count = max(distinct agents you've actually chatted with,
+      //                    resident_agents declared in cfg)
+      // Chronicle count comes from /api/chat-history/workspaces via loadWorkspaces.
+      const liveCount = (state.workspaceAgentCounts || {})[w.workspace_id] || 0;
+      const declaredCount = w.resident_agents?.length || 0;
+      const agentCount = Math.max(liveCount, declaredCount);
       const meta = w.workspace_id === state.active
-        ? `${w.resident_agents?.length || 0} agents · active`
-        : `${w.resident_agents?.length || 0} agents`;
+        ? `${agentCount} agents · active`
+        : `${agentCount} agents`;
       return `
         <div class="nx-ws-row ${w.workspace_id === state.active ? "active" : ""}" data-id="${w.workspace_id}">
           <button class="nx-ws-pill" data-id="${w.workspace_id}" aria-label="Open workspace ${escapeHtml(w.name)}">
@@ -1815,6 +1836,9 @@ async function renderSettings() {
       return;
     }
     panel.innerHTML = await renderSettingsTab(tab);
+    if (tab === "providers") {
+      wireProvidersHandlers(panel);
+    }
     // Wire any panel-specific handlers
     if (tab === "moods") {
       panel.querySelector("#nx-settings-mood-clear")?.addEventListener("click", () => {
@@ -1890,6 +1914,182 @@ function renderTrustRows(rows) {
   }).join("");
 }
 
+// ── Providers tab (Settings) ──────────────────────────────────────────────
+//
+// Shows local providers (Ollama, llama.cpp) and lets the user add cloud
+// providers (OpenAI, Anthropic) via an inline API-key input. Keys are
+// POSTed to /api/providers/keys, persisted to ~/.local/share/nexus/
+// provider_keys.json with 0600 perms, and never displayed back to the UI.
+// The configured state surfaces only a tail-fingerprint like "sk-...1234".
+
+const PROVIDER_DISPLAY = {
+  ollama:    { label: "Ollama",    note: "local · runs offline", isLocal: true },
+  "llama.cpp": { label: "llama.cpp", note: "local · llama.cpp HTTP server", isLocal: true },
+  local:     { label: "llama.cpp", note: "local · llama.cpp HTTP server", isLocal: true },
+  openai:    { label: "OpenAI",    note: "cloud · requires API key" },
+  anthropic: { label: "Anthropic", note: "cloud · requires API key" },
+};
+
+const _providersState = { addingKey: null /* "openai" | "anthropic" | null */ };
+
+async function renderProvidersTab() {
+  let list = { providers: [] };
+  let keys = { keys: {} };
+  try {
+    [list, keys] = await Promise.all([
+      fetch("/api/providers").then(r => r.ok ? r.json() : { providers: [] }),
+      fetch("/api/providers/keys").then(r => r.ok ? r.json() : { keys: {} }),
+    ]);
+  } catch {}
+
+  const rowsLive = (list.providers || []).map(p => {
+    const slug = (p.name || "").toLowerCase();
+    const meta = PROVIDER_DISPLAY[slug] || { label: p.name, note: "" };
+    const dotClass = p.healthy ? "ok" : "fail";
+    const statusText = p.healthy ? "healthy" : "unavailable";
+    return `
+      <div class="nx-st-row">
+        <dt>${escapeHtml(meta.label)} ${p.is_default ? '<span class="nx-st-pill">DEFAULT</span>' : ""}</dt>
+        <dd>
+          <span class="nx-st-status-dot ${dotClass}" aria-hidden="true"></span><span class="${dotClass}">${escapeHtml(statusText)}</span>
+          ${meta.note ? `<span class="nx-dim" style="margin-left:10px;font-size:11px">· ${escapeHtml(meta.note)}</span>` : ""}
+        </dd>
+      </div>
+    `;
+  }).join("");
+
+  // Cloud rows (OpenAI / Anthropic) — separate UI element with add/configured/remove states
+  const cloudRows = ["openai", "anthropic"].map(slug => renderCloudProviderRow(slug, keys.keys || {})).join("");
+
+  return `
+    <h3>LLM providers</h3>
+    <p class="nx-dim" style="font-size:13px;margin-bottom:14px">
+      Local providers (Ollama, llama.cpp) run offline with no API key.
+      Add an OpenAI or Anthropic key below to enable cloud providers — keys are stored locally with restricted file permissions and never re-displayed.
+    </p>
+
+    <div class="nx-eyebrow" style="margin:8px 0 6px">LOCAL</div>
+    <dl class="nx-st-rows">${rowsLive || `<div class="nx-empty">no providers registered</div>`}</dl>
+
+    <div class="nx-eyebrow" style="margin:18px 0 6px">CLOUD</div>
+    <dl class="nx-st-rows">${cloudRows}</dl>
+  `;
+}
+
+function renderCloudProviderRow(slug, keysMap) {
+  const meta = PROVIDER_DISPLAY[slug];
+  const info = keysMap[slug];                // { configured: bool, fingerprint: "...xxxx" }
+  const isConfigured = !!(info && info.configured);
+  const isAdding = _providersState.addingKey === slug;
+
+  let dd;
+  if (isAdding) {
+    dd = `
+      <form class="nx-st-keyform" data-add="${escapeHtml(slug)}">
+        <input type="password" name="apiKey" class="nx-st-keyinput"
+               placeholder="${slug === "openai" ? "sk-..." : "sk-ant-..."}"
+               autocomplete="off" spellcheck="false" autofocus>
+        <button type="submit" class="nx-st-keysave">save</button>
+        <button type="button" class="nx-st-keycancel" data-cancel="${escapeHtml(slug)}">cancel</button>
+      </form>
+    `;
+  } else if (isConfigured) {
+    const fp = info.fingerprint || "configured";
+    dd = `
+      <span class="nx-st-status-dot ok" aria-hidden="true"></span><span class="ok">configured</span>
+      <code style="margin-left:10px">${escapeHtml(fp)}</code>
+      <button type="button" class="nx-st-keyremove" data-remove="${escapeHtml(slug)}">remove</button>
+    `;
+  } else {
+    dd = `
+      <button type="button" class="nx-st-keyadd" data-add="${escapeHtml(slug)}">+ add ${escapeHtml(meta.label)} API key</button>
+    `;
+  }
+  return `
+    <div class="nx-st-row">
+      <dt>${escapeHtml(meta.label)}</dt>
+      <dd>${dd}</dd>
+    </div>
+  `;
+}
+
+// Wired by renderSettings after each providers-tab render. Re-renders the
+// tab when the state changes so we don't have to manage in-place mutation.
+function wireProvidersHandlers(panel) {
+  const repaint = async () => {
+    panel.innerHTML = await renderProvidersTab();
+    wireProvidersHandlers(panel);
+  };
+
+  panel.querySelectorAll("[data-add]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      // The form's submit is handled below; here we only handle the "+ add"
+      // button that flips into edit mode.
+      if (el.tagName === "BUTTON" && el.classList.contains("nx-st-keyadd")) {
+        _providersState.addingKey = el.dataset.add;
+        repaint();
+      }
+    });
+  });
+
+  panel.querySelectorAll("[data-cancel]").forEach(el => {
+    el.addEventListener("click", () => {
+      _providersState.addingKey = null;
+      repaint();
+    });
+  });
+
+  panel.querySelectorAll("form.nx-st-keyform").forEach(form => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const slug = form.dataset.add;
+      const input = form.querySelector("input[name=apiKey]");
+      const key = (input?.value || "").trim();
+      if (!key) return;
+      const submitBtn = form.querySelector(".nx-st-keysave");
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "saving…"; }
+      try {
+        const r = await fetch("/api/providers/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: slug, api_key: key }),
+        });
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}));
+          alert(`failed to save ${slug} key: ${body.detail || r.status}`);
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "save"; }
+          return;
+        }
+        // Clear input immediately (so the key never lingers in DOM) and flip out of edit mode.
+        if (input) input.value = "";
+        _providersState.addingKey = null;
+        repaint();
+      } catch (err) {
+        alert(`network error: ${err}`);
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "save"; }
+      }
+    });
+  });
+
+  panel.querySelectorAll("[data-remove]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const slug = btn.dataset.remove;
+      const meta = PROVIDER_DISPLAY[slug];
+      if (!confirm(`Remove the ${meta?.label || slug} API key from this machine?`)) return;
+      try {
+        const r = await fetch(`/api/providers/keys/${encodeURIComponent(slug)}`, { method: "DELETE" });
+        if (!r.ok) {
+          alert(`failed to remove key: ${r.status}`);
+          return;
+        }
+        repaint();
+      } catch (err) {
+        alert(`network error: ${err}`);
+      }
+    });
+  });
+}
+
 // ── Chat history (settings tab) ───────────────────────────────────────────
 // Three nested views: workspaces → agents → chats. The page polls every 5s
 // while open so new exchanges appear without a manual refresh.
@@ -1939,7 +2139,26 @@ async function paintChatHistory(panel, { silent = false } = {}) {
   else if (view === "agents") html = await renderChatHistoryAgents();
   else html = await renderChatHistoryChats();
   panel.innerHTML = html;
+  // Tone the chat-history surface to the workspace's color, so the rail on
+  // each chat panel, the breadcrumb hover, and the agent tag pick up the
+  // workspace's own gradient instead of the global mood primary.
+  applyChatHistoryTone(panel);
   wireChatHistoryHandlers(panel);
+}
+
+function applyChatHistoryTone(panel) {
+  const tone = (chatHistoryState.view === "workspaces")
+    ? null
+    : (chatHistoryState.workspace_tone || "indigo").toLowerCase();
+  if (!tone) {
+    panel.style.removeProperty("--ch-tone-a");
+    panel.style.removeProperty("--ch-tone-b");
+    panel.classList.remove("nx-ch-toned");
+    return;
+  }
+  panel.style.setProperty("--ch-tone-a", `var(--nx-tone-${tone}-a)`);
+  panel.style.setProperty("--ch-tone-b", `var(--nx-tone-${tone}-b)`);
+  panel.classList.add("nx-ch-toned");
 }
 
 function chatHistoryRelative(ts) {
@@ -2263,24 +2482,7 @@ async function renderSettingsTab(tab) {
       `;
     }
     case "providers": {
-      const list = await fetch("/api/providers").then(r => r.ok ? r.json() : {providers:[]}).catch(() => ({providers:[]}));
-      const rows = (list.providers || []).map(p => {
-        const sub = p.model || p.kind || "";
-        const subBlock = sub ? `<code>${escapeHtml(sub)}</code> · ` : "";
-        const dotClass = p.healthy ? "ok" : "fail";
-        const statusText = p.healthy ? "healthy" : "unavailable";
-        return `
-        <div class="nx-st-row">
-          <dt>${escapeHtml(p.name)} ${p.is_default ? '<span class="nx-st-pill">DEFAULT</span>' : ""}</dt>
-          <dd>${subBlock}<span class="nx-st-status-dot ${dotClass}" aria-hidden="true"></span><span class="${dotClass}">${escapeHtml(statusText)}</span></dd>
-        </div>
-      `;
-      }).join("");
-      return `
-        <h3>LLM providers</h3>
-        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">Local llama.cpp / Ollama runs offline. Set NEXUS_OPENAI_KEY / NEXUS_ANTHROPIC_KEY env vars to add cloud providers.</p>
-        <dl class="nx-st-rows">${rows || `<div class="nx-empty">no providers registered</div>`}</dl>
-      `;
+      return await renderProvidersTab();
     }
     case "federation": {
       let peers = { peers: [] };
