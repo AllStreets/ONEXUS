@@ -82,6 +82,12 @@ ONEXUS auto-detects Ollama at boot — the Cortex routes natural-language questi
 
 ### Cloud provider (optional override)
 
+Two ways to add an OpenAI or Anthropic key:
+
+**In-app (recommended)** — Settings → Providers → CLOUD → click `+ add OpenAI API key` or `+ add Anthropic API key`. Paste the key, press Enter. It's stored at `~/.local/share/nexus/provider_keys.json` with `chmod 0600`, registered with the live kernel router immediately (no restart), re-displayed only as a tail-fingerprint like `sk-…1234`. Remove any time from the same row.
+
+**Environment variables** — still respected, useful for CI / Docker:
+
 ```bash
 export NEXUS_OPENAI_KEY=sk-...
 # or
@@ -94,9 +100,12 @@ export NEXUS_DEFAULT_PROVIDER=openai   # or anthropic / local / ollama
 ```
 ⌘K   workspace switcher           ⌘E   workshop (code + sandbox)
 ⌘N   new workspace                ⌘/   web search
-⌘0   expanded cockpit             ⌘P   settings
-⌘⏎   send message                  ?   open the guide
+⌘L   cortex multi-agent launch    ⌘P   settings
+⌘0   expanded cockpit              ?   open the guide
+⌘⏎   send message
 ```
+
+In the home composer you can also type `cortex <prompt>` — the keyword is detected and you're routed to the launcher with the rest of the message pre-filled.
 
 ### Footprint
 
@@ -153,7 +162,8 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 
 - Hover any pill → reveals a neon-red trash icon to delete that workspace
 - Recent agents block — built-in identity discs with trust tier
-- `⌘E` workshop · `⌘/` web search · catalog · `⌘P` settings
+- Workspace tiles show **live agent counts** — "agents · N" reflects distinct cortex modules you've actually chatted with in that workspace (sourced from chronicle, not just declared residents)
+- `⌘L` cortex launch · `⌘E` workshop · `⌘/` web search · catalog · `⌘P` settings
 - Persistent user footer pinned at the bottom
 
 </details>
@@ -181,6 +191,33 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 - Footer: `kernel.network.io = ∅ (static-verified)` — the kernel itself never touches the network
 
 Press <kbd>⌘ 0</kbd> for the expanded six-panel cockpit overlay.
+
+</details>
+
+<details>
+<summary><strong>Cortex launcher</strong> — fan one prompt out to many agents</summary>
+
+`⌘L` (or sidebar → **cortex launch**, or type `cortex <prompt>` into the home composer) opens a multi-agent dispatcher:
+
+- Big prompt textarea
+- Every registered agent shows up as a chip — Cortex's classifier top-picks are visually marked, the primary pick gets a `PRIMARY` pill so you know which one Cortex would have routed to alone
+- Shortcuts: `pick top 3 for me` · `all available` · `clear`
+- Dispatch runs all selected agents in **parallel** via `asyncio.gather`. Each gets its own Aegis capability check, so a denied agent fails with a clear `permission_denied` row instead of crashing the run.
+- Every run renders as its own card with module · ok/error pill · latency · full response
+- All `multi_launch_start` / `multi_launch_done` / per-run events land in Chronicle, so the chat-history tab picks up multi-agent sessions automatically
+
+</details>
+
+<details>
+<summary><strong>Settings</strong> — General · Chat history · Security · Providers · Federation · Moods · About</summary>
+
+- **General** — data dir, port, default provider
+- **Chat history** — drill from workspaces → agents → individual chats with full transcripts. 50 chats per page with prev/next pagination, polls every 5s so new exchanges appear without a refresh. Each workspace's chat cards pick up that workspace's own tone gradient on the left rail.
+- **Security** — search any of the **590** Aegis-registered modules; revoke any agent's trust to 0 with one click
+- **Providers** — LOCAL section (Ollama + llama.cpp with live health dots, green for healthy / red for unavailable) and CLOUD section (`+ add OpenAI / Anthropic API key` flow described above)
+- **Federation** — peer-to-peer instance config
+- **Moods** — current MoodEngine state + 8 atmospheres with live previews
+- **About** — version, test count, catalog size, source link
 
 </details>
 
