@@ -2495,20 +2495,28 @@ async function renderCortexLauncher(hash) {
     });
   };
 
-  // Fetch initial candidates (if there's a prefill)
+  // Fetch candidates. With an empty prompt we still hit the endpoint so
+  // the picker always knows the built-in module list (otherwise the chip
+  // area says "no agents registered" until the user types). The endpoint
+  // returns an empty `top` and `catalog_matches` in that case but still
+  // populates `all_modules` with the 10 built-ins.
   const loadCandidates = async (msg) => {
-    if (!msg.trim()) {
-      _cortexState.candidates = null;
-      renderChips();
-      return;
-    }
     try {
-      const r = await fetch(`/api/cortex/candidates?message=${encodeURIComponent(msg)}&catalog_limit=6`);
+      const url = msg.trim()
+        ? `/api/cortex/candidates?message=${encodeURIComponent(msg)}&catalog_limit=8`
+        : `/api/cortex/candidates?message=hello&catalog_limit=0`;  // hello is throwaway; we only want all_modules
+      const r = await fetch(url);
       if (r.ok) {
         const data = await r.json();
+        // When there's no prompt yet, scrub the prompt-driven hints so
+        // the UI doesn't pre-tick a "primary" that's just whatever the
+        // classifier defaulted to for an empty query.
+        if (!msg.trim()) {
+          data.top = [];
+          data.catalog_matches = [];
+          data.primary = null;
+        }
         _cortexState.candidates = data;
-        // Pre-populate catalogMeta so selecting these chips before doing a
-        // search still works in the dispatch payload.
         (data.catalog_matches || []).forEach(c => _cortexState.catalogMeta.set(c.slug, c));
         renderChips();
       }
@@ -2557,20 +2565,50 @@ async function renderCortexLauncher(hash) {
   });
 
   // Pick-helper buttons
-  document.getElementById("nx-cortex-top3").addEventListener("click", () => {
-    // Build up to 3 picks: classifier's scored top → primary → fill with the
-    // first registered modules. The classifier often returns top=[] when the
-    // prompt doesn't match any narrow trigger, but "pick 3 for me" should
-    // still hand the user 3 actual choices rather than just whichever module
-    // the classifier defaulted to (which was the user's complaint).
+  document.getElementById("nx-cortex-top3").addEventListener("click", async () => {
+    // Rank across BOTH built-ins (classifier score) and catalog (keyword-
+    // search relevance). The classifier returns built-in modules in
+    // .top with float scores; catalog_matches are already pre-ranked by
+    // the candidates endpoint via keyword-search and tokenization. Both
+    // populations contribute proportionally — if the catalog has very
+    // strong matches for a domain-specific prompt (e.g. spreadsheet,
+    // financial-modeling), they should be able to outrank the generic
+    // built-ins instead of always losing to "council" because council
+    // is the default primary.
+    const cands = _cortexState.candidates || {};
+    const scored = [];
+
+    // Built-in classifier hits — keep their float score (0..1 ish).
+    (cands.top || []).forEach(c => scored.push({ slug: c.module, score: c.score || 0.5 }));
+    // Primary even when score=[] (the classifier's default pick).
+    if (cands.primary && !scored.some(s => s.slug === cands.primary)) {
+      scored.push({ slug: cands.primary, score: 0.45 });
+    }
+    // Catalog hits — ranked descending; give them tapered relevance scores
+    // so the strongest catalog match can outrank a low-confidence built-in.
+    (cands.catalog_matches || []).forEach((c, i) => {
+      // Top catalog match gets ~0.7, then declines. Strong catalog
+      // matches outrank built-in classifier defaults (~0.45) but the
+      // best-scored built-in (e.g. council@0.8) still wins.
+      scored.push({ slug: c.slug, score: Math.max(0.20, 0.72 - i * 0.07) });
+    });
+
+    // If we still need more options (sparse prompt), backfill with the
+    // remaining registered built-ins at lower scores.
+    (cands.all_modules || []).forEach(slug => {
+      if (!scored.some(s => s.slug === slug)) {
+        scored.push({ slug, score: 0.15 });
+      }
+    });
+
+    // Pick top 3, distinct.
+    scored.sort((a, b) => b.score - a.score);
     const picks = [];
-    const add = (slug) => {
-      if (slug && !picks.includes(slug)) picks.push(slug);
-    };
-    (_cortexState.candidates?.top || []).forEach(c => add(c.module));
-    add(_cortexState.candidates?.primary);
-    (_cortexState.candidates?.all_modules || []).forEach(add);
-    _cortexState.selected = new Set(picks.slice(0, 3));
+    for (const s of scored) {
+      if (!picks.includes(s.slug)) picks.push(s.slug);
+      if (picks.length >= 3) break;
+    }
+    _cortexState.selected = new Set(picks);
     renderChips();
     refreshRunBtn();
   });
@@ -2623,8 +2661,9 @@ async function renderCortexLauncher(hash) {
     }
   });
 
-  // Initial paint
-  await loadCandidates(_cortexState.prompt);
+  // Initial paint — always loads the built-in module list so the picker
+  // isn't blank on first entry, even when there's no prompt.
+  await loadCandidates(_cortexState.prompt || "");
   renderChips();
   refreshRunBtn();
   renderRuns();
@@ -2667,7 +2706,18 @@ async function renderProvidersTab() {
     ]);
   } catch {}
 
-  const rowsLive = (list.providers || []).map(p => {
+  // Don't surface llama.cpp as "unavailable" when the user is on Ollama —
+  // Ollama IS their local provider. Only show llama.cpp if it's actually
+  // reachable (separate HTTP server at port 8384) so the panel doesn't
+  // imply something is broken.
+  const filteredProviders = (list.providers || []).filter(p => {
+    const slug = (p.name || "").toLowerCase();
+    if (slug === "local" || slug === "llama.cpp") {
+      return !!p.healthy;
+    }
+    return true;
+  });
+  const rowsLive = filteredProviders.map(p => {
     const slug = (p.name || "").toLowerCase();
     const meta = PROVIDER_DISPLAY[slug] || { label: p.name, note: "" };
     const dotClass = p.healthy ? "ok" : "fail";
@@ -2682,6 +2732,10 @@ async function renderProvidersTab() {
       </div>
     `;
   }).join("");
+  const hasLlamaCpp = filteredProviders.some(p => {
+    const s = (p.name || "").toLowerCase();
+    return s === "local" || s === "llama.cpp";
+  });
 
   // Cloud rows (OpenAI / Anthropic) — separate UI element with add/configured/remove states
   const cloudRows = ["openai", "anthropic"].map(slug => renderCloudProviderRow(slug, keys.keys || {})).join("");
@@ -2695,6 +2749,12 @@ async function renderProvidersTab() {
 
     <div class="nx-eyebrow" style="margin:8px 0 6px">LOCAL</div>
     <dl class="nx-st-rows">${rowsLive || `<div class="nx-empty">no providers registered</div>`}</dl>
+    ${!hasLlamaCpp ? `
+      <p class="nx-dim" style="font-size:11px;margin:6px 14px 0;line-height:1.5">
+        llama.cpp HTTP server isn't running on port 8384 — Ollama covers the local-inference slot.
+        If you want to add llama.cpp too, start a server on <code>localhost:8384</code> and it'll show up here automatically.
+      </p>
+    ` : ""}
 
     <div class="nx-eyebrow" style="margin:18px 0 6px">CLOUD</div>
     <dl class="nx-st-rows">${cloudRows}</dl>
