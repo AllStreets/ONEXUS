@@ -16,7 +16,7 @@
 // find your code from anywhere it's launched.
 
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -30,9 +30,19 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 
 const HOST: &str = "127.0.0.1";
-const PORT: u16 = 8000;
+// 8765 by default — chosen to avoid common dev-tool ports (8000 was a magnet
+// for FastAPI defaults, jupyter, SMADP, etc.). We probe candidates in order
+// and either attach to an existing ONEXUS server or spawn one on the first
+// free port.
+const PORT_CANDIDATES: &[u16] = &[8765, 8766, 8767, 8768, 8769, 8770, 8771, 8772, 8773];
 const HEALTH_TIMEOUT_SECS: u64 = 20;
 const BUNDLE_ID: &str = "com.allstreets.onexus";
+
+/// Resolved port for this run. Set once in `run()` before any helper uses it.
+/// Read with `current_port()`.
+use std::sync::atomic::{AtomicU16, Ordering};
+static PORT: AtomicU16 = AtomicU16::new(8765);
+fn current_port() -> u16 { PORT.load(Ordering::SeqCst) }
 
 /// Wrapper around the spawned Python child so we can kill it on shutdown
 /// and on demand (e.g. the File → Reload Backend menu item).
@@ -154,11 +164,11 @@ fn spawn_python_server() -> Result<Child, String> {
 
     let mut command = if root.join(".venv/bin/onexus").exists() {
         let mut c = Command::new(root.join(".venv/bin/onexus"));
-        c.arg("serve").arg("--port").arg(PORT.to_string());
+        c.arg("serve").arg("--port").arg(current_port().to_string());
         c
     } else if which::which("onexus").is_ok() {
         let mut c = Command::new("onexus");
-        c.arg("serve").arg("--port").arg(PORT.to_string());
+        c.arg("serve").arg("--port").arg(current_port().to_string());
         c
     } else {
         let python = ["python3.14", "python3.13", "python3.12", "python3.11", "python3", "python"]
@@ -166,7 +176,7 @@ fn spawn_python_server() -> Result<Child, String> {
             .find(|name| which::which(name).is_ok())
             .ok_or_else(|| "no python3 found on PATH and no .venv/bin/onexus".to_string())?;
         let mut c = Command::new(python);
-        c.arg("-m").arg("nexus.cli").arg("serve").arg("--port").arg(PORT.to_string());
+        c.arg("-m").arg("nexus.cli").arg("serve").arg("--port").arg(current_port().to_string());
         c
     };
 
@@ -198,7 +208,8 @@ fn spawn_python_server() -> Result<Child, String> {
 
 fn wait_for_server() -> Result<(), String> {
     let deadline = Instant::now() + Duration::from_secs(HEALTH_TIMEOUT_SECS);
-    let addr = format!("{HOST}:{PORT}");
+    let port = current_port();
+    let addr = format!("{HOST}:{port}");
     while Instant::now() < deadline {
         if TcpStream::connect_timeout(
             &addr.parse().map_err(|e| format!("bad address: {e}"))?,
@@ -213,12 +224,63 @@ fn wait_for_server() -> Result<(), String> {
     Err(format!("server never came up on {addr} within {HEALTH_TIMEOUT_SECS}s"))
 }
 
-fn port_is_listening() -> bool {
+fn port_is_listening_on(port: u16) -> bool {
     TcpStream::connect_timeout(
-        &format!("{HOST}:{PORT}").parse().unwrap(),
+        &format!("{HOST}:{port}").parse().unwrap(),
         Duration::from_millis(200),
     )
     .is_ok()
+}
+
+fn port_is_listening() -> bool {
+    port_is_listening_on(current_port())
+}
+
+/// Talk HTTP/1.1 to whatever's on `port` and decide whether it's ONEXUS.
+///
+/// ONEXUS responds to `/api/system/status` with JSON containing `"data_dir"`
+/// and `"modules_loaded"`. Any other service (SMADP's FastAPI, jupyter, a
+/// random dev server) either 404s or returns unrelated content — we'd
+/// rather pick another port than glue our WebView onto someone else's UI.
+fn probe_is_onexus(port: u16) -> bool {
+    let addr = match format!("{HOST}:{port}").parse() {
+        Ok(a) => a,
+        Err(_) => return false,
+    };
+    let mut stream = match TcpStream::connect_timeout(&addr, Duration::from_millis(500)) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(1000)));
+    let req = format!(
+        "GET /api/system/status HTTP/1.1\r\nHost: {HOST}\r\nConnection: close\r\nUser-Agent: onexus-standalone\r\n\r\n",
+    );
+    if stream.write_all(req.as_bytes()).is_err() {
+        return false;
+    }
+    let mut buf = Vec::with_capacity(4096);
+    let _ = stream.take(8192).read_to_end(&mut buf);
+    let body = String::from_utf8_lossy(&buf);
+    // Markers from nexus.api.routes.system.status — these wouldn't co-occur
+    // accidentally in another project's 200 response.
+    body.contains("\"data_dir\"") && body.contains("\"modules_loaded\"")
+}
+
+/// Walk PORT_CANDIDATES, returning (port, already_up_as_onexus).
+/// - If a candidate is free → spawn a fresh server there.
+/// - If a candidate is occupied AND the occupant is ONEXUS → attach.
+/// - If occupied by something else → skip to the next candidate.
+fn pick_port() -> Option<(u16, bool)> {
+    for &p in PORT_CANDIDATES {
+        if !port_is_listening_on(p) {
+            return Some((p, false));
+        }
+        if probe_is_onexus(p) {
+            return Some((p, true));
+        }
+        eprintln!("[onexus] port {p} is taken by a non-ONEXUS service, trying next");
+    }
+    None
 }
 
 /// Reload the backend: kill any child we spawned, kill any other onexus
@@ -398,10 +460,17 @@ fn start_watcher(app: AppHandle, project_root: PathBuf) {
 // ── App bootstrap ────────────────────────────────────────────────────────────
 
 pub fn run() {
-    let already_up = port_is_listening();
+    // Pick a port: prefer free, fall back to attaching to an existing
+    // ONEXUS server, never glue ourselves onto a foreign service.
+    let (chosen_port, already_up_onexus) = pick_port()
+        .expect("no free or ONEXUS-occupied port in PORT_CANDIDATES");
+    PORT.store(chosen_port, Ordering::SeqCst);
+    eprintln!(
+        "[onexus] using {HOST}:{chosen_port} (already_up_onexus={already_up_onexus})"
+    );
 
-    let server: Option<Child> = if already_up {
-        eprintln!("[onexus] server already listening on {HOST}:{PORT}, attaching");
+    let server: Option<Child> = if already_up_onexus {
+        eprintln!("[onexus] attaching to existing ONEXUS server on port {chosen_port}");
         None
     } else {
         match spawn_python_server() {
@@ -466,6 +535,19 @@ pub fn run() {
             if let Some(root) = resolve_project_root() {
                 let watcher_handle = app.handle().clone();
                 start_watcher(watcher_handle, root);
+            }
+
+            // Navigate the main WebView to the resolved port. tauri.conf.json
+            // can only encode a constant URL, but we may have picked any port
+            // from PORT_CANDIDATES — override after the window is built.
+            if let Some(window) = app.get_webview_window("main") {
+                let port = current_port();
+                let target = format!("http://{HOST}:{port}/aurora");
+                if let Ok(url) = target.parse::<tauri::Url>() {
+                    if let Err(e) = window.navigate(url) {
+                        eprintln!("[onexus] failed to navigate WebView to {target}: {e}");
+                    }
+                }
             }
 
             Ok(())

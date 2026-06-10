@@ -57,10 +57,10 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[llm,api,tui,messaging]"
 
 # 3. Boot — single command brings up API + Aurora + WebSocket streams.
-onexus serve --port 8000
+onexus serve --port 8765
 ```
 
-Open **http://127.0.0.1:8000/aurora** and you're in. Every new install lands you in a default `Hello World` workspace; create more with `⌘N`, delete from the sidebar trash. First-time visitors also get a **13-page guided tour**; hit `?` any time to re-open it.
+Open **http://127.0.0.1:8765/aurora** and you're in. Every new install lands you in a default `Hello World` workspace; create more with `⌘N`, delete from the sidebar trash. First-time visitors also get a **13-page guided tour**; hit `?` any time to re-open it.
 
 **Heads-up — without a local LLM (next section) agents only respond to pattern-matched commands** (`summon X`, `list`, `agents <keyword>`). Plain-English questions return a keyword-search dump instead of a real recommendation. Install Ollama and the same questions get LLM-backed answers.
 
@@ -267,10 +267,10 @@ The catalog rebuilds nightly via a [GitHub Actions cron](.github/workflows/night
 ### Local
 
 ```bash
-onexus serve --port 8000
+onexus serve --port 8765
 ```
 
-Open `http://127.0.0.1:8000/aurora`. Data lives in `~/.local/share/nexus/`.
+Open `http://127.0.0.1:8765/aurora`. Data lives in `~/.local/share/nexus/`.
 
 ### Standalone `.app` (Tauri wrapper)
 
@@ -287,9 +287,11 @@ open /Applications/ONEXUS.app
 ```
 
 What the `.app` does on launch:
-- Checks if port 8000 is already serving — attaches if yes
-- Otherwise spawns `.venv/bin/onexus serve --port 8000` from your project root
-- Opens a native WebView at `http://127.0.0.1:8000/aurora`
+- Walks port candidates `8765, 8766, …, 8773` and probes `/api/system/status`
+- If one is already an ONEXUS server, attaches to it; otherwise picks the first free port
+- Refuses to glue itself to a non-ONEXUS service on the port (so SMADP / jupyter / random dev servers can't hijack the WebView)
+- Spawns `.venv/bin/onexus serve --port <resolved>` from your project root
+- Opens a native WebView at `http://127.0.0.1:<resolved>/aurora`
 - Kills the spawned server on quit
 
 Built-in menu (no terminal needed for the edit loop):

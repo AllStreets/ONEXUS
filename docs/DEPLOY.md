@@ -8,10 +8,10 @@ run it locally, on Railway, on Fly.io, or on any Docker host.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[llm,api,tui,messaging]"
-onexus serve --port 8000
+onexus serve --port 8765
 ```
 
-Open <http://127.0.0.1:8000/aurora>.
+Open <http://127.0.0.1:8765/aurora>.
 
 ## Docker
 
