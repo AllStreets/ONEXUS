@@ -2,23 +2,34 @@ name: Nightly catalog rebuild
 
 on:
   schedule:
-    # Every night at 06:00 UTC — pulls latest agents from ONEXUS-Agents
+    # Every night at 06:00 UTC. The upstream ONEXUS-Agents nightly refresh
+    # (cron 13:00 UTC, observed fire 13:30-18:30 + up to 2h run) is always
+    # finished well before this slot, so the image bakes the freshest
+    # catalog snapshot without racing the refresh.
     - cron: "0 6 * * *"
   workflow_dispatch: {}
 
 permissions:
   contents: read
   packages: write
-
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}/onexus
+  issues: write
 
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    # Kill switch: set the repo Actions variable AGENTS_SYNC_ENABLED to
+    # 'false' to stop nightly catalog rebuilds. Unset or any other value
+    # means enabled. Documented in docs/AUTOMATION.md.
+    if: ${{ vars.AGENTS_SYNC_ENABLED != 'false' }}
     steps:
       - name: Check out ONEXUS
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Compute lowercase image name
+        id: image
+        # ghcr.io rejects mixed-case repository names; github.repository is
+        # "AllStreets/ONEXUS", so lowercase it here.
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/onexus" >> "$GITHUB_OUTPUT"
 
       - name: Read latest catalog ref
         id: catalog_ref
@@ -26,20 +37,24 @@ jobs:
           # Use the head SHA of the catalog repo as the build arg so the
           # image is reproducible and points at a known catalog snapshot.
           REF=$(git ls-remote https://github.com/AllStreets/ONEXUS-Agents.git refs/heads/main | awk '{print $1}')
+          if [ -z "$REF" ]; then
+            echo "Could not resolve ONEXUS-Agents main HEAD" >&2
+            exit 1
+          fi
           echo "ref=${REF}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build + push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: ./Dockerfile
@@ -47,8 +62,29 @@ jobs:
           build-args: |
             CATALOG_REF=${{ steps.catalog_ref.outputs.ref }}
           tags: |
-            ${{ env.IMAGE_NAME }}:nightly
-            ${{ env.IMAGE_NAME }}:catalog-${{ steps.catalog_ref.outputs.ref }}
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:nightly
+            ${{ steps.image.outputs.name }}:catalog-${{ steps.catalog_ref.outputs.ref }}
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Open or update failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create bot-failure --repo "$GITHUB_REPOSITORY" \
+            --description "Automated pipeline failure" --color B60205 2>/dev/null || true
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label bot-failure \
+            --state open --search "in:title Nightly catalog rebuild" \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Another failed run: $run_url"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "Nightly catalog rebuild failed" \
+              --label bot-failure \
+              --body "The nightly catalog image rebuild failed. Latest run: $run_url. The deployed image keeps serving the previous catalog snapshot until this is fixed. Kill switch: set Actions variable AGENTS_SYNC_ENABLED=false."
+          fi

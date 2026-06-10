@@ -20,7 +20,6 @@ WORKDIR /opt/onexus
 # Copy project files
 COPY pyproject.toml README.md ./
 COPY nexus ./nexus
-COPY scripts ./scripts
 
 # Install the Python package + its runtime extras
 RUN pip install --no-cache-dir --upgrade pip wheel \
