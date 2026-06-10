@@ -288,13 +288,21 @@ class Aegis:
         """, (module,))
 
     def _record_history(self, conn: sqlite3.Connection, module: str,
-                        old: float, new: float, delta: float, reason: str) -> None:
+                        old: float, new: float, delta: float, reason: str) -> dict:
+        """Insert into aegis_trust_history and RETURN the chronicle payload.
+
+        We don't call self._log_chronicle here — the caller's connection is
+        holding an uncommitted write transaction on the same SQLite file, and
+        Chronicle opens its own connection. That second writer hits a "database
+        is locked" race and the chronicle log was being silently swallowed by
+        the try/except in _log_chronicle. Caller commits FIRST, then logs.
+        """
         ts = self._now()
         conn.execute("""
             INSERT INTO aegis_trust_history (module_name, old_score, new_score, delta, reason, timestamp)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (module, old, new, delta, reason, ts))
-        self._log_chronicle("aegis.trust_change", {
+        return {
             "module": module,
             "old_score": old,
             "new_score": new,
@@ -302,7 +310,7 @@ class Aegis:
             "reason": reason,
             "tier": TrustTier.from_score(new),
             "timestamp": ts,
-        })
+        }
 
     def record_outcome(self, module: str, success: bool) -> float:
         """Adjust trust based on outcome. Returns the new score."""
@@ -321,9 +329,12 @@ class Aegis:
             "UPDATE aegis_policies SET trust_score = ? WHERE module_name = ?",
             (new_score, module),
         )
-        self._record_history(conn, module, old_score, new_score, delta, reason)
+        payload = self._record_history(conn, module, old_score, new_score, delta, reason)
         conn.commit()
         conn.close()
+        # Log to Chronicle AFTER the policy/history conn is committed + closed
+        # so the second writer doesn't hit "database is locked".
+        self._log_chronicle("aegis.trust_change", payload)
         return new_score
 
     def get_trust(self, module: str) -> float:
@@ -354,9 +365,10 @@ class Aegis:
         conn.execute(
             "UPDATE aegis_policies SET trust_score = 0.0 WHERE module_name = ?", (module,)
         )
-        self._record_history(conn, module, old_score, 0.0, -old_score, "revoked")
+        payload = self._record_history(conn, module, old_score, 0.0, -old_score, "revoked")
         conn.commit()
         conn.close()
+        self._log_chronicle("aegis.trust_change", payload)
 
     def get_trust_history(self, module: str, limit: int = 100) -> list[dict[str, Any]]:
         conn = self._conn()
@@ -492,11 +504,12 @@ class Aegis:
             "UPDATE aegis_policies SET trust_score = ? WHERE module_name = ?",
             (score, agent_slug),
         )
-        self._record_history(
+        payload = self._record_history(
             conn, agent_slug, old_score, score, score - old_score, "set_trust",
         )
         conn.commit()
         conn.close()
+        self._log_chronicle("aegis.trust_change", payload)
 
         # Trust collapse: revoke every grant
         if score < 0.50:

@@ -71,7 +71,11 @@ def _init_kernel(config: NexusConfig) -> KernelState:
     chronicle = Chronicle(str(config.db_path))
     chronicle.init_db()
 
-    aegis = Aegis(str(config.db_path))
+    # Wire Chronicle into Aegis so every trust change / grant / revoke gets
+    # logged to the immutable audit log. Without this Aegis silently no-ops
+    # its _log_chronicle calls and the cockpit's trust card never sees
+    # aegis.trust_change events to refresh from.
+    aegis = Aegis(str(config.db_path), chronicle=chronicle)
     aegis.init_db()
 
     pulse = Pulse()
