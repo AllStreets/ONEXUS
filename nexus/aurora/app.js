@@ -631,6 +631,7 @@ function attachShellHandlers() {
   document.getElementById("nx-open-settings").addEventListener("click", () => location.hash = "#/settings");
   document.getElementById("nx-open-workshop").addEventListener("click", () => location.hash = "#/workshop");
   document.getElementById("nx-open-search").addEventListener("click", () => location.hash = "#/search");
+  document.getElementById("nx-open-cortex")?.addEventListener("click", () => location.hash = "#/cortex");
   document.getElementById("nx-search-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -1560,6 +1561,19 @@ async function sendMessage(workspaceId) {
   const body = input.value.trim();
   const files = state.attachments.get(workspaceId) || [];
   if (!body && files.length === 0) return;
+
+  // Keyword launcher: typing "cortex <prompt>" (or just "cortex") opens the
+  // Cortex multi-agent launcher with the rest of the message prefilled.
+  // Useful when the user wants to fan a question to several agents at once
+  // instead of letting cortex pick a single best.
+  const cortexMatch = body.match(/^cortex\b\s*(.*)$/i);
+  if (cortexMatch) {
+    input.value = "";
+    const rest = (cortexMatch[1] || "").trim();
+    location.hash = rest ? `#/cortex?prompt=${encodeURIComponent(rest)}` : "#/cortex";
+    return;
+  }
+
   input.value = "";
   if (state._pendingComposer && state._pendingComposer.id === workspaceId) {
     state._pendingComposer = null;
@@ -1912,6 +1926,266 @@ function renderTrustRows(rows) {
       </div>
     `;
   }).join("");
+}
+
+// ── Cortex launcher ──────────────────────────────────────────────────────
+//
+// Multi-agent dispatch surface. Type a prompt, pick one or more agents
+// (Cortex pre-suggests its top picks), and the launcher fans the prompt
+// to all selected agents in parallel. Each response renders as its own
+// card with module name, latency, and a feedback affordance hooked into
+// the same Aegis trust loop the home composer uses.
+//
+// Also reachable by typing "cortex <prompt>" into the home composer —
+// sendMessage detects the keyword and routes here with the rest of the
+// message pre-filled via ?prompt=...
+
+const _cortexState = {
+  prompt: "",
+  candidates: null,         // { primary, top: [{module, intent, score}], all_modules }
+  selected: new Set(),      // module slugs the user has ticked
+  running: false,
+  runs: null,               // last result envelope
+};
+
+async function renderCortexLauncher(hash) {
+  // Parse ?prompt= out of the hash, if present.
+  const qi = hash.indexOf("?");
+  let prefill = "";
+  if (qi >= 0) {
+    const params = new URLSearchParams(hash.slice(qi + 1));
+    prefill = params.get("prompt") || "";
+  }
+  if (prefill && !_cortexState.prompt) {
+    _cortexState.prompt = prefill;
+  }
+
+  const main = document.getElementById("nx-main");
+  main.innerHTML = `
+    <div class="nx-main-inner">
+      <header style="margin-bottom:18px">
+        <div class="nx-eyebrow" style="margin-bottom:6px">Cortex · multi-agent launcher</div>
+        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Launch</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">
+          Type a prompt and pick one or many agents. Cortex pre-suggests its top picks; tick whichever you want and dispatch in parallel.
+          You can also type <code>cortex …</code> into the home composer to land here.
+        </div>
+      </header>
+
+      <section class="nx-card" id="nx-cortex-form" style="padding:18px;margin-bottom:18px">
+        <textarea
+          id="nx-cortex-prompt"
+          rows="3"
+          class="nx-cortex-textarea"
+          placeholder="What should the agents do?"
+          autofocus>${escapeHtml(_cortexState.prompt)}</textarea>
+
+        <div class="nx-cortex-pickers">
+          <div class="nx-eyebrow" style="margin-bottom:8px">AGENTS · pick one or many</div>
+          <div class="nx-cortex-chips" id="nx-cortex-chips">
+            <div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">loading agents…</div>
+          </div>
+        </div>
+
+        <div class="nx-cortex-actions">
+          <button id="nx-cortex-run" class="nx-cortex-run" type="button" disabled>
+            <span class="nx-cortex-run-label">pick agents to dispatch</span>
+          </button>
+          <button id="nx-cortex-top3" class="nx-cortex-pickbtn" type="button">pick top 3 for me</button>
+          <button id="nx-cortex-all" class="nx-cortex-pickbtn" type="button">all available</button>
+          <button id="nx-cortex-clear" class="nx-cortex-pickbtn" type="button">clear</button>
+        </div>
+      </section>
+
+      <section id="nx-cortex-results"></section>
+    </div>
+  `;
+
+  const promptEl = document.getElementById("nx-cortex-prompt");
+  const chipsEl = document.getElementById("nx-cortex-chips");
+  const runBtn = document.getElementById("nx-cortex-run");
+  const resultsEl = document.getElementById("nx-cortex-results");
+
+  const refreshRunBtn = () => {
+    const n = _cortexState.selected.size;
+    runBtn.disabled = _cortexState.running || n === 0 || !(_cortexState.prompt.trim());
+    const label = runBtn.querySelector(".nx-cortex-run-label");
+    if (_cortexState.running) {
+      label.textContent = "dispatching…";
+    } else if (n === 0) {
+      label.textContent = "pick agents to dispatch";
+    } else {
+      label.textContent = `dispatch to ${n} agent${n === 1 ? "" : "s"}`;
+    }
+  };
+
+  const renderChips = () => {
+    const cands = _cortexState.candidates || { top: [], all_modules: [], primary: null };
+    const topModules = new Set((cands.top || []).map(c => c.module));
+    const all = cands.all_modules || [];
+    const topMap = Object.fromEntries((cands.top || []).map(c => [c.module, c]));
+    chipsEl.innerHTML = all.map(slug => {
+      const selected = _cortexState.selected.has(slug);
+      const t = topMap[slug];
+      const scoreText = t ? `· ${(t.score * 100).toFixed(0)}%` : "";
+      const isPrimary = cands.primary === slug;
+      const gradient = (typeof GRADIENTS !== "undefined" && GRADIENTS[slug]) || ["#9aa8ff", "#4d5bcf"];
+      const disc = (typeof agentDisc === "function")
+        ? agentDisc(slug, { size: 24 })
+        : `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,${gradient[0]},${gradient[1]})"></span>`;
+      return `
+        <button type="button" class="nx-cortex-chip ${selected ? "selected" : ""} ${topModules.has(slug) ? "top" : ""}" data-slug="${escapeHtml(slug)}">
+          <span class="nx-cortex-chip-icon">${disc}</span>
+          <span class="nx-cortex-chip-name">${escapeHtml(slug)}</span>
+          ${isPrimary ? `<span class="nx-cortex-chip-pill">PRIMARY</span>` : ""}
+          ${scoreText ? `<span class="nx-cortex-chip-score">${escapeHtml(scoreText)}</span>` : ""}
+        </button>
+      `;
+    }).join("") || `<div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">no agents registered</div>`;
+    chipsEl.querySelectorAll(".nx-cortex-chip").forEach(c => {
+      c.addEventListener("click", () => {
+        const slug = c.dataset.slug;
+        if (_cortexState.selected.has(slug)) _cortexState.selected.delete(slug);
+        else _cortexState.selected.add(slug);
+        renderChips();
+        refreshRunBtn();
+      });
+    });
+  };
+
+  const renderRuns = () => {
+    if (!_cortexState.runs) {
+      resultsEl.innerHTML = "";
+      return;
+    }
+    const { runs = [], succeeded = 0, failed = 0 } = _cortexState.runs;
+    resultsEl.innerHTML = `
+      <header class="nx-cortex-results-head">
+        <div class="nx-eyebrow">RESULTS</div>
+        <div class="nx-cortex-summary">
+          <span class="ok">${succeeded} succeeded</span>
+          ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}
+        </div>
+      </header>
+      <div class="nx-cortex-runlist">
+        ${runs.map(r => `
+          <article class="nx-cortex-run-card ${r.success ? "ok" : "fail"}">
+            <header class="nx-cortex-run-head">
+              <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
+              <span class="nx-cortex-run-meta">
+                <span class="nx-cortex-run-status ${r.success ? "ok" : "fail"}">${r.success ? "ok" : "error"}</span>
+                <span class="nx-dim">· ${r.elapsed_ms}ms</span>
+              </span>
+            </header>
+            <div class="nx-cortex-run-body">
+              ${r.success
+                ? escapeHtml(r.response).replace(/\n/g, "<br>")
+                : `<span class="fail">${escapeHtml(r.error || "unknown error")}</span>`}
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    `;
+  };
+
+  // Fetch initial candidates (if there's a prefill)
+  const loadCandidates = async (msg) => {
+    if (!msg.trim()) {
+      _cortexState.candidates = null;
+      renderChips();
+      return;
+    }
+    try {
+      const r = await fetch(`/api/cortex/candidates?message=${encodeURIComponent(msg)}`);
+      if (r.ok) {
+        _cortexState.candidates = await r.json();
+        renderChips();
+      }
+    } catch {}
+  };
+
+  // Wire prompt textarea
+  promptEl.addEventListener("input", debounceCortexInput((e) => {
+    _cortexState.prompt = e.target.value;
+    loadCandidates(_cortexState.prompt);
+    refreshRunBtn();
+  }));
+  promptEl.addEventListener("input", (e) => {
+    _cortexState.prompt = e.target.value;
+    refreshRunBtn();
+  });
+
+  // Pick-helper buttons
+  document.getElementById("nx-cortex-top3").addEventListener("click", () => {
+    const tops = (_cortexState.candidates?.top || []).slice(0, 3).map(c => c.module);
+    if (!tops.length && _cortexState.candidates?.primary) tops.push(_cortexState.candidates.primary);
+    _cortexState.selected = new Set(tops);
+    renderChips();
+    refreshRunBtn();
+  });
+  document.getElementById("nx-cortex-all").addEventListener("click", () => {
+    _cortexState.selected = new Set(_cortexState.candidates?.all_modules || []);
+    renderChips();
+    refreshRunBtn();
+  });
+  document.getElementById("nx-cortex-clear").addEventListener("click", () => {
+    _cortexState.selected = new Set();
+    renderChips();
+    refreshRunBtn();
+  });
+
+  // Dispatch
+  runBtn.addEventListener("click", async () => {
+    if (_cortexState.running) return;
+    const agents = [..._cortexState.selected];
+    if (!agents.length || !_cortexState.prompt.trim()) return;
+    _cortexState.running = true;
+    refreshRunBtn();
+    // Show pending cards immediately so the user sees something
+    _cortexState.runs = {
+      runs: agents.map(slug => ({ module: slug, success: false, response: "", error: "pending", elapsed_ms: 0 })),
+      succeeded: 0, failed: 0,
+    };
+    renderRuns();
+    try {
+      const r = await fetch("/api/cortex/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: _cortexState.prompt.trim(),
+          agents,
+          workspace_id: state.active || null,
+        }),
+      });
+      if (r.ok) {
+        _cortexState.runs = await r.json();
+      } else {
+        const detail = await r.text();
+        _cortexState.runs = { runs: [{ module: "cortex", success: false, error: `${r.status}: ${detail}`, response: "", elapsed_ms: 0 }], succeeded: 0, failed: 1 };
+      }
+    } catch (err) {
+      _cortexState.runs = { runs: [{ module: "cortex", success: false, error: `network: ${err.message}`, response: "", elapsed_ms: 0 }], succeeded: 0, failed: 1 };
+    } finally {
+      _cortexState.running = false;
+      renderRuns();
+      refreshRunBtn();
+    }
+  });
+
+  // Initial paint
+  await loadCandidates(_cortexState.prompt);
+  renderChips();
+  refreshRunBtn();
+  renderRuns();
+}
+
+// Tiny debounce — only refetches candidates after the user pauses typing.
+function debounceCortexInput(fn, ms = 250) {
+  let t = null;
+  return (e) => {
+    if (t) clearTimeout(t);
+    t = setTimeout(() => fn(e), ms);
+  };
 }
 
 // ── Providers tab (Settings) ──────────────────────────────────────────────
@@ -3580,6 +3854,7 @@ async function route(hash) {
   if (hash === "#/workspaces") { renderWorkspacesGrid(); return; }
   if (hash.startsWith("#/catalog")) { renderCatalog(); return; }
   if (hash === "#/settings") { renderSettings(); return; }
+  if (hash.startsWith("#/cortex")) { renderCortexLauncher(hash); return; }
   if (hash === "#/workshop") { renderWorkshop(); return; }
   if (hash.startsWith("#/search")) { renderSearch(hash); return; }
   if (hash.startsWith("#/guide")) {

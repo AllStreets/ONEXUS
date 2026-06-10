@@ -2536,6 +2536,167 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   .nx-g-dot { min-width: 26px; height: 26px; font-size: 10px; }
 }
 
+/* ── Cortex launcher ─────────────────────────────────────────────────── */
+
+.nx-cortex-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 70px;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid rgba(168, 134, 255, 0.20);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: #f3ecff;
+  font-family: inherit;
+  line-height: 1.45;
+  outline: none;
+  transition: border-color var(--d-fast), box-shadow var(--d-fast);
+}
+.nx-cortex-textarea:focus {
+  border-color: var(--nx-mood-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-mood-primary) 20%, transparent);
+}
+.nx-cortex-pickers { margin-top: 14px; }
+.nx-cortex-chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.nx-cortex-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px 7px 8px;
+  background: rgba(232,222,252,0.04);
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--d-fast), border-color var(--d-fast), transform var(--d-fast);
+  font-size: 13px;
+  color: #d9d0ea;
+}
+.nx-cortex-chip:hover {
+  background: rgba(232,222,252,0.08);
+  border-color: rgba(232,222,252,0.22);
+}
+.nx-cortex-chip.selected {
+  background: color-mix(in srgb, var(--nx-mood-primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 55%, transparent);
+  color: #f3ecff;
+}
+.nx-cortex-chip.top:not(.selected) {
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 30%, rgba(232,222,252,0.10) 70%);
+}
+.nx-cortex-chip-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+}
+.nx-cortex-chip-icon svg { width: 20px; height: 20px; }
+.nx-cortex-chip-name {
+  font-family: var(--nx-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+.nx-cortex-chip-pill {
+  font-family: var(--nx-font-mono); font-size: 9px;
+  letter-spacing: 0.18em;
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--nx-mood-primary) 22%, transparent);
+  color: var(--nx-mood-primary);
+  border-radius: 4px;
+}
+.nx-cortex-chip-score {
+  font-family: var(--nx-font-mono); font-size: 10px;
+  color: #9b91ad;
+}
+.nx-cortex-chip.selected .nx-cortex-chip-score { color: #d9d0ea; }
+
+.nx-cortex-actions {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(232,222,252,0.08);
+}
+.nx-cortex-run {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--nx-mood-primary), color-mix(in srgb, var(--nx-mood-primary) 60%, #4d5bcf 40%));
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-family: var(--nx-font-mono); font-size: 12px;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+  transition: opacity var(--d-fast), transform var(--d-fast);
+}
+.nx-cortex-run:hover:not(:disabled) { transform: translateY(-1px); }
+.nx-cortex-run:disabled { opacity: 0.40; cursor: not-allowed; }
+
+.nx-cortex-pickbtn {
+  padding: 7px 12px;
+  background: transparent;
+  color: #9b91ad;
+  border: 1px solid rgba(232,222,252,0.10);
+  border-radius: 7px;
+  font-family: var(--nx-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background var(--d-fast), color var(--d-fast);
+}
+.nx-cortex-pickbtn:hover {
+  background: rgba(232,222,252,0.06);
+  color: #d9d0ea;
+}
+
+.nx-cortex-results-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.nx-cortex-summary {
+  font-family: var(--nx-font-mono); font-size: 11px;
+  letter-spacing: 0.10em;
+}
+.nx-cortex-summary .ok { color: #9affb6; }
+.nx-cortex-summary .fail { color: #f86078; }
+
+.nx-cortex-runlist {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.nx-cortex-run-card {
+  background: rgba(232,222,252,0.025);
+  border: 1px solid rgba(232,222,252,0.07);
+  border-radius: 12px;
+  padding: 14px 16px;
+  position: relative;
+}
+.nx-cortex-run-card.fail {
+  border-color: rgba(248, 96, 120, 0.30);
+  background: color-mix(in srgb, #f86078 6%, rgba(232,222,252,0.025) 94%);
+}
+.nx-cortex-run-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(232,222,252,0.07);
+}
+.nx-cortex-run-name {
+  font-family: var(--nx-font-mono);
+  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #f3ecff;
+  font-weight: 600;
+}
+.nx-cortex-run-meta {
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.10em;
+}
+.nx-cortex-run-status.ok   { color: #9affb6; }
+.nx-cortex-run-status.fail { color: #f86078; }
+.nx-cortex-run-body {
+  font-size: 13.5px; line-height: 1.55;
+  color: #d9d0ea;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 /* ── Settings · Chat history ──────────────────────────────────────────── */
 
 .nx-ch-head {
