@@ -3966,6 +3966,7 @@ function attachKeybinds() {
     if (meta && e.key === "0") { e.preventDefault(); toggleCockpitOverlay(); return; }
     if (meta && (e.key === "p" || e.key === "P")) { e.preventDefault(); location.hash = "#/settings"; return; }
     if (meta && e.key === "e") { e.preventDefault(); location.hash = "#/workshop"; return; }
+    if (meta && (e.key === "l" || e.key === "L")) { e.preventDefault(); location.hash = "#/cortex"; return; }
     if (meta && e.key === "/") { e.preventDefault(); location.hash = "#/search"; return; }
     if (e.key === "?" && document.activeElement === document.body) {
       e.preventDefault(); renderGuide(0); return;

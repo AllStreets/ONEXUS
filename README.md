@@ -107,6 +107,8 @@ export NEXUS_DEFAULT_PROVIDER=openai   # or anthropic / local / ollama
 
 In the home composer you can also type `cortex <prompt>` — the keyword is detected and you're routed to the launcher with the rest of the message pre-filled.
 
+Full keyboard + CLI + curl reference: **[docs/CHEATSHEET.md](docs/CHEATSHEET.md)**.
+
 ### Footprint
 
 | Component | Disk | RAM |
