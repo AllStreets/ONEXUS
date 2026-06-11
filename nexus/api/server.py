@@ -275,6 +275,13 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Optional per-instance bearer-token gate (HTTP + WebSocket). No-op unless
+    # NEXUS_API_TOKEN is set, so the loopback default and the test suite are
+    # unchanged; set the env var to lock down a non-loopback deployment.
+    from nexus.api.auth import ApiTokenMiddleware
+
+    app.add_middleware(ApiTokenMiddleware)
+
     # Mount all route groups
     app.include_router(messages_router)
     app.include_router(modules_router)
