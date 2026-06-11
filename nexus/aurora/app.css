@@ -1194,10 +1194,13 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 /* ── catalog view ────────────────────────────────────────────────────────── */
 .nx-spatial-header {
   display: flex; align-items: end; justify-content: space-between;
-  flex-wrap: wrap; gap: 14px;
+  flex-wrap: nowrap; gap: 14px;
   margin-bottom: 16px;
 }
-.nx-cat-filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* Let the title block shrink so the filter row never wraps below it when the
+   count text changes (e.g. toggling "runnable only") — the row stays put. */
+.nx-spatial-header > div:first-child { min-width: 0; }
+.nx-cat-filters { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; }
 .nx-cat-filters input[type=search], .nx-cat-filters select {
   padding: 7px 12px;
   background: rgba(232,222,252,0.05);
@@ -1213,6 +1216,8 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   color: #a8a0c8;
   cursor: pointer;
 }
+/* Natural lavender check, not the aggressive default blue. */
+.nx-cat-toggle input[type=checkbox] { accent-color: #a78bfa; }
 .nx-spatial {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

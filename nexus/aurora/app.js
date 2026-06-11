@@ -15,6 +15,7 @@ const state = {
   attachments: new Map(),  // workspace_id -> array of pending file uploads
   agents: [],              // catalog/runtime metadata
   runnableCount: 0,        // live count of runnable (MCP-adapter) catalog agents
+  catalogTotal: 0,         // live count of ALL catalog agents (for search/picker labels)
   recentAgents: [],
   // cache-bust query string appended to guide image src so users always
   // see the latest PNGs even if their browser cached the old ones
@@ -479,9 +480,15 @@ async function refreshRunnableCount() {
   try {
     const r = await fetch("/api/agents?runnable_only=true&limit=1");
     if (r.ok) {
-      const body = await r.json();
-      const n = Number(body.total ?? body.count ?? 0);
-      if (Number.isFinite(n)) state.runnableCount = n;
+      const n = Number((await r.json()).total ?? 0);
+      if (Number.isFinite(n) && n > 0) state.runnableCount = n;
+    }
+  } catch {}
+  try {
+    const rt = await fetch("/api/agents?limit=1");
+    if (rt.ok) {
+      const n = Number((await rt.json()).total ?? 0);
+      if (Number.isFinite(n) && n > 0) state.catalogTotal = n;
     }
   } catch {}
   const label = document.getElementById("nx-agents-label");
@@ -1854,7 +1861,7 @@ async function renderCatalog() {
           <div>
             <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
             <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
-            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of ${body.total} · ${runnableOnly ? "runnable (MCP adapter)" : "all"} · vendored from ONEXUS-Agents</div>
+            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of ${body.total} ${search ? `matching “${escapeHtml(search)}” (whole catalog)` : (runnableOnly ? "· runnable (MCP adapter)" : "· all")} · vendored from ONEXUS-Agents</div>
           </div>
           <form class="nx-cat-filters" id="nx-cat-filters">
             <input type="search" id="nx-cat-q" value="${escapeHtml(search)}" placeholder="search the catalog…">
@@ -1887,6 +1894,15 @@ async function renderCatalog() {
     document.getElementById("nx-cat-filters").addEventListener("submit", (e) => { e.preventDefault(); applyFilters(); });
     document.getElementById("nx-cat-cat").addEventListener("change", applyFilters);
     document.getElementById("nx-cat-runnable").addEventListener("change", applyFilters);
+    // Live search across the WHOLE catalog (server-side), debounced so it
+    // fires as you type — not just on Enter.
+    const qEl = document.getElementById("nx-cat-q");
+    qEl.addEventListener("input", debounceCortexInput(applyFilters, 300));
+    // The live search re-renders the page; keep the cursor in the search box.
+    if (search) {
+      qEl.focus();
+      qEl.setSelectionRange(qEl.value.length, qEl.value.length);
+    }
     // Wire card actions
     main.querySelectorAll(".nx-spatial-card[data-slug]").forEach(card => {
       const slug = card.dataset.slug;
@@ -2122,7 +2138,7 @@ async function renderCortexLauncher(hash) {
             <div class="nx-eyebrow">AGENTS · pick one or many</div>
             <div class="nx-cortex-search">
               <input id="nx-cortex-agent-search" type="search"
-                     placeholder="search 590+ catalog agents…"
+                     placeholder="search ${(state.catalogTotal || state.runnableCount || 0).toLocaleString()} catalog agents…"
                      autocomplete="off" spellcheck="false">
             </div>
           </div>
