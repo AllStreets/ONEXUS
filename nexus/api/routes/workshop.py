@@ -22,10 +22,38 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/workshop", tags=["workshop"])
 
 
+# Inline-executable runtimes (code is passed as an argument, no compile step).
+# A language only actually runs if its binary is on PATH — `/languages`
+# reports every entry with an `installed` flag so the UI can offer the full
+# searchable list while the run endpoint returns a clear 503 for missing ones.
 _RUNTIMES = {
-    "python":     {"exec": [sys.executable, "-c"], "ext": ".py", "timeout": 8},
-    "javascript": {"exec": ["node", "-e"],         "ext": ".js", "timeout": 8},
-    "shell":      {"exec": ["bash", "-c"],         "ext": ".sh", "timeout": 6},
+    "python":      {"exec": [sys.executable, "-c"],   "ext": ".py",  "timeout": 8},
+    "javascript":  {"exec": ["node", "-e"],           "ext": ".js",  "timeout": 8},
+    "typescript":  {"exec": ["deno", "eval", "--ext=ts"], "ext": ".ts", "timeout": 8},
+    "shell":       {"exec": ["bash", "-c"],           "ext": ".sh",  "timeout": 6},
+    "bash":        {"exec": ["bash", "-c"],           "ext": ".sh",  "timeout": 6},
+    "zsh":         {"exec": ["zsh", "-c"],            "ext": ".zsh", "timeout": 6},
+    "fish":        {"exec": ["fish", "-c"],           "ext": ".fish","timeout": 6},
+    "ruby":        {"exec": ["ruby", "-e"],           "ext": ".rb",  "timeout": 8},
+    "perl":        {"exec": ["perl", "-e"],           "ext": ".pl",  "timeout": 8},
+    "php":         {"exec": ["php", "-r"],            "ext": ".php", "timeout": 8},
+    "lua":         {"exec": ["lua", "-e"],            "ext": ".lua", "timeout": 8},
+    "r":           {"exec": ["Rscript", "-e"],        "ext": ".R",   "timeout": 8},
+    "deno":        {"exec": ["deno", "eval"],         "ext": ".ts",  "timeout": 8},
+    "bun":         {"exec": ["bun", "-e"],            "ext": ".js",  "timeout": 8},
+    "node":        {"exec": ["node", "-e"],           "ext": ".js",  "timeout": 8},
+    "elixir":      {"exec": ["elixir", "-e"],         "ext": ".exs", "timeout": 8},
+    "erlang":      {"exec": ["escript"],              "ext": ".erl", "timeout": 8},
+    "powershell":  {"exec": ["pwsh", "-c"],           "ext": ".ps1", "timeout": 8},
+    "groovy":      {"exec": ["groovy", "-e"],         "ext": ".groovy", "timeout": 10},
+    "scala":       {"exec": ["scala", "-e"],          "ext": ".scala","timeout": 12},
+    "raku":        {"exec": ["raku", "-e"],           "ext": ".raku","timeout": 8},
+    "tcl":         {"exec": ["tclsh"],                "ext": ".tcl", "timeout": 8},
+    "julia":       {"exec": ["julia", "-e"],          "ext": ".jl",  "timeout": 10},
+    "clojure":     {"exec": ["clojure", "-e"],        "ext": ".clj", "timeout": 12},
+    "dart":        {"exec": ["dart", "run", "-"],     "ext": ".dart","timeout": 10},
+    "swift":       {"exec": ["swift", "-"],           "ext": ".swift","timeout": 12},
+    "go":          {"exec": ["go", "run", "-"],       "ext": ".go",  "timeout": 12},
 }
 
 
@@ -46,14 +74,15 @@ class RunResponse(BaseModel):
 
 @router.get("/languages")
 async def languages() -> dict:
-    """List available sandbox runtimes (those whose binary exists on PATH)."""
-    available = {}
+    """List sandbox runtimes. Returns every defined language with an
+    ``installed`` flag (binary present on PATH) so the UI can show the full
+    searchable list; the run endpoint 503s for an uninstalled pick."""
+    out = {}
     for name, cfg in _RUNTIMES.items():
         bin_name = cfg["exec"][0]
-        # sys.executable always exists; everything else needs which-look-up
-        if bin_name == sys.executable or shutil.which(bin_name):
-            available[name] = {"bin": bin_name, "timeout_s": cfg["timeout"]}
-    return {"languages": available}
+        installed = bin_name == sys.executable or shutil.which(bin_name) is not None
+        out[name] = {"bin": bin_name, "timeout_s": cfg["timeout"], "installed": installed}
+    return {"languages": out}
 
 
 @router.post("/run", response_model=RunResponse)
