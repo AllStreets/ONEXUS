@@ -24,6 +24,7 @@ from nexus.modules.consciousness import ConsciousnessModule
 from nexus.modules.sentry import SentryModule
 from nexus.modules.echo import EchoModule
 from nexus.modules.sigil import SigilModule
+from nexus.modules.atlas import AtlasModule
 
 from nexus.api.routes.messages import router as messages_router
 from nexus.api.routes.modules import router as modules_router
@@ -100,7 +101,7 @@ def _init_kernel(config: NexusConfig) -> KernelState:
     for ModuleClass in [CouncilModule, SpecterModule, AutonomicModule,
                         OracleModule, WraithModule, LegacyModule,
                         ConsciousnessModule, SentryModule, EchoModule,
-                        SigilModule]:
+                        SigilModule, AtlasModule]:
         module = ModuleClass()
         cortex.register_module(module)
         aegis.set_policy(module.name, allowed=True, initial_trust=0.30)
