@@ -125,6 +125,24 @@ export const GLYPHS = {
       <rect x="3" y="13" width="6" height="6" rx="1.4"/>
       <rect x="13" y="13" width="6" height="6" rx="1.4" opacity="0.5" stroke-dasharray="2 2"/>
     </svg>`,
+
+  /* sigil — concentric radar arcs with sweep contact */
+  sigil: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
+      <path d="M4 13a7 7 0 0 1 14 0"/>
+      <path d="M7 13a4 4 0 0 1 8 0" opacity="0.7"/>
+      <path d="M11 13v5" opacity="0.5"/>
+      <circle cx="11" cy="13" r="1.1" fill="#fff" stroke="none"/>
+      <circle cx="16.4" cy="7.4" r="0.9" fill="#fff" stroke="none" opacity="0.85"/>
+    </svg>`,
+
+  /* atlas — meridian globe (world model) */
+  atlas: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4">
+      <circle cx="11" cy="11" r="7"/>
+      <ellipse cx="11" cy="11" rx="3" ry="7" opacity="0.7"/>
+      <path d="M4 11h14" opacity="0.7"/>
+    </svg>`,
 };
 
 /* default gradient palette for each built-in (matches manifest "identity.gradient") */
@@ -139,6 +157,8 @@ export const GRADIENTS = {
   sentry:        ["#ffb878", "#8c4218"],
   echo:          ["#a8e8ff", "#346b9c"],
   agents:        ["#c8c8ff", "#3a3a8c"],
+  sigil:         ["#ffb4a8", "#a82a1c"],
+  atlas:         ["#7ee8b2", "#1c6a4a"],
 };
 
 /* common UI icons — all line-stroke, no fills (cohesive language) */
@@ -282,6 +302,31 @@ export const BUILTIN_CAPABILITIES = {
     ],
     permission_classes: ["Routine", "Notable"],
     trust_floor: 0.50,
+    network: false,
+  },
+  sigil: {
+    tagline: "Threat radar — kernel anomaly detection with emergency bypass",
+    description: "Watches Aegis trust deltas, gate verdicts, routing traffic, and the network log. Table-driven detections broadcast at emergency priority with a provenance hash; high-stakes hits auto-activate Specter (kill switch available).",
+    intents: ["detect", "broadcast", "escalate"],
+    tools: [
+      { name: "pulse.subscribe",            class: "Routine" },
+      { name: "chronicle.read.workspace",   class: "Routine" },
+      { name: "pulse.broadcast.emergency",  class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  atlas: {
+    tagline: "World model — temporal facts with confidence decay",
+    description: "Engram's semantic tier as a knowledge graph: facts decay deterministically until re-confirmed, contradictions coexist with competing confidences, and every answer cites its source.",
+    intents: ["observe", "recall-world", "cite"],
+    tools: [
+      { name: "engram.read.workspace",  class: "Routine" },
+      { name: "engram.write.workspace", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
     network: false,
   },
 };
