@@ -714,6 +714,22 @@ class Cortex:
             "trust_tier": self._aegis.get_tier(target),
         })
 
+        # 4b. Stream the routing decision live (N1.3 kernel visualization)
+        await self._pulse.publish(Message(
+            topic="kernel.route",
+            source="cortex",
+            payload={
+                "target": target,
+                "trust_tier": self._aegis.get_tier(target),
+                "message_preview": message[:100],
+                "signals": [
+                    {"name": s.name, "module": s.module, "score": s.score,
+                     "signals": s.signals}
+                    for s in scored_intents[:5]
+                ],
+            },
+        ))
+
         # 5. Store the user message in episodic memory
         self._engram.episodic.store(f"User: {message}", source="user_input")
 
