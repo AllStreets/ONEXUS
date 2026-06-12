@@ -137,12 +137,16 @@ async def search_agents(
 ):
     catalog = _get_catalog(request)
     if not q.strip():
-        entries = catalog.list_agents()[:limit]
+        all_matches = catalog.list_agents()
     else:
-        entries = catalog.search(q.strip(), limit=limit)
+        # Search scans the WHOLE catalog; a high cap returns every match so we
+        # can report the true total, then page to `limit` for display.
+        all_matches = catalog.search(q.strip(), limit=1_000_000)
+    total = len(all_matches)
+    page = all_matches[:limit]
     return AgentListResponse(
-        agents=[_entry_to_summary(e) for e in entries],
-        total=len(entries),
+        agents=[_entry_to_summary(e) for e in page],
+        total=total,
         categories=catalog.categories(),
     )
 

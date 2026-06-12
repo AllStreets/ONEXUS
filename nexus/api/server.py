@@ -203,8 +203,30 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
         kernel.pulse.subscribe("cortex.route", _on_cortex_route)
         kernel.pulse.subscribe("aegis.trust_change", _on_trust_change)
 
+        # Keep the agent catalog fresh: re-read it from disk every 5 minutes so
+        # newly-added agents become searchable/launchable without a restart
+        # (atomic swap — see AgentCatalog.reload). No-op when the catalog dir
+        # hasn't changed; cheap relative to the 5-min interval.
+        import asyncio as _asyncio
+
+        async def _catalog_refresher():
+            while True:
+                await _asyncio.sleep(300)
+                cat = getattr(app.state, "agent_catalog", None)
+                if cat is None:
+                    continue
+                try:
+                    await _asyncio.to_thread(cat.reload)
+                except Exception as exc:  # noqa: BLE001
+                    import logging as _log
+
+                    _log.getLogger("nexus.api").warning("catalog reload failed: %s", exc)
+
+        _refresh_task = _asyncio.create_task(_catalog_refresher())
+
         yield
         # Shutdown: drain event bus, log shutdown
+        _refresh_task.cancel()
         await kernel.pulse.drain()
         kernel.chronicle.log("api", "server_stop", {})
 

@@ -14,6 +14,9 @@ const state = {
   thread: new Map(),       // workspace_id -> array of message records
   attachments: new Map(),  // workspace_id -> array of pending file uploads
   agents: [],              // catalog/runtime metadata
+  runnableCount: 0,        // live count of runnable (MCP-adapter) catalog agents
+  catalogTotal: 0,         // live count of ALL catalog agents (for search/picker labels)
+  coreOnDuty: 0,           // live count of always-on cortex modules + routing ("agents on duty")
   recentAgents: [],
   // cache-bust query string appended to guide image src so users always
   // see the latest PNGs even if their browser cached the old ones
@@ -471,6 +474,42 @@ async function loadWorkspaces() {
   } catch {}
 }
 
+// Fetch the live total of runnable (MCP-adapter) catalog agents and refresh
+// the agents label. Cheap (limit=1; we only read `total`). Safe to call on a
+// timer — the catalog count changes only when a nightly rebuild lands.
+async function refreshRunnableCount() {
+  try {
+    const r = await fetch("/api/agents?runnable_only=true&limit=1");
+    if (r.ok) {
+      const n = Number((await r.json()).total ?? 0);
+      if (Number.isFinite(n) && n > 0) state.runnableCount = n;
+    }
+  } catch {}
+  try {
+    const rt = await fetch("/api/agents?limit=1");
+    if (rt.ok) {
+      const n = Number((await rt.json()).total ?? 0);
+      if (Number.isFinite(n) && n > 0) state.catalogTotal = n;
+    }
+  } catch {}
+  try {
+    // Always-on cognitive roster (council, oracle, specter, …) + the cortex
+    // router. This is the truthful "agents on duty" floor — resident the moment
+    // the kernel boots, regardless of a workspace's declared resident_agents.
+    const rm = await fetch("/api/cortex/modules");
+    if (rm.ok) {
+      const n = Number((await rm.json()).count ?? 0);
+      if (Number.isFinite(n) && n >= 0) state.coreOnDuty = n;
+    }
+  } catch {}
+  const label = document.getElementById("nx-agents-label");
+  if (label && state.agents) {
+    const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
+    label.textContent = `${totalBuiltin} BUILT-IN · ${state.runnableCount || 0} RUNNABLE`;
+  }
+  renderChromeContext();
+}
+
 async function loadAgents() {
   // Recent agents = the ones you've actually USED (from chronicle). This
   // takes priority over the catalog/system list — the sidebar should
@@ -500,6 +539,10 @@ async function loadAgents() {
       state.agents = body.agents || [];
     }
   } catch {}
+  // Live count of runnable (MCP-adapter) agents in the catalog — drives the
+  // "RUNNABLE" figure in the agents label. limit=1 keeps it cheap; we only
+  // need the total.
+  await refreshRunnableCount();
   // If chronicle had no usage yet, fall back to listing running MCP
   // subprocess agents so the sidebar still has something to show on a
   // fresh install. Real usage replaces this as soon as the user dispatches.
@@ -846,7 +889,13 @@ function renderChromeContext() {
   if (!state.active) { el.textContent = "no workspace"; return; }
   const w = state.workspaces.find(ws => ws.workspace_id === state.active);
   const name = w ? w.name : state.active;
-  const count = w?.resident_agents?.length || 0;
+  // "On duty" = the larger of this workspace's declared/active agents and the
+  // always-on cortex roster (cortex routing + council + oracle + …). The core
+  // modules are resident whenever the kernel is up, so the count is never 0
+  // while the system is live, and it tracks the real module set as it changes.
+  const declared = w?.resident_agents?.length || 0;
+  const chatted = (state.workspaceAgentCounts || {})[state.active] || 0;
+  const count = Math.max(declared, chatted, state.coreOnDuty || 0);
   el.textContent = `— ${name.toLowerCase()} · ${count} agent${count === 1 ? "" : "s"} on duty`;
 }
 
@@ -988,7 +1037,7 @@ function renderAgentDiscs() {
   const BUILTINS = ["oracle", "council", "wraith", "echo", "specter", "autonomic"];
   const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
   document.getElementById("nx-agents-label").textContent =
-    `${totalBuiltin} BUILT-IN · ${state.agents.length || 0} INSTALLED`;
+    `${totalBuiltin} BUILT-IN · ${state.runnableCount || 0} RUNNABLE`;
   const overflow = Math.max(0, totalBuiltin - BUILTINS.length);
   el.innerHTML = BUILTINS.map(slug => `<button class="nx-disc-btn" data-slug="${slug}" title="${escapeHtml(BUILTIN_CAPABILITIES[slug]?.tagline || slug)}">${agentDisc(slug, { size: 28 })}</button>`).join("") +
     (overflow > 0 ? `<button class="nx-agent-overflow" title="Browse catalog">+${overflow}</button>` : "");
@@ -1252,6 +1301,33 @@ async function renderConversation(workspaceId) {
   main.addEventListener("dragover", onDragOver);
   main.addEventListener("dragleave", onDragLeave);
   main.addEventListener("drop", onDrop);
+
+  // Copy/paste attach: paste a copied file or a screenshot straight into the
+  // composer. Plain-text pastes fall through to normal typing.
+  const composerInput = document.getElementById("nx-composer-input");
+  const onPaste = async (e) => {
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const files = [];
+    for (const item of Array.from(cd.items || [])) {
+      if (item.kind !== "file") continue;
+      let f = item.getAsFile();
+      if (!f) continue;
+      if (!f.name) {
+        // Clipboard images arrive unnamed — give them a real filename.
+        const ext = (f.type.split("/")[1] || "bin").replace("jpeg", "jpg");
+        f = new File([f], `pasted-${Date.now()}.${ext}`, { type: f.type });
+      }
+      files.push(f);
+    }
+    for (const f of Array.from(cd.files || [])) {
+      if (!files.some(x => x.name === f.name && x.size === f.size)) files.push(f);
+    }
+    if (!files.length) return;  // plain text -> let the paste happen normally
+    e.preventDefault();
+    for (const f of files) await uploadFile(workspaceId, f);
+  };
+  composerInput?.addEventListener("paste", onPaste);
 
   // Welcome guide link — open the 12-page guide
   document.getElementById("nx-welcome-guide")?.addEventListener("click", () => renderGuide(0));
@@ -1803,7 +1879,7 @@ async function renderCatalog() {
           <div>
             <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
             <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
-            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of ${body.total} · ${runnableOnly ? "runnable (MCP adapter)" : "all"} · vendored from ONEXUS-Agents</div>
+            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of ${body.total} ${search ? `matching “${escapeHtml(search)}” (whole catalog)` : (runnableOnly ? "· runnable (MCP adapter)" : "· all")} · vendored from ONEXUS-Agents</div>
           </div>
           <form class="nx-cat-filters" id="nx-cat-filters">
             <input type="search" id="nx-cat-q" value="${escapeHtml(search)}" placeholder="search the catalog…">
@@ -1836,6 +1912,15 @@ async function renderCatalog() {
     document.getElementById("nx-cat-filters").addEventListener("submit", (e) => { e.preventDefault(); applyFilters(); });
     document.getElementById("nx-cat-cat").addEventListener("change", applyFilters);
     document.getElementById("nx-cat-runnable").addEventListener("change", applyFilters);
+    // Live search across the WHOLE catalog (server-side), debounced so it
+    // fires as you type — not just on Enter.
+    const qEl = document.getElementById("nx-cat-q");
+    qEl.addEventListener("input", debounceCortexInput(applyFilters, 300));
+    // The live search re-renders the page; keep the cursor in the search box.
+    if (search) {
+      qEl.focus();
+      qEl.setSelectionRange(qEl.value.length, qEl.value.length);
+    }
     // Wire card actions
     main.querySelectorAll(".nx-spatial-card[data-slug]").forEach(card => {
       const slug = card.dataset.slug;
@@ -2071,7 +2156,7 @@ async function renderCortexLauncher(hash) {
             <div class="nx-eyebrow">AGENTS · pick one or many</div>
             <div class="nx-cortex-search">
               <input id="nx-cortex-agent-search" type="search"
-                     placeholder="search 590+ catalog agents…"
+                     placeholder="search ${(state.catalogTotal || state.runnableCount || 0).toLocaleString()} catalog agents…"
                      autocomplete="off" spellcheck="false">
             </div>
           </div>
@@ -3942,7 +4027,8 @@ async function renderWorkshop() {
     if (r.ok) langs = (await r.json()).languages || {};
   } catch {}
   const available = Object.keys(langs);
-  const defaultLang = available[0] || "python";
+  const installedLangs = available.filter(l => langs[l]?.installed);
+  const defaultLang = installedLangs[0] || available[0] || "python";
   const lastCode = state._workshopCode || "";
   const lastLang = state._workshopLang || defaultLang;
 
@@ -3952,16 +4038,19 @@ async function renderWorkshop() {
         <div>
           <div class="nx-eyebrow" style="margin-bottom:6px">Workshop</div>
           <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Code &amp; sandbox</div>
-          <div class="nx-dim" style="font-size:13px;margin-top:4px">${available.length} runtime${available.length===1?"":"s"} available · gated by Aegis · logged to Chronicle · coder agent on the right</div>
+          <div class="nx-dim" style="font-size:13px;margin-top:4px">${available.length} languages (${installedLangs.length} installed) · gated by Aegis · logged to Chronicle · coder agent on the right</div>
         </div>
       </header>
 
       <div class="nx-workshop with-chat">
         <div class="nx-workshop-left">
           <div class="nx-workshop-controls">
-            <select id="nx-workshop-lang" class="nx-input">
-              ${available.map(l => `<option value="${escapeHtml(l)}" ${l===lastLang?"selected":""}>${escapeHtml(l)}</option>`).join("")}
-            </select>
+            <input id="nx-workshop-lang" class="nx-input" list="nx-workshop-lang-list"
+                   value="${escapeHtml(lastLang)}" placeholder="search language…"
+                   autocomplete="off" spellcheck="false" aria-label="Language (type to search)">
+            <datalist id="nx-workshop-lang-list">
+              ${available.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}${langs[l]?.installed ? "" : " — not installed"}</option>`).join("")}
+            </datalist>
             <button id="nx-workshop-run" class="nx-run-btn">
               <span>Run</span>
               <span class="run-kbd">⌘⏎</span>
@@ -4004,11 +4093,17 @@ async function renderWorkshop() {
   const runBtn = document.getElementById("nx-workshop-run");
 
   const run = async () => {
-    runBtn.disabled = true;
     const code = codeEl.value;
-    const language = langEl.value;
+    const language = (langEl.value || "").trim().toLowerCase();
     state._workshopCode = code;
     state._workshopLang = language;
+    // The language field is a free-text search box; guide typos before we
+    // bother the sandbox.
+    if (!available.includes(language)) {
+      outEl.innerHTML = `<div class="nx-empty" style="opacity:0.7;padding:14px;font-size:11.5px">Unknown language <b>${escapeHtml(language || "(blank)")}</b>. Pick one from the list (${available.length} available).</div>`;
+      return;
+    }
+    runBtn.disabled = true;
     outEl.innerHTML = `<div class="nx-empty" style="opacity:0.55;padding:14px;font-size:11.5px">Running…</div>`;
     try {
       const r = await fetch("/api/workshop/run", {
@@ -4107,7 +4202,7 @@ async function renderWorkshop() {
             langEl.value = blocks[bi].lang;
             state._workshopLang = blocks[bi].lang;
           }
-          btn.textContent = "✓ applied — ⌘⏎ to run";
+          btn.innerHTML = `${UI.check(12)} applied — ⌘⏎ to run`;
           btn.disabled = true;
         }
       });
@@ -4355,7 +4450,7 @@ async function renderSearch(hash) {
           <h2>${escapeHtml(hit.title || hit.url)}</h2>
           <a class="nx-reader-url" href="${escapeHtml(hit.url)}" target="_blank" rel="noopener">${escapeHtml(hit.url)} ↗</a>
         </div>
-        <button class="nx-reader-close" aria-label="Close reader">✕</button>
+        <button class="nx-reader-close" aria-label="Close reader">${UI.close(14)}</button>
       </header>
       <section class="nx-reader-digest">
         <div class="nx-eyebrow">DIGEST · LLM summary</div>
@@ -4768,6 +4863,8 @@ function subscribeStreams() {
     await Promise.allSettled([loadTrust(), loadPermissions()]);
     renderCockpitRail();
   }, 30000);
+  // Keep the runnable-agents figure live (catalog count updates on rebuilds).
+  setInterval(refreshRunnableCount, 60000);
   // Trust event temperature overlays — flash a brief gold/steel/crimson wash
   // on the body when a new trust_change event lands in chronicle.
   setInterval(pollTrustEvents, 2000);

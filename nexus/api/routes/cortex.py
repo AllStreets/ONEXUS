@@ -211,6 +211,19 @@ def _get_kernel(request: Request):
     return request.app.state.kernel
 
 
+@router.get("/modules")
+async def list_modules(request: Request) -> dict[str, Any]:
+    """The always-on cognitive roster (council, specter, oracle, …) plus the
+    cortex router itself. The Aurora header reads this to show a live, truthful
+    "agents on duty" count — these modules are resident the moment the kernel
+    boots, independent of any workspace's declared resident_agents."""
+    cortex = _get_kernel(request).cortex
+    modules = sorted(cortex.list_modules())
+    # "+ 1" for cortex's own routing layer, which is on duty whenever a module is.
+    on_duty = (["routing"] if modules else []) + modules
+    return {"modules": modules, "on_duty": on_duty, "count": len(on_duty)}
+
+
 class LaunchBody(BaseModel):
     message: str = Field(..., min_length=1)
     workspace_id: str | None = None

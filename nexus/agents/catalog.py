@@ -101,9 +101,9 @@ class AgentCatalog:
         self._adapters_root = self._root.parent / "adapters"
         self._load()
 
-    def _load(self) -> None:
-        """Scan the catalog directory and load all agent entries."""
-        count = 0
+    def _scan(self) -> dict[str, AgentEntry]:
+        """Scan the catalog directory and return a fresh {slug: entry} map."""
+        out: dict[str, AgentEntry] = {}
         for cat_dir in sorted(self._root.iterdir()):
             if not cat_dir.is_dir() or cat_dir.name.startswith("_"):
                 continue
@@ -111,16 +111,21 @@ class AgentCatalog:
                 try:
                     data = json.loads(json_file.read_text())
                     entry = AgentEntry.from_json(data)
-                    self._entries[entry.slug] = entry
-                    count += 1
+                    out[entry.slug] = entry
                 except Exception as exc:
                     logger.warning("Failed to load %s: %s", json_file, exc)
-        logger.info("Loaded %d agents from catalog at %s", count, self._root)
+        logger.info("Loaded %d agents from catalog at %s", len(out), self._root)
+        return out
+
+    def _load(self) -> None:
+        """Scan the catalog directory and load all agent entries."""
+        self._entries = self._scan()
 
     def reload(self) -> None:
-        """Re-read the catalog from disk."""
-        self._entries.clear()
-        self._load()
+        """Re-read the catalog from disk, swapping in the new entries atomically
+        so concurrent readers never observe a partially-loaded catalog (and new
+        agents show up without a restart)."""
+        self._entries = self._scan()
 
     def list_agents(self, category: str | None = None, runnable_only: bool = False) -> list[AgentEntry]:
         """Return agents, optionally filtered by category and runnable status."""

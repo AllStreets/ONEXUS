@@ -102,7 +102,10 @@ def test_render_briefing_emits_required_sections(tmp_kernel_db: Path, tmp_path: 
 def test_render_briefing_counts_seeded_data(tmp_kernel_db: Path, tmp_path: Path, monkeypatch):
     monkeypatch.setattr(daily_mod, "reports_dir", lambda: tmp_path / "reports")
     monkeypatch.setattr(daily_mod, "catalog_root", lambda: None)
-    text = render_briefing(db=tmp_kernel_db, today=date.today())
+    # The briefing windows events by UTC day and the fixture timestamps with
+    # datetime.now(timezone.utc) — so pass the UTC date, not date.today(),
+    # which diverges from it every evening in US timezones.
+    text = render_briefing(db=tmp_kernel_db, today=datetime.now(timezone.utc).date())
 
     # Two workspaces seeded
     assert "Workspaces: **2**" in text
