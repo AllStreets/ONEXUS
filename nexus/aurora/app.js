@@ -5,6 +5,7 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 
 import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES } from "/aurora/static/icons.js";
+import { renderMarkdown } from "/aurora/static/md.js";
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
@@ -1612,6 +1613,13 @@ function renderMessageHTML(m) {
     </div>
   ` : "";
   const fb = m.feedback;  // null | 'up' | 'down'
+  // Agent message bodies render through the escape-first markdown pipeline
+  // (md.js). While a reply is still streaming we show the raw text with
+  // pre-wrap (cheap incremental updates); on completion the body is
+  // re-rendered as markdown. User messages stay plain-escaped.
+  const bodyHTML = m.streaming
+    ? `<div class="nx-msg-body" style="white-space:pre-wrap">${escapeHtml(m.body)}<span class="nx-stream-caret" aria-hidden="true"></span></div>`
+    : `<div class="nx-msg-body nx-msg-md">${m.html || renderMarkdown(m.body)}</div>`;
   return `
     <div class="nx-msg-agent" data-message-id="${escapeHtml(m.id || "")}" data-module="${escapeHtml(slug)}">
       ${agentDisc(slug, { size: 40 })}
@@ -1621,7 +1629,7 @@ function renderMessageHTML(m) {
           <span class="nx-msg-meta">${escapeHtml(time)}</span>
           ${m.memory_id ? `<span class="nx-msg-memory" title="Stored in Engram: ${escapeHtml(m.memory_id)}">remembered</span>` : ""}
         </div>
-        <div class="nx-msg-body" style="white-space:pre-wrap">${m.html || escapeHtml(m.body)}</div>
+        ${bodyHTML}
         ${diffHTML}
         <div class="nx-msg-footer">
           <button class="nx-fb-btn ${fb === 'up' ? 'on' : ''}" data-fb="up" title="Mark this response as useful (raises ${escapeHtml(slug)}'s trust)">
@@ -2321,7 +2329,7 @@ async function renderCortexLauncher(hash) {
     return `
       <div class="nx-cortex-turn agent">
         <span class="nx-cortex-turn-tag">agent</span>
-        <div class="nx-cortex-turn-body">${escapeHtml(m.content).replace(/\n/g, "<br>")}</div>
+        <div class="nx-cortex-turn-body nx-msg-md">${renderMarkdown(m.content)}</div>
       </div>
     `;
   };
