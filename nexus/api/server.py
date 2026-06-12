@@ -374,6 +374,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.cortex import router as cortex_router
     app.include_router(cortex_router)
 
+    from nexus.api.routes.sigil import router as sigil_router
+    app.include_router(sigil_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):
