@@ -48,8 +48,10 @@ def test_config_creates_data_dir(tmp_path):
 
 
 def test_config_default_provider(tmp_path):
+    # Default flipped from "local" (llama.cpp) to "ollama" — the runtime the
+    # kernel autostarts against. Override with NEXUS_DEFAULT_PROVIDER.
     cfg = NexusConfig(data_dir=tmp_path / "nexus_data")
-    assert cfg.default_provider == "local"
+    assert cfg.default_provider == "ollama"
 
 def test_config_default_provider_from_env(tmp_path, monkeypatch):
     monkeypatch.setenv("NEXUS_DEFAULT_PROVIDER", "openai")
