@@ -14,6 +14,11 @@ const state = {
   workspaceAgentCounts: {}, // workspace_id -> distinct-agents-you've-chatted-with
   thread: new Map(),       // workspace_id -> array of message records
   attachments: new Map(),  // workspace_id -> array of pending file uploads
+  codebases: new Map(),    // workspace_id -> registered codebase roots
+  codebaseTrees: new Map(),// "<codebase_id>|<rel path>" -> cached tree entries
+  codebaseOpen: new Set(), // expanded "<codebase_id>|<rel path>" keys
+  codebasePanel: new Set(),// workspace_ids with the codebases panel open
+  _codebaseErr: null,      // last codebase action error (shown in the panel)
   agents: [],              // catalog/runtime metadata
   runnableCount: 0,        // live count of runnable (MCP-adapter) catalog agents
   catalogTotal: 0,         // live count of ALL catalog agents (for search/picker labels)
@@ -1161,12 +1166,19 @@ async function renderConversation(workspaceId) {
   // JS click chain. Works in every browser, including Safari which is picky
   // about programmatic .click() on hidden inputs.
   const composerHTML = `
+    ${renderCodebasePanelHTML(workspaceId)}
     <form class="nx-composer" id="nx-composer" autocomplete="off">
       <label class="nx-attach-btn" id="nx-attach-btn" for="nx-file-input" title="Attach file (or drag-and-drop)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9.8 5.5 5.8 9.5a2 2 0 1 1-2.8-2.8L8 1.7a3 3 0 0 1 4.2 4.2L7.2 11a4 4 0 0 1-5.7-5.6"/>
         </svg>
       </label>
+      <button type="button" class="nx-attach-btn" id="nx-codebase-btn" title="Browse codebases (attach source files)" aria-expanded="${state.codebasePanel.has(workspaceId)}">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 4 2 7l3 3"/>
+          <path d="M9 4l3 3-3 3"/>
+        </svg>
+      </button>
       <input type="file" id="nx-file-input" multiple aria-hidden="true" class="nx-file-input-vis">
       <input id="nx-composer-input"
              placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
@@ -1278,6 +1290,9 @@ async function renderConversation(workspaceId) {
       renderConversation(workspaceId);
     });
   });
+
+  // Codebases panel — register roots, browse trees, attach files.
+  wireCodebasePanel(workspaceId);
 
   // Drop anywhere on the main canvas — use addEventListener not the on*
   // properties so they survive re-renders cleanly. The dragover handler MUST
@@ -1704,6 +1719,207 @@ async function uploadFile(workspaceId, file) {
   } catch (e) {
     console.error("upload error:", e);
   }
+}
+
+// ── Codebases panel ────────────────────────────────────────────────────────
+// A workspace can register local directories ("codebase roots") through
+// POST /api/codebases. The panel browses them one directory level at a time
+// (lazy: GET /tree on first expand, cached in state.codebaseTrees) and a
+// click on a file pulls its content (GET /file) and pushes it through the
+// existing upload/attachment flow, so it lands in the composer exactly like
+// a dragged-in file — Engram record, Chronicle log, dedupe and all.
+
+function _cbKey(codebaseId, rel) { return `${codebaseId}|${rel}`; }
+
+function renderCodebaseLevelHTML(codebaseId, rel, depth) {
+  const entries = state.codebaseTrees.get(_cbKey(codebaseId, rel)) || [];
+  if (!entries.length) {
+    return `<div class="nx-cb-empty" style="padding-left:${14 + depth * 14}px">empty</div>`;
+  }
+  return entries.map(e => {
+    const childRel = rel ? `${rel}/${e.name}` : e.name;
+    const pad = 14 + depth * 14;
+    if (e.type === "dir") {
+      const open = state.codebaseOpen.has(_cbKey(codebaseId, childRel));
+      return `
+        <button type="button" class="nx-cb-row nx-cb-dir ${open ? "open" : ""}"
+                data-cb-dir data-cb-id="${escapeHtml(codebaseId)}" data-cb-rel="${encodeURIComponent(childRel)}"
+                style="padding-left:${pad}px">
+          <span class="nx-cb-arrow" aria-hidden="true">›</span>
+          <span class="nx-cb-name">${escapeHtml(e.name)}</span>
+        </button>
+        ${open ? renderCodebaseLevelHTML(codebaseId, childRel, depth + 1) : ""}
+      `;
+    }
+    return `
+      <button type="button" class="nx-cb-row nx-cb-file"
+              data-cb-file data-cb-id="${escapeHtml(codebaseId)}" data-cb-rel="${encodeURIComponent(childRel)}"
+              style="padding-left:${pad}px" title="Attach ${escapeHtml(e.name)} to the composer">
+        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 0h6l4 4v10H2z"/><path d="M8 0v4h4"/>
+        </svg>
+        <span class="nx-cb-name">${escapeHtml(e.name)}</span>
+        <span class="nx-cb-size">${((e.size || 0) / 1024).toFixed(1)} KB</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderCodebasePanelHTML(workspaceId) {
+  if (!state.codebasePanel.has(workspaceId)) return "";
+  const roots = state.codebases.get(workspaceId) || [];
+  const rows = roots.map(r => {
+    const open = state.codebaseOpen.has(_cbKey(r.id, ""));
+    return `
+      <div class="nx-cb-root">
+        <div class="nx-cb-root-row">
+          <button type="button" class="nx-cb-row nx-cb-dir ${open ? "open" : ""}"
+                  data-cb-dir data-cb-id="${escapeHtml(r.id)}" data-cb-rel=""
+                  title="${escapeHtml(r.path)}">
+            <span class="nx-cb-arrow" aria-hidden="true">›</span>
+            <span class="nx-cb-name">${escapeHtml(r.name)}</span>
+            <span class="nx-cb-path">${escapeHtml(truncate(r.path, 48))}</span>
+          </button>
+          <button type="button" class="nx-cb-remove" data-cb-remove data-cb-id="${escapeHtml(r.id)}"
+                  title="Unregister this codebase" aria-label="Unregister ${escapeHtml(r.name)}">×</button>
+        </div>
+        ${open ? renderCodebaseLevelHTML(r.id, "", 1) : ""}
+      </div>
+    `;
+  }).join("");
+  return `
+    <div class="nx-codebase-panel" id="nx-codebase-panel">
+      <div class="nx-cb-head">
+        <span class="nx-cb-title">CODEBASES</span>
+        <span class="nx-cb-hint">read-only · click a file to attach it</span>
+      </div>
+      ${rows || `<div class="nx-cb-empty">no codebases registered for this workspace yet</div>`}
+      <form class="nx-cb-add" id="nx-cb-add">
+        <input id="nx-cb-path" placeholder="/absolute/path/to/repo" aria-label="Absolute path to a local codebase" autocomplete="off">
+        <button type="submit">register</button>
+      </form>
+      ${state._codebaseErr ? `<div class="nx-cb-err" role="alert">${escapeHtml(state._codebaseErr)}</div>` : ""}
+    </div>
+  `;
+}
+
+async function loadCodebases(workspaceId) {
+  try {
+    const r = await fetch(`/api/codebases?workspace_id=${encodeURIComponent(workspaceId)}`);
+    if (r.ok) state.codebases.set(workspaceId, (await r.json()).codebases || []);
+  } catch {}
+}
+
+async function _cbDetail(r, fallback) {
+  try {
+    const body = await r.json();
+    return body.detail || fallback;
+  } catch { return fallback; }
+}
+
+function wireCodebasePanel(workspaceId) {
+  document.getElementById("nx-codebase-btn")?.addEventListener("click", async () => {
+    if (state.codebasePanel.has(workspaceId)) {
+      state.codebasePanel.delete(workspaceId);
+    } else {
+      state.codebasePanel.add(workspaceId);
+      state._codebaseErr = null;
+      await loadCodebases(workspaceId);
+    }
+    renderConversation(workspaceId);
+  });
+
+  const panel = document.getElementById("nx-codebase-panel");
+  if (!panel) return;
+
+  document.getElementById("nx-cb-add")?.addEventListener("submit", async (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const input = document.getElementById("nx-cb-path");
+    const path = (input?.value || "").trim();
+    if (!path) return;
+    state._codebaseErr = null;
+    try {
+      const r = await fetch("/api/codebases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace_id: workspaceId, path }),
+      });
+      if (!r.ok) {
+        state._codebaseErr = await _cbDetail(r, `register failed (HTTP ${r.status})`);
+      } else {
+        await loadCodebases(workspaceId);
+      }
+    } catch (err) {
+      state._codebaseErr = `register failed: ${err.message}`;
+    }
+    renderConversation(workspaceId);
+  });
+
+  panel.querySelectorAll("[data-cb-remove]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.cbId;
+      state._codebaseErr = null;
+      try { await fetch(`/api/codebases/${encodeURIComponent(id)}`, { method: "DELETE" }); } catch {}
+      for (const key of [...state.codebaseOpen]) if (key.startsWith(`${id}|`)) state.codebaseOpen.delete(key);
+      for (const key of [...state.codebaseTrees.keys()]) if (key.startsWith(`${id}|`)) state.codebaseTrees.delete(key);
+      await loadCodebases(workspaceId);
+      renderConversation(workspaceId);
+    });
+  });
+
+  panel.querySelectorAll("[data-cb-dir]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.cbId;
+      const rel = decodeURIComponent(btn.dataset.cbRel || "");
+      const key = _cbKey(id, rel);
+      state._codebaseErr = null;
+      if (state.codebaseOpen.has(key)) {
+        state.codebaseOpen.delete(key);
+      } else {
+        if (!state.codebaseTrees.has(key)) {
+          try {
+            const r = await fetch(`/api/codebases/${encodeURIComponent(id)}/tree?path=${encodeURIComponent(rel)}`);
+            if (!r.ok) {
+              state._codebaseErr = await _cbDetail(r, `browse failed (HTTP ${r.status})`);
+              renderConversation(workspaceId);
+              return;
+            }
+            state.codebaseTrees.set(key, (await r.json()).entries || []);
+          } catch (err) {
+            state._codebaseErr = `browse failed: ${err.message}`;
+            renderConversation(workspaceId);
+            return;
+          }
+        }
+        state.codebaseOpen.add(key);
+      }
+      renderConversation(workspaceId);
+    });
+  });
+
+  panel.querySelectorAll("[data-cb-file]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.cbId;
+      const rel = decodeURIComponent(btn.dataset.cbRel || "");
+      state._codebaseErr = null;
+      try {
+        const r = await fetch(`/api/codebases/${encodeURIComponent(id)}/file?path=${encodeURIComponent(rel)}`);
+        if (!r.ok) {
+          state._codebaseErr = await _cbDetail(r, `attach failed (HTTP ${r.status})`);
+          renderConversation(workspaceId);
+          return;
+        }
+        const body = await r.json();
+        // Reuse the standard attachment flow: the file content becomes a
+        // pending upload, exactly as if it were dragged into the surface.
+        const file = new File([body.content], body.name, { type: "text/plain" });
+        await uploadFile(workspaceId, file);
+      } catch (err) {
+        state._codebaseErr = `attach failed: ${err.message}`;
+        renderConversation(workspaceId);
+      }
+    });
+  });
 }
 
 async function sendMessage(workspaceId) {
