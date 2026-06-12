@@ -190,3 +190,172 @@ class SigilRuleEngine:
         return self._fire(rule, "aegis", ("egress_anomaly", int(now // rule.window_s)),
                           [{"recent_per_min": len(recent),
                             "baseline_per_min": round(baseline_per_min, 3)}], now)
+
+
+class SigilModule(NexusModule):
+    name = "sigil"
+    description = (
+        "Threat radar -- deterministic detection of trust collapse, denied-call "
+        "bursts, runaway loops, anomalous egress cadence, and permission escalation"
+    )
+    version = "1.0.0"
+
+    @classmethod
+    def manifest(cls):
+        from nexus.agents.manifest import Manifest
+        return Manifest.model_validate({
+            "manifest_version": 1,
+            "slug": "sigil",
+            "name": "sigil",
+            "tagline": "Threat radar: trust collapse, denied bursts, runaway loops, egress anomalies.",
+            "version": cls.version,
+            "system": True,
+            "publisher": {"type": "org", "handle": "nexus"},
+            "category": "monitoring",
+            "license": "Apache-2.0",
+            "identity": {"mark": {"kind": "builtin:sigil",
+                                  "gradient": ["#ffb4a8", "#a82a1c"]}},
+            "intents": [{
+                "name": "THREAT_RADAR",
+                "patterns": [
+                    r"\bsigil\b", r"\bthreat\s+radar\b", r"\btrust\s+collapse\b",
+                    r"\bdenied\s+calls?\b", r"\bsecurity\s+sweep\b",
+                    r"\bdetections?\s+log\b", r"\banomalous\s+egress\b",
+                ],
+                "semantic_signals": [
+                    "threat radar", "trust collapse", "denied calls", "radar",
+                    "security sweep", "detections", "what threats", "egress anomaly",
+                ],
+                "weight": 1.0,
+            }],
+            "capabilities": {
+                "tools": [{"name": "handle", "class": "Routine"}],
+                "declared": {"Routine": ["pulse.subscribe",
+                                         "chronicle.read.workspace",
+                                         "pulse.broadcast.emergency"],
+                             "Notable": [], "Sensitive": [], "Privileged": []},
+            },
+            "runtime": {"transport": "in_process"},
+            "trust": {"floor": 0.30, "default_tier": "ADVISOR"},
+        })
+
+    def __init__(self, engine: SigilRuleEngine | None = None):
+        self._engine = engine or SigilRuleEngine()
+        self._context: dict[str, Any] | None = None
+        self._sub_ids: list[str] = []
+
+    # -- lifecycle ----------------------------------------------------------
+
+    async def on_load(self, context: dict[str, Any] | None = None) -> None:
+        if not context or "pulse" not in context:
+            return
+        self._context = context
+        aegis = context.get("aegis")
+        if aegis is not None:
+            decision = aegis.check_capability("sigil", "pulse.subscribe")
+            if decision.verdict.value != "ALLOW":
+                return
+        pulse = context["pulse"]
+        for topic in ("aegis.trust_change", "kernel.gate", "kernel.route"):
+            self._sub_ids.append(pulse.subscribe(topic, self._on_pulse))
+
+    async def on_unload(self, context: dict[str, Any] | None = None) -> None:
+        ctx = context or self._context
+        if ctx and "pulse" in ctx:
+            for sid in self._sub_ids:
+                ctx["pulse"].unsubscribe(sid)
+        self._sub_ids = []
+
+    # -- event ingestion ------------------------------------------------------
+
+    def _normalize(self, msg: Message) -> dict[str, Any] | None:
+        p = msg.payload or {}
+        now = time.time()
+        if msg.topic == "aegis.trust_change":
+            return {"kind": "trust_change", "module": p.get("module"),
+                    "old_score": p.get("old_score", 0.0),
+                    "new_score": p.get("new_score", 0.0), "ts": now}
+        if msg.topic == "kernel.gate":
+            return {"kind": "gate", "module": p.get("agent"),
+                    "capability": p.get("capability"), "verdict": p.get("verdict"),
+                    "permission_class": p.get("permission_class"), "ts": now}
+        if msg.topic == "kernel.route":
+            return {"kind": "route", "module": p.get("target"),
+                    "preview": p.get("message_preview", ""), "ts": now}
+        return None
+
+    async def _on_pulse(self, msg: Message) -> None:
+        if msg.source == "sigil":
+            return
+        ev = self._normalize(msg)
+        if ev is None:
+            return
+        detections = self._engine.observe(ev)
+        if ev["kind"] == "gate" and str(ev.get("capability") or "").startswith("network.outbound"):
+            detections += self._scan_egress()
+        for det in detections:
+            await self._broadcast(det)
+
+    def _scan_egress(self) -> list[Detection]:
+        chronicle = (self._context or {}).get("chronicle")
+        if chronicle is None:
+            return []
+        rows = chronicle.query(source="aegis", action="network_request", limit=1000)
+        stamps: list[float] = []
+        for r in rows:
+            try:
+                stamps.append(datetime.fromisoformat(r["timestamp"]).timestamp())
+            except (TypeError, ValueError):
+                continue
+        return self._engine.check_egress(stamps, now=time.time())
+
+    # -- broadcast ------------------------------------------------------------
+
+    async def _broadcast(self, det: Detection) -> None:
+        ctx = self._context or {}
+        chronicle, pulse, cortex = ctx.get("chronicle"), ctx.get("pulse"), ctx.get("cortex")
+        rule = DETECTION_RULES.get(det.rule)
+        payload: dict[str, Any] = {
+            "rule": det.rule,
+            "severity": det.severity,
+            "module": det.module,
+            "description": rule.description if rule else "",
+            "evidence": det.evidence[:10],
+            "detected_at": datetime.now(timezone.utc).isoformat(),
+        }
+        sentry = cortex.get_module("sentry") if cortex is not None and hasattr(cortex, "get_module") else None
+        if sentry is not None and hasattr(sentry, "get_state"):
+            payload["sentry_state"] = sentry.get_state().to_dict()
+        payload["provenance"] = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode()
+        ).hexdigest()
+        payload["activate_specter"] = bool(det.high_stakes)
+        if chronicle is not None:
+            chronicle.log("sigil", "detection", payload)
+        if pulse is not None:
+            await pulse.publish(Message(
+                topic="sigil.detection", source="sigil",
+                payload=payload, priority=Priority.EMERGENCY,
+            ))
+
+    # -- handle ----------------------------------------------------------------
+
+    async def handle(self, message: str, context: dict[str, Any]) -> str:
+        aegis = context.get("aegis")
+        if aegis is not None:
+            decision = aegis.check_capability("sigil", "chronicle.read.workspace")
+            if decision.verdict.value != "ALLOW":
+                return "[Sigil] Read blocked by Aegis: " + decision.reason
+        chronicle = context.get("chronicle")
+        rows = chronicle.query(source="sigil", action="detection", limit=10) if chronicle else []
+        if not rows:
+            return "[Sigil] Radar clear -- no detections recorded."
+        lines = ["[Sigil] Recent detections:"]
+        for r in rows:
+            p = r["payload"]
+            lines.append(
+                f"  [{str(p.get('severity', '?')).upper()}] {p.get('rule', '?')} "
+                f"on {p.get('module', '?')} at {r['timestamp']} "
+                f"(provenance {str(p.get('provenance', ''))[:12]})"
+            )
+        return "\n".join(lines)

@@ -23,6 +23,7 @@ from nexus.modules.legacy import LegacyModule
 from nexus.modules.consciousness import ConsciousnessModule
 from nexus.modules.sentry import SentryModule
 from nexus.modules.echo import EchoModule
+from nexus.modules.sigil import SigilModule
 
 from nexus.api.routes.messages import router as messages_router
 from nexus.api.routes.modules import router as modules_router
@@ -98,10 +99,17 @@ def _init_kernel(config: NexusConfig) -> KernelState:
     # so they can be routed to immediately and earn their way up
     for ModuleClass in [CouncilModule, SpecterModule, AutonomicModule,
                         OracleModule, WraithModule, LegacyModule,
-                        ConsciousnessModule, SentryModule, EchoModule]:
+                        ConsciousnessModule, SentryModule, EchoModule,
+                        SigilModule]:
         module = ModuleClass()
         cortex.register_module(module)
         aegis.set_policy(module.name, allowed=True, initial_trust=0.30)
+
+    # N1 wiring: live gate events and built-in manifests for check_capability.
+    # (The emergency routing bypass needs a running event loop to subscribe,
+    # so it is attached in the app lifespan startup below.)
+    aegis.set_pulse(pulse)
+    cortex.register_builtin_manifests()
 
     # Initialize provider router — always available, providers registered on demand
     from nexus.inference.router import ProviderRouter
@@ -173,6 +181,10 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # N1 wiring: emergency routing bypass (Sigil -> Specter). Subscribing
+        # to Pulse requires a running event loop, hence here and not in
+        # _init_kernel. Idempotent.
+        kernel.cortex.attach_emergency_bypass()
         # Startup: initialize modules
         await kernel.cortex.initialize_modules()
         kernel.chronicle.log("api", "server_start", {"version": __version__})
