@@ -3579,3 +3579,56 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-ch-pager-status .nx-dim { color: #7a7188; }
 .nx-ch-pager-page { color: #f3ecff; font-weight: 600; }
 .nx-ch-pager-total { color: #f3ecff; }
+
+/* ── Kernel live visualization (N1.3) ─────────────────────────────────── */
+.nx-kernel-viz { display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+.nx-kv-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.nx-kv-route .nx-kv-target { color: var(--nx-text-high); font-family: var(--nx-font-mono); }
+.nx-kv-cap { font-family: var(--nx-font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-kv-mod { font-family: var(--nx-font-mono); min-width: 72px; }
+.nx-kv-divider { border-top: 1px solid var(--nx-hairline); margin: 4px 0; }
+.nx-kv-gate-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.nx-kv-gate-dot.v-allow  { background: var(--nx-routine); }
+.nx-kv-gate-dot.v-prompt { background: var(--nx-sensitive); }
+.nx-kv-gate-dot.v-deny   { background: var(--nx-privileged); }
+.nx-kv-gate-dot.pc-notable.v-allow { background: var(--nx-notable); }
+
+/* Sigil detections — radar pings */
+.nx-radar-row { display: flex; align-items: center; gap: 8px; color: var(--nx-trust-collapse); font-size: 11px; }
+.nx-radar-rule { font-family: var(--nx-font-mono); letter-spacing: 0.06em; }
+.nx-radar-ping-dot { animation: nx-radar-ping 1.6s ease-out infinite; transform-origin: center; }
+@keyframes nx-radar-ping {
+  0%   { opacity: 1; }
+  70%  { opacity: 0.25; }
+  100% { opacity: 1; }
+}
+
+/* Emergency broadcast — full-surface veil, alert palette */
+.nx-emergency-veil {
+  position: fixed; inset: 0; z-index: 320;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center,
+              rgba(248, 100, 60, 0.18), rgba(12, 10, 20, 0.82));
+}
+.nx-emergency-card {
+  border: 1px solid var(--nx-trust-collapse);
+  background: rgba(22, 10, 10, 0.94);
+  border-radius: var(--nx-card-radius);
+  padding: 22px 26px; max-width: 440px;
+}
+.nx-emergency-title {
+  font-family: var(--nx-font-mono); letter-spacing: 0.18em;
+  color: var(--nx-trust-collapse); font-size: 12px; margin-bottom: 8px;
+}
+.nx-emergency-body { color: var(--nx-text-mid); font-size: 13px; margin-bottom: 14px; }
+.nx-emergency-dismiss {
+  font-family: var(--nx-font-mono); font-size: 11px; letter-spacing: 0.12em;
+  color: var(--nx-text-high); background: transparent;
+  border: 1px solid var(--nx-card-border); border-radius: var(--nx-radius-sm);
+  padding: 6px 14px; cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-radar-ping-dot { animation: none; }
+  .nx-emergency-veil { background: rgba(12, 10, 20, 0.88); }
+}

@@ -31,6 +31,12 @@ const state = {
     pending: [],
     recent: [],            // last N decisions for cockpit log
   },
+  kernelViz: {            // N1.3 live kernel visualization
+    routes: [],           // last kernel.route payloads
+    gates: [],            // last kernel.gate payloads
+    detections: [],       // last sigil.detection payloads
+    trustSeries: {},      // module -> rolling trust scores
+  },
   mood: {
     mood: "calm_focus",
     tone: null,
@@ -905,6 +911,7 @@ function renderCockpitRail() {
   renderPermLog();
   renderMoodCard();
   renderAgentDiscs();
+  renderKernelViz();
 }
 
 function renderTrustCard() {
@@ -980,6 +987,117 @@ function trustSparkSVG(history, direction) {
     <circle cx="${last.x.toFixed(1)}" cy="${y(last.acc).toFixed(1)}" r="3.5" fill="${colorLine}"/>
     <circle cx="${last.x.toFixed(1)}" cy="${y(last.acc).toFixed(1)}" r="8" fill="none" stroke="${colorLine}" stroke-opacity="0.4"/>
   `;
+}
+
+// ── Kernel live visualization (N1.3) ───────────────────────────────────────
+function handleKernelEvent(m) {
+  const kv = state.kernelViz;
+  let touched = true;
+  if (m.topic === "kernel.route") {
+    kv.routes.unshift(m.payload || {});
+    kv.routes = kv.routes.slice(0, 8);
+  } else if (m.topic === "kernel.gate") {
+    kv.gates.unshift(m.payload || {});
+    kv.gates = kv.gates.slice(0, 8);
+  } else if (m.topic === "sigil.detection") {
+    kv.detections.unshift(m.payload || {});
+    kv.detections = kv.detections.slice(0, 6);
+  } else if (m.topic === "aegis.trust_change") {
+    const p = m.payload || {};
+    if (p.module && typeof p.new_score === "number") {
+      const series = kv.trustSeries[p.module] = kv.trustSeries[p.module] || [];
+      series.push(p.new_score);
+      if (series.length > 24) series.shift();
+    }
+  } else {
+    touched = false;
+  }
+  if (m.priority === 0) emergencyVeil(m);   // Pulse EMERGENCY -> full-surface alert
+  if (touched) renderKernelViz();
+}
+
+function moduleSparkSVG(series, w = 64, h = 16) {
+  if (!series || series.length < 2) {
+    return `<line x1="0" y1="${h - 3}" x2="${w}" y2="${h - 3}" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>`;
+  }
+  const min = Math.min(...series), max = Math.max(...series);
+  const range = (max - min) || 1;
+  const pts = series.map((v, i) =>
+    `${(i / (series.length - 1) * w).toFixed(1)},${(h - 2 - (v - min) / range * (h - 4)).toFixed(1)}`
+  ).join(" L");
+  return `<path d="M ${pts}" fill="none" stroke="#ffe09a" stroke-width="1.2" stroke-linecap="round"/>`;
+}
+
+function radarPingHTML(det) {
+  return `
+    <div class="nx-radar-row" title="${escapeHtml(det.description || "")}">
+      <span class="nx-radar" aria-hidden="true"><svg viewBox="0 0 20 20" width="18" height="18">
+        <circle cx="10" cy="10" r="3" fill="none" stroke="var(--nx-trust-collapse)" stroke-width="1"/>
+        <circle cx="10" cy="10" r="7" fill="none" stroke="var(--nx-trust-collapse)" stroke-width="1" opacity="0.5"/>
+        <circle cx="10" cy="10" r="2" fill="var(--nx-trust-collapse)" class="nx-radar-ping-dot"/>
+      </svg></span>
+      <span class="nx-radar-rule">${escapeHtml(det.rule || "")}</span>
+      <span class="nx-radar-module nx-dim">${escapeHtml(det.module || "")}</span>
+    </div>`;
+}
+
+function kernelVizHTML() {
+  const kv = state.kernelViz;
+  const routes = kv.routes.slice(0, 4).map(r => {
+    const top = (r.signals && r.signals[0]) ? r.signals[0].name : "—";
+    return `<div class="nx-kv-row nx-kv-route">
+      <span class="nx-dim">route</span>
+      <span class="nx-kv-target">${escapeHtml(r.target || "?")}</span>
+      <span class="nx-dim" style="margin-left:auto">${escapeHtml(top)}</span>
+    </div>`;
+  }).join("") || `<div class="nx-dim" style="font-size:11px">no routing yet</div>`;
+  const gates = kv.gates.slice(0, 4).map(g => {
+    const v = String(g.verdict || "").toLowerCase();
+    const pc = String(g.permission_class || "routine").toLowerCase();
+    return `<div class="nx-kv-row">
+      <span class="nx-kv-gate-dot v-${v} pc-${pc}" aria-hidden="true"></span>
+      <span class="nx-kv-cap" title="${escapeHtml(g.capability || "")}">${escapeHtml(truncate(g.capability || "", 26))}</span>
+      <span class="nx-dim" style="margin-left:auto">${escapeHtml(g.agent || "")} · ${escapeHtml(v)}</span>
+    </div>`;
+  }).join("");
+  const sparks = Object.entries(kv.trustSeries).slice(0, 5).map(([mod, series]) => `
+    <div class="nx-kv-row nx-kv-spark">
+      <span class="nx-kv-mod">${escapeHtml(mod)}</span>
+      <svg viewBox="0 0 64 16" width="64" height="16" preserveAspectRatio="none" aria-hidden="true">${moduleSparkSVG(series)}</svg>
+      <span class="nx-dim">${series[series.length - 1].toFixed(2)}</span>
+    </div>`).join("");
+  const pings = kv.detections.map(radarPingHTML).join("");
+  return `
+    ${routes}
+    ${gates}
+    ${sparks ? `<div class="nx-kv-divider"></div>${sparks}` : ""}
+    ${pings ? `<div class="nx-kv-divider"></div>${pings}` : ""}
+  `;
+}
+
+function renderKernelViz() {
+  const el = document.getElementById("nx-kernel-viz");
+  if (el) el.innerHTML = kernelVizHTML();
+  const overlayEl = document.getElementById("nx-cockpit-kernel-live");
+  if (overlayEl) overlayEl.innerHTML = kernelVizHTML();
+}
+
+function emergencyVeil(m) {
+  const root = document.getElementById("nx-overlay-root");
+  if (!root || root.querySelector(".nx-emergency-veil")) return;
+  const p = m.payload || {};
+  const veil = document.createElement("div");
+  veil.className = "nx-emergency-veil";
+  veil.innerHTML = `
+    <div class="nx-emergency-card" role="alertdialog" aria-label="Emergency broadcast">
+      <div class="nx-emergency-title">EMERGENCY — ${escapeHtml(p.rule || m.topic || "broadcast")}</div>
+      <div class="nx-emergency-body">${escapeHtml(p.description || "")}${p.module ? " · module: " + escapeHtml(p.module) : ""}</div>
+      <button class="nx-emergency-dismiss">acknowledge</button>
+    </div>`;
+  root.appendChild(veil);
+  const close = () => veil.remove();
+  veil.querySelector(".nx-emergency-dismiss").addEventListener("click", close);
+  setTimeout(close, 12000);
 }
 
 function renderPermLog() {
@@ -4768,6 +4886,22 @@ async function toggleCockpitOverlay() {
             </div>
             <div class="nx-dim" style="font-size:11px;margin-top:4px">ticket${state.perms.pending.length === 1 ? "" : "s"} awaiting decision</div>
           </div>
+
+          <!-- Row 3: live kernel visualization spans 4 cols -->
+          <div class="nx-cockpit-panel span2">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Kernel · live</span>
+              <span class="nx-cockpit-panel-badge">${state.kernelViz.routes.length + state.kernelViz.gates.length} events</span>
+            </div>
+            <div id="nx-cockpit-kernel-live">${kernelVizHTML()}</div>
+          </div>
+          <div class="nx-cockpit-panel span2">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Sigil radar</span>
+              <span class="nx-cockpit-panel-badge">${state.kernelViz.detections.length} pings</span>
+            </div>
+            <div>${state.kernelViz.detections.map(radarPingHTML).join("") || "<div class='nx-dim'>radar clear</div>"}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -4855,6 +4989,14 @@ function subscribeStreams() {
           renderConversation(id);
         }
       } catch {}
+    };
+  } catch {}
+  // Kernel events — kernel.route / kernel.gate / sigil.detection /
+  // aegis.trust_change stream over the all-topics Pulse relay. No polling.
+  try {
+    const w = new WebSocket(`${wsProto}//${location.host}/api/events/ws`);
+    w.onmessage = (e) => {
+      try { handleKernelEvent(JSON.parse(e.data)); } catch {}
     };
   } catch {}
   // Trust + permission log: poll every 30s, only refresh cockpit (never the
