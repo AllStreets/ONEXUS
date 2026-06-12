@@ -1751,6 +1751,11 @@ async function sendMessage(workspaceId) {
   state.thread.set(workspaceId, thread);
   renderConversation(workspaceId);
 
+  // Preferred path: consume the SSE stream and render the reply token by
+  // token. Falls back to the plain POST endpoint on any stream failure.
+  const streamedOk = await streamAgentReply(workspaceId, thread, typingId, messageForAgent);
+  if (streamedOk) return;
+
   try {
     const r = await fetch("/api/messages", {
       method: "POST",
@@ -1790,6 +1795,110 @@ async function sendMessage(workspaceId) {
     thread.push({ id: _msgId(), role: "agent", agent: "specter", body: `Routing error: ${err.message}`, ts: new Date().toISOString() });
     state.thread.set(workspaceId, thread);
     renderConversation(workspaceId);
+  }
+}
+
+// ── Streaming send path ────────────────────────────────────────────────────
+// POST /api/messages/stream returns SSE frames:
+//   {type:"chunk", content, module} · {type:"done", module, memory_id}
+//   · {type:"error", detail}
+// The agent message is appended to the thread on the FIRST chunk and its
+// body grows in place (cheap targeted DOM update, no full re-render per
+// token). On the terminal frame the message is finalized and re-rendered
+// through the markdown pipeline. Returns false when the caller should fall
+// back to the non-streaming endpoint.
+async function streamAgentReply(workspaceId, thread, typingId, messageForAgent) {
+  let msg = null;
+
+  const ensureMsg = (module) => {
+    if (msg) return msg;
+    const idx = thread.findIndex(m => m.id === typingId);
+    if (idx >= 0) thread.splice(idx, 1);
+    msg = {
+      id: _msgId(), role: "agent", agent: module || "oracle",
+      body: "", ts: new Date().toISOString(),
+      streaming: true, memory_id: null, feedback: null,
+    };
+    thread.push(msg);
+    state.thread.set(workspaceId, thread);
+    renderConversation(workspaceId);
+    return msg;
+  };
+
+  // Targeted incremental update: rewrite only the streaming bubble's body.
+  const paintChunk = () => {
+    const node = document.querySelector(`.nx-msg-agent[data-message-id="${msg.id}"] .nx-msg-body`);
+    if (!node) { renderConversation(workspaceId); return; }
+    node.innerHTML = `${escapeHtml(msg.body)}<span class="nx-stream-caret" aria-hidden="true"></span>`;
+    const inner = document.querySelector(".nx-main-inner");
+    if (inner) inner.scrollTop = inner.scrollHeight;
+  };
+
+  try {
+    const r = await fetch("/api/messages/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: messageForAgent, workspace_id: workspaceId }),
+    });
+    if (!r.ok || !r.body) return false;
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let sawDone = false;
+
+    let done = false;
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      if (value) buf += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buf.indexOf("\n\n")) >= 0) {
+        const frame = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        for (const line of frame.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          let ev;
+          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+          if (ev.type === "chunk") {
+            const m = ensureMsg(ev.module);
+            if (ev.module) m.agent = ev.module;
+            m.body += ev.content || "";
+            paintChunk();
+          } else if (ev.type === "done") {
+            sawDone = true;
+            const m = ensureMsg(ev.module);
+            if (ev.module) m.agent = ev.module;
+            m.memory_id = ev.memory_id || null;
+            m.streaming = false;
+          } else if (ev.type === "error") {
+            throw new Error(ev.detail || "stream error");
+          }
+        }
+      }
+    }
+
+    if (!sawDone && !msg) return false;  // stream produced nothing usable
+    if (msg) msg.streaming = false;       // finalize even on a truncated stream
+    state.thread.set(workspaceId, thread);
+    renderConversation(workspaceId);      // full render → markdown pipeline
+    loadTrust().then(() => loadPermissions()).then(renderCockpitRail);
+    return true;
+  } catch {
+    // Roll back any partial streamed bubble so the fallback path doesn't
+    // duplicate the reply. If the bubble had already consumed the typing
+    // placeholder, reinstate it so the fallback POST still shows the
+    // system thinking.
+    if (msg) {
+      const i = thread.indexOf(msg);
+      if (i >= 0) thread.splice(i, 1);
+      if (!thread.some(m => m.id === typingId)) {
+        thread.push({ id: typingId, role: "agent", agent: msg.agent || "council", body: "", ts: new Date().toISOString(), typing: true });
+      }
+      state.thread.set(workspaceId, thread);
+      renderConversation(workspaceId);
+    }
+    return false;
   }
 }
 

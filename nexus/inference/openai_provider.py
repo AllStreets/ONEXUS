@@ -63,6 +63,37 @@ class OpenAIProvider(InferenceProvider):
         except Exception as e:
             return f"[Inference error: {e}]"
 
+    async def infer_stream(self, messages: list[dict], max_tokens: int = 1024,
+                           temperature: float = 0.7):
+        """Stream completion deltas via the OpenAI SDK (stream=True)."""
+        if self._client is None:
+            yield "[OpenAI SDK not installed]"
+            return
+        kwargs: dict = {
+            "model": self._model,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": True,
+        }
+        try:
+            # Same new/legacy max-token param dance as infer().
+            try:
+                kwargs["max_completion_tokens"] = max_tokens
+                stream = await self._client.chat.completions.create(**kwargs)
+            except Exception:
+                del kwargs["max_completion_tokens"]
+                kwargs["max_tokens"] = max_tokens
+                stream = await self._client.chat.completions.create(**kwargs)
+            async for event in stream:
+                if not getattr(event, "choices", None):
+                    continue
+                delta = event.choices[0].delta
+                token = getattr(delta, "content", None)
+                if token:
+                    yield token
+        except Exception as e:
+            yield f"[Inference error: {e}]"
+
     async def health(self) -> bool:
         if self._client is None:
             return False
