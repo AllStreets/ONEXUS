@@ -2108,6 +2108,7 @@ const _cortexState = {
   catalogMeta: new Map(),   // slug → catalog entry metadata (for chip rendering)
   running: false,
   runs: null,
+  lastError: null,          // { status, detail } — last failed dispatch, shown as role=alert banner
 };
 
 async function renderCortexLauncher(hash) {
@@ -2180,12 +2181,15 @@ async function renderCortexLauncher(hash) {
 
         <div class="nx-cortex-actions">
           <button id="nx-cortex-run" class="nx-cortex-run" type="button" disabled>
+            <span class="nx-spinner" aria-hidden="true" hidden></span>
             <span class="nx-cortex-run-label">pick agents to dispatch</span>
           </button>
           <button id="nx-cortex-top3" class="nx-cortex-pickbtn" type="button">pick top 3 for me</button>
           <button id="nx-cortex-all" class="nx-cortex-pickbtn" type="button">all available</button>
           <button id="nx-cortex-clear" class="nx-cortex-pickbtn" type="button">clear</button>
         </div>
+
+        <div id="nx-cortex-error-slot"></div>
       </section>
 
       <section id="nx-cortex-results"></section>
@@ -2201,6 +2205,9 @@ async function renderCortexLauncher(hash) {
     const n = _cortexState.selected.size;
     runBtn.disabled = _cortexState.running || n === 0 || !(_cortexState.prompt.trim());
     const label = runBtn.querySelector(".nx-cortex-run-label");
+    const spinner = runBtn.querySelector(".nx-spinner");
+    if (spinner) spinner.hidden = !_cortexState.running;
+    runBtn.classList.toggle("running", !!_cortexState.running);
     if (_cortexState.running) {
       label.textContent = "dispatching…";
     } else if (n === 0) {
@@ -2208,6 +2215,30 @@ async function renderCortexLauncher(hash) {
     } else {
       label.textContent = `dispatch to ${n} agent${n === 1 ? "" : "s"}`;
     }
+  };
+
+  // Prominent inline error banner — renders into the slot below the dispatch
+  // actions whenever the LAST dispatch failed outright (HTTP error or network
+  // failure). role="alert" so screen readers announce it immediately.
+  const renderLauncherError = () => {
+    const slot = document.getElementById("nx-cortex-error-slot");
+    if (!slot) return;
+    const err = _cortexState.lastError;
+    if (!err) { slot.innerHTML = ""; return; }
+    const text = err.status
+      ? `HTTP ${err.status} — ${err.detail || "no detail"}`
+      : (err.detail || "unknown error");
+    slot.innerHTML = `
+      <div class="nx-cortex-error" role="alert">
+        <span class="nx-cortex-error-badge">DISPATCH FAILED</span>
+        <span class="nx-cortex-error-text">${escapeHtml(text)}</span>
+        <button type="button" class="nx-cortex-error-dismiss" aria-label="Dismiss error">${UI.close(11)}</button>
+      </div>
+    `;
+    slot.querySelector(".nx-cortex-error-dismiss")?.addEventListener("click", () => {
+      _cortexState.lastError = null;
+      renderLauncherError();
+    });
   };
 
   const renderChips = () => {
@@ -2298,13 +2329,15 @@ async function renderCortexLauncher(hash) {
       return;
     }
     const { runs = [], succeeded = 0, failed = 0 } = _cortexState.runs;
+    const anyPending = runs.some(r => r.pending);
+    const summary = anyPending
+      ? `<span class="running"><span class="nx-spinner" aria-hidden="true"></span> dispatching to ${runs.length} agent${runs.length === 1 ? "" : "s"}…</span>`
+      : `<span class="ok">${succeeded} succeeded</span>
+         ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}`;
     resultsEl.innerHTML = `
       <header class="nx-cortex-results-head">
-        <div class="nx-eyebrow">RESULTS · click a card to continue the conversation</div>
-        <div class="nx-cortex-summary">
-          <span class="ok">${succeeded} succeeded</span>
-          ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}
-        </div>
+        <div class="nx-eyebrow">${anyPending ? "DISPATCHING · agents are working" : "RESULTS · click a card to continue the conversation"}</div>
+        <div class="nx-cortex-summary">${summary}</div>
       </header>
       <div class="nx-cortex-runlist">
         ${runs.map((r, idx) => renderRunCard(r, idx)).join("")}
@@ -2335,14 +2368,31 @@ async function renderCortexLauncher(hash) {
   };
 
   const renderRunCard = (r, idx) => {
+    // In-flight: the dispatch has been sent but no result has landed yet.
+    // Render as RUNNING (spinner + pulsing border), never as an error.
+    if (r.pending) {
+      return `
+        <article class="nx-cortex-run-card pending" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
+          <header class="nx-cortex-run-head">
+            <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
+            <span class="nx-cortex-run-meta">
+              <span class="nx-spinner" aria-hidden="true"></span>
+              <span class="nx-cortex-run-status running">running</span>
+            </span>
+          </header>
+          <div class="nx-cortex-run-body nx-dim">dispatched — waiting for ${escapeHtml(r.module)} to respond…</div>
+        </article>
+      `;
+    }
     if (!r.success) {
+      const secs = ((r.elapsed_ms || 0) / 1000).toFixed(1);
       return `
         <article class="nx-cortex-run-card fail" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
           <header class="nx-cortex-run-head">
             <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
             <span class="nx-cortex-run-meta">
               <span class="nx-cortex-run-status fail">error</span>
-              <span class="nx-dim">· ${r.elapsed_ms}ms</span>
+              <span class="nx-dim">· failed after ${secs}s</span>
             </span>
           </header>
           <div class="nx-cortex-run-body">
@@ -2485,6 +2535,7 @@ async function renderCortexLauncher(hash) {
       const idx = parseInt(card.dataset.idx, 10);
       const moduleSlug = card.dataset.module;
       const runEntry = _cortexState.runs.runs[idx];
+      if (!runEntry || runEntry.pending) return;  // in-flight cards have no affordances yet
 
       // Feedback buttons — same Aegis +0.12/−0.22 loop as the main composer
       card.querySelectorAll(".nx-cortex-fb-btn[data-fb]").forEach(btn => {
@@ -2721,14 +2772,32 @@ async function renderCortexLauncher(hash) {
     if (_cortexState.running) return;
     const agents = [..._cortexState.selected];
     if (!agents.length || !_cortexState.prompt.trim()) return;
+    const startedAt = Date.now();
     _cortexState.running = true;
+    _cortexState.lastError = null;
+    renderLauncherError();
     refreshRunBtn();
-    // Show pending cards immediately so the user sees something
+    // Show RUNNING cards immediately — spinner + pulsing border, not errors.
     _cortexState.runs = {
-      runs: agents.map(slug => ({ module: slug, success: false, response: "", error: "pending", elapsed_ms: 0 })),
+      runs: agents.map(slug => ({ module: slug, pending: true, success: false, response: "", error: null, elapsed_ms: 0 })),
       succeeded: 0, failed: 0,
     };
     renderRuns();
+    // A failed dispatch must never look like a silent 0-second nothing:
+    // every selected agent's card flips to a clear error with elapsed time,
+    // and the launcher shows a prominent role="alert" banner.
+    const failAll = (status, detail) => {
+      const elapsed = Date.now() - startedAt;
+      _cortexState.lastError = { status, detail };
+      _cortexState.runs = {
+        runs: agents.map(slug => ({
+          module: slug, success: false, response: "",
+          error: status ? `dispatch failed — HTTP ${status}: ${detail}` : `dispatch failed — ${detail}`,
+          elapsed_ms: elapsed,
+        })),
+        succeeded: 0, failed: agents.length,
+      };
+    };
     try {
       const r = await fetch("/api/cortex/launch", {
         method: "POST",
@@ -2742,15 +2811,17 @@ async function renderCortexLauncher(hash) {
       if (r.ok) {
         _cortexState.runs = await r.json();
       } else {
-        const detail = await r.text();
-        _cortexState.runs = { runs: [{ module: "cortex", success: false, error: `${r.status}: ${detail}`, response: "", elapsed_ms: 0 }], succeeded: 0, failed: 1 };
+        let detail = await r.text();
+        try { detail = JSON.parse(detail).detail || detail; } catch {}
+        failAll(r.status, detail);
       }
     } catch (err) {
-      _cortexState.runs = { runs: [{ module: "cortex", success: false, error: `network: ${err.message}`, response: "", elapsed_ms: 0 }], succeeded: 0, failed: 1 };
+      failAll(null, `network error: ${err.message}`);
     } finally {
       _cortexState.running = false;
       renderRuns();
       refreshRunBtn();
+      renderLauncherError();
     }
   });
 

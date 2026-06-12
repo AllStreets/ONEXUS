@@ -3127,8 +3127,69 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   font-family: var(--nx-font-mono); font-size: 10.5px;
   letter-spacing: 0.10em;
 }
-.nx-cortex-run-status.ok   { color: #9affb6; }
-.nx-cortex-run-status.fail { color: #f86078; }
+.nx-cortex-run-status.ok      { color: #9affb6; }
+.nx-cortex-run-status.fail    { color: #f86078; }
+.nx-cortex-run-status.running { color: var(--nx-mood-primary, #c9b8ff); }
+.nx-cortex-summary .running   { color: var(--nx-mood-primary, #c9b8ff); }
+
+/* spinner — pure CSS, currentColor; the global prefers-reduced-motion rule
+   in tokens.css collapses the animation to a static ring */
+.nx-spinner {
+  display: inline-block;
+  width: 11px; height: 11px;
+  vertical-align: -1px;
+  border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: nx-spin 0.8s linear infinite;
+}
+.nx-cortex-run .nx-spinner { margin-right: 7px; }
+@keyframes nx-spin { to { transform: rotate(360deg); } }
+
+/* in-flight run card — pulsing mood-tinted border, reads as "working" */
+.nx-cortex-run-card.pending {
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 38%, transparent);
+  animation: nx-pending-pulse 1.6s ease-in-out infinite;
+}
+@keyframes nx-pending-pulse {
+  0%, 100% { border-color: color-mix(in srgb, var(--nx-mood-primary) 38%, transparent);
+             box-shadow: 0 0 0 0 transparent; }
+  50%      { border-color: color-mix(in srgb, var(--nx-mood-primary) 70%, transparent);
+             box-shadow: 0 0 18px -6px var(--nx-mood-glow, rgba(201,184,255,0.45)); }
+}
+
+/* dispatch failure banner — role="alert", below the launcher actions */
+.nx-cortex-error {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #f86078 9%, transparent);
+  border: 1px solid rgba(248, 96, 120, 0.40);
+  border-radius: 8px;
+}
+.nx-cortex-error-badge {
+  flex: 0 0 auto;
+  font-family: var(--nx-font-mono);
+  font-size: 9.5px; letter-spacing: 0.16em; font-weight: 700;
+  color: #f86078;
+}
+.nx-cortex-error-text {
+  flex: 1 1 auto;
+  font-size: 12.5px; line-height: 1.45;
+  color: #ffc9d2;
+  word-break: break-word;
+}
+.nx-cortex-error-dismiss {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  background: transparent;
+  border: 1px solid rgba(248, 96, 120, 0.30);
+  border-radius: 6px;
+  color: #f86078;
+  cursor: pointer;
+}
+.nx-cortex-error-dismiss:hover { background: rgba(248, 96, 120, 0.12); }
 .nx-cortex-llm-pill {
   display: inline-block;
   margin-left: 8px;
