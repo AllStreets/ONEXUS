@@ -42,6 +42,26 @@ _DELIBERATION_ROLES: dict[str, dict[str, Any]] = {
         "instruction": "Find weaknesses, hidden assumptions, and failure modes.",
         "triggers": ["decision", "should i", "plan", "strategy", "risk"],
     },
+    "oracle": {
+        "role": "analytical",
+        "instruction": "Give a clear first-read analysis and a concrete recommendation.",
+        "triggers": ["what", "how", "best", "use case", "analyze", "explain", "compare"],
+    },
+    "legacy": {
+        "role": "historical",
+        "instruction": "Recall relevant prior context, precedent, and what was decided before.",
+        "triggers": ["before", "history", "remember", "past", "precedent", "again"],
+    },
+    "sentry": {
+        "role": "risk",
+        "instruction": "Flag safety, trust, and risk concerns in the proposal.",
+        "triggers": ["risk", "safe", "trust", "danger", "secure", "permission"],
+    },
+    "echo": {
+        "role": "reflective",
+        "instruction": "Mirror and sharpen the core intent; surface what's really being asked.",
+        "triggers": ["mean", "intent", "really", "clarify", "goal"],
+    },
     "atlas": {
         "role": "factual",
         "instruction": "Provide relevant facts and knowledge context.",
@@ -803,11 +823,24 @@ class CouncilModule(NexusModule):
 
     def select_participants(self, question: str) -> list[str]:
         question_lower = question.lower()
+        # Score over EVERY loaded sibling module — not just those with a
+        # predefined role. Previously only the modules listed in
+        # _DELIBERATION_ROLES were eligible (specter + atlas), and atlas often
+        # isn't even loaded, so deliberations collapsed to a single
+        # participant. Modules without a defined role still join with the
+        # default role/instruction (see the deliberation loop).
+        candidates = set(self._modules) | set(_DELIBERATION_ROLES)
         scores: list[tuple[str, int]] = []
-        for mod_name, role_info in _DELIBERATION_ROLES.items():
-            score = sum(1 for t in role_info["triggers"] if t in question_lower)
+        for mod_name in candidates:
+            triggers = _DELIBERATION_ROLES.get(mod_name, {}).get("triggers", [])
+            score = sum(1 for t in triggers if t in question_lower)
             scores.append((mod_name, score))
-        scores.sort(key=lambda x: x[1], reverse=True)
+        # Loaded modules outrank unloaded role placeholders at equal score —
+        # otherwise an unloaded role (atlas, usually) can claim a slot and
+        # then be dropped by the availability filter, stranding the
+        # deliberation below min_modules again. Name is the final key so the
+        # ordering is deterministic.
+        scores.sort(key=lambda x: (x[1], x[0] in self._modules, x[0]), reverse=True)
 
         selected: list[str] = []
         for name in self._config["always_include"]:
@@ -840,6 +873,16 @@ class CouncilModule(NexusModule):
         context: dict[str, Any],
         participants: list[str] | None = None,
     ) -> DeliberationResult:
+        # Refresh the sibling-module set from cortex. on_load may have run
+        # before the other modules finished registering (load order), leaving
+        # self._modules sparse — which used to strand deliberations at a single
+        # participant. Re-snapshot the live registry here.
+        cortex = context.get("cortex") if context else None
+        if cortex is not None and getattr(cortex, "_modules", None):
+            self._modules = {
+                name: mod for name, mod in cortex._modules.items() if name != self.name
+            }
+
         if participants is None:
             participants = self.select_participants(question)
 

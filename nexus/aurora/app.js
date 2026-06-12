@@ -16,6 +16,7 @@ const state = {
   agents: [],              // catalog/runtime metadata
   runnableCount: 0,        // live count of runnable (MCP-adapter) catalog agents
   catalogTotal: 0,         // live count of ALL catalog agents (for search/picker labels)
+  coreOnDuty: 0,           // live count of always-on cortex modules + routing ("agents on duty")
   recentAgents: [],
   // cache-bust query string appended to guide image src so users always
   // see the latest PNGs even if their browser cached the old ones
@@ -491,11 +492,22 @@ async function refreshRunnableCount() {
       if (Number.isFinite(n) && n > 0) state.catalogTotal = n;
     }
   } catch {}
+  try {
+    // Always-on cognitive roster (council, oracle, specter, …) + the cortex
+    // router. This is the truthful "agents on duty" floor — resident the moment
+    // the kernel boots, regardless of a workspace's declared resident_agents.
+    const rm = await fetch("/api/cortex/modules");
+    if (rm.ok) {
+      const n = Number((await rm.json()).count ?? 0);
+      if (Number.isFinite(n) && n >= 0) state.coreOnDuty = n;
+    }
+  } catch {}
   const label = document.getElementById("nx-agents-label");
   if (label && state.agents) {
     const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
     label.textContent = `${totalBuiltin} BUILT-IN · ${state.runnableCount || 0} RUNNABLE`;
   }
+  renderChromeContext();
 }
 
 async function loadAgents() {
@@ -877,7 +889,13 @@ function renderChromeContext() {
   if (!state.active) { el.textContent = "no workspace"; return; }
   const w = state.workspaces.find(ws => ws.workspace_id === state.active);
   const name = w ? w.name : state.active;
-  const count = w?.resident_agents?.length || 0;
+  // "On duty" = the larger of this workspace's declared/active agents and the
+  // always-on cortex roster (cortex routing + council + oracle + …). The core
+  // modules are resident whenever the kernel is up, so the count is never 0
+  // while the system is live, and it tracks the real module set as it changes.
+  const declared = w?.resident_agents?.length || 0;
+  const chatted = (state.workspaceAgentCounts || {})[state.active] || 0;
+  const count = Math.max(declared, chatted, state.coreOnDuty || 0);
   el.textContent = `— ${name.toLowerCase()} · ${count} agent${count === 1 ? "" : "s"} on duty`;
 }
 
@@ -4184,7 +4202,7 @@ async function renderWorkshop() {
             langEl.value = blocks[bi].lang;
             state._workshopLang = blocks[bi].lang;
           }
-          btn.textContent = "✓ applied — ⌘⏎ to run";
+          btn.textContent = "● applied — ⌘⏎ to run";
           btn.disabled = true;
         }
       });
