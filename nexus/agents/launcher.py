@@ -9,11 +9,49 @@ from __future__ import annotations
 
 import logging
 import os
+import shlex
 import subprocess
 from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger("nexus.agents.launcher")
+
+# Command allowlist for launching agent adapters. The catalog is a sibling
+# repo refreshed nightly from upstream; an adapter manifest with
+# ``runnable: true`` and an arbitrary ``command`` would otherwise be executed
+# verbatim. Only these known MCP launcher binaries may be spawned. Operators
+# can extend the set explicitly via NEXUS_AGENT_COMMAND_ALLOWLIST (a
+# comma- or whitespace-separated list); they cannot be silently widened by a
+# catalog update.
+_DEFAULT_COMMAND_ALLOWLIST = frozenset(
+    {
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uv",
+        "uvx",
+        "deno",
+        "bun",
+        "docker",
+        "aider-mcp",
+    }
+)
+
+
+def _command_allowlist() -> frozenset[str]:
+    extra = os.environ.get("NEXUS_AGENT_COMMAND_ALLOWLIST", "")
+    if not extra.strip():
+        return _DEFAULT_COMMAND_ALLOWLIST
+    tokens = {t for t in extra.replace(",", " ").split() if t}
+    return _DEFAULT_COMMAND_ALLOWLIST | tokens
+
+
+def _command_basename(command: str) -> str:
+    # Match on the bare program name so an absolute path to an allowed binary
+    # is fine, but a path to a planted binary still has to clear the allowlist
+    # by basename. Reject anything with shell metacharacters outright.
+    return os.path.basename(command)
 
 
 @dataclass
@@ -79,6 +117,27 @@ class AgentLauncher:
         adapter = self._catalog.load_adapter(entry)
         if not adapter:
             raise AgentLaunchError(f"Could not load adapter for '{slug}'")
+
+        if not adapter.command:
+            raise AgentLaunchError(f"Adapter for '{slug}' has no command", status=400)
+        # Guard against a malicious/typo'd upstream manifest reaching exec.
+        # Reject shell metacharacters (plain names and absolute paths quote to
+        # themselves; anything with spaces/;/$/backticks does not), then
+        # allowlist by program basename before we ever spawn.
+        if shlex.quote(adapter.command) != adapter.command:
+            raise AgentLaunchError(
+                f"Adapter command for '{slug}' contains unsafe characters: "
+                f"{adapter.command!r}",
+                status=400,
+            )
+        base = _command_basename(adapter.command)
+        if base not in _command_allowlist():
+            raise AgentLaunchError(
+                f"Adapter command '{adapter.command}' for '{slug}' is not on the "
+                f"launch allowlist. If you trust it, add it to "
+                f"NEXUS_AGENT_COMMAND_ALLOWLIST.",
+                status=400,
+            )
 
         env = dict(os.environ)
         if self._kernel.provider_router:
