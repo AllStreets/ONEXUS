@@ -6,8 +6,10 @@ logs to Chronicle, and stores interactions in Engram.
 """
 from __future__ import annotations
 
+import os
 import re
 from collections import deque
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -471,6 +473,17 @@ def default_builtin_registry():
     ])
 
 
+def specter_autoactivation_enabled(config: NexusConfig) -> bool:
+    """Kill switch for Sigil → Specter auto-activation (spec invariant).
+
+    Disabled by env NEXUS_SIGIL_SPECTER_AUTOACTIVATE=0/false/no, or by the
+    presence of <data_dir>/sigil-specter.kill (ecosystem kill-switch file).
+    """
+    if os.environ.get("NEXUS_SIGIL_SPECTER_AUTOACTIVATE", "1").lower() in ("0", "false", "no"):
+        return False
+    return not (Path(config.data_dir) / "sigil-specter.kill").exists()
+
+
 # ---------------------------------------------------------------------------
 # Cortex -- the central router
 # ---------------------------------------------------------------------------
@@ -554,11 +567,76 @@ class Cortex:
     def list_modules(self) -> list[str]:
         return list(self._modules.keys())
 
+    def get_module(self, name: str) -> NexusModule | None:
+        """Public module lookup (used by Sigil to read Sentry state)."""
+        return self._modules.get(name)
+
     async def initialize_modules(self) -> None:
         """Call on_load for all registered modules with kernel context."""
         context = self._build_context()
         for module in self._modules.values():
             await module.on_load(context)
+
+    # -- emergency routing bypass (N1.1) -------------------------------------
+
+    def attach_emergency_bypass(self) -> None:
+        """Give EMERGENCY-priority Pulse messages a routing bypass.
+
+        Emergency broadcasts (Sigil detections) skip intent classification
+        and the trust floor entirely: they are logged to Chronicle and, when
+        the payload requests it and the kill switch allows, dispatched
+        straight to Specter for an adversarial read. Idempotent.
+        """
+        if getattr(self, "_emergency_sub", None):
+            return
+        self._emergency_sub = self._pulse.subscribe("*", self._on_emergency_message)
+
+    async def _on_emergency_message(self, msg: Message) -> None:
+        from nexus.kernel.pulse import Priority
+        if msg.priority != Priority.EMERGENCY or msg.source == "cortex":
+            return
+        payload = msg.payload or {}
+        self._chronicle.log("cortex", "emergency_bypass", {
+            "topic": msg.topic, "source": msg.source, "msg_id": msg.msg_id,
+            "rule": payload.get("rule"), "module": payload.get("module"),
+        })
+        if not payload.get("activate_specter"):
+            return
+        if not specter_autoactivation_enabled(self._config):
+            self._chronicle.log("cortex", "specter_autoactivation_skipped",
+                                {"reason": "kill_switch", "rule": payload.get("rule")})
+            return
+        specter = self._modules.get("specter")
+        if specter is None:
+            return
+        try:
+            self._aegis.check("specter", "handle")
+        except PermissionDenied:
+            self._chronicle.log("cortex", "permission_denied", {
+                "module": "specter", "message_preview": "sigil emergency adversarial read",
+            })
+            return
+        prompt = (
+            "Adversarial read requested by Sigil threat radar. Stress test the "
+            f"triggering context: rule={payload.get('rule', 'unknown')} "
+            f"module={payload.get('module', 'unknown')} "
+            f"evidence={payload.get('evidence', [])}"
+        )
+        try:
+            response = await specter.handle(prompt, self._build_context())
+        except Exception as exc:
+            self._chronicle.log("cortex", "module_error",
+                                {"module": "specter", "error": str(exc)})
+            return
+        self._chronicle.log("cortex", "specter_auto_activated", {
+            "trigger_msg_id": msg.msg_id, "rule": payload.get("rule"),
+            "module": payload.get("module"), "response_preview": response[:200],
+        })
+        await self._pulse.publish(Message(
+            topic="cortex.emergency_response", source="cortex",
+            payload={"module": "specter", "trigger": msg.topic,
+                     "rule": payload.get("rule"), "response": response},
+        ))
 
     # -- context builder ---------------------------------------------------
 
