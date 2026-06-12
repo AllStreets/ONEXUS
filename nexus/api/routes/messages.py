@@ -120,14 +120,17 @@ async def send_message(body: MessageRequest, request: Request) -> MessageRespons
 
 def _stream_persona(kernel, request: Request, module_name: str | None) -> str:
     """System prompt for the provider-streamed reply: the routed module's
-    curated persona (same map the Cortex launcher uses)."""
+    curated persona (same map the Cortex launcher uses), grounded in this
+    instance's truthful capability context."""
+    from nexus.api.capabilities import ground_persona
     from nexus.api.routes.cortex import _AGENT_PERSONAS
     slug = module_name or "oracle"
-    return _AGENT_PERSONAS.get(
+    persona = _AGENT_PERSONAS.get(
         slug,
         f"You are {slug}, an agent in the ONEXUS operating system. "
         f"Respond helpfully and concisely to the user's request.",
     )
+    return ground_persona(persona, request.app.state)
 
 
 @router.post("/stream")
