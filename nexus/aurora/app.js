@@ -4184,7 +4184,7 @@ async function renderWorkshop() {
             langEl.value = blocks[bi].lang;
             state._workshopLang = blocks[bi].lang;
           }
-          btn.textContent = "✓ applied — ⌘⏎ to run";
+          btn.innerHTML = `${UI.check(12)} applied — ⌘⏎ to run`;
           btn.disabled = true;
         }
       });
@@ -4432,7 +4432,7 @@ async function renderSearch(hash) {
           <h2>${escapeHtml(hit.title || hit.url)}</h2>
           <a class="nx-reader-url" href="${escapeHtml(hit.url)}" target="_blank" rel="noopener">${escapeHtml(hit.url)} ↗</a>
         </div>
-        <button class="nx-reader-close" aria-label="Close reader">✕</button>
+        <button class="nx-reader-close" aria-label="Close reader">${UI.close(14)}</button>
       </header>
       <section class="nx-reader-digest">
         <div class="nx-eyebrow">DIGEST · LLM summary</div>
