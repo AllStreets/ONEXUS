@@ -5,6 +5,7 @@ Trust tiers: OBSERVER, ADVISOR, MONITOR, EXECUTOR, AUTONOMOUS.
 """
 from __future__ import annotations
 
+import asyncio
 import sqlite3
 import time
 import uuid
@@ -201,6 +202,27 @@ class Aegis:
         except Exception:
             pass  # chronicle failure must never block trust operations
 
+    # -- live event emission (N1) --------------------------------------------
+
+    def set_pulse(self, pulse: Any) -> None:
+        """Attach the kernel Pulse bus so gate/trust events stream live.
+
+        Optional: when unset (CLI, unit tests) Aegis behaves exactly as
+        before — Chronicle remains the durable record.
+        """
+        self._pulse = pulse
+
+    def _emit_pulse(self, topic: str, payload: dict[str, Any]) -> None:
+        pulse = getattr(self, "_pulse", None)
+        if pulse is None:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # sync context — no live stream, Chronicle still has it
+        from nexus.kernel.pulse import Message
+        loop.create_task(pulse.publish(Message(topic=topic, source="aegis", payload=payload)))
+
     # -- schema ------------------------------------------------------------
 
     def init_db(self) -> None:
@@ -335,6 +357,7 @@ class Aegis:
         # Log to Chronicle AFTER the policy/history conn is committed + closed
         # so the second writer doesn't hit "database is locked".
         self._log_chronicle("aegis.trust_change", payload)
+        self._emit_pulse("aegis.trust_change", payload)
         return new_score
 
     def get_trust(self, module: str) -> float:
@@ -369,6 +392,7 @@ class Aegis:
         conn.commit()
         conn.close()
         self._log_chronicle("aegis.trust_change", payload)
+        self._emit_pulse("aegis.trust_change", payload)
 
     def get_trust_history(self, module: str, limit: int = 100) -> list[dict[str, Any]]:
         conn = self._conn()
@@ -510,6 +534,7 @@ class Aegis:
         conn.commit()
         conn.close()
         self._log_chronicle("aegis.trust_change", payload)
+        self._emit_pulse("aegis.trust_change", payload)
 
         # Trust collapse: revoke every grant
         if score < 0.50:
@@ -534,6 +559,26 @@ class Aegis:
     # ── the arbiter ─────────────────────────────────────────────────────
 
     def check_capability(
+        self,
+        agent_slug: str,
+        capability: str,
+        workspace_id: str | None = None,
+    ) -> CapabilityDecision:
+        """Gate a capability and stream the resolution as a kernel.gate event."""
+        decision = self._decide_capability(agent_slug, capability, workspace_id)
+        self._emit_pulse("kernel.gate", {
+            "agent": agent_slug,
+            "capability": capability,
+            "verdict": decision.verdict.value,
+            "permission_class": (
+                decision.permission_class.value if decision.permission_class else None
+            ),
+            "reason": decision.reason,
+            "workspace_id": workspace_id,
+        })
+        return decision
+
+    def _decide_capability(
         self,
         agent_slug: str,
         capability: str,
