@@ -91,6 +91,45 @@ def _get_discovery(request: Request):
     return discovery
 
 
+def _get_sync(request: Request):
+    kernel = _get_kernel(request)
+    engine = getattr(kernel, "federation_sync_engine", None)
+    if engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Federation sync is not enabled on this instance",
+        )
+    return engine
+
+
+def _get_allowlist(request: Request):
+    kernel = _get_kernel(request)
+    allowlist = getattr(kernel, "federation_allowlist", None)
+    if allowlist is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Federation sync is not enabled on this instance",
+        )
+    return allowlist
+
+
+# ── Sync request models ────────────────────────────────────────────────────
+
+class AllowBody(BaseModel):
+    peer_id: str
+    workspace_id: str
+
+
+class InboundAtlasBody(BaseModel):
+    workspace_id: str
+    facts: list[dict] = Field(default_factory=list)
+
+
+class PushBody(BaseModel):
+    peer_id: str
+    workspace_id: str
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 @router.post("/handshake")
@@ -202,3 +241,66 @@ async def remove_peer(peer_id: str, request: Request) -> dict:
     await protocol.disconnect_peer(peer_id)
     protocol.registry.remove_peer(peer_id)
     return {"status": "removed", "peer_id": peer_id}
+
+
+# ── Workspace sync (N3.2) ──────────────────────────────────────────────────
+
+@router.post("/sync/allow")
+async def sync_allow(body: AllowBody, request: Request) -> dict:
+    """Allowlist a peer to sync a specific workspace (workspace-scoped)."""
+    allowlist = _get_allowlist(request)
+    allowlist.allow(body.peer_id, body.workspace_id)
+    return {"status": "allowed", "peer_id": body.peer_id,
+            "workspace_id": body.workspace_id}
+
+
+@router.delete("/sync/allow/{peer_id}/{workspace_id}")
+async def sync_revoke(peer_id: str, workspace_id: str, request: Request) -> dict:
+    """Revoke a peer's sync access for a workspace."""
+    allowlist = _get_allowlist(request)
+    allowlist.revoke(peer_id, workspace_id)
+    return {"status": "revoked", "peer_id": peer_id, "workspace_id": workspace_id}
+
+
+@router.get("/sync/allowlist")
+async def sync_allowlist(request: Request) -> dict:
+    """List all (peer, workspace) sync grants."""
+    allowlist = _get_allowlist(request)
+    return {"allowlist": allowlist.entries()}
+
+
+@router.post("/sync/atlas")
+async def sync_inbound_atlas(body: InboundAtlasBody, request: Request) -> dict:
+    """Inbound: merge Atlas facts pushed by a peer into the local workspace."""
+    engine = _get_sync(request)
+    return await engine.handle_inbound_atlas(body.workspace_id, body.facts)
+
+
+@router.post("/sync/push")
+async def sync_push(body: PushBody, request: Request) -> dict:
+    """Outbound: push the local workspace's Atlas facts to an allowlisted peer.
+
+    The engine itself never touches the network — it exports facts and gates
+    via Aegis, then hands the push to a transport. The real-network transport
+    routes peer HTTP through FederationProtocol._http (KernelHttpClient ->
+    aegis.network()), preserving the kernel-import invariant.
+    """
+    engine = _get_sync(request)
+    protocol = _get_protocol(request)
+    peer = protocol.registry.get_peer(body.peer_id)
+
+    class _ProtocolPushClient:
+        async def push_atlas(self, workspace_id, facts):
+            if peer is None or not peer.url:
+                return {"delivered": False, "reason": "peer_unknown_or_no_url"}
+            from nexus.context import as_agent
+            async with as_agent("federation"):
+                resp = await protocol._http.post(
+                    f"{peer.url.rstrip('/')}/api/federation/sync/atlas",
+                    json={"workspace_id": workspace_id, "facts": facts},
+                )
+            resp.raise_for_status()
+            return resp.json()
+
+    return await engine.push_workspace(body.peer_id, body.workspace_id,
+                                       _ProtocolPushClient())

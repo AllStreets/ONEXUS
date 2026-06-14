@@ -469,7 +469,8 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 identity=Identity(mark=IdentityMark(kind="builtin:federation")),
                 capabilities=Capabilities(
                     declared=DeclaredCapabilities(**{
-                        "Routine": ["network.outbound.localhost"],
+                        "Routine": ["network.outbound.localhost",
+                                    "federation.sync.workspace"],
                     }),
                 ),
                 runtime=RuntimeConfig(transport="in_process"),
@@ -512,9 +513,53 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             kernel.federation_protocol = fed_protocol
             kernel.federation_discovery = fed_discovery
 
+            # N3.2 — workspace-scoped, allowlist-only, Aegis-gated Atlas sync.
+            # The sync engine never touches the network (the kernel-import
+            # invariant is enforced on nexus/federation/sync.py); real peer
+            # HTTP flows through FederationProtocol._http only.
+            from nexus.federation.sync import PeerAllowlist, WorkspaceSyncEngine
+            from nexus.workspaces.manager import WorkspaceManager
+
+            fed_allowlist = PeerAllowlist(kernel.config.data_dir / "federation")
+
+            def _engram_for(ws_id: str):
+                ws_root = kernel.config.data_dir / "workspaces"
+                ws_root.mkdir(parents=True, exist_ok=True)
+                mgr = WorkspaceManager(root=ws_root)
+                try:
+                    ws_dir = mgr.workspace_dir(ws_id)
+                except Exception:
+                    ws_dir = ws_root / ws_id
+                ws_dir.mkdir(parents=True, exist_ok=True)
+                eng = Engram(ws_dir / "engram" / "episodic.sqlite")
+                (ws_dir / "engram").mkdir(parents=True, exist_ok=True)
+                eng.init_db()
+                return eng
+
+            fed_sync_engine = WorkspaceSyncEngine(
+                instance_id=instance_id,
+                aegis=kernel.aegis,
+                chronicle=kernel.chronicle,
+                allowlist=fed_allowlist,
+                engram_for=_engram_for,
+            )
+
+            # Kill switch: NEXUS_FEDERATION_SYNC=0/false/no OR
+            # <data_dir>/federation-sync.kill disables sync. Default on.
+            import pathlib as _pathlib
+            _sync_env_on = os.environ.get(
+                "NEXUS_FEDERATION_SYNC", "1").lower() not in ("0", "false", "no")
+            _sync_kill = (_pathlib.Path(kernel.config.data_dir)
+                          / "federation-sync.kill").exists()
+            fed_sync_engine.set_sync_enabled(_sync_env_on and not _sync_kill)
+
+            kernel.federation_allowlist = fed_allowlist
+            kernel.federation_sync_engine = fed_sync_engine
+
             kernel.chronicle.log("federation", "initialized", {
                 "instance_id": instance_id,
                 "instance_name": instance_name,
+                "sync_enabled": fed_sync_engine.sync_enabled,
             })
         except Exception:
             pass
