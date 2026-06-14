@@ -467,11 +467,13 @@ def default_builtin_registry():
     from nexus.modules.agent_dispatcher import AgentDispatcherModule
     from nexus.modules.sigil import SigilModule
     from nexus.modules.atlas import AtlasModule
+    from nexus.modules.chronos import ChronosModule
 
     return BuiltinRegistry.from_modules([
         CouncilModule, SpecterModule, AutonomicModule, OracleModule,
         WraithModule, LegacyModule, ConsciousnessModule, SentryModule,
         EchoModule, AgentDispatcherModule, SigilModule, AtlasModule,
+        ChronosModule,
     ])
 
 
