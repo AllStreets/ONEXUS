@@ -3632,3 +3632,76 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   .nx-radar-ping-dot { animation: none; }
   .nx-emergency-veil { background: rgba(12, 10, 20, 0.88); }
 }
+
+/* ── N2 surfaces: morning brief · Atlas graph · Chronos timeline ─────────── */
+
+.nx-morning-brief { display: flex; flex-direction: column; gap: 6px; }
+.nx-brief-empty { font-size: 12px; }
+.nx-brief-head { font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+.nx-brief-date { font-size: 11px; }
+.nx-brief-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.nx-brief-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 10px;
+  background: rgba(184, 196, 255, 0.10);
+  border: 1px solid var(--nx-hairline);
+  font-size: 11px; color: var(--nx-routine);
+}
+.nx-brief-count {
+  font-size: 10px; opacity: 0.7; padding-left: 4px;
+  border-left: 1px solid var(--nx-hairline);
+}
+
+/* Atlas force-layout graph view */
+.nx-atlas-view, .nx-chronos-view { padding: 28px 32px; max-width: 920px; margin: 0 auto; }
+.nx-view-head h2 { font-size: 18px; margin: 0 0 4px; }
+.nx-view-head p { font-size: 12.5px; margin: 0 0 18px; }
+.nx-atlas-canvas { width: 100%; height: auto; display: block; }
+.nx-atlas-edge {
+  stroke: var(--nx-hairline); stroke-width: 1;
+  transition: stroke 0.2s ease;
+}
+.nx-atlas-node circle { fill: var(--nx-routine); stroke: none; }
+.nx-atlas-node text { fill: var(--nx-text, #e6e6f0); font-size: 10px; }
+.nx-atlas-node.decayed circle { fill: var(--nx-sensitive); }
+.nx-atlas-node.decayed text { fill: var(--nx-sensitive); font-style: italic; }
+
+/* Chronos counterfactual timeline */
+.nx-chronos-list { display: flex; flex-direction: column; gap: 2px; }
+.nx-chronos-row {
+  display: grid;
+  grid-template-columns: 150px 70px 90px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 5px 10px; border-radius: 6px;
+  font-size: 12px; transition: background 0.15s ease;
+}
+.nx-chronos-row:hover { background: rgba(255, 255, 255, 0.03); }
+.nx-chronos-branch {
+  border-left: 2px solid var(--nx-chronos-branch);
+  padding-left: 8px;
+}
+.nx-chronos-branch:hover { background: rgba(184, 196, 255, 0.07); }
+.nx-chronos-kind { color: var(--nx-chronos-branch); }
+.nx-chronos-flip {
+  font-size: 11px; padding: 2px 9px; border-radius: 10px;
+  background: rgba(184, 196, 255, 0.10);
+  border: 1px solid var(--nx-chronos-branch);
+  color: var(--nx-chronos-branch); cursor: pointer;
+  transition: background 0.15s ease;
+}
+.nx-chronos-flip:hover { background: rgba(184, 196, 255, 0.20); }
+.nx-chronos-result {
+  margin-top: 18px; padding: 14px 16px; border-radius: 10px;
+  background: rgba(184, 196, 255, 0.06);
+  border: 1px solid var(--nx-hairline);
+}
+.nx-chronos-result-head { font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }
+.nx-chronos-pruned {
+  font-size: 12px; padding: 3px 0; color: var(--nx-trust-collapse);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-atlas-node, .nx-atlas-edge, .nx-chronos-row,
+  .nx-chronos-flip, .nx-chronos-branch { transition: none; }
+  .nx-radar-ping-dot { animation: none; }
+}

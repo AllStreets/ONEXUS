@@ -28,6 +28,9 @@
   --nx-trust-falling:  #8cb8d4; /* cool steel */
   --nx-trust-collapse: #f8643c; /* hot crimson */
 
+  /* N2 — Chronos counterfactual branch accent */
+  --nx-chronos-branch: #b8c4ff; /* periwinkle — decision branch points */
+
   /* workspace home tones — 25 across the spectrum */
   /* cool — blues / violets / teals */
   --nx-tone-indigo-a:    #5a6cd0;  --nx-tone-indigo-b:    #2c3a78;

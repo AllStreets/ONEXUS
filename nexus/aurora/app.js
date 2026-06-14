@@ -42,6 +42,11 @@ const state = {
     tone: null,
     reason: "",
   },
+  n2: {                    // N2 surfaces: morning brief, atlas graph, chronos
+    brief: null,           // latest /api/dreamweaver/brief
+    atlasGraph: null,      // latest /api/atlas/graph
+    chronos: null,         // latest /api/chronos/timeline + counterfactual result
+  },
   user: { initials: "you", name: "you" },
 };
 
@@ -912,6 +917,8 @@ function renderCockpitRail() {
   renderMoodCard();
   renderAgentDiscs();
   renderKernelViz();
+  renderMorningBrief();
+  loadMorningBrief();
 }
 
 function renderTrustCard() {
@@ -1009,11 +1016,155 @@ function handleKernelEvent(m) {
       series.push(p.new_score);
       if (series.length > 24) series.shift();
     }
+  } else if (m.topic === "dreamweaver.brief") {
+    // N2.2 — overnight distillation finished; refresh the morning-brief card.
+    state.n2.brief = m.payload || null;
+    renderMorningBrief();
+    touched = false;
   } else {
     touched = false;
   }
   if (m.priority === 0) emergencyVeil(m);   // Pulse EMERGENCY -> full-surface alert
   if (touched) renderKernelViz();
+}
+
+// ── N2 surfaces: morning brief / Atlas graph / Chronos timeline ─────────────
+async function loadMorningBrief() {
+  try {
+    const r = await fetch("/api/dreamweaver/brief");
+    if (!r.ok) return;
+    state.n2.brief = await r.json();
+    renderMorningBrief();
+  } catch {}
+}
+
+function renderMorningBrief() {
+  const el = document.getElementById("nx-morning-brief");
+  if (!el) return;
+  const b = state.n2.brief;
+  if (!b || !b.headline) {
+    el.innerHTML = `<div class="nx-brief-empty nx-dim">No morning brief yet.</div>`;
+    return;
+  }
+  const topics = (b.topics || []).slice(0, 8);
+  const chips = topics.map(t =>
+    `<span class="nx-brief-chip">${escapeHtml(t.topic)}<span class="nx-brief-count">${escapeHtml(String(t.count))}</span></span>`
+  ).join("");
+  el.innerHTML = `
+    <div class="nx-brief-head">${escapeHtml(b.headline)}</div>
+    ${b.date ? `<div class="nx-brief-date nx-dim">${escapeHtml(b.date)}</div>` : ""}
+    <div class="nx-brief-chips">${chips || `<span class="nx-dim">no recurring topics</span>`}</div>`;
+}
+
+async function renderAtlasGraph() {
+  const main = document.getElementById("nx-main");
+  if (!main) return;
+  let data = state.n2.atlasGraph;
+  try {
+    const r = await fetch("/api/atlas/graph");
+    if (r.ok) { data = await r.json(); state.n2.atlasGraph = data; }
+  } catch {}
+  data = data || { nodes: [], edges: [] };
+  const nodes = data.nodes || [];
+  const edges = data.edges || [];
+  // Deterministic radial layout: subjects sit on a ring, low confidence drifts
+  // outward. No animation loop — the layout is static and reproducible.
+  const W = 720, H = 520, cx = W / 2, cy = H / 2;
+  const pos = {};
+  nodes.forEach((n, i) => {
+    const angle = (i / Math.max(nodes.length, 1)) * Math.PI * 2;
+    const conf = Math.max(0.05, Math.min(1, n.confidence ?? 0.5));
+    const radius = 90 + (1 - conf) * 150;   // low confidence drifts outward
+    pos[n.id] = { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, conf, n };
+  });
+  const edgeSVG = edges.map(e => {
+    const a = pos[e.src], b = pos[e.dst];
+    if (!a || !b) return "";
+    return `<line class="nx-atlas-edge" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"><title>${escapeHtml(e.label || "related")}</title></line>`;
+  }).join("");
+  const nodeSVG = nodes.map(n => {
+    const p = pos[n.id];
+    const cls = n.decayed ? "nx-atlas-node decayed" : "nx-atlas-node";
+    const op = (0.25 + 0.75 * p.conf).toFixed(3);   // opacity tracks confidence
+    const label = `${n.subject} ${n.relation} ${n.object}`;
+    return `<g class="${cls}" style="opacity:${op}">
+        <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(4 + 6 * p.conf).toFixed(1)}"/>
+        <text x="${(p.x + 9).toFixed(1)}" y="${(p.y + 4).toFixed(1)}">${escapeHtml(label)}</text>
+        <title>${escapeHtml(label)} — confidence ${p.conf.toFixed(2)}${n.decayed ? " (decayed)" : ""} · ${escapeHtml(n.source_ref || "unrecorded")}</title>
+      </g>`;
+  }).join("");
+  main.innerHTML = `
+    <section class="nx-view nx-atlas-view">
+      <header class="nx-view-head">
+        <h2>Atlas — world model graph</h2>
+        <p class="nx-dim">${nodes.length} facts · ${edges.length} edges · node opacity tracks live confidence, faded nodes have decayed.</p>
+      </header>
+      ${nodes.length ? `<svg class="nx-atlas-canvas" viewBox="0 0 ${W} ${H}" role="img" aria-label="Atlas knowledge graph">
+        ${edgeSVG}${nodeSVG}
+      </svg>` : `<div class="nx-empty">No facts recorded yet. Teach Atlas with "observe: subject | relation | object".</div>`}
+    </section>`;
+}
+
+async function renderChronosTimeline() {
+  const main = document.getElementById("nx-main");
+  if (!main) return;
+  let data = null;
+  try {
+    const r = await fetch("/api/chronos/timeline?limit=80");
+    if (r.ok) data = await r.json();
+  } catch {}
+  const rows = (data && data.timeline) || [];
+  state.n2.chronos = { timeline: rows, result: state.n2.chronos?.result || null };
+  const rowsHTML = rows.slice().reverse().map(d => {
+    const branch = d.branch_point;
+    const cls = branch ? "nx-chronos-row nx-chronos-branch" : "nx-chronos-row";
+    const btn = branch
+      ? `<button class="nx-chronos-flip" data-id="${escapeHtml(d.id)}" data-module="${escapeHtml(d.module || "")}" data-action="${escapeHtml(d.kind === "grant" ? "permission_granted" : d.action)}">what if?</button>`
+      : "";
+    return `<div class="${cls}">
+        <span class="nx-chronos-time nx-dim">${escapeHtml((d.timestamp || "").slice(0, 19))}</span>
+        <span class="nx-chronos-kind">${escapeHtml(d.kind)}</span>
+        <span class="nx-chronos-mod">${escapeHtml(d.module || "-")}</span>
+        <span class="nx-chronos-prev nx-dim">${escapeHtml((d.preview || "").slice(0, 48))}</span>
+        ${btn}
+      </div>`;
+  }).join("");
+  const res = state.n2.chronos.result;
+  const resultHTML = res && res.flipped ? `
+    <div class="nx-chronos-result">
+      <div class="nx-chronos-result-head">If ${escapeHtml(res.flipped.module || "?")}'s ${escapeHtml(res.flipped.action)} had been denied — would NOT have happened:</div>
+      ${(res.would_not_have_happened || []).map(a =>
+        `<div class="nx-chronos-pruned">${escapeHtml(a.module || "-")} · ${escapeHtml(a.action)} · ${escapeHtml((a.preview || "").slice(0, 48))}</div>`
+      ).join("") || `<div class="nx-dim">nothing downstream depended on it</div>`}
+    </div>` : "";
+  main.innerHTML = `
+    <section class="nx-view nx-chronos-view">
+      <header class="nx-view-head">
+        <h2>Chronos — decision timeline</h2>
+        <p class="nx-dim">${rows.length} decisions · branch points (grants &amp; routes) can be flipped to preview the counterfactual. The kernel is never re-run.</p>
+      </header>
+      <div class="nx-chronos-list">${rowsHTML || `<div class="nx-empty">No decisions recorded yet.</div>`}</div>
+      ${resultHTML}
+    </section>`;
+  main.querySelectorAll(".nx-chronos-flip").forEach(btn => {
+    btn.addEventListener("click", () =>
+      runCounterfactual(btn.dataset.module, btn.dataset.action, btn.dataset.id));
+  });
+}
+
+async function runCounterfactual(module, action, eventId) {
+  try {
+    const body = (module && action) ? { module, action } : { event_id: eventId };
+    const r = await fetch("/api/chronos/counterfactual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) return;
+    const result = await r.json();
+    state.n2.chronos = { timeline: state.n2.chronos?.timeline || [], result };
+    renderChronosTimeline();
+  } catch {}
 }
 
 function moduleSparkSVG(series, w = 64, h = 16) {
@@ -4929,6 +5080,8 @@ async function route(hash) {
   if (hash === "#/settings") { renderSettings(); return; }
   if (hash.startsWith("#/cortex")) { renderCortexLauncher(hash); return; }
   if (hash === "#/workshop") { renderWorkshop(); return; }
+  if (hash === "#/atlas") { await renderAtlasGraph(); return; }
+  if (hash === "#/chronos") { await renderChronosTimeline(); return; }
   if (hash.startsWith("#/search")) { renderSearch(hash); return; }
   if (hash.startsWith("#/guide")) {
     const m = hash.match(/#\/guide\/(\d+)/);
