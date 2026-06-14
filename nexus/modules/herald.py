@@ -7,10 +7,26 @@ the full transcript is recorded in Chronicle.
 """
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 from nexus.modules.base import NexusModule
 from nexus.society.herald import Forge, NegotiationState, NegotiationStatus
+
+
+def herald_autoaccept_enabled(config) -> bool:
+    """Kill switch for Herald's only automated behavior: auto-accepting a
+    counter that strictly dominates the prior offer.
+
+    Default OFF (spec deviation 3). Enabled only by env
+    NEXUS_HERALD_AUTOACCEPT in (1/true/yes) AND no
+    <data_dir>/herald-autoaccept.kill file. Mirrors the Dreamweaver
+    convention so the kill switch is observable and uniform.
+    """
+    if os.environ.get("NEXUS_HERALD_AUTOACCEPT", "0").lower() not in ("1", "true", "yes"):
+        return False
+    return not (Path(config.data_dir) / "herald-autoaccept.kill").exists()
 
 
 class HeraldModule(NexusModule):
@@ -124,6 +140,23 @@ class HeraldModule(NexusModule):
         return {"committed": True, "verdict": verdict, "negotiation_id": negotiation_id,
                 "capability": token.capability, "workspace_id": token.workspace_id,
                 "terms": token.terms}
+
+    async def maybe_auto_accept(self, ctx, negotiation_id, *, by) -> dict[str, Any]:
+        """Policy-driven auto-accept of a strictly-dominating counter.
+
+        This is Herald's only automated behavior. It is OFF by default and
+        gated by herald_autoaccept_enabled() (env + kill file). When disabled
+        it no-ops and logs the skip; manual negotiation is unaffected.
+        """
+        config = ctx.get("config")
+        if config is None or not herald_autoaccept_enabled(config):
+            self._log(ctx, "autoaccept_skipped",
+                      {"negotiation_id": negotiation_id, "reason": "kill_switch"})
+            return {"auto_accepted": False, "reason": "kill_switch"}
+        neg = self._get(negotiation_id)
+        if not neg.counter_dominates():
+            return {"auto_accepted": False, "reason": "counter_not_dominating"}
+        return await self.respond(ctx, negotiation_id, action="accept", by=by)
 
     def get(self, negotiation_id) -> dict[str, Any] | None:
         neg = self._negotiations.get(negotiation_id)
