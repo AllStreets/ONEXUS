@@ -1152,7 +1152,7 @@ function renderMoodCard() {
 function renderAgentDiscs() {
   const el = document.getElementById("nx-agent-discs");
   if (!el) return;
-  const BUILTINS = ["oracle", "council", "wraith", "echo", "specter", "autonomic"];
+  const BUILTINS = ["oracle", "council", "wraith", "echo", "prism", "chronos"];
   const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
   document.getElementById("nx-agents-label").textContent =
     `${totalBuiltin} BUILT-IN · ${state.runnableCount || 0} RUNNABLE`;
