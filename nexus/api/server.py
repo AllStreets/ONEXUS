@@ -421,6 +421,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.prism import router as prism_router
     app.include_router(prism_router)
 
+    from nexus.api.routes.herald import router as herald_router
+    app.include_router(herald_router)
+
     from nexus.api.routes.atlas import router as atlas_router
     app.include_router(atlas_router)
 
