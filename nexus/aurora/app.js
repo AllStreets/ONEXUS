@@ -47,6 +47,10 @@ const state = {
     atlasGraph: null,      // latest /api/atlas/graph
     chronos: null,         // latest /api/chronos/timeline + counterfactual result
   },
+  n3: {                    // N3 surfaces: herald negotiation + federation sync
+    herald: [],            // recent herald.* Pulse events (offer/counter/.../commit)
+    fedSync: { pushed: 0, merged: 0, last: null },  // federation sync counters
+  },
   user: { initials: "you", name: "you" },
 };
 
@@ -919,6 +923,9 @@ function renderCockpitRail() {
   renderKernelViz();
   renderMorningBrief();
   loadMorningBrief();
+  renderHeraldPanel();
+  renderFederationSync();
+  loadHeraldPanel();
 }
 
 function renderTrustCard() {
@@ -1021,6 +1028,27 @@ function handleKernelEvent(m) {
     state.n2.brief = m.payload || null;
     renderMorningBrief();
     touched = false;
+  } else if (m.topic && m.topic.startsWith("herald.")) {
+    // N3.1 — agent-to-agent negotiation events stream over the Pulse relay.
+    const kind = m.topic.slice("herald.".length);
+    state.n3.herald.unshift({ kind, payload: m.payload || {} });
+    state.n3.herald = state.n3.herald.slice(0, 8);
+    renderHeraldPanel();
+    touched = false;
+  } else if (m.topic === "federation" || (m.topic && m.topic.startsWith("federation."))) {
+    // N3.2 — federation sync push/merge counts (best-effort; engine logs to
+    // Chronicle, but live events refresh the panel without polling).
+    const p = m.payload || {};
+    const action = p.action || (m.topic.includes("merge") ? "sync_merge" : "");
+    if (action === "sync_push" || m.topic.includes("push")) {
+      state.n3.fedSync.pushed += (p.count || 0);
+      state.n3.fedSync.last = "push";
+    } else if (action === "sync_merge" || m.topic.includes("merge")) {
+      state.n3.fedSync.merged += (p.merged || 0);
+      state.n3.fedSync.last = "merge";
+    }
+    renderFederationSync();
+    touched = false;
   } else {
     touched = false;
   }
@@ -1054,6 +1082,48 @@ function renderMorningBrief() {
     <div class="nx-brief-head">${escapeHtml(b.headline)}</div>
     ${b.date ? `<div class="nx-brief-date nx-dim">${escapeHtml(b.date)}</div>` : ""}
     <div class="nx-brief-chips">${chips || `<span class="nx-dim">no recurring topics</span>`}</div>`;
+}
+
+// ── N3 surfaces: Herald negotiation + federation sync ──────────────────────
+async function loadHeraldPanel() {
+  try {
+    const r = await fetch("/api/herald");
+    if (!r.ok) return;
+    const body = await r.json();
+    state.n3.heraldOpen = (body.negotiations || []).length;
+    renderHeraldPanel();
+  } catch {}
+}
+
+function renderHeraldPanel() {
+  const el = document.getElementById("nx-herald-panel");
+  if (!el) return;
+  const events = state.n3.herald || [];
+  const open = state.n3.heraldOpen || 0;
+  if (!events.length && !open) {
+    el.innerHTML = `<div class="nx-dim">No negotiations. Offers, counters, and Aegis-gated commits stream here.</div>`;
+    return;
+  }
+  const rows = events.map(e => {
+    const p = e.payload || {};
+    const cap = p.capability ? ` · ${escapeHtml(p.capability)}` : "";
+    return `<div class="nx-herald-row"><span class="nx-herald-kind">${escapeHtml(e.kind)}</span><span class="nx-dim">${escapeHtml(String(p.negotiation_id || ""))}${cap}</span></div>`;
+  }).join("");
+  el.innerHTML = `
+    <div class="nx-herald-meta nx-dim">${open} open · last ${events.length} event${events.length === 1 ? "" : "s"}</div>
+    ${rows}`;
+}
+
+function renderFederationSync() {
+  const el = document.getElementById("nx-fedsync-panel");
+  if (!el) return;
+  const s = state.n3.fedSync || { pushed: 0, merged: 0, last: null };
+  el.innerHTML = `
+    <div class="nx-fedsync-row">
+      <span class="nx-fedsync-stat"><span class="nx-fedsync-val">${s.pushed}</span><span class="nx-dim">pushed</span></span>
+      <span class="nx-fedsync-stat"><span class="nx-fedsync-val">${s.merged}</span><span class="nx-dim">merged</span></span>
+    </div>
+    <div class="nx-dim nx-fedsync-note">workspace-scoped · allowlist-only · Aegis-gated</div>`;
 }
 
 async function renderAtlasGraph() {

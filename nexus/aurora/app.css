@@ -3652,6 +3652,28 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   border-left: 1px solid var(--nx-hairline);
 }
 
+/* N3.1 Herald negotiation cockpit panel */
+.nx-herald-panel { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; }
+.nx-herald-meta { font-size: 10.5px; margin-bottom: 2px; }
+.nx-herald-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 2px 0; line-height: 1.3;
+}
+.nx-herald-kind {
+  display: inline-block; min-width: 56px;
+  padding: 1px 7px; border-radius: 9px;
+  background: rgba(255, 217, 168, 0.12);
+  border: 1px solid var(--nx-hairline);
+  color: #ffd9a8; font-size: 10.5px;
+}
+
+/* N3.2 federation sync cockpit panel */
+.nx-fedsync-panel { display: flex; flex-direction: column; gap: 6px; }
+.nx-fedsync-row { display: flex; gap: 16px; }
+.nx-fedsync-stat { display: flex; flex-direction: column; line-height: 1.1; }
+.nx-fedsync-val { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.nx-fedsync-note { font-size: 10.5px; }
+
 /* Atlas force-layout graph view */
 .nx-atlas-view, .nx-chronos-view { padding: 28px 32px; max-width: 920px; margin: 0 auto; }
 .nx-view-head h2 { font-size: 18px; margin: 0 0 4px; }
