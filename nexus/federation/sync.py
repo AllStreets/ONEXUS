@@ -70,7 +70,7 @@ class LoopbackPeerClient:
         return await self._inbound(workspace_id, facts)
 
 
-class _WorkspaceSyncEngine_PENDING_TASK6:
+class WorkspaceSyncEngine:
     """Workspace-scoped, allowlist-only, Aegis-gated Atlas-fact sync."""
 
     CAPABILITY = "federation.sync.workspace"
