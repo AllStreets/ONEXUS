@@ -415,6 +415,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.sigil import router as sigil_router
     app.include_router(sigil_router)
 
+    from nexus.api.routes.chronos import router as chronos_router
+    app.include_router(chronos_router)
+
     from nexus.api.routes.dreamweaver import router as dreamweaver_router
     app.include_router(dreamweaver_router)
 
