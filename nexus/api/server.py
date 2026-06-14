@@ -240,9 +240,43 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
 
         _refresh_task = _asyncio.create_task(_catalog_refresher())
 
+        # N2.2: Dreamweaver overnight distillation. In-process asyncio interval
+        # loop (mirrors _catalog_refresher), guarded by dreamweaver_enabled
+        # (env NEXUS_DREAMWEAVER=0/false/no or <data_dir>/dreamweaver.kill).
+        # Interval defaults to 24h; NEXUS_DREAMWEAVER_INTERVAL_S overrides for
+        # tests. Each run publishes a dreamweaver.brief Pulse message so Aurora
+        # refreshes the morning-brief card without polling.
+        from nexus.synthesis.dreamweaver import Dreamweaver, dreamweaver_enabled
+        from nexus.kernel.pulse import Message as _Message
+
+        app.state.dreamweaver = Dreamweaver(
+            kernel.config, kernel.engram, kernel.chronicle
+        )
+        _dw_interval = float(os.environ.get("NEXUS_DREAMWEAVER_INTERVAL_S", "86400"))
+
+        async def _dreamweaver_loop():
+            while True:
+                await _asyncio.sleep(_dw_interval)
+                if not dreamweaver_enabled(kernel.config):
+                    continue
+                try:
+                    brief = await _asyncio.to_thread(app.state.dreamweaver.run_once)
+                except Exception as exc:  # noqa: BLE001
+                    import logging as _log
+
+                    _log.getLogger("nexus.api").warning("dreamweaver run failed: %s", exc)
+                    continue
+                if brief.get("skipped") is None:
+                    await kernel.pulse.publish(_Message(
+                        topic="dreamweaver.brief", source="dreamweaver", payload=brief,
+                    ))
+
+        _dreamweaver_task = _asyncio.create_task(_dreamweaver_loop())
+
         yield
         # Shutdown: drain event bus, log shutdown
         _refresh_task.cancel()
+        _dreamweaver_task.cancel()
         await kernel.pulse.drain()
         kernel.chronicle.log("api", "server_stop", {})
 
@@ -380,6 +414,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
 
     from nexus.api.routes.sigil import router as sigil_router
     app.include_router(sigil_router)
+
+    from nexus.api.routes.dreamweaver import router as dreamweaver_router
+    app.include_router(dreamweaver_router)
 
     # Initialize federation if enabled via environment
     import os
