@@ -470,12 +470,13 @@ def default_builtin_registry():
     from nexus.modules.chronos import ChronosModule
     from nexus.modules.prism import PrismModule
     from nexus.modules.herald import HeraldModule
+    from nexus.modules.serendipity import SerendipityModule
 
     return BuiltinRegistry.from_modules([
         CouncilModule, SpecterModule, AutonomicModule, OracleModule,
         WraithModule, LegacyModule, ConsciousnessModule, SentryModule,
         EchoModule, AgentDispatcherModule, SigilModule, AtlasModule,
-        ChronosModule, PrismModule, HeraldModule,
+        ChronosModule, PrismModule, HeraldModule, SerendipityModule,
     ])
 
 
