@@ -41,6 +41,18 @@ You don't leave the OS to do anything. Code editor, web search, file drop, mood-
 
 ---
 
+## v2 — The Missing Minds (on `feat/missing-minds`, in review)
+
+Three new cognitive layers built and tested on `feat/missing-minds` (1,274 tests passing), turning the agent-OS into something with genuine cognition. Awaiting review before merge:
+
+- **N1 — Perception.** **Sigil**, a threat radar that watches Aegis trust deltas, gate verdicts, and routing traffic, broadcasts emergency Pulse alerts and can auto-activate Specter. **Atlas**, a temporal knowledge graph in Engram with read-time confidence decay, re-confirmation, and coexisting contradictions. A **live kernel visualization** in Aurora — watch Cortex route and Aegis gate in real time, with radar pings and full-surface emergency veils.
+- **N2 — Cognition.** **Prism** cross-domain synthesis across workspace partitions (Aegis-gated), **Chronos** counterfactual reasoning over Chronicle's decision history ("what would have happened if that grant had been denied"), and **Dreamweaver** overnight distillation of the day's memory into a morning brief — surfaced as an Atlas graph view, a Chronos timeline, and a brief card.
+- **N3 — Society.** **Herald** agent-to-agent negotiation (offer → counter → accept/reject → commit) where every commitment is Aegis-gated and the full transcript lands in Chronicle, real **workspace-scoped federation sync** between instances, the **Serendipity** anti-optimization module, and the **Aurora v3** responsive layout.
+
+A companion `fix/aurora-feedback` branch ships UX fixes: escape-first markdown rendering, real dispatch in-flight/error states, true token streaming, local-codebase access, and truthful capability grounding (so agents stop inventing integrations that don't exist). Design docs and plans live under `docs/superpowers/{specs,plans}/`.
+
+---
+
 ## Quickstart
 
 > **Prerequisites:** Python 3.11+, [Ollama](https://ollama.com) (for natural-language responses — see next section), and ~6 GB free disk if you want a local LLM.
