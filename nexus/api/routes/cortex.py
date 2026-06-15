@@ -33,6 +33,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from nexus.api.capabilities import ground_persona
 from nexus.kernel.aegis import PermissionDenied
 
 
@@ -153,9 +154,14 @@ def _looks_canned(response: str, elapsed_ms: int) -> bool:
     return False
 
 
-async def _llm_augment(kernel, module_name: str, user_message: str, persona: str | None = None) -> str | None:
+async def _llm_augment(
+    kernel, module_name: str, user_message: str,
+    persona: str | None = None, app_state: Any | None = None,
+) -> str | None:
     """Ask the live LLM to respond AS the named agent. Returns None if no
-    healthy provider is available — caller keeps the original canned response."""
+    healthy provider is available — caller keeps the original canned response.
+    When *app_state* is provided, the persona is grounded in this instance's
+    truthful capability context so the agent can't invent integrations."""
     router_ = getattr(kernel, "provider_router", None)
     if router_ is None:
         return None
@@ -165,6 +171,8 @@ async def _llm_augment(kernel, module_name: str, user_message: str, persona: str
             f"You are {module_name}, an agent in the ONEXUS operating system. "
             f"Respond helpfully and concisely to the user's request.",
         )
+    if app_state is not None:
+        persona = ground_persona(persona, app_state)
     messages = [
         {"role": "system", "content": persona},
         {"role": "user", "content": user_message},
@@ -231,7 +239,10 @@ class LaunchBody(BaseModel):
     top_k: int | None = Field(default=None, ge=1, le=10)
 
 
-async def _run_one(kernel, cortex, catalog, module_name: str, message: str) -> dict[str, Any]:
+async def _run_one(
+    kernel, cortex, catalog, module_name: str, message: str,
+    app_state: Any | None = None,
+) -> dict[str, Any]:
     """Run a single agent. Mirrors the safety steps in cortex.process()
     so multi-launch follows the same Aegis discipline as single routing.
 
@@ -268,7 +279,7 @@ async def _run_one(kernel, cortex, catalog, module_name: str, message: str) -> d
     if module is None and catalog_entry is not None:
         start = time.perf_counter()
         persona = _catalog_persona(catalog_entry)
-        augmented = await _llm_augment(kernel, module_name, message, persona=persona)
+        augmented = await _llm_augment(kernel, module_name, message, persona=persona, app_state=app_state)
         elapsed = int((time.perf_counter() - start) * 1000)
         if not augmented:
             # No LLM available — return a deterministic shape so the user
@@ -333,7 +344,7 @@ async def _run_one(kernel, cortex, catalog, module_name: str, message: str) -> d
         # between "Oracle returned 0ms with All clear" and Oracle actually
         # analyzing the user's prompt through its persona.
         if _looks_canned(response, elapsed):
-            augmented = await _llm_augment(kernel, module_name, message)
+            augmented = await _llm_augment(kernel, module_name, message, app_state=app_state)
             if augmented:
                 response = augmented
                 llm_augmented = True
@@ -415,7 +426,10 @@ async def launch(body: LaunchBody, request: Request) -> dict:
         "mode": "explicit" if body.agents else ("top_k" if body.top_k else "single"),
     })
 
-    runs = await asyncio.gather(*(_run_one(kernel, cortex, catalog, slug, body.message) for slug in targets))
+    runs = await asyncio.gather(*(
+        _run_one(kernel, cortex, catalog, slug, body.message, app_state=request.app.state)
+        for slug in targets
+    ))
 
     succeeded = sum(1 for r in runs if r["success"])
 
@@ -531,9 +545,10 @@ def _resolve_persona(kernel, request: Request, slug: str) -> tuple[str, str]:
 
     Built-ins use the curated _AGENT_PERSONAS map; catalog agents derive
     persona from their catalog entry. Falls back to a generic prompt for
-    anything we don't recognize. Every persona is suffixed with the
-    hand-off instruction so any agent can route the next turn elsewhere
-    when it's the right call."""
+    anything we don't recognize. Every persona is grounded in this
+    instance's truthful capability context and suffixed with the hand-off
+    instruction so any agent can route the next turn elsewhere when it's
+    the right call."""
     cortex = kernel.cortex
     base: str
     kind: str
@@ -561,7 +576,7 @@ def _resolve_persona(kernel, request: Request, slug: str) -> tuple[str, str]:
                 f"Respond helpfully and concisely to the user's request."
             )
             kind = "unknown"
-    return base + _HANDOFF_INSTRUCTION, kind
+    return ground_persona(base, request.app.state) + _HANDOFF_INSTRUCTION, kind
 
 
 # Pattern an agent can emit to suggest a hand-off, e.g.:

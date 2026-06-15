@@ -68,6 +68,37 @@ class AnthropicProvider(InferenceProvider):
         except Exception as e:
             return f"[Inference error: {e}]"
 
+    async def infer_stream(self, messages: list[dict], max_tokens: int = 1024,
+                           temperature: float = 0.7):
+        """Stream text deltas via the Anthropic SDK's messages.stream()."""
+        if self._client is None:
+            yield "[Anthropic SDK not installed]"
+            return
+        try:
+            system_msg = None
+            non_system = []
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_msg = msg["content"]
+                else:
+                    non_system.append(msg)
+
+            kwargs: dict = {
+                "model": self._model,
+                "messages": non_system,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            if system_msg:
+                kwargs["system"] = system_msg
+
+            async with self._client.messages.stream(**kwargs) as stream:
+                async for token in stream.text_stream:
+                    if token:
+                        yield token
+        except Exception as e:
+            yield f"[Inference error: {e}]"
+
     async def health(self) -> bool:
         if self._client is None:
             return False

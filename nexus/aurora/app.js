@@ -5,6 +5,7 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 
 import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES } from "/aurora/static/icons.js";
+import { renderMarkdown } from "/aurora/static/md.js";
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
@@ -13,6 +14,11 @@ const state = {
   workspaceAgentCounts: {}, // workspace_id -> distinct-agents-you've-chatted-with
   thread: new Map(),       // workspace_id -> array of message records
   attachments: new Map(),  // workspace_id -> array of pending file uploads
+  codebases: new Map(),    // workspace_id -> registered codebase roots
+  codebaseTrees: new Map(),// "<codebase_id>|<rel path>" -> cached tree entries
+  codebaseOpen: new Set(), // expanded "<codebase_id>|<rel path>" keys
+  codebasePanel: new Set(),// workspace_ids with the codebases panel open
+  _codebaseErr: null,      // last codebase action error (shown in the panel)
   agents: [],              // catalog/runtime metadata
   runnableCount: 0,        // live count of runnable (MCP-adapter) catalog agents
   catalogTotal: 0,         // live count of ALL catalog agents (for search/picker labels)
@@ -1499,12 +1505,19 @@ async function renderConversation(workspaceId) {
   // JS click chain. Works in every browser, including Safari which is picky
   // about programmatic .click() on hidden inputs.
   const composerHTML = `
+    ${renderCodebasePanelHTML(workspaceId)}
     <form class="nx-composer" id="nx-composer" autocomplete="off">
       <label class="nx-attach-btn" id="nx-attach-btn" for="nx-file-input" title="Attach file (or drag-and-drop)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9.8 5.5 5.8 9.5a2 2 0 1 1-2.8-2.8L8 1.7a3 3 0 0 1 4.2 4.2L7.2 11a4 4 0 0 1-5.7-5.6"/>
         </svg>
       </label>
+      <button type="button" class="nx-attach-btn" id="nx-codebase-btn" title="Browse codebases (attach source files)" aria-expanded="${state.codebasePanel.has(workspaceId)}">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 4 2 7l3 3"/>
+          <path d="M9 4l3 3-3 3"/>
+        </svg>
+      </button>
       <input type="file" id="nx-file-input" multiple aria-hidden="true" class="nx-file-input-vis">
       <input id="nx-composer-input"
              placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
@@ -1616,6 +1629,9 @@ async function renderConversation(workspaceId) {
       renderConversation(workspaceId);
     });
   });
+
+  // Codebases panel — register roots, browse trees, attach files.
+  wireCodebasePanel(workspaceId);
 
   // Drop anywhere on the main canvas — use addEventListener not the on*
   // properties so they survive re-renders cleanly. The dragover handler MUST
@@ -1951,6 +1967,13 @@ function renderMessageHTML(m) {
     </div>
   ` : "";
   const fb = m.feedback;  // null | 'up' | 'down'
+  // Agent message bodies render through the escape-first markdown pipeline
+  // (md.js). While a reply is still streaming we show the raw text with
+  // pre-wrap (cheap incremental updates); on completion the body is
+  // re-rendered as markdown. User messages stay plain-escaped.
+  const bodyHTML = m.streaming
+    ? `<div class="nx-msg-body" style="white-space:pre-wrap">${escapeHtml(m.body)}<span class="nx-stream-caret" aria-hidden="true"></span></div>`
+    : `<div class="nx-msg-body nx-msg-md">${m.html || renderMarkdown(m.body)}</div>`;
   return `
     <div class="nx-msg-agent" data-message-id="${escapeHtml(m.id || "")}" data-module="${escapeHtml(slug)}">
       ${agentDisc(slug, { size: 40 })}
@@ -1960,7 +1983,7 @@ function renderMessageHTML(m) {
           <span class="nx-msg-meta">${escapeHtml(time)}</span>
           ${m.memory_id ? `<span class="nx-msg-memory" title="Stored in Engram: ${escapeHtml(m.memory_id)}">remembered</span>` : ""}
         </div>
-        <div class="nx-msg-body" style="white-space:pre-wrap">${m.html || escapeHtml(m.body)}</div>
+        ${bodyHTML}
         ${diffHTML}
         <div class="nx-msg-footer">
           <button class="nx-fb-btn ${fb === 'up' ? 'on' : ''}" data-fb="up" title="Mark this response as useful (raises ${escapeHtml(slug)}'s trust)">
@@ -2037,6 +2060,207 @@ async function uploadFile(workspaceId, file) {
   }
 }
 
+// ── Codebases panel ────────────────────────────────────────────────────────
+// A workspace can register local directories ("codebase roots") through
+// POST /api/codebases. The panel browses them one directory level at a time
+// (lazy: GET /tree on first expand, cached in state.codebaseTrees) and a
+// click on a file pulls its content (GET /file) and pushes it through the
+// existing upload/attachment flow, so it lands in the composer exactly like
+// a dragged-in file — Engram record, Chronicle log, dedupe and all.
+
+function _cbKey(codebaseId, rel) { return `${codebaseId}|${rel}`; }
+
+function renderCodebaseLevelHTML(codebaseId, rel, depth) {
+  const entries = state.codebaseTrees.get(_cbKey(codebaseId, rel)) || [];
+  if (!entries.length) {
+    return `<div class="nx-cb-empty" style="padding-left:${14 + depth * 14}px">empty</div>`;
+  }
+  return entries.map(e => {
+    const childRel = rel ? `${rel}/${e.name}` : e.name;
+    const pad = 14 + depth * 14;
+    if (e.type === "dir") {
+      const open = state.codebaseOpen.has(_cbKey(codebaseId, childRel));
+      return `
+        <button type="button" class="nx-cb-row nx-cb-dir ${open ? "open" : ""}"
+                data-cb-dir data-cb-id="${escapeHtml(codebaseId)}" data-cb-rel="${encodeURIComponent(childRel)}"
+                style="padding-left:${pad}px">
+          <span class="nx-cb-arrow" aria-hidden="true">›</span>
+          <span class="nx-cb-name">${escapeHtml(e.name)}</span>
+        </button>
+        ${open ? renderCodebaseLevelHTML(codebaseId, childRel, depth + 1) : ""}
+      `;
+    }
+    return `
+      <button type="button" class="nx-cb-row nx-cb-file"
+              data-cb-file data-cb-id="${escapeHtml(codebaseId)}" data-cb-rel="${encodeURIComponent(childRel)}"
+              style="padding-left:${pad}px" title="Attach ${escapeHtml(e.name)} to the composer">
+        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 0h6l4 4v10H2z"/><path d="M8 0v4h4"/>
+        </svg>
+        <span class="nx-cb-name">${escapeHtml(e.name)}</span>
+        <span class="nx-cb-size">${((e.size || 0) / 1024).toFixed(1)} KB</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderCodebasePanelHTML(workspaceId) {
+  if (!state.codebasePanel.has(workspaceId)) return "";
+  const roots = state.codebases.get(workspaceId) || [];
+  const rows = roots.map(r => {
+    const open = state.codebaseOpen.has(_cbKey(r.id, ""));
+    return `
+      <div class="nx-cb-root">
+        <div class="nx-cb-root-row">
+          <button type="button" class="nx-cb-row nx-cb-dir ${open ? "open" : ""}"
+                  data-cb-dir data-cb-id="${escapeHtml(r.id)}" data-cb-rel=""
+                  title="${escapeHtml(r.path)}">
+            <span class="nx-cb-arrow" aria-hidden="true">›</span>
+            <span class="nx-cb-name">${escapeHtml(r.name)}</span>
+            <span class="nx-cb-path">${escapeHtml(truncate(r.path, 48))}</span>
+          </button>
+          <button type="button" class="nx-cb-remove" data-cb-remove data-cb-id="${escapeHtml(r.id)}"
+                  title="Unregister this codebase" aria-label="Unregister ${escapeHtml(r.name)}">×</button>
+        </div>
+        ${open ? renderCodebaseLevelHTML(r.id, "", 1) : ""}
+      </div>
+    `;
+  }).join("");
+  return `
+    <div class="nx-codebase-panel" id="nx-codebase-panel">
+      <div class="nx-cb-head">
+        <span class="nx-cb-title">CODEBASES</span>
+        <span class="nx-cb-hint">read-only · click a file to attach it</span>
+      </div>
+      ${rows || `<div class="nx-cb-empty">no codebases registered for this workspace yet</div>`}
+      <form class="nx-cb-add" id="nx-cb-add">
+        <input id="nx-cb-path" placeholder="/absolute/path/to/repo" aria-label="Absolute path to a local codebase" autocomplete="off">
+        <button type="submit">register</button>
+      </form>
+      ${state._codebaseErr ? `<div class="nx-cb-err" role="alert">${escapeHtml(state._codebaseErr)}</div>` : ""}
+    </div>
+  `;
+}
+
+async function loadCodebases(workspaceId) {
+  try {
+    const r = await fetch(`/api/codebases?workspace_id=${encodeURIComponent(workspaceId)}`);
+    if (r.ok) state.codebases.set(workspaceId, (await r.json()).codebases || []);
+  } catch {}
+}
+
+async function _cbDetail(r, fallback) {
+  try {
+    const body = await r.json();
+    return body.detail || fallback;
+  } catch { return fallback; }
+}
+
+function wireCodebasePanel(workspaceId) {
+  document.getElementById("nx-codebase-btn")?.addEventListener("click", async () => {
+    if (state.codebasePanel.has(workspaceId)) {
+      state.codebasePanel.delete(workspaceId);
+    } else {
+      state.codebasePanel.add(workspaceId);
+      state._codebaseErr = null;
+      await loadCodebases(workspaceId);
+    }
+    renderConversation(workspaceId);
+  });
+
+  const panel = document.getElementById("nx-codebase-panel");
+  if (!panel) return;
+
+  document.getElementById("nx-cb-add")?.addEventListener("submit", async (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const input = document.getElementById("nx-cb-path");
+    const path = (input?.value || "").trim();
+    if (!path) return;
+    state._codebaseErr = null;
+    try {
+      const r = await fetch("/api/codebases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace_id: workspaceId, path }),
+      });
+      if (!r.ok) {
+        state._codebaseErr = await _cbDetail(r, `register failed (HTTP ${r.status})`);
+      } else {
+        await loadCodebases(workspaceId);
+      }
+    } catch (err) {
+      state._codebaseErr = `register failed: ${err.message}`;
+    }
+    renderConversation(workspaceId);
+  });
+
+  panel.querySelectorAll("[data-cb-remove]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.cbId;
+      state._codebaseErr = null;
+      try { await fetch(`/api/codebases/${encodeURIComponent(id)}`, { method: "DELETE" }); } catch {}
+      for (const key of [...state.codebaseOpen]) if (key.startsWith(`${id}|`)) state.codebaseOpen.delete(key);
+      for (const key of [...state.codebaseTrees.keys()]) if (key.startsWith(`${id}|`)) state.codebaseTrees.delete(key);
+      await loadCodebases(workspaceId);
+      renderConversation(workspaceId);
+    });
+  });
+
+  panel.querySelectorAll("[data-cb-dir]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.cbId;
+      const rel = decodeURIComponent(btn.dataset.cbRel || "");
+      const key = _cbKey(id, rel);
+      state._codebaseErr = null;
+      if (state.codebaseOpen.has(key)) {
+        state.codebaseOpen.delete(key);
+      } else {
+        if (!state.codebaseTrees.has(key)) {
+          try {
+            const r = await fetch(`/api/codebases/${encodeURIComponent(id)}/tree?path=${encodeURIComponent(rel)}`);
+            if (!r.ok) {
+              state._codebaseErr = await _cbDetail(r, `browse failed (HTTP ${r.status})`);
+              renderConversation(workspaceId);
+              return;
+            }
+            state.codebaseTrees.set(key, (await r.json()).entries || []);
+          } catch (err) {
+            state._codebaseErr = `browse failed: ${err.message}`;
+            renderConversation(workspaceId);
+            return;
+          }
+        }
+        state.codebaseOpen.add(key);
+      }
+      renderConversation(workspaceId);
+    });
+  });
+
+  panel.querySelectorAll("[data-cb-file]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.cbId;
+      const rel = decodeURIComponent(btn.dataset.cbRel || "");
+      state._codebaseErr = null;
+      try {
+        const r = await fetch(`/api/codebases/${encodeURIComponent(id)}/file?path=${encodeURIComponent(rel)}`);
+        if (!r.ok) {
+          state._codebaseErr = await _cbDetail(r, `attach failed (HTTP ${r.status})`);
+          renderConversation(workspaceId);
+          return;
+        }
+        const body = await r.json();
+        // Reuse the standard attachment flow: the file content becomes a
+        // pending upload, exactly as if it were dragged into the surface.
+        const file = new File([body.content], body.name, { type: "text/plain" });
+        await uploadFile(workspaceId, file);
+      } catch (err) {
+        state._codebaseErr = `attach failed: ${err.message}`;
+        renderConversation(workspaceId);
+      }
+    });
+  });
+}
+
 async function sendMessage(workspaceId) {
   const input = document.getElementById("nx-composer-input");
   const body = input.value.trim();
@@ -2082,6 +2306,11 @@ async function sendMessage(workspaceId) {
   state.thread.set(workspaceId, thread);
   renderConversation(workspaceId);
 
+  // Preferred path: consume the SSE stream and render the reply token by
+  // token. Falls back to the plain POST endpoint on any stream failure.
+  const streamedOk = await streamAgentReply(workspaceId, thread, typingId, messageForAgent);
+  if (streamedOk) return;
+
   try {
     const r = await fetch("/api/messages", {
       method: "POST",
@@ -2121,6 +2350,110 @@ async function sendMessage(workspaceId) {
     thread.push({ id: _msgId(), role: "agent", agent: "specter", body: `Routing error: ${err.message}`, ts: new Date().toISOString() });
     state.thread.set(workspaceId, thread);
     renderConversation(workspaceId);
+  }
+}
+
+// ── Streaming send path ────────────────────────────────────────────────────
+// POST /api/messages/stream returns SSE frames:
+//   {type:"chunk", content, module} · {type:"done", module, memory_id}
+//   · {type:"error", detail}
+// The agent message is appended to the thread on the FIRST chunk and its
+// body grows in place (cheap targeted DOM update, no full re-render per
+// token). On the terminal frame the message is finalized and re-rendered
+// through the markdown pipeline. Returns false when the caller should fall
+// back to the non-streaming endpoint.
+async function streamAgentReply(workspaceId, thread, typingId, messageForAgent) {
+  let msg = null;
+
+  const ensureMsg = (module) => {
+    if (msg) return msg;
+    const idx = thread.findIndex(m => m.id === typingId);
+    if (idx >= 0) thread.splice(idx, 1);
+    msg = {
+      id: _msgId(), role: "agent", agent: module || "oracle",
+      body: "", ts: new Date().toISOString(),
+      streaming: true, memory_id: null, feedback: null,
+    };
+    thread.push(msg);
+    state.thread.set(workspaceId, thread);
+    renderConversation(workspaceId);
+    return msg;
+  };
+
+  // Targeted incremental update: rewrite only the streaming bubble's body.
+  const paintChunk = () => {
+    const node = document.querySelector(`.nx-msg-agent[data-message-id="${msg.id}"] .nx-msg-body`);
+    if (!node) { renderConversation(workspaceId); return; }
+    node.innerHTML = `${escapeHtml(msg.body)}<span class="nx-stream-caret" aria-hidden="true"></span>`;
+    const inner = document.querySelector(".nx-main-inner");
+    if (inner) inner.scrollTop = inner.scrollHeight;
+  };
+
+  try {
+    const r = await fetch("/api/messages/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: messageForAgent, workspace_id: workspaceId }),
+    });
+    if (!r.ok || !r.body) return false;
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let sawDone = false;
+
+    let done = false;
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      if (value) buf += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buf.indexOf("\n\n")) >= 0) {
+        const frame = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        for (const line of frame.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          let ev;
+          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+          if (ev.type === "chunk") {
+            const m = ensureMsg(ev.module);
+            if (ev.module) m.agent = ev.module;
+            m.body += ev.content || "";
+            paintChunk();
+          } else if (ev.type === "done") {
+            sawDone = true;
+            const m = ensureMsg(ev.module);
+            if (ev.module) m.agent = ev.module;
+            m.memory_id = ev.memory_id || null;
+            m.streaming = false;
+          } else if (ev.type === "error") {
+            throw new Error(ev.detail || "stream error");
+          }
+        }
+      }
+    }
+
+    if (!sawDone && !msg) return false;  // stream produced nothing usable
+    if (msg) msg.streaming = false;       // finalize even on a truncated stream
+    state.thread.set(workspaceId, thread);
+    renderConversation(workspaceId);      // full render → markdown pipeline
+    loadTrust().then(() => loadPermissions()).then(renderCockpitRail);
+    return true;
+  } catch {
+    // Roll back any partial streamed bubble so the fallback path doesn't
+    // duplicate the reply. If the bubble had already consumed the typing
+    // placeholder, reinstate it so the fallback POST still shows the
+    // system thinking.
+    if (msg) {
+      const i = thread.indexOf(msg);
+      if (i >= 0) thread.splice(i, 1);
+      if (!thread.some(m => m.id === typingId)) {
+        thread.push({ id: typingId, role: "agent", agent: msg.agent || "council", body: "", ts: new Date().toISOString(), typing: true });
+      }
+      state.thread.set(workspaceId, thread);
+      renderConversation(workspaceId);
+    }
+    return false;
   }
 }
 
@@ -2439,6 +2772,7 @@ const _cortexState = {
   catalogMeta: new Map(),   // slug → catalog entry metadata (for chip rendering)
   running: false,
   runs: null,
+  lastError: null,          // { status, detail } — last failed dispatch, shown as role=alert banner
 };
 
 async function renderCortexLauncher(hash) {
@@ -2511,12 +2845,15 @@ async function renderCortexLauncher(hash) {
 
         <div class="nx-cortex-actions">
           <button id="nx-cortex-run" class="nx-cortex-run" type="button" disabled>
+            <span class="nx-spinner" aria-hidden="true" hidden></span>
             <span class="nx-cortex-run-label">pick agents to dispatch</span>
           </button>
           <button id="nx-cortex-top3" class="nx-cortex-pickbtn" type="button">pick top 3 for me</button>
           <button id="nx-cortex-all" class="nx-cortex-pickbtn" type="button">all available</button>
           <button id="nx-cortex-clear" class="nx-cortex-pickbtn" type="button">clear</button>
         </div>
+
+        <div id="nx-cortex-error-slot"></div>
       </section>
 
       <section id="nx-cortex-results"></section>
@@ -2532,6 +2869,9 @@ async function renderCortexLauncher(hash) {
     const n = _cortexState.selected.size;
     runBtn.disabled = _cortexState.running || n === 0 || !(_cortexState.prompt.trim());
     const label = runBtn.querySelector(".nx-cortex-run-label");
+    const spinner = runBtn.querySelector(".nx-spinner");
+    if (spinner) spinner.hidden = !_cortexState.running;
+    runBtn.classList.toggle("running", !!_cortexState.running);
     if (_cortexState.running) {
       label.textContent = "dispatching…";
     } else if (n === 0) {
@@ -2539,6 +2879,30 @@ async function renderCortexLauncher(hash) {
     } else {
       label.textContent = `dispatch to ${n} agent${n === 1 ? "" : "s"}`;
     }
+  };
+
+  // Prominent inline error banner — renders into the slot below the dispatch
+  // actions whenever the LAST dispatch failed outright (HTTP error or network
+  // failure). role="alert" so screen readers announce it immediately.
+  const renderLauncherError = () => {
+    const slot = document.getElementById("nx-cortex-error-slot");
+    if (!slot) return;
+    const err = _cortexState.lastError;
+    if (!err) { slot.innerHTML = ""; return; }
+    const text = err.status
+      ? `HTTP ${err.status} — ${err.detail || "no detail"}`
+      : (err.detail || "unknown error");
+    slot.innerHTML = `
+      <div class="nx-cortex-error" role="alert">
+        <span class="nx-cortex-error-badge">DISPATCH FAILED</span>
+        <span class="nx-cortex-error-text">${escapeHtml(text)}</span>
+        <button type="button" class="nx-cortex-error-dismiss" aria-label="Dismiss error">${UI.close(11)}</button>
+      </div>
+    `;
+    slot.querySelector(".nx-cortex-error-dismiss")?.addEventListener("click", () => {
+      _cortexState.lastError = null;
+      renderLauncherError();
+    });
   };
 
   const renderChips = () => {
@@ -2629,13 +2993,15 @@ async function renderCortexLauncher(hash) {
       return;
     }
     const { runs = [], succeeded = 0, failed = 0 } = _cortexState.runs;
+    const anyPending = runs.some(r => r.pending);
+    const summary = anyPending
+      ? `<span class="running"><span class="nx-spinner" aria-hidden="true"></span> dispatching to ${runs.length} agent${runs.length === 1 ? "" : "s"}…</span>`
+      : `<span class="ok">${succeeded} succeeded</span>
+         ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}`;
     resultsEl.innerHTML = `
       <header class="nx-cortex-results-head">
-        <div class="nx-eyebrow">RESULTS · click a card to continue the conversation</div>
-        <div class="nx-cortex-summary">
-          <span class="ok">${succeeded} succeeded</span>
-          ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}
-        </div>
+        <div class="nx-eyebrow">${anyPending ? "DISPATCHING · agents are working" : "RESULTS · click a card to continue the conversation"}</div>
+        <div class="nx-cortex-summary">${summary}</div>
       </header>
       <div class="nx-cortex-runlist">
         ${runs.map((r, idx) => renderRunCard(r, idx)).join("")}
@@ -2660,20 +3026,37 @@ async function renderCortexLauncher(hash) {
     return `
       <div class="nx-cortex-turn agent">
         <span class="nx-cortex-turn-tag">agent</span>
-        <div class="nx-cortex-turn-body">${escapeHtml(m.content).replace(/\n/g, "<br>")}</div>
+        <div class="nx-cortex-turn-body nx-msg-md">${renderMarkdown(m.content)}</div>
       </div>
     `;
   };
 
   const renderRunCard = (r, idx) => {
+    // In-flight: the dispatch has been sent but no result has landed yet.
+    // Render as RUNNING (spinner + pulsing border), never as an error.
+    if (r.pending) {
+      return `
+        <article class="nx-cortex-run-card pending" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
+          <header class="nx-cortex-run-head">
+            <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
+            <span class="nx-cortex-run-meta">
+              <span class="nx-spinner" aria-hidden="true"></span>
+              <span class="nx-cortex-run-status running">running</span>
+            </span>
+          </header>
+          <div class="nx-cortex-run-body nx-dim">dispatched — waiting for ${escapeHtml(r.module)} to respond…</div>
+        </article>
+      `;
+    }
     if (!r.success) {
+      const secs = ((r.elapsed_ms || 0) / 1000).toFixed(1);
       return `
         <article class="nx-cortex-run-card fail" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
           <header class="nx-cortex-run-head">
             <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
             <span class="nx-cortex-run-meta">
               <span class="nx-cortex-run-status fail">error</span>
-              <span class="nx-dim">· ${r.elapsed_ms}ms</span>
+              <span class="nx-dim">· failed after ${secs}s</span>
             </span>
           </header>
           <div class="nx-cortex-run-body">
@@ -2816,6 +3199,7 @@ async function renderCortexLauncher(hash) {
       const idx = parseInt(card.dataset.idx, 10);
       const moduleSlug = card.dataset.module;
       const runEntry = _cortexState.runs.runs[idx];
+      if (!runEntry || runEntry.pending) return;  // in-flight cards have no affordances yet
 
       // Feedback buttons — same Aegis +0.12/−0.22 loop as the main composer
       card.querySelectorAll(".nx-cortex-fb-btn[data-fb]").forEach(btn => {
@@ -3052,14 +3436,32 @@ async function renderCortexLauncher(hash) {
     if (_cortexState.running) return;
     const agents = [..._cortexState.selected];
     if (!agents.length || !_cortexState.prompt.trim()) return;
+    const startedAt = Date.now();
     _cortexState.running = true;
+    _cortexState.lastError = null;
+    renderLauncherError();
     refreshRunBtn();
-    // Show pending cards immediately so the user sees something
+    // Show RUNNING cards immediately — spinner + pulsing border, not errors.
     _cortexState.runs = {
-      runs: agents.map(slug => ({ module: slug, success: false, response: "", error: "pending", elapsed_ms: 0 })),
+      runs: agents.map(slug => ({ module: slug, pending: true, success: false, response: "", error: null, elapsed_ms: 0 })),
       succeeded: 0, failed: 0,
     };
     renderRuns();
+    // A failed dispatch must never look like a silent 0-second nothing:
+    // every selected agent's card flips to a clear error with elapsed time,
+    // and the launcher shows a prominent role="alert" banner.
+    const failAll = (status, detail) => {
+      const elapsed = Date.now() - startedAt;
+      _cortexState.lastError = { status, detail };
+      _cortexState.runs = {
+        runs: agents.map(slug => ({
+          module: slug, success: false, response: "",
+          error: status ? `dispatch failed — HTTP ${status}: ${detail}` : `dispatch failed — ${detail}`,
+          elapsed_ms: elapsed,
+        })),
+        succeeded: 0, failed: agents.length,
+      };
+    };
     try {
       const r = await fetch("/api/cortex/launch", {
         method: "POST",
@@ -3073,15 +3475,17 @@ async function renderCortexLauncher(hash) {
       if (r.ok) {
         _cortexState.runs = await r.json();
       } else {
-        const detail = await r.text();
-        _cortexState.runs = { runs: [{ module: "cortex", success: false, error: `${r.status}: ${detail}`, response: "", elapsed_ms: 0 }], succeeded: 0, failed: 1 };
+        let detail = await r.text();
+        try { detail = JSON.parse(detail).detail || detail; } catch {}
+        failAll(r.status, detail);
       }
     } catch (err) {
-      _cortexState.runs = { runs: [{ module: "cortex", success: false, error: `network: ${err.message}`, response: "", elapsed_ms: 0 }], succeeded: 0, failed: 1 };
+      failAll(null, `network error: ${err.message}`);
     } finally {
       _cortexState.running = false;
       renderRuns();
       refreshRunBtn();
+      renderLauncherError();
     }
   });
 

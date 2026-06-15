@@ -74,6 +74,45 @@ class OllamaProvider(InferenceProvider):
             data = resp.json()
             return (data.get("message") or {}).get("content", "").strip()
 
+    async def infer_stream(self, messages: list[dict], max_tokens: int = 1024,
+                           temperature: float = 0.7):
+        """Stream tokens from Ollama's /api/chat (stream=True → NDJSON lines).
+
+        When an Aegis-gated KernelHttpClient is attached we fall back to the
+        non-streaming base implementation so every outbound byte keeps going
+        through aegis.network(); the direct path streams for real.
+        """
+        if self._http is not None:
+            async for chunk in super().infer_stream(messages, max_tokens=max_tokens, temperature=temperature):
+                yield chunk
+            return
+        import json as _json
+        import httpx
+        payload = {
+            "model": self._model,
+            "messages": messages,
+            "stream": True,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream("POST", f"{self._base_url}/api/chat", json=payload) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.strip():
+                        continue
+                    try:
+                        data = _json.loads(line)
+                    except Exception:
+                        continue
+                    token = (data.get("message") or {}).get("content", "")
+                    if token:
+                        yield token
+                    if data.get("done"):
+                        return
+
     async def health(self) -> bool:
         """Return True if Ollama is running AND has at least one model pulled
         that we can call. The endpoint /api/tags lists installed models;

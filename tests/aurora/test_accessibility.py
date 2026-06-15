@@ -32,6 +32,6 @@ def test_no_emojis_in_any_aurora_asset(client):
     pat = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF]")
     for path in ["/aurora", "/aurora/static/tokens.css", "/aurora/static/mood.css",
                  "/aurora/static/app.css", "/aurora/static/app.js",
-                 "/aurora/static/icons.js"]:
+                 "/aurora/static/icons.js", "/aurora/static/md.js"]:
         r = client.get(path)
         assert not pat.search(r.text), f"emoji found in {path}"

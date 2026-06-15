@@ -400,6 +400,9 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.files import router as files_router
     app.include_router(files_router)
 
+    from nexus.api.routes.codebases import router as codebases_router
+    app.include_router(codebases_router)
+
     from nexus.api.routes.search import router as search_router
     app.include_router(search_router)
 

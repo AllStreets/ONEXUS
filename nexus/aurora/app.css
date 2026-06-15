@@ -667,6 +667,77 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-msg-body .nx-code { font-family: var(--nx-font-mono); color: #c9b8ff; }
 .nx-msg-body .nx-cap  { font-family: var(--nx-font-mono); color: var(--nx-sensitive); }
 
+/* markdown-rendered agent bodies (md.js) — normal white-space; structure
+   comes from the rendered block elements instead of pre-wrap */
+.nx-msg-md { white-space: normal; }
+.nx-msg-md > :first-child { margin-top: 0; }
+.nx-msg-md > :last-child  { margin-bottom: 0; }
+.nx-msg-md p { margin: 0 0 10px; }
+.nx-msg-md h1, .nx-msg-md h2, .nx-msg-md h3 {
+  margin: 14px 0 8px;
+  color: #f3ecff;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.nx-msg-md h1 { font-size: 16px; }
+.nx-msg-md h2 { font-size: 14.5px; }
+.nx-msg-md h3 { font-size: 13.5px; letter-spacing: 0.02em; }
+.nx-msg-md ul, .nx-msg-md ol { margin: 0 0 10px; padding-left: 22px; }
+.nx-msg-md li { margin: 3px 0; }
+.nx-msg-md blockquote {
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  border-left: 2px solid color-mix(in srgb, var(--nx-mood-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--nx-mood-primary) 6%, transparent);
+  border-radius: 0 8px 8px 0;
+  color: #b9aed0;
+}
+.nx-msg-md a {
+  color: var(--nx-mood-primary, #c9b8ff);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--nx-mood-primary) 45%, transparent);
+  text-underline-offset: 2px;
+}
+.nx-msg-md .nx-md-code {
+  font-family: var(--nx-font-mono);
+  font-size: 12px;
+  color: #c9b8ff;
+  background: rgba(232, 222, 252, 0.07);
+  border: 1px solid rgba(232, 222, 252, 0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.nx-msg-md .nx-md-pre {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  background: rgba(6, 4, 12, 0.55);
+  border: 1px solid rgba(232, 222, 252, 0.08);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.nx-msg-md .nx-md-pre code {
+  font-family: var(--nx-font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #d9d0ea;
+  white-space: pre;
+}
+
+/* live-stream caret — pulses while tokens arrive */
+.nx-stream-caret {
+  display: inline-block;
+  width: 7px; height: 13px;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: var(--nx-mood-primary, #c9b8ff);
+  border-radius: 2px;
+  animation: nx-stream-caret 0.9s ease-in-out infinite;
+}
+@keyframes nx-stream-caret {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.85; }
+}
+
 /* typing indicator */
 .nx-typing {
   display: inline-flex; gap: 5px; height: 18px; align-items: center;
@@ -900,6 +971,104 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   margin-left: 2px;
 }
 .nx-attached-chip .chip-x:hover { background: rgba(248,96,120,0.20); color: #ff8e8e; }
+
+/* codebases panel — registered local roots + lazy one-level tree browser */
+.nx-codebase-panel {
+  flex: none;
+  margin: 8px var(--region-pad-x) 0;
+  padding: 10px 12px;
+  background: rgba(232, 222, 252, 0.04);
+  border: 1px solid rgba(232, 222, 252, 0.08);
+  border-radius: 14px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.nx-cb-head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 8px;
+}
+.nx-cb-title {
+  font-family: var(--nx-font-mono); font-size: 10px;
+  letter-spacing: 0.14em; color: #a8a0c8;
+}
+.nx-cb-hint { font-size: 10.5px; color: #6b6080; }
+.nx-cb-root { margin-bottom: 2px; }
+.nx-cb-root-row { display: flex; align-items: center; gap: 6px; }
+.nx-cb-root-row .nx-cb-dir { flex: 1; min-width: 0; }
+.nx-cb-row {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%;
+  padding: 4px 8px;
+  background: transparent; border: 0; border-radius: 7px;
+  color: #d9d0ea;
+  font-family: var(--nx-font-mono); font-size: 11px;
+  text-align: left; cursor: pointer;
+  transition: background var(--d-fast), color var(--d-fast);
+}
+.nx-cb-row:hover { background: color-mix(in srgb, var(--nx-mood-primary) 10%, transparent); }
+.nx-cb-arrow {
+  display: inline-block; width: 10px;
+  color: #a8a0c8;
+  transition: transform var(--d-fast);
+}
+.nx-cb-dir.open > .nx-cb-arrow { transform: rotate(90deg); }
+.nx-cb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-cb-dir .nx-cb-name { color: var(--nx-text-high); }
+.nx-cb-path { margin-left: auto; color: #6b6080; font-size: 10px; }
+.nx-cb-size { margin-left: auto; color: #6b6080; font-size: 10px; }
+.nx-cb-file:hover .nx-cb-name { color: var(--nx-mood-primary); }
+.nx-cb-empty {
+  padding: 4px 8px;
+  color: #6b6080;
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+}
+.nx-cb-remove {
+  width: 18px; height: 18px; flex: none;
+  border-radius: 50%; border: 0;
+  background: rgba(0,0,0,0.25);
+  color: #a8a0c8;
+  cursor: pointer;
+  font: inherit; font-size: 12px; line-height: 1;
+}
+.nx-cb-remove:hover { background: rgba(248,96,120,0.20); color: #ff8e8e; }
+.nx-cb-add {
+  display: flex; gap: 8px;
+  margin-top: 8px;
+}
+.nx-cb-add input {
+  flex: 1; min-width: 0;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.20);
+  border: 1px solid rgba(232, 222, 252, 0.08);
+  border-radius: 8px;
+  color: var(--nx-text-high);
+  font-family: var(--nx-font-mono); font-size: 11px;
+  outline: 0;
+}
+.nx-cb-add input:focus {
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 55%, transparent);
+}
+.nx-cb-add input::placeholder { color: #6b6080; }
+.nx-cb-add button {
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--nx-mood-primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nx-mood-primary) 36%, transparent);
+  border-radius: 8px;
+  color: #e0d0ff;
+  font-family: var(--nx-font-mono); font-size: 10.5px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.nx-cb-add button:hover { filter: brightness(1.12); }
+.nx-cb-err {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(248, 96, 120, 0.10);
+  border: 1px solid rgba(248, 96, 120, 0.38);
+  border-radius: 8px;
+  color: #f8a0b0;
+  font-size: 11px;
+}
 
 /* welcome empty state */
 .nx-welcome {
@@ -3056,8 +3225,69 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   font-family: var(--nx-font-mono); font-size: 10.5px;
   letter-spacing: 0.10em;
 }
-.nx-cortex-run-status.ok   { color: #9affb6; }
-.nx-cortex-run-status.fail { color: #f86078; }
+.nx-cortex-run-status.ok      { color: #9affb6; }
+.nx-cortex-run-status.fail    { color: #f86078; }
+.nx-cortex-run-status.running { color: var(--nx-mood-primary, #c9b8ff); }
+.nx-cortex-summary .running   { color: var(--nx-mood-primary, #c9b8ff); }
+
+/* spinner — pure CSS, currentColor; the global prefers-reduced-motion rule
+   in tokens.css collapses the animation to a static ring */
+.nx-spinner {
+  display: inline-block;
+  width: 11px; height: 11px;
+  vertical-align: -1px;
+  border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: nx-spin 0.8s linear infinite;
+}
+.nx-cortex-run .nx-spinner { margin-right: 7px; }
+@keyframes nx-spin { to { transform: rotate(360deg); } }
+
+/* in-flight run card — pulsing mood-tinted border, reads as "working" */
+.nx-cortex-run-card.pending {
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 38%, transparent);
+  animation: nx-pending-pulse 1.6s ease-in-out infinite;
+}
+@keyframes nx-pending-pulse {
+  0%, 100% { border-color: color-mix(in srgb, var(--nx-mood-primary) 38%, transparent);
+             box-shadow: 0 0 0 0 transparent; }
+  50%      { border-color: color-mix(in srgb, var(--nx-mood-primary) 70%, transparent);
+             box-shadow: 0 0 18px -6px var(--nx-mood-glow, rgba(201,184,255,0.45)); }
+}
+
+/* dispatch failure banner — role="alert", below the launcher actions */
+.nx-cortex-error {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #f86078 9%, transparent);
+  border: 1px solid rgba(248, 96, 120, 0.40);
+  border-radius: 8px;
+}
+.nx-cortex-error-badge {
+  flex: 0 0 auto;
+  font-family: var(--nx-font-mono);
+  font-size: 9.5px; letter-spacing: 0.16em; font-weight: 700;
+  color: #f86078;
+}
+.nx-cortex-error-text {
+  flex: 1 1 auto;
+  font-size: 12.5px; line-height: 1.45;
+  color: #ffc9d2;
+  word-break: break-word;
+}
+.nx-cortex-error-dismiss {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  background: transparent;
+  border: 1px solid rgba(248, 96, 120, 0.30);
+  border-radius: 6px;
+  color: #f86078;
+  cursor: pointer;
+}
+.nx-cortex-error-dismiss:hover { background: rgba(248, 96, 120, 0.12); }
 .nx-cortex-llm-pill {
   display: inline-block;
   margin-left: 8px;
