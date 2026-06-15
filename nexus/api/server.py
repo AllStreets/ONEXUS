@@ -23,6 +23,10 @@ from nexus.modules.legacy import LegacyModule
 from nexus.modules.consciousness import ConsciousnessModule
 from nexus.modules.sentry import SentryModule
 from nexus.modules.echo import EchoModule
+from nexus.modules.sigil import SigilModule
+from nexus.modules.atlas import AtlasModule
+from nexus.modules.chronos import ChronosModule
+from nexus.modules.prism import PrismModule
 
 from nexus.api.routes.messages import router as messages_router
 from nexus.api.routes.modules import router as modules_router
@@ -98,10 +102,18 @@ def _init_kernel(config: NexusConfig) -> KernelState:
     # so they can be routed to immediately and earn their way up
     for ModuleClass in [CouncilModule, SpecterModule, AutonomicModule,
                         OracleModule, WraithModule, LegacyModule,
-                        ConsciousnessModule, SentryModule, EchoModule]:
+                        ConsciousnessModule, SentryModule, EchoModule,
+                        SigilModule, AtlasModule, ChronosModule,
+                        PrismModule]:
         module = ModuleClass()
         cortex.register_module(module)
         aegis.set_policy(module.name, allowed=True, initial_trust=0.30)
+
+    # N1 wiring: live gate events and built-in manifests for check_capability.
+    # (The emergency routing bypass needs a running event loop to subscribe,
+    # so it is attached in the app lifespan startup below.)
+    aegis.set_pulse(pulse)
+    cortex.register_builtin_manifests()
 
     # Initialize provider router — always available, providers registered on demand
     from nexus.inference.router import ProviderRouter
@@ -173,6 +185,10 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # N1 wiring: emergency routing bypass (Sigil -> Specter). Subscribing
+        # to Pulse requires a running event loop, hence here and not in
+        # _init_kernel. Idempotent.
+        kernel.cortex.attach_emergency_bypass()
         # Startup: initialize modules
         await kernel.cortex.initialize_modules()
         kernel.chronicle.log("api", "server_start", {"version": __version__})
@@ -224,9 +240,43 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
 
         _refresh_task = _asyncio.create_task(_catalog_refresher())
 
+        # N2.2: Dreamweaver overnight distillation. In-process asyncio interval
+        # loop (mirrors _catalog_refresher), guarded by dreamweaver_enabled
+        # (env NEXUS_DREAMWEAVER=0/false/no or <data_dir>/dreamweaver.kill).
+        # Interval defaults to 24h; NEXUS_DREAMWEAVER_INTERVAL_S overrides for
+        # tests. Each run publishes a dreamweaver.brief Pulse message so Aurora
+        # refreshes the morning-brief card without polling.
+        from nexus.synthesis.dreamweaver import Dreamweaver, dreamweaver_enabled
+        from nexus.kernel.pulse import Message as _Message
+
+        app.state.dreamweaver = Dreamweaver(
+            kernel.config, kernel.engram, kernel.chronicle
+        )
+        _dw_interval = float(os.environ.get("NEXUS_DREAMWEAVER_INTERVAL_S", "86400"))
+
+        async def _dreamweaver_loop():
+            while True:
+                await _asyncio.sleep(_dw_interval)
+                if not dreamweaver_enabled(kernel.config):
+                    continue
+                try:
+                    brief = await _asyncio.to_thread(app.state.dreamweaver.run_once)
+                except Exception as exc:  # noqa: BLE001
+                    import logging as _log
+
+                    _log.getLogger("nexus.api").warning("dreamweaver run failed: %s", exc)
+                    continue
+                if brief.get("skipped") is None:
+                    await kernel.pulse.publish(_Message(
+                        topic="dreamweaver.brief", source="dreamweaver", payload=brief,
+                    ))
+
+        _dreamweaver_task = _asyncio.create_task(_dreamweaver_loop())
+
         yield
         # Shutdown: drain event bus, log shutdown
         _refresh_task.cancel()
+        _dreamweaver_task.cancel()
         await kernel.pulse.drain()
         kernel.chronicle.log("api", "server_stop", {})
 
@@ -362,6 +412,27 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     from nexus.api.routes.cortex import router as cortex_router
     app.include_router(cortex_router)
 
+    from nexus.api.routes.sigil import router as sigil_router
+    app.include_router(sigil_router)
+
+    from nexus.api.routes.chronos import router as chronos_router
+    app.include_router(chronos_router)
+
+    from nexus.api.routes.prism import router as prism_router
+    app.include_router(prism_router)
+
+    from nexus.api.routes.herald import router as herald_router
+    app.include_router(herald_router)
+
+    from nexus.api.routes.serendipity import router as serendipity_router
+    app.include_router(serendipity_router)
+
+    from nexus.api.routes.atlas import router as atlas_router
+    app.include_router(atlas_router)
+
+    from nexus.api.routes.dreamweaver import router as dreamweaver_router
+    app.include_router(dreamweaver_router)
+
     # Initialize federation if enabled via environment
     import os
     if os.environ.get("NEXUS_FEDERATION_ENABLED", "").lower() in ("1", "true", "yes"):
@@ -401,7 +472,8 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 identity=Identity(mark=IdentityMark(kind="builtin:federation")),
                 capabilities=Capabilities(
                     declared=DeclaredCapabilities(**{
-                        "Routine": ["network.outbound.localhost"],
+                        "Routine": ["network.outbound.localhost",
+                                    "federation.sync.workspace"],
                     }),
                 ),
                 runtime=RuntimeConfig(transport="in_process"),
@@ -444,9 +516,53 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             kernel.federation_protocol = fed_protocol
             kernel.federation_discovery = fed_discovery
 
+            # N3.2 — workspace-scoped, allowlist-only, Aegis-gated Atlas sync.
+            # The sync engine never touches the network (the kernel-import
+            # invariant is enforced on nexus/federation/sync.py); real peer
+            # HTTP flows through FederationProtocol._http only.
+            from nexus.federation.sync import PeerAllowlist, WorkspaceSyncEngine
+            from nexus.workspaces.manager import WorkspaceManager
+
+            fed_allowlist = PeerAllowlist(kernel.config.data_dir / "federation")
+
+            def _engram_for(ws_id: str):
+                ws_root = kernel.config.data_dir / "workspaces"
+                ws_root.mkdir(parents=True, exist_ok=True)
+                mgr = WorkspaceManager(root=ws_root)
+                try:
+                    ws_dir = mgr.workspace_dir(ws_id)
+                except Exception:
+                    ws_dir = ws_root / ws_id
+                ws_dir.mkdir(parents=True, exist_ok=True)
+                eng = Engram(ws_dir / "engram" / "episodic.sqlite")
+                (ws_dir / "engram").mkdir(parents=True, exist_ok=True)
+                eng.init_db()
+                return eng
+
+            fed_sync_engine = WorkspaceSyncEngine(
+                instance_id=instance_id,
+                aegis=kernel.aegis,
+                chronicle=kernel.chronicle,
+                allowlist=fed_allowlist,
+                engram_for=_engram_for,
+            )
+
+            # Kill switch: NEXUS_FEDERATION_SYNC=0/false/no OR
+            # <data_dir>/federation-sync.kill disables sync. Default on.
+            import pathlib as _pathlib
+            _sync_env_on = os.environ.get(
+                "NEXUS_FEDERATION_SYNC", "1").lower() not in ("0", "false", "no")
+            _sync_kill = (_pathlib.Path(kernel.config.data_dir)
+                          / "federation-sync.kill").exists()
+            fed_sync_engine.set_sync_enabled(_sync_env_on and not _sync_kill)
+
+            kernel.federation_allowlist = fed_allowlist
+            kernel.federation_sync_engine = fed_sync_engine
+
             kernel.chronicle.log("federation", "initialized", {
                 "instance_id": instance_id,
                 "instance_name": instance_name,
+                "sync_enabled": fed_sync_engine.sync_enabled,
             })
         except Exception:
             pass

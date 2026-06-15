@@ -125,6 +125,69 @@ export const GLYPHS = {
       <rect x="3" y="13" width="6" height="6" rx="1.4"/>
       <rect x="13" y="13" width="6" height="6" rx="1.4" opacity="0.5" stroke-dasharray="2 2"/>
     </svg>`,
+
+  /* sigil — concentric radar arcs with sweep contact */
+  sigil: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
+      <path d="M4 13a7 7 0 0 1 14 0"/>
+      <path d="M7 13a4 4 0 0 1 8 0" opacity="0.7"/>
+      <path d="M11 13v5" opacity="0.5"/>
+      <circle cx="11" cy="13" r="1.1" fill="#fff" stroke="none"/>
+      <circle cx="16.4" cy="7.4" r="0.9" fill="#fff" stroke="none" opacity="0.85"/>
+    </svg>`,
+
+  /* atlas — meridian globe (world model) */
+  atlas: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4">
+      <circle cx="11" cy="11" r="7"/>
+      <ellipse cx="11" cy="11" rx="3" ry="7" opacity="0.7"/>
+      <path d="M4 11h14" opacity="0.7"/>
+    </svg>`,
+
+  /* prism — refracting triangular prism splitting a beam (cross-domain synthesis) */
+  prism: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M11 4 4 16h14L11 4Z"/>
+      <path d="M2 11h4" opacity="0.8"/>
+      <path d="M14 11h6" opacity="0.85"/>
+      <path d="M14 13.5h6" opacity="0.55"/>
+      <path d="M14 8.5h6" opacity="0.55"/>
+    </svg>`,
+
+  /* chronos — clock face with a forking branch (counterfactual timeline) */
+  chronos: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="9" r="6"/>
+      <path d="M9 5.5V9l2.4 1.6"/>
+      <path d="M14 13l3 3" opacity="0.85"/>
+      <path d="M17 16l3-1.5M17 16l-1.5 3" opacity="0.7"/>
+    </svg>`,
+
+  /* serendipity — scattered constellation + one off-axis bright node (anti-optimization) */
+  serendipity: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
+      <circle cx="6" cy="14" r="0.9" fill="#fff" stroke="none" opacity="0.5"/>
+      <circle cx="11" cy="9" r="0.9" fill="#fff" stroke="none" opacity="0.5"/>
+      <circle cx="16" cy="13" r="0.9" fill="#fff" stroke="none" opacity="0.5"/>
+      <path d="M6 14 11 9 16 13" opacity="0.45"/>
+      <path d="M15 4l0.9 2 2 0.9-2 0.9L15 10l-0.9-2-2-0.9 2-0.9z" fill="#fff" stroke="none"/>
+    </svg>`,
+
+  /* herald — pennant on a staff (messenger / negotiation) */
+  herald: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 3v16"/>
+      <path d="M6 4h10l-2.4 3L16 10H6z"/>
+      <circle cx="6" cy="3" r="0.9" fill="#fff" stroke="none"/>
+    </svg>`,
+
+  /* federation — two linked nodes (peer-to-peer sync) */
+  federation: (s = 20) => `
+    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
+      <circle cx="6" cy="8" r="2.4"/>
+      <circle cx="16" cy="14" r="2.4"/>
+      <path d="M8 9.6 14 12.4" opacity="0.7"/>
+    </svg>`,
 };
 
 /* default gradient palette for each built-in (matches manifest "identity.gradient") */
@@ -139,6 +202,13 @@ export const GRADIENTS = {
   sentry:        ["#ffb878", "#8c4218"],
   echo:          ["#a8e8ff", "#346b9c"],
   agents:        ["#c8c8ff", "#3a3a8c"],
+  sigil:         ["#ffb4a8", "#a82a1c"],
+  atlas:         ["#7ee8b2", "#1c6a4a"],
+  prism:         ["#d8b4ff", "#5a2a9c"],
+  chronos:       ["#b8c4ff", "#3a4a9c"],
+  serendipity:   ["#ffc4f0", "#7a2a6a"],
+  herald:        ["#ffd9a8", "#9c6a2a"],
+  federation:    ["#a8d8ff", "#2a5a9c"],
 };
 
 /* common UI icons — all line-stroke, no fills (cohesive language) */
@@ -283,5 +353,88 @@ export const BUILTIN_CAPABILITIES = {
     permission_classes: ["Routine", "Notable"],
     trust_floor: 0.50,
     network: false,
+  },
+  sigil: {
+    tagline: "Threat radar — kernel anomaly detection with emergency bypass",
+    description: "Watches Aegis trust deltas, gate verdicts, routing traffic, and the network log. Table-driven detections broadcast at emergency priority with a provenance hash; high-stakes hits auto-activate Specter (kill switch available).",
+    intents: ["detect", "broadcast", "escalate"],
+    tools: [
+      { name: "pulse.subscribe",            class: "Routine" },
+      { name: "chronicle.read.workspace",   class: "Routine" },
+      { name: "pulse.broadcast.emergency",  class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  atlas: {
+    tagline: "World model — temporal facts with confidence decay",
+    description: "Engram's semantic tier as a knowledge graph: facts decay deterministically until re-confirmed, contradictions coexist with competing confidences, and every answer cites its source.",
+    intents: ["observe", "recall-world", "cite"],
+    tools: [
+      { name: "engram.read.workspace",  class: "Routine" },
+      { name: "engram.write.workspace", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  prism: {
+    tagline: "Cross-domain synthesis — connections the per-workspace view can't see",
+    description: "Reads across Engram partitions (Aegis-gated, always prompted) to surface recurring entities, cross-workspace contradictions, and patterns no single workspace can show — every finding citing its Engram/Atlas source.",
+    intents: ["synthesise", "recurring", "contradict"],
+    tools: [
+      { name: "engram.read.workspace", class: "Routine" },
+      { name: "engram.read.global",    class: "Sensitive" },
+    ],
+    permission_classes: ["Routine", "Sensitive"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  chronos: {
+    tagline: "Counterfactual reasoning — replay the decision DAG with one node flipped",
+    description: "Reconstructs a deterministic decision graph from Chronicle's recorded history, then answers counterfactuals — flip one grant or route to denied and report which downstream actions depended on it. The kernel is never re-run.",
+    intents: ["counterfactual", "timeline", "replay"],
+    tools: [
+      { name: "chronicle.read.workspace", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  herald: {
+    tagline: "Negotiation — structured agent-to-agent offers, counters, and commitments",
+    description: "Runs an offer / counter / accept / reject / commit state machine where every step is a typed Pulse message. Each commit is gated by the initiator's capability class through Aegis, and the full transcript is recorded in Chronicle.",
+    intents: ["negotiate", "propose", "commit"],
+    tools: [
+      { name: "chronicle.read.workspace", class: "Routine" },
+      { name: "pulse.subscribe",          class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  serendipity: {
+    tagline: "Anti-optimization — the signal optimization would have hidden",
+    description: "Reads Atlas facts (Aegis-gated), scores each by relevance and novelty, then deliberately surfaces high-novelty / low-relevance items on a budget. Every item cites its source; every discovery lands in Chronicle.",
+    intents: ["discover", "surprise", "novelty"],
+    tools: [
+      { name: "engram.read.workspace", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.30,
+    network: false,
+  },
+  federation: {
+    tagline: "Peer sync — workspace-scoped, allowlist-only Atlas-fact federation",
+    description: "Diffs Atlas facts between this instance and an allowlisted peer, gated per workspace through Aegis. The sync engine never touches the network — real peer HTTP flows only through the federation protocol's Aegis-routed client. Kill switch available.",
+    intents: ["sync", "federate", "peer"],
+    tools: [
+      { name: "federation.sync.workspace",  class: "Routine" },
+      { name: "network.outbound.localhost", class: "Routine" },
+    ],
+    permission_classes: ["Routine"],
+    trust_floor: 0.80,
+    network: true,
   },
 };

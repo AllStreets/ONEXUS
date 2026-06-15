@@ -121,6 +121,21 @@ def test_v1_acceptance(client, tmp_path):
         assert "urlopen" not in text
         assert "requests.get" not in text and "requests.post" not in text
 
+    # 10b. N3.2 invariant — the federation sync engine must NOT touch the
+    #      network. Real peer HTTP stays in FederationProtocol._http
+    #      (KernelHttpClient -> aegis.network()). sync.py imports no transport.
+    sync_src = Path("nexus/federation/sync.py").read_text()
+    # Strip the module docstring (which names httpx/socket in prose) before the
+    # import scan so the invariant checks real imports, not documentation.
+    import ast
+    sync_tree = ast.parse(sync_src)
+    sync_no_doc = ast.get_docstring(sync_tree)
+    code_only = sync_src
+    if sync_no_doc:
+        code_only = sync_src.replace(f'"""{sync_no_doc}"""', "", 1)
+    assert "import httpx" not in code_only and "from httpx" not in code_only
+    assert "import socket" not in code_only and "from socket" not in code_only
+
     # 11. Zero-emoji invariant in Aurora assets
     pat = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF]")
     for path in ["/aurora", "/aurora/static/tokens.css", "/aurora/static/mood.css",
