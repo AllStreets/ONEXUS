@@ -41,9 +41,9 @@ You don't leave the OS to do anything. Code editor, web search, file drop, mood-
 
 ---
 
-## v2 — The Missing Minds (on `feat/missing-minds`, in review)
+## v2 — The Missing Minds
 
-Three new cognitive layers built and tested on `feat/missing-minds` (1,274 tests passing), turning the agent-OS into something with genuine cognition. Awaiting review before merge:
+Three new cognitive layers (1,274 tests passing) turning the agent-OS into something with genuine cognition:
 
 - **N1 — Perception.** **Sigil**, a threat radar that watches Aegis trust deltas, gate verdicts, and routing traffic, broadcasts emergency Pulse alerts and can auto-activate Specter. **Atlas**, a temporal knowledge graph in Engram with read-time confidence decay, re-confirmation, and coexisting contradictions. A **live kernel visualization** in Aurora — watch Cortex route and Aegis gate in real time, with radar pings and full-surface emergency veils.
 - **N2 — Cognition.** **Prism** cross-domain synthesis across workspace partitions (Aegis-gated), **Chronos** counterfactual reasoning over Chronicle's decision history ("what would have happened if that grant had been denied"), and **Dreamweaver** overnight distillation of the day's memory into a morning brief — surfaced as an Atlas graph view, a Chronos timeline, and a brief card.
