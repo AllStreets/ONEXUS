@@ -7,11 +7,18 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 
 router = APIRouter(tags=["aurora"])
 _STATIC_DIR = Path(__file__).parent.parent.parent / "aurora"
+
+
+@router.get("/", include_in_schema=False)
+async def root_redirect() -> RedirectResponse:
+    """Send the bare host (e.g. http://localhost:8765/) to the Aurora UI, so a
+    bookmark to the server root lands on the app instead of a 404."""
+    return RedirectResponse(url="/aurora")
 
 
 # Aurora ships from disk on every request — there is no build step. To make
