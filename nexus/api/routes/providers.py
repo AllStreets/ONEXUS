@@ -8,7 +8,11 @@ Supports:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, HTTPException
+import shutil
+import subprocess
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Request
 
 from nexus.api.models import (
     RegisterProviderRequest,
@@ -180,3 +184,71 @@ async def set_default_provider(
     })
 
     return {"default": name, "previous": old_default}
+
+
+def _find_ollama_binary() -> str | None:
+    """Locate the ``ollama`` executable.
+
+    A GUI app's PATH is often minimal, so we also probe the common install
+    prefixes (Ollama's own installer drops it under ~/.local/bin).
+    """
+    candidates = [
+        shutil.which("ollama"),
+        str(Path.home() / ".local" / "bin" / "ollama"),
+        "/usr/local/bin/ollama",
+        "/opt/homebrew/bin/ollama",
+        "/usr/bin/ollama",
+    ]
+    return next((c for c in candidates if c and Path(c).exists()), None)
+
+
+@router.post("/ollama/restart")
+async def restart_ollama(request: Request) -> dict:
+    """Start (or restart) the local Ollama server.
+
+    Desktop convenience: when the user has quit Ollama, this brings the
+    local-inference slot back without leaving the app. Locates the binary,
+    terminates any running ``ollama serve``, and spawns a fresh detached one.
+    """
+    binary = _find_ollama_binary()
+    if binary is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "ollama binary not found (looked on PATH, ~/.local/bin, "
+                "/usr/local/bin, /opt/homebrew/bin). Install Ollama from ollama.com."
+            ),
+        )
+
+    # Best-effort terminate any running `ollama serve` so this is a true restart.
+    killed = False
+    try:
+        result = subprocess.run(  # noqa: S603, S607
+            ["pkill", "-f", "ollama serve"], capture_output=True, timeout=5
+        )
+        killed = result.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    try:
+        subprocess.Popen(  # noqa: S603
+            [binary, "serve"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"failed to start ollama: {exc}") from exc
+
+    kernel = getattr(request.app.state, "kernel", None)
+    chronicle = getattr(kernel, "chronicle", None) if kernel is not None else None
+    if chronicle is not None:
+        chronicle.log("providers", "ollama_restart", {"binary": binary, "killed_existing": killed})
+
+    return {
+        "started": True,
+        "binary": binary,
+        "killed_existing": killed,
+        "message": "Ollama restarted" if killed else "Ollama started",
+    }

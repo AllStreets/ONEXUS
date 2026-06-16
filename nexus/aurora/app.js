@@ -3577,6 +3577,10 @@ async function renderProvidersTab() {
 
     <div class="nx-eyebrow" style="margin:8px 0 6px">LOCAL</div>
     <dl class="nx-st-rows">${rowsLive || `<div class="nx-empty">no providers registered</div>`}</dl>
+    <div class="nx-ollama-controls" style="margin:6px 14px 0;display:flex;align-items:center;gap:10px">
+      <button type="button" class="nx-st-keysave" data-ollama-restart>Restart Ollama</button>
+      <span class="nx-ollama-status nx-dim" style="font-size:11px"></span>
+    </div>
     ${!hasLlamaCpp ? `
       <p class="nx-dim" style="font-size:11px;margin:6px 14px 0;line-height:1.5">
         llama.cpp HTTP server isn't running on port 8384 — Ollama covers the local-inference slot.
@@ -3649,6 +3653,35 @@ function wireProvidersHandlers(panel) {
     el.addEventListener("click", () => {
       _providersState.addingKey = null;
       repaint();
+    });
+  });
+
+  // Restart Ollama: spawn (or restart) the local Ollama server from inside the
+  // app, so quitting Ollama doesn't mean leaving ONEXUS to bring it back.
+  panel.querySelectorAll("[data-ollama-restart]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const status = panel.querySelector(".nx-ollama-status");
+      const prev = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "restarting…";
+      if (status) status.textContent = "";
+      try {
+        const r = await fetch("/api/providers/ollama/restart", { method: "POST" });
+        const body = await r.json().catch(() => ({}));
+        if (r.ok) {
+          if (status) status.textContent = body.message || "Ollama started";
+          // Give the server a moment to bind its port, then refresh health dots.
+          setTimeout(repaint, 1500);
+        } else {
+          if (status) status.textContent = body.detail || `failed (${r.status})`;
+          btn.disabled = false;
+          btn.textContent = prev;
+        }
+      } catch (err) {
+        if (status) status.textContent = `network error: ${err}`;
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
     });
   });
 
