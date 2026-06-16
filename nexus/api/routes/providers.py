@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -202,13 +203,37 @@ def _find_ollama_binary() -> str | None:
     return next((c for c in candidates if c and Path(c).exists()), None)
 
 
+def _ollama_app_path() -> Path | None:
+    """Return the macOS Ollama ``.app`` bundle if the binary lives inside one.
+
+    The binary at ~/.local/bin/ollama is usually a symlink into
+    ``/Applications/Ollama.app/Contents/Resources/ollama``. Launching the
+    bundle (instead of a bare ``ollama serve``) starts the menu-bar app the
+    user recognises — it shows its icon and appears by name in Activity
+    Monitor, where a headless ``ollama serve`` is easy to miss.
+    """
+    binary = _find_ollama_binary()
+    if binary is None:
+        return None
+    try:
+        resolved = Path(binary).resolve()
+    except OSError:
+        return None
+    for parent in resolved.parents:
+        if parent.suffix == ".app":
+            return parent
+    return None
+
+
 @router.post("/ollama/restart")
 async def restart_ollama(request: Request) -> dict:
-    """Start (or restart) the local Ollama server.
+    """Start (or restart) local Ollama.
 
     Desktop convenience: when the user has quit Ollama, this brings the
-    local-inference slot back without leaving the app. Locates the binary,
-    terminates any running ``ollama serve``, and spawns a fresh detached one.
+    local-inference slot back without leaving the app. On macOS it launches the
+    Ollama menu-bar app (visible, with its icon); elsewhere it spawns a headless
+    ``ollama serve``. Either way any running ``ollama serve`` is terminated
+    first so this is a true restart.
     """
     binary = _find_ollama_binary()
     if binary is None:
@@ -220,7 +245,8 @@ async def restart_ollama(request: Request) -> dict:
             ),
         )
 
-    # Best-effort terminate any running `ollama serve` so this is a true restart.
+    # Best-effort terminate any running `ollama serve` so this is a true restart
+    # (and so the relaunched app can bind port 11434 cleanly).
     killed = False
     try:
         result = subprocess.run(  # noqa: S603, S607
@@ -230,25 +256,37 @@ async def restart_ollama(request: Request) -> dict:
     except (OSError, subprocess.SubprocessError):
         pass
 
+    app = _ollama_app_path() if sys.platform == "darwin" else None
+    launched_via = "app" if app is not None else "serve"
     try:
-        subprocess.Popen(  # noqa: S603
-            [binary, "serve"],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+        if app is not None:
+            # `open` returns immediately; the app (re)starts its own server and
+            # shows the menu-bar icon.
+            subprocess.run(["open", str(app)], capture_output=True, timeout=10)  # noqa: S603, S607
+        else:
+            subprocess.Popen(  # noqa: S603
+                [binary, "serve"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
     except OSError as exc:
         raise HTTPException(status_code=500, detail=f"failed to start ollama: {exc}") from exc
 
     kernel = getattr(request.app.state, "kernel", None)
     chronicle = getattr(kernel, "chronicle", None) if kernel is not None else None
     if chronicle is not None:
-        chronicle.log("providers", "ollama_restart", {"binary": binary, "killed_existing": killed})
+        chronicle.log(
+            "providers",
+            "ollama_restart",
+            {"binary": binary, "killed_existing": killed, "via": launched_via},
+        )
 
     return {
         "started": True,
         "binary": binary,
         "killed_existing": killed,
+        "launched_via": launched_via,
         "message": "Ollama restarted" if killed else "Ollama started",
     }

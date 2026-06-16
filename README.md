@@ -92,7 +92,7 @@ ollama pull llama3.1:8b             # ~5 GB · M-series default
 #   ollama pull qwen2.5:14b         # ~9 GB · better reasoning
 ```
 
-ONEXUS auto-detects Ollama at boot — the Cortex routes natural-language questions through it, every catalog agent gets the LLM in its context, and Aegis still gates every tool call. No knobs to flip. If you quit Ollama, **Settings → Providers → Restart Ollama** brings the local-inference slot back without leaving the app, and each provider's live health (green `healthy` / red `unavailable`) is polled from `/api/providers`.
+ONEXUS auto-detects Ollama at boot — the Cortex routes natural-language questions through it, every catalog agent gets the LLM in its context, and Aegis still gates every tool call. No knobs to flip. If you quit Ollama, **Settings → Providers → Restart Ollama** relaunches it — on macOS it opens the Ollama menu-bar app (so it reappears in Activity Monitor and the menu bar), elsewhere it spawns a headless `ollama serve` — and each provider's live health (green `healthy` / red `unavailable`) is polled from `/api/providers`.
 
 ### Cloud provider (optional override)
 
