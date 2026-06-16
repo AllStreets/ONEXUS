@@ -72,7 +72,9 @@ pip install -e ".[llm,api,tui,messaging]"
 onexus serve --port 8765
 ```
 
-Open **http://127.0.0.1:8765/aurora** and you're in. Every new install lands you in a default `Hello World` workspace; create more with `⌘N`, delete from the sidebar trash. First-time visitors also get a **13-page guided tour**; hit `?` any time to re-open it.
+Open **http://127.0.0.1:8765/aurora** — or just **http://127.0.0.1:8765/**, which redirects there — and you're in. Every new install lands you in a default `Hello World` workspace; create more with `⌘N`, delete from the sidebar trash. First-time visitors also get a **13-page guided tour**; hit `?` any time to re-open it.
+
+> **Serve the real backend, not a static file server.** Aurora is a thin client over the FastAPI app — every panel (live provider health, the Ollama restart button, token streaming) calls `/api/*`. Always launch with `onexus serve` (uvicorn). Pointing `python -m http.server` at the `aurora/` folder will render the shell but every `/api/*` call 404s, so health shows nothing and buttons do nothing.
 
 **Heads-up — without a local LLM (next section) agents only respond to pattern-matched commands** (`summon X`, `list`, `agents <keyword>`). Plain-English questions return a keyword-search dump instead of a real recommendation. Install Ollama and the same questions get LLM-backed answers.
 
@@ -90,7 +92,7 @@ ollama pull llama3.1:8b             # ~5 GB · M-series default
 #   ollama pull qwen2.5:14b         # ~9 GB · better reasoning
 ```
 
-ONEXUS auto-detects Ollama at boot — the Cortex routes natural-language questions through it, every catalog agent gets the LLM in its context, and Aegis still gates every tool call. No knobs to flip.
+ONEXUS auto-detects Ollama at boot — the Cortex routes natural-language questions through it, every catalog agent gets the LLM in its context, and Aegis still gates every tool call. No knobs to flip. If you quit Ollama, **Settings → Providers → Restart Ollama** brings the local-inference slot back without leaving the app, and each provider's live health (green `healthy` / red `unavailable`) is polled from `/api/providers`.
 
 ### Cloud provider (optional override)
 
