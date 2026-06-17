@@ -257,7 +257,7 @@ def tui():
 
 @main.command()
 @click.option("--host", default="127.0.0.1", help="Bind address")
-@click.option("--port", default=8765, type=int, help="Port number")
+@click.option("--port", default=8901, type=int, help="Port number")
 def serve(host, port):
     """Start the REST/WebSocket API server."""
     try:
@@ -271,7 +271,7 @@ def serve(host, port):
 
 @main.command()
 @click.option("--host", default="127.0.0.1", help="Bind address")
-@click.option("--port", default=8765, type=int, help="API server port for dashboard connection")
+@click.option("--port", default=8901, type=int, help="API server port for dashboard connection")
 def dashboard(host, port):
     """Launch the live web dashboard."""
     try:

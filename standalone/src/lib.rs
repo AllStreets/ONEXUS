@@ -30,18 +30,18 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 
 const HOST: &str = "127.0.0.1";
-// 8765 by default — chosen to avoid common dev-tool ports (8000 was a magnet
-// for FastAPI defaults, jupyter, SMADP, etc.). We probe candidates in order
-// and either attach to an existing ONEXUS server or spawn one on the first
-// free port.
-const PORT_CANDIDATES: &[u16] = &[8765, 8766, 8767, 8768, 8769, 8770, 8771, 8772, 8773];
+// 8901 by default — far from common dev-tool ports (8000, 3000, 5000, 8080)
+// AND far from the user's other local projects (8765 = Meridian, 8000 = SMADP).
+// We probe candidates in order and either attach to an existing ONEXUS server
+// or spawn one on the first free port.
+const PORT_CANDIDATES: &[u16] = &[8901, 8902, 8903, 8904, 8905, 8906, 8907, 8908, 8909];
 const HEALTH_TIMEOUT_SECS: u64 = 20;
 const BUNDLE_ID: &str = "com.allstreets.onexus";
 
 /// Resolved port for this run. Set once in `run()` before any helper uses it.
 /// Read with `current_port()`.
 use std::sync::atomic::{AtomicU16, Ordering};
-static PORT: AtomicU16 = AtomicU16::new(8765);
+static PORT: AtomicU16 = AtomicU16::new(8901);
 fn current_port() -> u16 { PORT.load(Ordering::SeqCst) }
 
 /// Wrapper around the spawned Python child so we can kill it on shutdown

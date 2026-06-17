@@ -54,14 +54,14 @@ Installed by `pip install -e .[llm,api,tui,messaging]` as the `onexus` command.
 ### Daily
 
 ```bash
-onexus serve --port 8765           # start the API + Aurora dashboard (default port)
+onexus serve --port 8901           # start the API + Aurora dashboard (default port)
 onexus status                      # kernel status: db, modules, providers, port
 onexus run                         # interactive REPL session against the kernel
 onexus tui                         # rich-terminal dashboard (no browser needed)
-onexus dashboard --port 8765       # launch the live web dashboard pointing at a server
+onexus dashboard --port 8901       # launch the live web dashboard pointing at a server
 ```
 
-`--port` defaults to **8765**. The standalone `.app` walks `[8765..8773]` and probes
+`--port` defaults to **8901**. The standalone `.app` walks `[8901..8909]` and probes
 `/api/system/status` so it never attaches to a non-ONEXUS service on the same port
 (e.g., SMADP, jupyter, FastAPI dev servers).
 
@@ -141,8 +141,8 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[llm,api,tui,messaging]"
 
 # 3. Boot
-onexus serve --port 8765
-# open http://127.0.0.1:8765/aurora
+onexus serve --port 8901
+# open http://127.0.0.1:8901/aurora
 ```
 
 ### Local LLM (recommended)
@@ -201,13 +201,13 @@ first run), walk up from the binary looking for `nexus/__init__.py`, `cwd`,
 
 ## Useful API one-liners
 
-All against `http://127.0.0.1:8765` by default.
+All against `http://127.0.0.1:8901` by default.
 
 ### Status / health
 
 ```bash
-curl -s http://127.0.0.1:8765/api/system/status | jq
-curl -s http://127.0.0.1:8765/api/providers | jq
+curl -s http://127.0.0.1:8901/api/system/status | jq
+curl -s http://127.0.0.1:8901/api/providers | jq
 ```
 
 ### Chat — single agent (Cortex picks)
@@ -215,7 +215,7 @@ curl -s http://127.0.0.1:8765/api/providers | jq
 ```bash
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"message":"hello","workspace_id":"hello-world"}' \
-  http://127.0.0.1:8765/api/messages | jq
+  http://127.0.0.1:8901/api/messages | jq
 ```
 
 ### Cortex multi-agent launch
@@ -224,15 +224,15 @@ curl -s -X POST -H "Content-Type: application/json" \
 # Fan one prompt to oracle + council in parallel
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"message":"How should I structure this?","agents":["oracle","council"]}' \
-  http://127.0.0.1:8765/api/cortex/launch | jq
+  http://127.0.0.1:8901/api/cortex/launch | jq
 
 # Let Cortex's classifier pick the top 3 for the prompt
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"message":"red-team my plan","top_k":3}' \
-  http://127.0.0.1:8765/api/cortex/launch | jq
+  http://127.0.0.1:8901/api/cortex/launch | jq
 
 # See which agents Cortex would pre-tick for a prompt
-curl -s "http://127.0.0.1:8765/api/cortex/candidates?message=red-team+my+plan" | jq
+curl -s "http://127.0.0.1:8901/api/cortex/candidates?message=red-team+my+plan" | jq
 ```
 
 ### Trust feedback (thumb up / down)
@@ -241,12 +241,12 @@ curl -s "http://127.0.0.1:8765/api/cortex/candidates?message=red-team+my+plan" |
 # Thumb up — +0.12 to oracle's trust
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"module":"oracle","accepted":true}' \
-  http://127.0.0.1:8765/api/messages/feedback | jq
+  http://127.0.0.1:8901/api/messages/feedback | jq
 
 # Thumb down — −0.22
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"module":"oracle","accepted":false}' \
-  http://127.0.0.1:8765/api/messages/feedback | jq
+  http://127.0.0.1:8901/api/messages/feedback | jq
 ```
 
 ### Provider keys
@@ -255,56 +255,56 @@ curl -s -X POST -H "Content-Type: application/json" \
 # Save a key (returns fingerprint only, never the key)
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"provider":"openai","api_key":"sk-..."}' \
-  http://127.0.0.1:8765/api/providers/keys | jq
+  http://127.0.0.1:8901/api/providers/keys | jq
 
 # List configured keys (fingerprints only)
-curl -s http://127.0.0.1:8765/api/providers/keys | jq
+curl -s http://127.0.0.1:8901/api/providers/keys | jq
 
 # Remove a key
-curl -s -X DELETE http://127.0.0.1:8765/api/providers/keys/openai | jq
+curl -s -X DELETE http://127.0.0.1:8901/api/providers/keys/openai | jq
 ```
 
 ### Chat history (the same data the Settings tab shows)
 
 ```bash
 # All workspaces with chat activity
-curl -s http://127.0.0.1:8765/api/chat-history/workspaces | jq
+curl -s http://127.0.0.1:8901/api/chat-history/workspaces | jq
 
 # Agents you've talked to in one workspace
-curl -s http://127.0.0.1:8765/api/chat-history/workspaces/hello-world/agents | jq
+curl -s http://127.0.0.1:8901/api/chat-history/workspaces/hello-world/agents | jq
 
 # Page of chats with one agent (50/page)
-curl -s "http://127.0.0.1:8765/api/chat-history/workspaces/hello-world/agents/council/chats?offset=0&limit=50" | jq
+curl -s "http://127.0.0.1:8901/api/chat-history/workspaces/hello-world/agents/council/chats?offset=0&limit=50" | jq
 ```
 
 ### Workspaces
 
 ```bash
-curl -s http://127.0.0.1:8765/api/workspaces | jq
+curl -s http://127.0.0.1:8901/api/workspaces | jq
 
 # Create
 curl -s -X POST -H "Content-Type: application/json" \
   -d '{"workspace_id":"build","name":"Build","tone":"emerald"}' \
-  http://127.0.0.1:8765/api/workspaces | jq
+  http://127.0.0.1:8901/api/workspaces | jq
 
 # Switch
-curl -s -X POST http://127.0.0.1:8765/api/workspaces/build/switch | jq
+curl -s -X POST http://127.0.0.1:8901/api/workspaces/build/switch | jq
 
 # Delete
-curl -s -X DELETE http://127.0.0.1:8765/api/workspaces/build | jq
+curl -s -X DELETE http://127.0.0.1:8901/api/workspaces/build | jq
 ```
 
 ### Chronicle (audit log)
 
 ```bash
 # Last 50 events
-curl -s "http://127.0.0.1:8765/api/chronicle?limit=50" | jq
+curl -s "http://127.0.0.1:8901/api/chronicle?limit=50" | jq
 
 # Filter by source + event type
-curl -s "http://127.0.0.1:8765/api/chronicle?source=aegis&event_type=aegis.trust_change&limit=20" | jq
+curl -s "http://127.0.0.1:8901/api/chronicle?source=aegis&event_type=aegis.trust_change&limit=20" | jq
 
 # Aggregate stats
-curl -s http://127.0.0.1:8765/api/chronicle/stats | jq
+curl -s http://127.0.0.1:8901/api/chronicle/stats | jq
 ```
 
 ---
@@ -315,7 +315,7 @@ curl -s http://127.0.0.1:8765/api/chronicle/stats | jq
 
 Something else is on port 8000 (often `smadp` if you have that project, jupyter,
 random FastAPI dev servers). The `.app` and `onexus serve` both default to
-**8765** now and walk forward through `8765..8773` if 8765 is also taken. If
+**8901** now and walk forward through `8901..8773` if 8901 is also taken. If
 you're seeing the old behavior, you're running a stale `.app` — rebuild:
 
 ```bash

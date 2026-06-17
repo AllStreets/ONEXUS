@@ -5,7 +5,7 @@
   "identifier": "com.allstreets.onexus",
   "build": {
     "frontendDist": "../nexus/aurora",
-    "devUrl": "http://127.0.0.1:8765/aurora"
+    "devUrl": "http://127.0.0.1:8901/aurora"
   },
   "app": {
     "windows": [
@@ -18,7 +18,7 @@
         "minHeight": 640,
         "resizable": true,
         "fullscreen": false,
-        "url": "http://127.0.0.1:8765/aurora",
+        "url": "http://127.0.0.1:8901/aurora",
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "transparent": false,
