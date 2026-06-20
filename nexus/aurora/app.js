@@ -1566,7 +1566,7 @@ async function renderWatch() {
           <div class="nx-cast" id="nx-watch-cast"></div>
         </div>
         <div class="nx-watch-rail-sec grow">
-          <div class="nx-watch-rail-label">Live ledger</div>
+          <div class="nx-watch-rail-label">Live ledger <a href="#/memory" class="nx-cp-watch-link" style="float:right">full replay ↗</a></div>
           <div class="nx-ledger" id="nx-watch-ledger"></div>
         </div>
       </div>
@@ -1941,6 +1941,7 @@ async function openCapabilitySheet(slug) {
 
         <div class="nx-cap-actions">
           <button class="nx-cap-mention" data-slug="${slug}">@${slug} — start a message</button>
+          <button class="nx-cap-watch" id="nx-cap-compose">compose ↗</button>
           <button class="nx-cap-watch" id="nx-cap-watch">watch live ↗</button>
           <button class="nx-cap-revoke" id="nx-cap-revoke" title="Drop trust to 0.00 and collapse every standing grant">revoke trust</button>
         </div>
@@ -1961,6 +1962,7 @@ async function openCapabilitySheet(slug) {
     }, 200);
   });
   document.getElementById("nx-cap-watch").addEventListener("click", () => { closeOverlay(); location.hash = "#/watch"; });
+  document.getElementById("nx-cap-compose")?.addEventListener("click", () => { closeOverlay(); location.hash = `#/cortex?agent=${encodeURIComponent(slug)}`; });
   document.getElementById("nx-cap-revoke").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     if (btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = "click again to confirm revoke"; btn.classList.add("armed"); return; }
@@ -3168,6 +3170,11 @@ async function renderCatalog() {
         e.stopPropagation();
         openCapabilitySheet(slug);
       });
+      // Catalog → Compose: pre-select this agent in the Cortex launcher.
+      card.querySelector(".compose-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        location.hash = `#/cortex?agent=${encodeURIComponent(slug)}`;
+      });
       card.querySelector(".launch-btn")?.addEventListener("click", async (e) => {
         e.stopPropagation();
         const btn = e.currentTarget;
@@ -3227,6 +3234,7 @@ function renderCatalogCard(a) {
       </div>
       <div class="nx-card-actions">
         ${runnable ? `<button class="launch-btn" type="button">Launch</button>` : ""}
+        <button class="compose-btn" type="button" title="Add to a Cortex launch">compose</button>
         <button class="trust-btn" type="button">trust</button>
         ${a.source_github ? `<a class="src-link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener noreferrer">source ↗</a>` : ""}
       </div>

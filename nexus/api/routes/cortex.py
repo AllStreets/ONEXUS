@@ -607,20 +607,47 @@ async def candidates(
     if cat is not None and catalog_limit > 0:
         try:
             import re as _re
+            import math as _math
             STOP = {"the","and","for","that","this","with","from","into","what","when",
-                    "your","you","want","need","like","want","make","just","also","then",
+                    "your","you","want","need","like","make","just","also","then",
                     "very","much","more","over","onto","than","each","some","such","only",
-                    "etc","help","plan","build","create","draft","work","tool"}
+                    "etc","help","plan","build","create","draft","work","tool","please",
+                    "would","could","should","about","using","use","get","got","let","its"}
             words = [w.lower() for w in _re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", message)]
-            keywords = [w for w in words if w not in STOP][:8]
+            # dedupe but keep order; longer, rarer words first carry more intent
+            keywords = [w for w in dict.fromkeys(words) if w not in STOP][:10]
             score_by_slug: dict[str, float] = {}
             entry_by_slug = {}
+            # Weighted field matching — a keyword in the NAME means far more than
+            # one buried in a tag. Each entry accumulates relevance across all
+            # keywords, so an agent that matches several terms outranks one that
+            # matches a single term many ways.
             for kw in keywords:
-                for entry in cat.search(kw, limit=10):
-                    score_by_slug[entry.slug] = score_by_slug.get(entry.slug, 0.0) + 1.0
+                kw_len_boost = 1.0 + min(len(kw) - 3, 6) * 0.08   # longer term → more intent
+                for entry in cat.search(kw, limit=14):
+                    name = (entry.name or "").lower()
+                    tagline = (entry.tagline or "").lower()
+                    category = (entry.category or "").lower().replace("-", " ")
+                    tags = " ".join(entry.tags or []).lower()
+                    s = 0.0
+                    if kw in name: s += 3.0
+                    if kw in category: s += 2.2
+                    if kw in tagline: s += 1.6
+                    if kw in tags: s += 1.0
+                    if s == 0.0: s = 0.4   # surfaced by search() but no exact field hit
+                    score_by_slug[entry.slug] = score_by_slug.get(entry.slug, 0.0) + s * kw_len_boost
                     entry_by_slug[entry.slug] = entry
-            ranked = sorted(score_by_slug.items(), key=lambda kv: kv[1], reverse=True)
-            for slug, _score in ranked[:catalog_limit]:
+
+            def _final(slug: str) -> float:
+                e = entry_by_slug[slug]
+                rel = score_by_slug[slug]
+                quality = float(getattr(e, "composite_score", 0.0) or 0.0) * 1.5   # ONEXUS grade, 0..1.5
+                pop = _math.log10((getattr(e, "stars", 0) or 0) + 10) * 0.3        # mild popularity nudge
+                runnable = 0.6 if getattr(e, "runnable", False) else 0.0           # prefer runnable
+                return rel + quality + pop + runnable
+
+            ranked = sorted(score_by_slug.keys(), key=_final, reverse=True)
+            for slug in ranked[:catalog_limit]:
                 entry = entry_by_slug[slug]
                 catalog_matches.append({
                     "slug": entry.slug,
@@ -630,6 +657,8 @@ async def candidates(
                     "tags": list(entry.tags or [])[:6],
                     "runnable": bool(entry.runnable),
                     "stars": entry.stars or 0,
+                    "composite_score": getattr(entry, "composite_score", None),
+                    "relevance": round(_final(slug), 2),
                     "kind": "catalog",
                 })
         except Exception:

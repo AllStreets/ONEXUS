@@ -428,6 +428,7 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   display: flex; flex-direction: column; gap: 4px;
   max-height: 280px;
   overflow-y: auto;
+  overscroll-behavior: contain;   /* don't chain the wheel to the sidebar */
   padding-right: 4px;
 }
 .nx-agent-list::-webkit-scrollbar {

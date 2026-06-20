@@ -28,14 +28,12 @@
 .nx-watch-head {
   position: absolute;
   top: 22px; left: 26px;
-  right: 26px;
+  max-width: 60%;
   pointer-events: none;
   z-index: 2;
-  padding-bottom: 18px;
-  /* scrim so the title stays legible over any glow that drifts up */
-  background: linear-gradient(180deg, rgba(8,6,14,0.78) 0%, rgba(8,6,14,0.4) 55%, rgba(8,6,14,0) 100%);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+  /* the constellation field starts 150px down (scene.js), so the title sits in
+     clear space — no scrim needed. A soft text-shadow keeps it crisp. */
+  text-shadow: 0 1px 16px rgba(8, 6, 14, 0.9), 0 0 2px rgba(8, 6, 14, 0.8);
 }
 .nx-watch-eyebrow {
   font-size: var(--nx-eyebrow-size, 9.5px);
@@ -166,7 +164,13 @@
 .nx-rail-scene canvas { display: block; width: 100%; height: 100%; }
 
 /* the cast — on-duty cognitive modules as clickable character chips */
-.nx-cast { display: flex; flex-wrap: wrap; gap: 6px; }
+.nx-cast {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  max-height: 180px; overflow-y: auto; overscroll-behavior: contain;
+  padding-right: 2px;
+}
+.nx-cast::-webkit-scrollbar { width: 6px; }
+.nx-cast::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
 .nx-cast-chip {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 9px 3px 3px; border-radius: 999px;
@@ -221,6 +225,9 @@
 .nx-mem-tier-link { font-family: var(--nx-font-mono); font-size: 10px; color: var(--nx-text-dim); text-decoration: none; }
 .nx-mem-tier-link:hover { color: var(--nx-text-high); }
 .nx-mem-tier-foot { font-size: 10px; margin-top: 10px; line-height: 1.4; }
+.nx-mem-tier-body { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.nx-mem-tier-body::-webkit-scrollbar { width: 6px; }
+.nx-mem-tier-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
 .nx-mem-row { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 11.5px; }
 .nx-mem-row.col { flex-direction: column; gap: 2px; }
 .nx-mem-k { font-family: var(--nx-font-mono); color: var(--nx-text-mid); flex: 0 0 auto; }
