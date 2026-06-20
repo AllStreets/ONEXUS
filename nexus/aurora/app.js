@@ -2857,9 +2857,9 @@ async function renderCatalog() {
       <div class="nx-main-inner">
         <div class="nx-spatial-header">
           <div>
-            <div class="nx-eyebrow" style="margin-bottom:6px">Catalog</div>
-            <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Browse agents</div>
-            <div class="nx-dim" style="font-size:13px;margin-top:4px">${agents.length} of ${body.total} ${search ? `matching “${escapeHtml(search)}” (whole catalog)` : (runnableOnly ? "· runnable (MCP adapter)" : "· all")} · vendored from ONEXUS-Agents</div>
+            <div class="nx-eyebrow" style="margin-bottom:6px">Agent store · ONEXUS catalog</div>
+            <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">${(body.total || 0).toLocaleString()} agents, graded &amp; runnable</div>
+            <div class="nx-dim" style="font-size:13px;margin-top:4px">${search ? `${agents.length} matching “${escapeHtml(search)}” across the whole catalog` : `showing ${agents.length} ${category ? "in " + escapeHtml(category.replace(/-/g, " ")) : "featured"} · ranked by ONEXUS benchmark score`}${runnableOnly && !search ? " · runnable via MCP adapter" : ""}</div>
           </div>
           <form class="nx-cat-filters" id="nx-cat-filters">
             <input type="search" id="nx-cat-q" value="${escapeHtml(search)}" placeholder="search the catalog…">
@@ -2930,17 +2930,40 @@ async function renderCatalog() {
   }
 }
 
+// Compact number formatting for app-store pedigree (1234 → 1.2k, 145000 → 145k).
+function fmtCount(n) {
+  if (n == null) return null;
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1) + "m";
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10_000 ? 0 : 1) + "k";
+  return String(n);
+}
+const STAR_GLYPH = `<svg viewBox="0 0 12 12" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M6 1l1.5 3.1 3.4.5-2.45 2.4.58 3.4L6 8.8 2.97 10.4l.58-3.4L1.1 4.6l3.4-.5z"/></svg>`;
+
 function renderCatalogCard(a) {
   const runnable = a.runnable || a.is_builtin;
+  // ONEXUS benchmark pedigree — the grading that turns a catalog into an app store.
+  const score = typeof a.composite_score === "number" ? a.composite_score : null;
+  const scorePct = score != null ? Math.round(score * 100) : null;
+  const stars = fmtCount(a.stars);
+  const rank = a.rank_in_category;
   return `
     <div class="nx-spatial-card" data-slug="${escapeHtml(a.slug)}">
-      ${agentDisc(a.slug, { size: 36, trust: a.trust_floor ?? null })}
+      <div class="nx-card-top">
+        ${agentDisc(a.slug, { size: 36, trust: a.trust_floor ?? null })}
+        ${rank != null && rank <= 3 ? `<span class="nx-card-rank" title="rank ${rank} in ${escapeHtml(a.category || "category")}">#${rank}</span>` : ""}
+      </div>
       <div class="name">${escapeHtml(a.name || a.slug)}</div>
       <div class="tagline">${escapeHtml(a.tagline || a.description || "")}</div>
+      ${score != null ? `
+        <div class="nx-card-bench" title="ONEXUS benchmark score ${score.toFixed(3)}">
+          <div class="nx-card-bench-track"><div class="nx-card-bench-fill" style="width:${scorePct}%"></div></div>
+          <span class="nx-card-bench-val">${score.toFixed(2)}</span>
+        </div>` : ""}
       <div class="status">
         <span class="status-dot ${runnable ? "" : "sleeping"}"></span>
         ${runnable ? "runnable" : "manifest-only"}
-        <span class="badge-system">${escapeHtml(a.category || "")}</span>
+        ${stars ? `<span class="nx-card-stars">${STAR_GLYPH}${stars}</span>` : ""}
+        <span class="badge-system">${escapeHtml((a.category || "").replace(/-/g, " "))}</span>
       </div>
       <div class="nx-card-actions">
         ${runnable ? `<button class="launch-btn" type="button">Launch</button>` : ""}
