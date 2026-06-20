@@ -1210,10 +1210,16 @@ async function renderAtlasGraph() {
     const radius = R + (1 - conf) * 70 + (nd.decayed ? 30 : 0);
     pos[nd.id] = { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, angle, conf, nd };
   });
-  // spokes from the hub to each fact
-  const spokeSVG = nodes.map(nd => {
+  // spokes from the hub to each fact — illuminated, gently flowing connective
+  // strings in the fact's own colour (green = live, steel = decayed).
+  const spokeSVG = nodes.map((nd, i) => {
     const p = pos[nd.id];
-    return `<line class="nx-atlas-edge" x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" style="opacity:${(0.06 + 0.14 * p.conf).toFixed(3)}"/>`;
+    const col = nd.decayed ? "#8cb8d4" : "#9affb6";
+    const glowOp = (0.05 + 0.10 * p.conf).toFixed(3);
+    const flowOp = (0.30 + 0.55 * p.conf).toFixed(3);
+    const delay = (i * 0.13).toFixed(2);
+    return `<line class="nx-atlas-glow" x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="${col}" style="opacity:${glowOp}"/>
+      <line class="nx-atlas-spoke" x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="${col}" style="opacity:${flowOp};animation-delay:-${delay}s"/>`;
   }).join("");
   const edgeSVG = edges.map(e => {
     const a = pos[e.src], b = pos[e.dst];

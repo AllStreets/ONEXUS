@@ -3920,6 +3920,17 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-atlas-node.decayed circle { fill: var(--nx-sensitive); }
 .nx-atlas-node.decayed text { fill: var(--nx-sensitive); font-style: italic; }
 
+/* Atlas spokes — illuminated connective strings: a soft static glow underlay
+   plus a thin flowing dash that travels from the hub out to each fact, in the
+   fact's own colour. Staggered per-spoke so the whole graph shimmers alive. */
+.nx-atlas-glow { stroke-width: 3; stroke-linecap: round; }
+.nx-atlas-spoke {
+  stroke-width: 1.5; stroke-linecap: round;
+  stroke-dasharray: 2 11;
+  animation: nx-atlas-flow 2.6s linear infinite;
+}
+@keyframes nx-atlas-flow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -26; } }
+
 /* Chronos counterfactual timeline */
 .nx-chronos-list { display: flex; flex-direction: column; gap: 2px; }
 .nx-chronos-row {
