@@ -83,7 +83,13 @@ async function boot() {
     const railCanvas = document.getElementById("nx-rail-scene-canvas");
     if (railCanvas) registerScene("rail", railCanvas, { compact: true });
   });
-  await route(location.hash);
+  // On a full load/reload, land on the workspace home rather than restoring a
+  // tool surface (workshop, watch, memory, …). So ⌘R / refresh always brings you
+  // back to your workspace, not whatever tool page you happened to be on.
+  // Conversations and the guided tour still restore in place.
+  const TOOL_ROUTE = /^#\/(workshop|cortex|watch|memory|catalog|settings|atlas|chronos|search|workspaces)\b/;
+  const startHash = TOOL_ROUTE.test(location.hash) ? "" : location.hash;
+  await route(startHash);
   maybeShowTour();
 }
 
