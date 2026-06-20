@@ -62,6 +62,14 @@ DETECTION_RULES: dict[str, DetectionRule] = {
         description="Repeated privileged capability requests after denial",
         severity="critical", high_stakes=True, window_s=600.0, threshold=3,
     ),
+    # Informational, NOT high-stakes — a swarm fanning out to many agents in a
+    # short window. Surfaces real activity on the radar (e.g. a cortex launch)
+    # at HIGH priority, so it never trips the emergency veil.
+    "swarm_burst": DetectionRule(
+        name="swarm_burst",
+        description="Many agents routed in a short window — a swarm is active",
+        severity="high", high_stakes=False, window_s=20.0, threshold=4,
+    ),
 }
 
 
@@ -106,7 +114,7 @@ class SigilRuleEngine:
             return self._check_denied_burst(event) + self._check_permission_escalation(event)
         if kind == "route":
             self._route_events.append(event)
-            return self._check_runaway_loop(event)
+            return self._check_runaway_loop(event) + self._check_swarm_burst(event)
         return []
 
     def _fire(self, rule: DetectionRule, module: str, key: tuple,
@@ -174,6 +182,22 @@ class SigilRuleEngine:
         return self._fire(rule, str(module),
                           ("runaway_loop", module, int(ts // rule.window_s)),
                           recent[-3:], ts)
+
+    def _check_swarm_burst(self, event: dict) -> list[Detection]:
+        """Informational: many distinct routes in a short window (a swarm is
+        active, e.g. a cortex launch). Fires once per window bucket so it pulses
+        the radar during bursts rather than spamming it."""
+        rule = self._rules.get("swarm_burst")
+        if rule is None:
+            return []
+        ts = float(event["ts"])
+        recent = [e for e in self._route_events if 0 <= ts - float(e["ts"]) <= rule.window_s]
+        if len(recent) < rule.threshold:
+            return []
+        modules = sorted({str(e.get("module")) for e in recent if e.get("module")})
+        return self._fire(rule, str(event.get("module") or "cortex"),
+                          ("swarm_burst", int(ts // rule.window_s)),
+                          [{"routes": len(recent), "modules": modules[:8]}], ts)
 
     def check_egress(self, network_ts: list[float], *, now: float) -> list[Detection]:
         """Anomalous egress cadence vs the trailing-hour workspace baseline."""
@@ -333,9 +357,14 @@ class SigilModule(NexusModule):
         if chronicle is not None:
             chronicle.log("sigil", "detection", payload)
         if pulse is not None:
+            # Only high-stakes detections go out at EMERGENCY priority (which the
+            # shell renders as a full-surface alert veil + alert mood). Routine
+            # detections broadcast at HIGH so they light up the Sigil radar
+            # without nuking the whole app red.
+            prio = Priority.EMERGENCY if det.high_stakes else Priority.HIGH
             await pulse.publish(Message(
                 topic="sigil.detection", source="sigil",
-                payload=payload, priority=Priority.EMERGENCY,
+                payload=payload, priority=prio,
             ))
 
     # -- handle ----------------------------------------------------------------

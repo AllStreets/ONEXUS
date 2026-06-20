@@ -28,8 +28,14 @@
 .nx-watch-head {
   position: absolute;
   top: 22px; left: 26px;
+  right: 26px;
   pointer-events: none;
   z-index: 2;
+  padding-bottom: 18px;
+  /* scrim so the title stays legible over any glow that drifts up */
+  background: linear-gradient(180deg, rgba(8,6,14,0.78) 0%, rgba(8,6,14,0.4) 55%, rgba(8,6,14,0) 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
 }
 .nx-watch-eyebrow {
   font-size: var(--nx-eyebrow-size, 9.5px);

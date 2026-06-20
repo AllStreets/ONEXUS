@@ -111,6 +111,24 @@ def _get_signals(request: Request) -> MoodSignals:
     return signals
 
 
+# Observations are momentary, not permanent. If no fresh observation arrives
+# within this window the mood self-heals back toward Calm Focus — otherwise a
+# single `trust_collapse` (or any alarm signal) would pin the whole shell red
+# forever, which is exactly the "stuck on alert" bug.
+_SIGNAL_TTL = 30.0
+
+
+def _effective_signals(app_state) -> MoodSignals:
+    """The signals to actually evaluate: the latched observations while fresh,
+    or a decayed Calm-Focus baseline (keeping only the workspace tone) once they
+    go stale. This makes mood live and self-recovering instead of sticky."""
+    signals = getattr(app_state, "mood_signals", None) or MoodSignals()
+    at = getattr(app_state, "mood_signals_at", None)
+    if at is None or (time.monotonic() - at) > _SIGNAL_TTL:
+        return MoodSignals(workspace_tone=getattr(signals, "workspace_tone", "INDIGO"))
+    return signals
+
+
 class ObserveBody(BaseModel):
     """Observation payload sent by surfaces/kernel.
 
@@ -193,8 +211,7 @@ def _apply_body_to_signals(body: ObserveBody, signals: MoodSignals) -> MoodSigna
 async def current(request: Request) -> dict:
     """Return the current mood snapshot."""
     engine = _get_engine(request)
-    signals = _get_signals(request)
-    result = engine.evaluate(signals)
+    result = engine.evaluate(_effective_signals(request.app.state))
     raw_mood = result.mood.name.lower()
     mood_key = _apply_hold(request.app.state, raw_mood)
     return {
@@ -212,7 +229,7 @@ async def mood_ws(websocket: WebSocket):
     try:
         while True:
             engine = _get_engine(websocket)
-            snap = engine.evaluate(getattr(websocket.app.state, "mood_signals", MoodSignals()))
+            snap = engine.evaluate(_effective_signals(websocket.app.state))
             raw_mood = snap.mood.name.lower()
             mood_key = _apply_hold(websocket.app.state, raw_mood)
             await websocket.send_json({
@@ -235,8 +252,10 @@ async def observe(request: Request, body: ObserveBody) -> dict:
         new_signals = _apply_body_to_signals(body, signals)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    # Persist updated signals
+    # Persist updated signals + stamp the time so they decay if no fresh
+    # observation follows (self-healing mood).
     request.app.state.mood_signals = new_signals
+    request.app.state.mood_signals_at = time.monotonic()
     result = engine.evaluate(new_signals)
     raw_mood = result.mood.name.lower()
     mood_key = _apply_hold(request.app.state, raw_mood)

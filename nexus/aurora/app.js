@@ -620,11 +620,47 @@ async function loadTrust() {
 
     state.trust.history = recent;
     state.trust.delta = recent.reduce((s, e) => s + (e.delta || 0), 0);
-    const anyCollapse = recent.some(e => e.new_score < 0.50);
-    state.trust.direction = anyCollapse
-      ? "collapse"
-      : state.trust.delta < -0.01 ? "falling" : "rising";
+    // Direction follows the NET 60-minute delta, not whether any single event
+    // ever dipped (a +0.86 net is "rising", never "collapse"). Collapse is
+    // reserved for a net loss where the latest events left an agent under 0.50.
+    const latestLow = recent.slice(-5).some(e => e.new_score < 0.50);
+    if (state.trust.delta > 0.01) state.trust.direction = "rising";
+    else if (state.trust.delta < -0.01) state.trust.direction = latestLow ? "collapse" : "falling";
+    else state.trust.direction = "steady";
   } catch {}
+  await loadTrustBreakdown();
+}
+
+// Trust-class breakdown for the cockpit card — counts real 60-minute activity,
+// not just permission tickets (which stay empty when everything auto-allows).
+// routine = agent routes (each routed agent gets a routine handle grant);
+// gate verdicts bucket by permission class; deny verdicts count as denied;
+// trust adjustments count as notable activity.
+async function loadTrustBreakdown() {
+  const bd = { routine: 0, notable: 0, sensitive: 0, privileged: 0, denied: 0 };
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  const inWindow = (ts) => { const t = Date.parse(ts); return !isNaN(t) && t >= cutoff; };
+  try {
+    const [aegisR, cortexR] = await Promise.all([
+      fetch("/api/chronicle?source=aegis&limit=300").then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/chronicle?source=cortex&limit=300").then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
+    for (const e of (aegisR?.entries || [])) {
+      if (!inWindow(e.timestamp)) continue;
+      const p = e.payload || {};
+      const v = String(p.verdict || "").toLowerCase();
+      const pc = String(p.permission_class || "").toLowerCase();
+      if (v === "deny") bd.denied++;
+      if (pc && bd[pc] !== undefined) bd[pc]++;
+      else if ((e.action || "").includes("trust_change")) bd.notable++;
+    }
+    for (const e of (cortexR?.entries || [])) {
+      if (!inWindow(e.timestamp)) continue;
+      const a = e.action || "";
+      if (a === "route" || a === "multi_run" || a === "multi_launch_start") bd.routine++;
+    }
+  } catch {}
+  state.trust.breakdown = bd;
 }
 
 async function loadPermissions() {
@@ -655,13 +691,6 @@ async function loadPermissions() {
         .map(formatChronicleAsPerm);
     }
   } catch {}
-  // Breakdown count
-  state.trust.breakdown = state.perms.recent.reduce((acc, e) => {
-    const k = (e.permission_class || "routine").toLowerCase();
-    acc[k] = (acc[k] || 0) + 1;
-    if (e.status === "denied") acc.denied = (acc.denied || 0) + 1;
-    return acc;
-  }, { routine: 0, notable: 0, sensitive: 0, privileged: 0, denied: 0 });
 }
 
 function formatChronicleAsPerm(e) {
@@ -1164,40 +1193,60 @@ async function renderAtlasGraph() {
   data = data || { nodes: [], edges: [] };
   const nodes = data.nodes || [];
   const edges = data.edges || [];
-  // Deterministic radial layout: subjects sit on a ring, low confidence drifts
-  // outward. No animation loop — the layout is static and reproducible.
-  const W = 720, H = 520, cx = W / 2, cy = H / 2;
+  // Sunburst layout: facts radiate from their subject hub, labels fan outward
+  // and are anchored by hemisphere so they never overlap. Confidence drives the
+  // node size + opacity; decayed facts sit slightly further out and dimmer.
+  const W = 1100, H = 760, cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * 0.33;
   const pos = {};
-  nodes.forEach((n, i) => {
-    const angle = (i / Math.max(nodes.length, 1)) * Math.PI * 2;
-    const conf = Math.max(0.05, Math.min(1, n.confidence ?? 0.5));
-    const radius = 90 + (1 - conf) * 150;   // low confidence drifts outward
-    pos[n.id] = { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, conf, n };
+  const n = Math.max(nodes.length, 1);
+  // dominant subject(s) — most facts share one subject, so we anchor the hub
+  const subjectCounts = {};
+  nodes.forEach(x => { subjectCounts[x.subject] = (subjectCounts[x.subject] || 0) + 1; });
+  const hubSubject = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  nodes.forEach((nd, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const conf = Math.max(0.05, Math.min(1, nd.confidence ?? 0.5));
+    const radius = R + (1 - conf) * 70 + (nd.decayed ? 30 : 0);
+    pos[nd.id] = { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, angle, conf, nd };
   });
+  // spokes from the hub to each fact
+  const spokeSVG = nodes.map(nd => {
+    const p = pos[nd.id];
+    return `<line class="nx-atlas-edge" x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" style="opacity:${(0.06 + 0.14 * p.conf).toFixed(3)}"/>`;
+  }).join("");
   const edgeSVG = edges.map(e => {
     const a = pos[e.src], b = pos[e.dst];
     if (!a || !b) return "";
-    return `<line class="nx-atlas-edge" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"><title>${escapeHtml(e.label || "related")}</title></line>`;
+    return `<line class="nx-atlas-edge" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" style="opacity:0.4"><title>${escapeHtml(e.label || "related")}</title></line>`;
   }).join("");
-  const nodeSVG = nodes.map(n => {
-    const p = pos[n.id];
-    const cls = n.decayed ? "nx-atlas-node decayed" : "nx-atlas-node";
-    const op = (0.25 + 0.75 * p.conf).toFixed(3);   // opacity tracks confidence
-    const label = `${n.subject} ${n.relation} ${n.object}`;
+  const nodeSVG = nodes.map(nd => {
+    const p = pos[nd.id];
+    const cls = nd.decayed ? "nx-atlas-node decayed" : "nx-atlas-node";
+    const op = (0.35 + 0.65 * p.conf).toFixed(3);
+    const right = Math.cos(p.angle) >= 0;
+    const lx = p.x + (right ? 12 : -12);
+    const anchor = right ? "start" : "end";
+    const label = `${nd.subject} ${nd.relation} ${nd.object}`;
+    const short = nd.object || label;   // labels just show the object; subject is the hub
     return `<g class="${cls}" style="opacity:${op}">
-        <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(4 + 6 * p.conf).toFixed(1)}"/>
-        <text x="${(p.x + 9).toFixed(1)}" y="${(p.y + 4).toFixed(1)}">${escapeHtml(label)}</text>
-        <title>${escapeHtml(label)} — confidence ${p.conf.toFixed(2)}${n.decayed ? " (decayed)" : ""} · ${escapeHtml(n.source_ref || "unrecorded")}</title>
+        <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(4 + 7 * p.conf).toFixed(1)}"/>
+        <text x="${lx.toFixed(1)}" y="${(p.y + 4).toFixed(1)}" text-anchor="${anchor}">${escapeHtml(short)}</text>
+        <title>${escapeHtml(label)} — confidence ${p.conf.toFixed(2)}${nd.decayed ? " (decayed)" : ""} · ${escapeHtml(nd.source_ref || "unrecorded")}</title>
       </g>`;
   }).join("");
+  const hubSVG = nodes.length ? `
+    <circle cx="${cx}" cy="${cy}" r="34" fill="url(#nx-atlas-hub)"/>
+    <text x="${cx}" y="${cy + 5}" text-anchor="middle" class="nx-atlas-hub-label">${escapeHtml(hubSubject)}</text>` : "";
   main.innerHTML = `
     <section class="nx-view nx-atlas-view">
       <header class="nx-view-head">
         <h2>Atlas — world model graph</h2>
-        <p class="nx-dim">${nodes.length} facts · ${edges.length} edges · node opacity tracks live confidence, faded nodes have decayed.</p>
+        <p class="nx-dim">${nodes.length} facts · hub = <b>${escapeHtml(hubSubject || "—")}</b> · distance + dimness track decay; size + opacity track live confidence.</p>
       </header>
-      ${nodes.length ? `<svg class="nx-atlas-canvas" viewBox="0 0 ${W} ${H}" role="img" aria-label="Atlas knowledge graph">
-        ${edgeSVG}${nodeSVG}
+      ${nodes.length ? `<svg class="nx-atlas-canvas" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atlas knowledge graph" style="width:100%;height:72vh;display:block">
+        <defs><radialGradient id="nx-atlas-hub" cx="40%" cy="35%"><stop offset="0%" stop-color="#c9b8ff"/><stop offset="100%" stop-color="#5a4ac4"/></radialGradient></defs>
+        ${spokeSVG}${edgeSVG}${nodeSVG}${hubSVG}
       </svg>` : `<div class="nx-empty">No facts recorded yet. Teach Atlas with "observe: subject | relation | object".</div>`}
     </section>`;
 }
@@ -1580,11 +1629,14 @@ async function renderMemory() {
   const main = document.getElementById("nx-main");
   main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">reading memory…</div></div>`;
   const j = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
-  const [working, episodic, atlas, timeline] = await Promise.all([
-    j("/api/memory/working"), j("/api/memory/episodic?limit=12"),
+  const [activity, episodic, atlas, timeline] = await Promise.all([
+    j("/api/chronicle?source=cortex&limit=16"), j("/api/memory/episodic?limit=12"),
     j("/api/atlas/graph?limit=16"), j("/api/replay/timeline?limit=120"),
   ]);
-  const wEntries = working && working.entries ? Object.entries(working.entries) : [];
+  // "Working" memory is empty by design (transient k/v), so the first tier shows
+  // live session activity instead — the agent turns happening right now.
+  const ACT = { route: "routed", multi_run: "ran", response: "replied", continue: "continued", multi_launch_start: "launched" };
+  const acts = (activity?.entries || []).filter(e => ACT[e.action || ""]);
   const epi = (episodic && episodic.results) ? episodic.results : [];
   const facts = (atlas && atlas.nodes) ? atlas.nodes : [];
   // Chronicle is newest-first; replay reads chronologically (oldest → newest).
@@ -1598,8 +1650,11 @@ async function renderMemory() {
       <div class="nx-mem-tier-body">${body || `<span class="nx-dim" style="font-size:11px">empty</span>`}</div>
     </div>`;
 
-  const workingBody = wEntries.slice(0, 8).map(([k, v]) =>
-    `<div class="nx-mem-row"><span class="nx-mem-k">${escapeHtml(k)}</span><span class="nx-mem-v nx-dim">${escapeHtml(truncate(String(v), 40))}</span></div>`).join("");
+  const activityBody = acts.slice(0, 8).map(e => {
+    const p = e.payload || {};
+    const who = p.module || p.target || "cortex";
+    return `<div class="nx-mem-row col"><span class="nx-mem-src">${escapeHtml(who)} · ${escapeHtml(ACT[e.action])}</span><span class="nx-mem-v nx-dim">${escapeHtml(truncate(p.response_preview || p.message_preview || "", 64))}</span></div>`;
+  }).join("");
   const epiBody = epi.slice(0, 7).map(m =>
     `<div class="nx-mem-row col"><span class="nx-mem-src">${escapeHtml(m.source || "")}</span><span class="nx-mem-v nx-dim">${escapeHtml(truncate((m.content || "").replace(/\n/g, " "), 64))}</span></div>`).join("");
   const atlasBody = facts.slice(0, 8).map(f => {
@@ -1624,7 +1679,7 @@ async function renderMemory() {
       </header>
 
       <div class="nx-mem-tiers">
-        ${tierCard("WORKING", wEntries.length, workingBody)}
+        ${tierCard("LIVE · SESSION", acts.length, activityBody)}
         ${tierCard("EPISODIC", (episodic && episodic.count) || epi.length, epiBody)}
         <div class="nx-mem-tier">
           <div class="nx-mem-tier-head"><span class="nx-mem-tier-label">ATLAS · WORLD MODEL</span><a class="nx-mem-tier-link" href="#/atlas">graph ↗</a></div>
@@ -1653,7 +1708,12 @@ async function renderMemory() {
   document.getElementById("nx-replay-step").addEventListener("click", () => { stepReplay(1); });
   document.getElementById("nx-replay-scrub").addEventListener("input", (e) => { pauseReplay(); selectReplay(parseInt(e.target.value, 10)); });
   renderReplayList();
-  selectReplay(_replayState.idx);
+  // Seed the detail panel WITHOUT scrolling the page (scrollIntoView on the last
+  // row was yanking the whole view down to the replay section on open).
+  selectReplay(_replayState.idx, false);
+  // Always open at the top of the page.
+  main.scrollTop = 0;
+  requestAnimationFrame(() => { main.scrollTop = 0; });
 }
 
 function renderReplayList() {
@@ -1673,18 +1733,19 @@ function renderReplayList() {
     r.addEventListener("click", () => { pauseReplay(); selectReplay(parseInt(r.dataset.i, 10)); }));
 }
 
-function selectReplay(i) {
+function selectReplay(i, scroll = true) {
   const evs = _replayState.events;
   if (!evs.length) return;
   _replayState.idx = Math.max(0, Math.min(evs.length - 1, i));
   const scrub = document.getElementById("nx-replay-scrub");
   if (scrub) scrub.value = _replayState.idx;
-  // highlight active row + scroll into view
+  // highlight active row; only scroll the row into view on user interaction
+  // (scroll=false on initial render so the page doesn't jump to the replay).
   const list = document.getElementById("nx-replay-list");
   if (list) {
     list.querySelectorAll(".nx-replay-row").forEach((r, idx) => r.classList.toggle("active", idx === _replayState.idx));
     const active = list.querySelector(".nx-replay-row.active");
-    if (active) active.scrollIntoView({ block: "nearest" });
+    if (active && scroll) active.scrollIntoView({ block: "nearest" });
   }
   const e = evs[_replayState.idx];
   const v = replayEventView(e);
@@ -4910,24 +4971,7 @@ function openMoodPicker() {
       const mood = btn.dataset.mood;
       state.mood.override = mood;   // <-- key fix: WS no longer overrides
       state.mood.mood = mood;
-      applyMood(mood);
-      // Best-effort: nudge the engine so a future Auto-mode sees aligned signals
-      try {
-        const map = {
-          calm_focus:    { kernel_cpu: 0.2, engram_busy_ratio: 0.2 },
-          deep_flow:     { kernel_cpu: 0.5, engram_busy_ratio: 0.7 },
-          routing:       { kernel_cpu: 0.8, engram_busy_ratio: 0.6 },
-          deliberating:  { engram_busy_ratio: 0.4, trust_sliding: 0.0 },
-          creative:      { kernel_cpu: 0.4, engram_busy_ratio: 0.5 },
-          reflective:    { kernel_cpu: 0.15, engram_busy_ratio: 0.3 },
-          watchful:      { trust_sliding: -0.05 },
-          alert:         { trust_sliding: -0.30 },
-        };
-        await fetch("/api/mood/observe", {
-          method: "POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify(map[mood] || {}),
-        });
-      } catch {}
+      applyMood(mood);              // applies instantly + holds (WS is gated on override)
       refreshActive();
       renderMoodCard();
     });
@@ -5399,6 +5443,29 @@ function openHistoryPopover(anchorEl, kind, onPick) {
 // Sees current source + last run output + full prior conversation on every turn.
 const _workshopThread = { messages: [], lastOutput: null };
 
+// Render markup/style languages in a sandboxed iframe (they don't "run").
+function renderWorkshopPreview(language, code, outEl) {
+  const demo = `<h1>Heading</h1><p>A paragraph with <a href="#">a link</a>, <strong>bold</strong> and <em>italic</em>.</p>
+    <button>Button</button> <input placeholder="input"/>
+    <ul><li>list item one</li><li>list item two</li></ul>`;
+  let doc;
+  if (language === "html") {
+    doc = code;
+  } else if (language === "css") {
+    doc = `<!doctype html><html><head><meta charset="utf-8"><style>${code}</style></head><body>${demo}</body></html>`;
+  } else { // markdown
+    doc = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:-apple-system,system-ui,sans-serif;color:#1a1620;background:#fff;padding:22px;line-height:1.6;max-width:760px}pre,code{font-family:ui-monospace,monospace;background:#f0eef5;padding:2px 5px;border-radius:4px}pre{padding:12px;overflow:auto}</style></head><body>${renderMarkdown(code)}</body></html>`;
+  }
+  outEl.innerHTML = `<div class="nx-workshop-stats"><span class="ok">preview</span><span>${escapeHtml(language)}</span><span class="nx-dim">rendered in a sandboxed frame</span></div>`;
+  const frame = document.createElement("iframe");
+  frame.className = "nx-workshop-preview";
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.setAttribute("title", `${language} preview`);
+  frame.style.cssText = "width:100%;height:360px;border:1px solid var(--nx-hairline);border-radius:10px;background:#fff;margin-top:8px";
+  frame.srcdoc = doc;
+  outEl.appendChild(frame);
+}
+
 async function renderWorkshop() {
   const main = document.getElementById("nx-main");
   // Discover available runtimes from the server
@@ -5478,6 +5545,8 @@ async function renderWorkshop() {
     const language = (langEl.value || "").trim().toLowerCase();
     state._workshopCode = code;
     state._workshopLang = language;
+    // Markup/style languages render in a sandboxed iframe instead of running.
+    if (langs[language]?.preview) { renderWorkshopPreview(language, code, outEl); return; }
     // The language field is a free-text search box; guide typos before we
     // bother the sandbox.
     if (!available.includes(language)) {

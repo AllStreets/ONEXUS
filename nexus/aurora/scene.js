@@ -129,8 +129,11 @@ export class KernelScene {
   _layout() {
     const w = this.W, h = this.H;
     const strataH = this.compact ? 0 : Math.max(64, h * 0.18);
-    this.field = { top: this.compact ? 8 : 18, bottom: h - strataH - (this.compact ? 8 : 14) };
-    const cy = this.field.top + (this.field.bottom - this.field.top) * (this.compact ? 0.5 : 0.46);
+    // Non-compact (full Watch view) reserves a top band so the constellation
+    // never rides up under the "Watch it think" title block.
+    const topBand = this.compact ? 8 : 150;
+    this.field = { top: topBand, bottom: h - strataH - (this.compact ? 8 : 14) };
+    const cy = this.field.top + (this.field.bottom - this.field.top) * (this.compact ? 0.5 : 0.5);
     this.core = this.core || { pulse: 0 };
     this.core.x = w * 0.5; this.core.y = cy;
     const rx = w * (this.compact ? 0.36 : 0.34);

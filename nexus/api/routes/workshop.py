@@ -54,7 +54,25 @@ _RUNTIMES = {
     "dart":        {"exec": ["dart", "run", "-"],     "ext": ".dart","timeout": 10},
     "swift":       {"exec": ["swift", "-"],           "ext": ".swift","timeout": 12},
     "go":          {"exec": ["go", "run", "-"],       "ext": ".go",  "timeout": 12},
+    # more inline-executable runtimes
+    "applescript": {"exec": ["osascript", "-e"],      "ext": ".applescript", "timeout": 8},
+    "sqlite":      {"exec": ["sqlite3", ":memory:"],  "ext": ".sql", "timeout": 6},
+    "nushell":     {"exec": ["nu", "-c"],             "ext": ".nu",  "timeout": 8},
+    "crystal":     {"exec": ["crystal", "eval"],      "ext": ".cr",  "timeout": 12},
+    "racket":      {"exec": ["racket", "-e"],         "ext": ".rkt", "timeout": 10},
+    "guile":       {"exec": ["guile", "-c"],          "ext": ".scm", "timeout": 8},
+    "scheme":      {"exec": ["guile", "-c"],          "ext": ".scm", "timeout": 8},
+    "commonlisp":  {"exec": ["sbcl", "--non-interactive", "--eval"], "ext": ".lisp", "timeout": 10},
+    "haskell":     {"exec": ["ghc", "-e"],            "ext": ".hs",  "timeout": 12},
+    "fennel":      {"exec": ["fennel", "-e"],         "ext": ".fnl", "timeout": 8},
+    "janet":       {"exec": ["janet", "-e"],          "ext": ".janet","timeout": 8},
+    "coffeescript":{"exec": ["coffee", "-e"],         "ext": ".coffee","timeout": 8},
 }
+
+# Markup/style "languages" — these render rather than execute, so the Workshop
+# previews them client-side in a sandboxed iframe instead of calling /run.
+# Reported by /languages so they show in the picker (always "installed").
+_PREVIEW_LANGS = {"html", "css", "markdown"}
 
 
 class RunRequest(BaseModel):
@@ -82,6 +100,9 @@ async def languages() -> dict:
         bin_name = cfg["exec"][0]
         installed = bin_name == sys.executable or shutil.which(bin_name) is not None
         out[name] = {"bin": bin_name, "timeout_s": cfg["timeout"], "installed": installed}
+    # Preview languages render in the browser — always available, no runtime.
+    for name in sorted(_PREVIEW_LANGS):
+        out[name] = {"bin": "browser", "timeout_s": 0, "installed": True, "preview": True}
     return {"languages": out}
 
 

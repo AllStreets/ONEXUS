@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 use notify::RecursiveMode;
 use notify_debouncer_mini::new_debouncer;
-use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 
 const HOST: &str = "127.0.0.1";
@@ -514,11 +514,24 @@ pub fn run() {
                 .separator()
                 .item(&quit_item)
                 .build()?;
+            // Edit menu — the standard cut/copy/paste/select-all roles. Without
+            // these, macOS never binds ⌘C/⌘V/⌘X to the WebView's text inputs,
+            // so copy/paste appears "broken" everywhere in the app.
+            let edit_menu = SubmenuBuilder::new(app, "Edit")
+                .item(&PredefinedMenuItem::undo(app, Some("Undo"))?)
+                .item(&PredefinedMenuItem::redo(app, Some("Redo"))?)
+                .separator()
+                .item(&PredefinedMenuItem::cut(app, Some("Cut"))?)
+                .item(&PredefinedMenuItem::copy(app, Some("Copy"))?)
+                .item(&PredefinedMenuItem::paste(app, Some("Paste"))?)
+                .item(&PredefinedMenuItem::select_all(app, Some("Select All"))?)
+                .build()?;
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&reload_aurora_item)
                 .build()?;
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
+                .item(&edit_menu)
                 .item(&view_menu)
                 .build()?;
             app.set_menu(menu)?;

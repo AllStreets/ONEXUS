@@ -4,11 +4,25 @@ from __future__ import annotations
 from nexus.modules.sigil import DETECTION_RULES, SigilRuleEngine
 
 
-def test_rule_table_covers_all_five_spec_rules():
-    assert set(DETECTION_RULES) == {
+def test_rule_table_covers_spec_rules():
+    # The five security detections, plus the informational swarm_burst radar ping.
+    assert {
         "trust_collapse", "denied_burst", "runaway_loop",
         "egress_anomaly", "permission_escalation",
-    }
+    } <= set(DETECTION_RULES)
+    # swarm_burst is informational — never high-stakes, so it never trips the veil.
+    assert DETECTION_RULES["swarm_burst"].high_stakes is False
+
+
+def test_swarm_burst_fires_on_route_fanout():
+    eng = SigilRuleEngine()
+    dets = []
+    for i in range(4):
+        dets += eng.observe({"kind": "route", "module": f"agent{i}",
+                             "preview": f"task {i}", "ts": 1000.0 + i})
+    assert any(d.rule == "swarm_burst" for d in dets)
+    burst = next(d for d in dets if d.rule == "swarm_burst")
+    assert burst.high_stakes is False
 
 
 def test_trust_collapse_fires_on_full_tier_drop():

@@ -35,9 +35,48 @@ from pydantic import BaseModel, Field
 
 from nexus.api.capabilities import ground_persona
 from nexus.kernel.aegis import PermissionDenied
+from nexus.kernel.pulse import Message
 
 
 router = APIRouter(prefix="/api/cortex", tags=["cortex"])
+
+
+async def _emit_route(kernel, module_name: str, message: str) -> None:
+    """Publish a kernel.route Pulse event for a multi-launch dispatch so the live
+    Kernel Scene animates a bead to this agent — the single-message path does this
+    in cortex.process(), but multi-launch ran silent before, leaving the scene
+    looking stagnant during a cortex launch."""
+    try:
+        await kernel.pulse.publish(Message(
+            topic="kernel.route", source="cortex",
+            payload={
+                "target": module_name,
+                "trust_tier": kernel.aegis.get_tier(module_name),
+                "message_preview": message[:100],
+                "signals": [], "via": "multi_launch",
+            },
+        ))
+    except Exception:
+        pass
+
+
+async def _emit_run_memory(kernel, module_name: str, message: str, response: str) -> None:
+    """Persist a multi-launch turn to episodic memory and stream engram.write +
+    cortex.response on Pulse, mirroring cortex.process() so memory strata fill and
+    the cockpit/scene stay live during a launch."""
+    try:
+        kernel.engram.episodic.store(f"Nexus ({module_name}): {response}", source=f"module.{module_name}")
+        await kernel.pulse.publish(Message(
+            topic="engram.write", source="engram",
+            payload={"tier": "episodic", "source": f"module.{module_name}",
+                     "preview": (response or "").strip().replace("\n", " ")[:80]},
+        ))
+        await kernel.pulse.publish(Message(
+            topic="cortex.response", source="cortex",
+            payload={"module": module_name, "message": message, "response": response},
+        ))
+    except Exception:
+        pass
 
 
 # Each agent has a narrow trigger matcher (Oracle scans for threats, Specter
@@ -488,10 +527,29 @@ async def launch(body: LaunchBody, request: Request) -> dict:
         "mode": "explicit" if body.agents else ("top_k" if body.top_k else "single"),
     })
 
+    # Light the live scene: store the user's prompt once, then fire a routing
+    # bead to every agent in the swarm before they run.
+    try:
+        kernel.engram.episodic.store(f"User: {body.message}", source="user_input")
+        await kernel.pulse.publish(Message(
+            topic="engram.write", source="engram",
+            payload={"tier": "episodic", "source": "user_input",
+                     "preview": body.message.strip().replace("\n", " ")[:80]},
+        ))
+    except Exception:
+        pass
+    await asyncio.gather(*(_emit_route(kernel, slug, body.message) for slug in targets))
+
     runs = await asyncio.gather(*(
         _run_one(kernel, cortex, catalog, slug, body.message, app_state=request.app.state)
         for slug in targets
     ))
+
+    # Persist each agent's reply to episodic memory + stream engram.write so the
+    # memory strata and cockpit reflect the launch.
+    for r in runs:
+        if r.get("success") and r.get("response"):
+            await _emit_run_memory(kernel, r["module"], body.message, r["response"])
 
     succeeded = sum(1 for r in runs if r["success"])
 
