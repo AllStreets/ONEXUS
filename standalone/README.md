@@ -20,15 +20,28 @@ standalone/
 
 ## What it does
 
-1. On launch, the binary checks whether port `8000` is already in use.
-2. If not, it spawns `python -m nexus.api.server` from the project root.
-3. It polls the port until the FastAPI server accepts connections (max 20s).
-4. It opens a native window pointing at `http://127.0.0.1:8000/aurora`.
-5. On window close, it kills the child process so the port frees up cleanly.
+1. On launch, it probes ports `8901–8909`. If one already hosts an ONEXUS
+   server (verified via `/api/system/status`), it **attaches** to it; otherwise
+   it spawns a fresh server on the first free port. It never glues the WebView
+   onto a foreign service.
+2. To start the server it tries, in order: `.venv/bin/onexus serve`, a global
+   `onexus serve`, then `python -m nexus.cli serve`. The project root is found
+   via `$ONEXUS_PROJECT_ROOT`, a cached path, or by walking up from the binary
+   for `nexus/__init__.py` — so `/Applications/ONEXUS.app` finds your code.
+3. It waits (max 20s) for the chosen port to accept a TCP connection.
+4. It opens a native dark window at `http://127.0.0.1:<port>/aurora` — the host
+   OS owns the traffic lights (the title bar is an overlay with the title
+   hidden), so Aurora fills the whole surface.
+5. It watches the project's `nexus/` tree: editing Aurora (html/css/js) hot-
+   reloads the WebView; editing a `.py` restarts the backend. The native
+   **File → Reload Backend** (⌘⇧R) and **View → Reload Aurora** (⌘R) menu items
+   do the same on demand.
+6. On window close or quit, it kills any server it spawned so the port frees.
 
-The standalone binary is **not a re-implementation** — it embeds the exact same
-HTML/CSS/JS the webapp serves. Same Aurora, same mood engine, same Aegis
-prompts. The only difference is that the host OS owns the window chrome.
+The standalone binary is **not a re-implementation** — it serves the exact same
+HTML/CSS/JS the webapp does. Same Aurora, same live kernel scene, same mood
+engine, same Aegis prompts. The only difference is that the host OS owns the
+window chrome, making it a real, double-clickable, sovereign appliance.
 
 ## Build (one-time setup)
 
@@ -61,9 +74,10 @@ WebKitGTK on Linux) instead of bundling Chromium.
 
 ## Distribution notes
 
-- The `.app` expects to find a Python with the ONEXUS package installed and
-  importable as `nexus.api.server`. Either ship that as an `onexus`
-  Homebrew formula, or document `pip install onexus` as a prerequisite.
+- The `.app` expects to find a runnable ONEXUS server — either a project
+  checkout with `.venv/bin/onexus`, a global `onexus` on `PATH`, or a Python
+  that can run `python -m nexus.cli serve`. Ship that as an `onexus` Homebrew
+  formula, or document `pip install onexus` as a prerequisite.
 - For a single-binary truly-standalone build, pair this with
   [PyOxidizer](https://pyoxidizer.readthedocs.io/) or
   [Python.framework embedding](https://docs.python.org/3/extending/embedding.html)

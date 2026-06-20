@@ -24,7 +24,8 @@
         "transparent": false,
         "decorations": true,
         "shadow": true,
-        "center": true
+        "center": true,
+        "theme": "Dark"
       }
     ],
     "security": {
