@@ -84,3 +84,15 @@ class TestTrustEndpoints:
         resp = await client.get("/api/trust/council")
         data = resp.json()
         assert len(data["history"]) >= 2
+
+    async def test_revoke_trust_drops_to_zero_and_collapses_grants(self, client, kernel):
+        """POST /api/trust/{module}/revoke drops trust to 0.0 and collapses grants."""
+        kernel.aegis.set_trust("council", 0.85)
+        resp = await client.post("/api/trust/council/revoke")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["module"] == "council"
+        assert data["revoked"] is True
+        assert data["trust"] == 0.0
+        # The revoke is durable — a subsequent read confirms 0.0.
+        assert kernel.aegis.get_trust("council") == 0.0

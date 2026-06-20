@@ -4000,3 +4000,74 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-swarm-card-count {
   font-family: var(--nx-font-mono); font-size: 10px; opacity: 0.5; margin-left: 6px;
 }
+
+/* ── Trust sheet (Deep Trust UI) ───────────────────────────────────────────
+ * Live trust meter, ONEXUS benchmark pedigree, per-agent Chronicle history,
+ * and the revoke control. Surfaces on built-in discs + catalog cards. */
+.nx-cap-section-trust, .nx-cap-section-pedigree, .nx-cap-section-history {
+  background: rgba(232, 222, 252, 0.03); border-radius: 10px;
+  padding: 14px 16px; margin: 14px 0 0;
+}
+.nx-trust-meter-top { display: flex; align-items: baseline; gap: 10px; }
+.nx-trust-meter-score { font-family: var(--nx-font-display); font-size: 26px; font-weight: 600; }
+.nx-trust-meter-tier {
+  font-family: var(--nx-font-mono); font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--nx-text-dim);
+}
+.nx-trust-meter-track {
+  position: relative; height: 7px; margin: 10px 0 7px;
+  background: rgba(255,255,255,0.06); border-radius: 999px; overflow: visible;
+}
+.nx-trust-meter-fill { height: 100%; border-radius: 999px; transition: width 0.5s var(--nx-ease, cubic-bezier(0.16,1,0.3,1)); }
+.nx-trust-meter-floor {
+  position: absolute; top: -3px; width: 2px; height: 13px;
+  background: rgba(255,255,255,0.55); border-radius: 2px; transform: translateX(-1px);
+}
+.nx-trust-meter-foot { font-size: 10.5px; }
+
+/* pedigree */
+.nx-pedigree-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.nx-pedigree-cell {
+  background: rgba(255,255,255,0.025); border: 1px solid var(--nx-hairline);
+  border-radius: 9px; padding: 10px 12px; text-decoration: none; display: block;
+}
+.nx-pedigree-cell.link:hover { border-color: rgba(255,255,255,0.22); }
+.nx-pedigree-val { font-family: var(--nx-font-display); font-size: 19px; color: var(--nx-text-high); font-weight: 500; }
+.nx-pedigree-lbl { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3px; }
+
+/* per-agent chronicle history */
+.nx-cap-history { display: flex; flex-direction: column; gap: 0; max-height: 220px; overflow-y: auto; }
+.nx-cap-hrow {
+  display: flex; align-items: baseline; gap: 8px; padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 11.5px;
+}
+.nx-cap-htag {
+  flex: 0 0 auto; font-family: var(--nx-font-mono); font-size: 8.5px;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px;
+}
+.nx-cap-htag.gate  { background: rgba(154,255,182,0.12); color: #b8f4cc; }
+.nx-cap-htag.deny  { background: rgba(248,100,60,0.16);  color: #ff9e88; }
+.nx-cap-htag.trust { background: rgba(248,196,96,0.12);  color: #f8d480; }
+.nx-cap-hbody { flex: 1; min-width: 0; color: var(--nx-text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-cap-htime { flex: 0 0 auto; font-family: var(--nx-font-mono); font-size: 10px; }
+
+/* actions */
+.nx-cap-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; align-items: center; }
+.nx-cap-watch, .nx-cap-revoke {
+  font: inherit; font-size: 12.5px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  background: rgba(232,222,252,0.05); border: 1px solid rgba(232,222,252,0.12); color: var(--nx-text-mid);
+  transition: background var(--d-fast), border-color var(--d-fast), color var(--d-fast);
+}
+.nx-cap-watch:hover { background: rgba(232,222,252,0.1); color: var(--nx-text-high); }
+.nx-cap-revoke { margin-left: auto; color: #ffb0a0; border-color: rgba(248,100,60,0.28); }
+.nx-cap-revoke:hover { background: rgba(248,100,60,0.12); border-color: rgba(248,100,60,0.5); }
+.nx-cap-revoke.armed { background: rgba(248,100,60,0.2); color: #fff; border-color: #f8643c; }
+.nx-cap-revoke:disabled { opacity: 0.6; cursor: progress; }
+
+/* catalog card trust button */
+.trust-btn {
+  font: inherit; font-size: 11.5px; padding: 5px 12px; border-radius: 8px; cursor: pointer;
+  background: rgba(232,222,252,0.05); border: 1px solid rgba(232,222,252,0.12); color: var(--nx-text-mid);
+  transition: background var(--d-fast), border-color var(--d-fast);
+}
+.trust-btn:hover { background: rgba(232,222,252,0.1); border-color: rgba(232,222,252,0.24); }

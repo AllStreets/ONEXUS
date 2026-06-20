@@ -64,6 +64,28 @@ async def get_trust_detail(module: str, request: Request) -> TrustDetailResponse
     )
 
 
+@router.post("/{module}/revoke")
+async def revoke_trust(module: str, request: Request) -> dict:
+    """Hard-revoke a module's trust — drop it to 0.0 immediately (mirrors the
+    `nexus revoke` CLI). This is the user-facing "I no longer trust this agent"
+    control surfaced in the trust sheet: below 0.50 Aegis collapses every grant,
+    so a revoked agent must re-earn trust before any Notable capability auto-grants
+    again. The decision is written to Chronicle and broadcast on Pulse, so the
+    revoke shows up live in the kernel scene and audit trail."""
+    kernel = _get_kernel(request)
+    policies = {p["module"]: p for p in kernel.aegis.list_policies()}
+    before = policies.get(module, {}).get("trust_score")
+    # set_trust(0.0) — unlike aegis.revoke() this also runs the trust-collapse
+    # path that deletes every standing grant, which is what "revoke trust" means
+    # to a user. Emits aegis.trust_change on Pulse + logs to Chronicle.
+    kernel.aegis.set_trust(module, 0.0)
+    after = kernel.aegis.get_trust(module)
+    kernel.chronicle.log("api", "trust_revoked", {
+        "module": module, "trust_before": before, "trust_after": after,
+    })
+    return {"module": module, "trust": after, "revoked": True}
+
+
 @router.post("/{module}/adjust", response_model=TrustAdjustResponse)
 async def adjust_trust(
     module: str, body: TrustAdjustRequest, request: Request

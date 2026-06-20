@@ -1590,11 +1590,35 @@ function renderAgentDiscs() {
   });
 }
 
-function openCapabilitySheet(slug) {
+// The trust sheet — one surface for any agent (built-in OR catalog). Renders
+// the static identity immediately, then hydrates live Aegis trust, ONEXUS
+// benchmark pedigree, and the agent's own slice of the Chronicle audit trail.
+// "Safety is a feature you can see" — VISION-AGENTIC-OS §4.
+function trustMeterHTML(score, floor) {
+  const pct = Math.round(Math.max(0, Math.min(1, score)) * 100);
+  const tier = tierForTrust(score);
+  const floorPct = floor != null ? Math.round(floor * 100) : null;
+  const col = score >= 0.75 ? "var(--nx-routine)" : score >= 0.5 ? "var(--nx-notable)" : score >= 0.25 ? "var(--nx-sensitive)" : "var(--nx-privileged)";
+  return `
+    <div class="nx-trust-meter">
+      <div class="nx-trust-meter-top">
+        <span class="nx-trust-meter-score" style="color:${col}">${score.toFixed(2)}</span>
+        <span class="nx-trust-meter-tier">${escapeHtml(tier)}</span>
+      </div>
+      <div class="nx-trust-meter-track">
+        <div class="nx-trust-meter-fill" style="width:${pct}%;background:${col}"></div>
+        ${floorPct != null ? `<div class="nx-trust-meter-floor" style="left:${floorPct}%" title="trust floor ${floor.toFixed(2)}"></div>` : ""}
+      </div>
+      <div class="nx-trust-meter-foot nx-dim">${floorPct != null ? `floor ${floor.toFixed(2)} · ` : ""}below 0.50, Aegis collapses every grant</div>
+    </div>`;
+}
+
+async function openCapabilitySheet(slug) {
   const caps = BUILTIN_CAPABILITIES[slug];
-  if (!caps) return;
+  const isBuiltin = !!caps;
   const root = document.getElementById("nx-overlay-root");
   const gradient = GRADIENTS[slug] || ["#a87af5", "#5a4ac4"];
+  const floorSeed = isBuiltin ? caps.trust_floor : null;
   root.innerHTML = `
     <div class="nx-cap-overlay" id="nx-cap-overlay" role="dialog" aria-modal="true">
       <div class="nx-cap-sheet" style="--cap-grad-a:${gradient[0]};--cap-grad-b:${gradient[1]}">
@@ -1602,26 +1626,36 @@ function openCapabilitySheet(slug) {
         <div class="nx-cap-head">
           ${agentDisc(slug, { size: 64 })}
           <div>
-            <div class="nx-cap-eyebrow">BUILT-IN AGENT</div>
+            <div class="nx-cap-eyebrow">${isBuiltin ? "BUILT-IN AGENT" : "CATALOG AGENT"}</div>
             <div class="nx-cap-name">${escapeHtml(slug)}</div>
-            <div class="nx-cap-tag">${escapeHtml(caps.tagline)}</div>
+            <div class="nx-cap-tag" id="nx-cap-tag">${escapeHtml(isBuiltin ? caps.tagline : "loading…")}</div>
           </div>
         </div>
-        <p class="nx-cap-desc">${escapeHtml(caps.description)}</p>
+        ${isBuiltin ? `<p class="nx-cap-desc">${escapeHtml(caps.description)}</p>` : `<p class="nx-cap-desc" id="nx-cap-desc"></p>`}
+
+        <div class="nx-cap-section nx-cap-section-trust">
+          <div class="nx-cap-label">LIVE TRUST</div>
+          <div id="nx-cap-trust">${trustMeterHTML(floorSeed != null ? floorSeed : 0.5, floorSeed)}</div>
+        </div>
+
+        ${!isBuiltin ? `
+        <div class="nx-cap-section nx-cap-section-pedigree">
+          <div class="nx-cap-label">BENCHMARK PEDIGREE · ONEXUS</div>
+          <div id="nx-cap-pedigree" class="nx-pedigree-grid"><span class="nx-dim" style="font-size:12px">loading pedigree…</span></div>
+        </div>` : ""}
 
         <div class="nx-cap-grid">
+          ${isBuiltin ? `
           <div class="nx-cap-section">
             <div class="nx-cap-label">INTENTS</div>
             <div class="nx-cap-chips">${caps.intents.map(i => `<span class="cap-chip">${escapeHtml(i)}</span>`).join("")}</div>
           </div>
-
           <div class="nx-cap-section">
             <div class="nx-cap-label">PERMISSION CLASSES</div>
             <div class="nx-cap-chips">${caps.permission_classes.map(c => `
               <span class="cap-chip class-${c.toLowerCase()}">${escapeHtml(c)}</span>
             `).join("")}</div>
           </div>
-
           <div class="nx-cap-section nx-cap-section-tools">
             <div class="nx-cap-label">TOOLS DECLARED</div>
             <div class="nx-cap-tools">
@@ -1634,20 +1668,21 @@ function openCapabilitySheet(slug) {
               `).join("")}
             </div>
           </div>
-
-          <div class="nx-cap-section">
-            <div class="nx-cap-label">TRUST FLOOR</div>
-            <div class="nx-cap-tf">${caps.trust_floor.toFixed(2)} <span style="color:#6b6080;font-size:11px;letter-spacing:0.10em">/ 1.00</span></div>
-          </div>
-
           <div class="nx-cap-section">
             <div class="nx-cap-label">NETWORK</div>
             <div class="nx-cap-net ${caps.network ? 'on' : 'off'}">${caps.network ? "REACHES NETWORK" : "LOCAL-ONLY"}</div>
-          </div>
+          </div>` : ""}
+        </div>
+
+        <div class="nx-cap-section nx-cap-section-history">
+          <div class="nx-cap-label">CHRONICLE · recent decisions for this agent</div>
+          <div id="nx-cap-history" class="nx-cap-history"><span class="nx-dim" style="font-size:12px">reading the audit log…</span></div>
         </div>
 
         <div class="nx-cap-actions">
           <button class="nx-cap-mention" data-slug="${slug}">@${slug} — start a message</button>
+          <button class="nx-cap-watch" id="nx-cap-watch">watch live ↗</button>
+          <button class="nx-cap-revoke" id="nx-cap-revoke" title="Drop trust to 0.00 and collapse every standing grant">revoke trust</button>
         </div>
       </div>
     </div>
@@ -1659,14 +1694,91 @@ function openCapabilitySheet(slug) {
   document.querySelector(".nx-cap-mention").addEventListener("click", () => {
     closeOverlay();
     if (!state.active) return;
-    if (!location.hash.startsWith("#/conversation/")) {
-      location.hash = `#/conversation/${state.active}`;
-    }
+    if (!location.hash.startsWith("#/conversation/")) location.hash = `#/conversation/${state.active}`;
     setTimeout(() => {
       const ci = document.getElementById("nx-composer-input");
       if (ci) { ci.value = `@${slug} `; ci.focus(); }
     }, 200);
   });
+  document.getElementById("nx-cap-watch").addEventListener("click", () => { closeOverlay(); location.hash = "#/watch"; });
+  document.getElementById("nx-cap-revoke").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    if (btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = "click again to confirm revoke"; btn.classList.add("armed"); return; }
+    btn.disabled = true; btn.textContent = "revoking…";
+    try {
+      await fetch(`/api/trust/${encodeURIComponent(slug)}/revoke`, { method: "POST" });
+      await hydrateTrustSheet(slug, floorSeed);
+      btn.classList.remove("armed"); btn.dataset.armed = "0";
+    } catch {}
+    btn.disabled = false; btn.textContent = "revoke trust";
+  });
+  // async hydrate the live sections
+  hydrateTrustSheet(slug, floorSeed);
+  if (!isBuiltin) hydrateCatalogPedigree(slug);
+}
+
+async function hydrateTrustSheet(slug, floorSeed) {
+  // live trust meter
+  try {
+    const r = await fetch(`/api/trust/${encodeURIComponent(slug)}`);
+    const el = document.getElementById("nx-cap-trust");
+    if (el) {
+      if (r.ok) {
+        const d = await r.json();
+        el.innerHTML = trustMeterHTML(typeof d.trust === "number" ? d.trust : (floorSeed ?? 0.5), floorSeed);
+      } else {
+        el.innerHTML = trustMeterHTML(floorSeed ?? 0.0, floorSeed) +
+          `<div class="nx-dim" style="font-size:11px;margin-top:6px">no live trust record yet — shown at its trust floor until first run.</div>`;
+      }
+    }
+  } catch {}
+  // chronicle history for this agent (gate verdicts + trust changes)
+  try {
+    const r = await fetch(`/api/chronicle?source=aegis&limit=120`);
+    const el = document.getElementById("nx-cap-history");
+    if (el && r.ok) {
+      const body = await r.json();
+      const rows = (body.entries || []).filter(e => {
+        const p = e.payload || {};
+        return p.module === slug || p.agent === slug;
+      }).slice(0, 10);
+      if (!rows.length) { el.innerHTML = `<span class="nx-dim" style="font-size:12px">no recorded decisions for this agent yet.</span>`; return; }
+      el.innerHTML = rows.map(e => {
+        const p = e.payload || {};
+        const t = formatTime(e.timestamp);
+        if (typeof p.new_score === "number") {
+          const dir = (p.new_score >= (p.old_score ?? p.new_score)) ? "↑" : "↓";
+          return `<div class="nx-cap-hrow"><span class="nx-cap-htag trust">trust</span><span class="nx-cap-hbody">${dir} ${p.new_score.toFixed(2)} <span class="nx-dim">${escapeHtml(p.reason || "")}</span></span><span class="nx-cap-htime nx-dim">${escapeHtml(t)}</span></div>`;
+        }
+        const v = String(p.verdict || e.action || "").toLowerCase();
+        return `<div class="nx-cap-hrow"><span class="nx-cap-htag ${v === "deny" ? "deny" : "gate"}">${escapeHtml(v || "event")}</span><span class="nx-cap-hbody">${escapeHtml(truncate(p.capability || e.action || "", 40))}</span><span class="nx-cap-htime nx-dim">${escapeHtml(t)}</span></div>`;
+      }).join("");
+    }
+  } catch {}
+}
+
+async function hydrateCatalogPedigree(slug) {
+  try {
+    const r = await fetch(`/api/agents/${encodeURIComponent(slug)}`);
+    if (!r.ok) return;
+    const a = await r.json();
+    const tagEl = document.getElementById("nx-cap-tag");
+    if (tagEl) tagEl.textContent = a.tagline || "—";
+    const descEl = document.getElementById("nx-cap-desc");
+    if (descEl) descEl.textContent = (a.category ? a.category.replace(/-/g, " ") + " · " : "") + (a.runnable ? "runnable via MCP adapter" : "manifest-only");
+    const el = document.getElementById("nx-cap-pedigree");
+    if (!el) return;
+    const fmt = (n) => n == null ? "—" : (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n));
+    const stat = (label, val, sub = "") => `<div class="nx-pedigree-cell"><div class="nx-pedigree-val">${val}</div><div class="nx-pedigree-lbl nx-dim">${label}${sub ? ` <span class="nx-softer">${sub}</span>` : ""}</div></div>`;
+    el.innerHTML =
+      stat("benchmark score", a.composite_score != null ? a.composite_score.toFixed(3) : "—") +
+      stat("rank in category", a.rank_in_category != null ? "#" + a.rank_in_category : "—", a.category ? a.category.replace(/-/g, " ") : "") +
+      stat("github stars", fmt(a.stars)) +
+      stat("downloads · 30d", fmt(a.downloads_30d)) +
+      stat("trust floor", a.trust_floor != null ? a.trust_floor.toFixed(2) : "—") +
+      stat("license", `<span style="font-size:13px">${escapeHtml(a.license || "—")}</span>`) +
+      (a.source_github ? `<a class="nx-pedigree-cell link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener"><div class="nx-pedigree-val">↗</div><div class="nx-pedigree-lbl nx-dim">source · github</div></a>` : "");
+  } catch {}
 }
 
 // ── Main view: conversation ────────────────────────────────────────────────
@@ -2792,6 +2904,10 @@ async function renderCatalog() {
     // Wire card actions
     main.querySelectorAll(".nx-spatial-card[data-slug]").forEach(card => {
       const slug = card.dataset.slug;
+      card.querySelector(".trust-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCapabilitySheet(slug);
+      });
       card.querySelector(".launch-btn")?.addEventListener("click", async (e) => {
         e.stopPropagation();
         const btn = e.currentTarget;
@@ -2828,6 +2944,7 @@ function renderCatalogCard(a) {
       </div>
       <div class="nx-card-actions">
         ${runnable ? `<button class="launch-btn" type="button">Launch</button>` : ""}
+        <button class="trust-btn" type="button">trust</button>
         ${a.source_github ? `<a class="src-link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener noreferrer">source ↗</a>` : ""}
       </div>
     </div>
