@@ -73,6 +73,7 @@ async function boot() {
   startClock();
   attachShellHandlers();
   attachKeybinds();
+  installClipboardShortcuts();
   await loadAll();
   renderSidebar();
   renderCockpitRail();
@@ -6409,6 +6410,69 @@ async function pollTrustEvents() {
 }
 
 // ── Keybinds ──────────────────────────────────────────────────────────────
+// ── Clipboard shortcuts (⌘/Ctrl + C / X / V) ────────────────────────────────
+// The Tauri WebView ships no Edit menu, so macOS never binds ⌘C/⌘V/⌘X to text
+// inputs there. This capture-phase handler performs copy/cut/paste itself via
+// the async Clipboard API, so the shortcuts work in the native app today
+// (no rebuild) and remain correct in the browser.
+function installClipboardShortcuts() {
+  const editableEl = () => {
+    const el = document.activeElement;
+    if (!el) return null;
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") return el;
+    if (el.isContentEditable) return el;
+    return null;
+  };
+  const selectedText = (el) => {
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+      const s = el.selectionStart, e = el.selectionEnd;
+      if (s != null && e != null && e > s) return el.value.slice(s, e);
+      return "";
+    }
+    return window.getSelection ? String(window.getSelection() || "") : "";
+  };
+  document.addEventListener("keydown", async (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (!meta || e.altKey) return;
+    const key = (e.key || "").toLowerCase();
+    if (key !== "c" && key !== "x" && key !== "v") return;
+    if (!navigator.clipboard) return;   // let the platform try if no API
+    const el = editableEl();
+
+    if (key === "c" || key === "x") {
+      const text = selectedText(el);
+      if (!text) return;                // nothing selected — leave default
+      e.preventDefault(); e.stopPropagation();
+      try { await navigator.clipboard.writeText(text); } catch { return; }
+      if (key === "x" && el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+        const s = el.selectionStart, en = el.selectionEnd;
+        el.setRangeText("", s, en, "end");
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (key === "x" && el && el.isContentEditable) {
+        document.execCommand("delete");
+      }
+      return;
+    }
+
+    // paste — only into an editable target
+    if (key === "v") {
+      if (!el) return;
+      e.preventDefault(); e.stopPropagation();
+      let text = "";
+      try { text = await navigator.clipboard.readText(); } catch { return; }
+      if (!text) return;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        const s = el.selectionStart ?? el.value.length;
+        const en = el.selectionEnd ?? el.value.length;
+        el.setRangeText(text, s, en, "end");
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (el.isContentEditable) {
+        document.execCommand("insertText", false, text);
+      }
+    }
+  }, true);  // capture phase — run before app keybinds
+}
+
 function attachKeybinds() {
   window.addEventListener("keydown", (e) => {
     const meta = e.metaKey || e.ctrlKey;
