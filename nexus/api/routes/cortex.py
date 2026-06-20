@@ -232,6 +232,68 @@ async def list_modules(request: Request) -> dict[str, Any]:
     return {"modules": modules, "on_duty": on_duty, "count": len(on_duty)}
 
 
+# ── Swarm templates ─────────────────────────────────────────────────────────
+# Curated starting points for common swarms (VISION-AGENTIC-OS roadmap §6:
+# "Templates for common swarms — research / build / monitor / negotiate").
+# Each names the built-in cognitive modules that compose the swarm and a
+# starter task with an editable <bracket>. The endpoint filters every roster
+# down to modules that are actually registered in this kernel, so a template
+# never offers an agent that can't run.
+_SWARM_TEMPLATES: list[dict[str, Any]] = [
+    {
+        "id": "research",
+        "name": "Research",
+        "tagline": "Gather, weigh, and draft a recommendation",
+        "tone": "ocean",
+        "agents": ["oracle", "council", "specter", "legacy", "atlas"],
+        "prompt": "Research <topic>: gather the best sources, weigh the evidence, "
+                  "surface the strongest counter-arguments, and draft a recommendation.",
+    },
+    {
+        "id": "build",
+        "name": "Build",
+        "tagline": "Plan it, build it, watch for risk",
+        "tone": "emerald",
+        "agents": ["council", "oracle", "autonomic", "specter", "sentry"],
+        "prompt": "Plan and build <thing>: break it into concrete steps, propose an "
+                  "implementation, red-team the plan, and flag anything risky.",
+    },
+    {
+        "id": "monitor",
+        "name": "Monitor",
+        "tagline": "Watch for drift, anomalies, and risk",
+        "tone": "teal",
+        "agents": ["sentry", "sigil", "oracle", "echo"],
+        "prompt": "Monitor <target>: watch for drift, anomalies, and risks, and tell "
+                  "me the moment something needs my attention.",
+    },
+    {
+        "id": "negotiate",
+        "name": "Negotiate",
+        "tagline": "Structure offers, counters, and trade-offs",
+        "tone": "honey",
+        "agents": ["herald", "council", "specter", "oracle"],
+        "prompt": "Negotiate <deal>: structure the offers and counters, weigh the "
+                  "trade-offs, and stress-test the other side's position.",
+    },
+]
+
+
+@router.get("/templates")
+async def swarm_templates(request: Request) -> dict[str, Any]:
+    """Curated swarm templates, each filtered to modules this kernel actually
+    runs. The Compose UI renders these as one-tap starting points."""
+    cortex = _get_kernel(request).cortex
+    registered = set(cortex._modules.keys())
+    out: list[dict[str, Any]] = []
+    for tpl in _SWARM_TEMPLATES:
+        agents = [a for a in tpl["agents"] if a in registered]
+        if not agents:
+            continue
+        out.append({**tpl, "agents": agents})
+    return {"templates": out}
+
+
 class LaunchBody(BaseModel):
     message: str = Field(..., min_length=1)
     workspace_id: str | None = None

@@ -3958,3 +3958,45 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   .nx-chronos-flip, .nx-chronos-branch { transition: none; }
   .nx-radar-ping-dot { animation: none; }
 }
+
+/* ── Swarm templates (Compose) ─────────────────────────────────────────────
+ * One-tap composition of a common swarm, above the Cortex picker. */
+.nx-swarm-templates { margin-bottom: 18px; }
+.nx-swarm-eyebrow { margin-bottom: 10px; }
+.nx-swarm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.nx-swarm-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px;
+  text-align: left;
+  padding: 14px 15px;
+  background: var(--nx-card-bg);
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-radius-md, 12px);
+  cursor: pointer;
+  transition: background var(--d-fast), border-color var(--d-fast), transform var(--d-fast);
+}
+.nx-swarm-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.18); transform: translateY(-2px); }
+.nx-swarm-card.active {
+  background: color-mix(in srgb, var(--nx-mood-primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--nx-mood-primary) 55%, transparent);
+}
+.nx-swarm-card-icon {
+  width: 30px; height: 30px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--nx-hairline);
+  color: var(--nx-text-high);
+}
+.nx-swarm-card-icon svg { width: 17px; height: 17px; }
+.nx-swarm-card-name { font-family: var(--nx-font-display); font-size: 15px; color: var(--nx-text-high); font-weight: 500; }
+.nx-swarm-card-tag { font-size: 11.5px; line-height: 1.35; }
+.nx-swarm-card-roster { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.nx-swarm-disc { display: inline-flex; margin-right: -6px; }
+.nx-swarm-disc:last-of-type { margin-right: 2px; }
+.nx-swarm-card-count {
+  font-family: var(--nx-font-mono); font-size: 10px; opacity: 0.5; margin-left: 6px;
+}

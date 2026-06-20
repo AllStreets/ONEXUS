@@ -2966,9 +2966,19 @@ const _cortexState = {
   catalogSearch: "",        // live search text inside the picker
   catalogSearchResults: [], // chips fetched on demand via /api/cortex/agent-search
   catalogMeta: new Map(),   // slug → catalog entry metadata (for chip rendering)
+  templates: [],            // curated swarm templates from /api/cortex/templates
+  activeTemplate: null,     // id of the template the user last applied
   running: false,
   runs: null,
   lastError: null,          // { status, detail } — last failed dispatch, shown as role=alert banner
+};
+
+// Bespoke swarm-template glyphs — line-stroke, same language as icons.js.
+const SWARM_TEMPLATE_ICONS = {
+  research: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5.2"/><path d="M12.8 12.8 18 18"/><path d="M9 6.4v5.2M6.4 9h5.2" opacity="0.5"/></svg>`,
+  build: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3.5" y="11" width="6.5" height="6.5" rx="1"/><rect x="12" y="11" width="6.5" height="6.5" rx="1"/><rect x="7.75" y="4" width="6.5" height="6.5" rx="1"/></svg>`,
+  monitor: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 11h4l2-5 3.5 10 2.5-7 1.5 2H20"/></svg>`,
+  negotiate: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6v11"/><path d="M5 6.5h9l-2.2 2.7L14 12H5z"/><circle cx="5" cy="5" r="0.9" fill="currentColor" stroke="none"/></svg>`,
 };
 
 async function renderCortexLauncher(hash) {
@@ -3011,6 +3021,8 @@ async function renderCortexLauncher(hash) {
           You can also type <code>cortex …</code> into the home composer to land here.
         </div>
       </header>
+
+      <section class="nx-swarm-templates" id="nx-swarm-templates" aria-label="Swarm templates"></section>
 
       <section class="nx-card" id="nx-cortex-form" style="padding:18px;margin-bottom:18px">
         <textarea
@@ -3685,12 +3697,70 @@ async function renderCortexLauncher(hash) {
     }
   });
 
+  // ── Swarm templates — one-tap composition of a common swarm ───────────────
+  // Tapping a template fills the task and pre-selects the swarm's agents, so
+  // composing a run is "open the template, edit the brackets, dispatch".
+  const applyTemplate = (tpl) => {
+    _cortexState.prompt = tpl.prompt || "";
+    promptEl.value = _cortexState.prompt;
+    _cortexState.selected = new Set(tpl.agents || []);
+    _cortexState.activeTemplate = tpl.id;
+    loadCandidates(_cortexState.prompt).then(() => { renderChips(); refreshRunBtn(); });
+    renderChips();
+    refreshRunBtn();
+    renderSwarmTemplates();
+    // place the caret on the first <bracket> so the user can type the specifics
+    promptEl.focus();
+    const m = _cortexState.prompt.match(/<[^>]+>/);
+    if (m) { const i = _cortexState.prompt.indexOf(m[0]); promptEl.setSelectionRange(i, i + m[0].length); }
+  };
+
+  const renderSwarmTemplates = () => {
+    const el = document.getElementById("nx-swarm-templates");
+    if (!el) return;
+    const tpls = _cortexState.templates || [];
+    if (!tpls.length) { el.innerHTML = ""; return; }
+    el.innerHTML = `
+      <div class="nx-eyebrow nx-swarm-eyebrow">SWARM TEMPLATES · compose a run in one tap</div>
+      <div class="nx-swarm-grid">
+        ${tpls.map(t => {
+          const active = _cortexState.activeTemplate === t.id;
+          const discs = (t.agents || []).slice(0, 5).map(a =>
+            `<span class="nx-swarm-disc">${agentDisc(a, { size: 22 })}</span>`).join("");
+          return `
+            <button type="button" class="nx-swarm-card ${active ? "active" : ""}" data-tpl="${escapeHtml(t.id)}">
+              <span class="nx-swarm-card-icon">${SWARM_TEMPLATE_ICONS[t.id] || ""}</span>
+              <span class="nx-swarm-card-name">${escapeHtml(t.name)}</span>
+              <span class="nx-swarm-card-tag nx-dim">${escapeHtml(t.tagline)}</span>
+              <span class="nx-swarm-card-roster">${discs}<span class="nx-swarm-card-count">${(t.agents || []).length}</span></span>
+            </button>`;
+        }).join("")}
+      </div>`;
+    el.querySelectorAll(".nx-swarm-card[data-tpl]").forEach(card => {
+      card.addEventListener("click", () => {
+        const tpl = (_cortexState.templates || []).find(x => x.id === card.dataset.tpl);
+        if (tpl) applyTemplate(tpl);
+      });
+    });
+  };
+
+  const loadSwarmTemplates = async () => {
+    try {
+      const r = await fetch("/api/cortex/templates");
+      if (!r.ok) return;
+      const body = await r.json();
+      _cortexState.templates = body.templates || [];
+      renderSwarmTemplates();
+    } catch {}
+  };
+
   // Initial paint — always loads the built-in module list so the picker
   // isn't blank on first entry, even when there's no prompt.
   await loadCandidates(_cortexState.prompt || "");
   renderChips();
   refreshRunBtn();
   renderRuns();
+  loadSwarmTemplates();
 }
 
 // Tiny debounce — only refetches candidates after the user pauses typing.
