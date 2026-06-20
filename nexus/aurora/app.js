@@ -732,6 +732,7 @@ function attachShellHandlers() {
   document.getElementById("nx-open-search").addEventListener("click", () => location.hash = "#/search");
   document.getElementById("nx-open-cortex")?.addEventListener("click", () => location.hash = "#/cortex");
   document.getElementById("nx-open-watch")?.addEventListener("click", () => location.hash = "#/watch");
+  document.getElementById("nx-open-memory")?.addEventListener("click", () => location.hash = "#/memory");
   document.getElementById("nx-open-watch-rail")?.addEventListener("click", (e) => { e.stopPropagation(); location.hash = "#/watch"; });
   document.getElementById("nx-search-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -1548,6 +1549,170 @@ function renderWatchCast() {
   }).join("");
   el.querySelectorAll(".nx-cast-chip[data-slug]").forEach(c =>
     c.addEventListener("click", () => openCapabilitySheet(c.dataset.slug)));
+}
+
+// ── N6 — Memory & Replay (Engram + Chronicle made visible) ──────────────────
+const _replayState = { events: [], idx: 0, playing: false, timer: null };
+
+// Map a Chronicle/replay event to a legible (kind, label, summary) triple.
+function replayEventView(e) {
+  const src = e.source || "", et = e.event_type || "", d = e.data || {};
+  let kind = "event", label = et || src, summary = "";
+  if (src === "cortex" && et === "route") { kind = "route"; label = "route"; summary = `→ ${d.target || "?"}${d.trust_tier ? " · " + d.trust_tier : ""}`; }
+  else if (src === "cortex" && et === "response") { kind = "response"; label = "response"; summary = `${d.module || ""} · ${truncate(d.response_preview || "", 60)}`; }
+  else if (et === "trust_change" || typeof d.new_score === "number") { kind = "trust"; label = "trust"; const dir = (d.new_score >= (d.old_score ?? d.new_score)) ? "↑" : "↓"; summary = `${d.module || ""} ${dir} ${typeof d.new_score === "number" ? d.new_score.toFixed(2) : ""} ${d.reason || ""}`; }
+  else if (et.includes("gate") || d.verdict) { kind = String(d.verdict || "").toLowerCase() === "deny" ? "deny" : "gate"; label = (d.verdict || "gate").toLowerCase(); summary = `${truncate(d.capability || "", 40)} · ${d.agent || ""}`; }
+  else if (src === "engram" || et.includes("write")) { kind = "memory"; label = "write"; summary = `${d.tier || "episodic"} · ${truncate(d.preview || "", 48)}`; }
+  else if (src === "sigil" || et === "detection") { kind = "alert"; label = "anomaly"; summary = `${d.rule || ""} ${d.module || ""}`; }
+  else if (src === "dreamweaver") { kind = "brief"; label = "brief"; summary = truncate(d.headline || "", 56); }
+  else { summary = truncate(JSON.stringify(d), 60); }
+  return { kind, label, summary };
+}
+
+async function renderMemory() {
+  const main = document.getElementById("nx-main");
+  main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">reading memory…</div></div>`;
+  const j = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
+  const [working, episodic, atlas, timeline] = await Promise.all([
+    j("/api/memory/working"), j("/api/memory/episodic?limit=12"),
+    j("/api/atlas/graph?limit=16"), j("/api/replay/timeline?limit=120"),
+  ]);
+  const wEntries = working && working.entries ? Object.entries(working.entries) : [];
+  const epi = (episodic && episodic.results) ? episodic.results : [];
+  const facts = (atlas && atlas.nodes) ? atlas.nodes : [];
+  // Chronicle is newest-first; replay reads chronologically (oldest → newest).
+  _replayState.events = ((timeline && timeline.events) ? timeline.events : []).slice().reverse();
+  _replayState.idx = Math.max(0, _replayState.events.length - 1);
+  _replayState.playing = false;
+
+  const tierCard = (label, count, body) => `
+    <div class="nx-mem-tier">
+      <div class="nx-mem-tier-head"><span class="nx-mem-tier-label">${label}</span><span class="nx-mem-tier-count">${count}</span></div>
+      <div class="nx-mem-tier-body">${body || `<span class="nx-dim" style="font-size:11px">empty</span>`}</div>
+    </div>`;
+
+  const workingBody = wEntries.slice(0, 8).map(([k, v]) =>
+    `<div class="nx-mem-row"><span class="nx-mem-k">${escapeHtml(k)}</span><span class="nx-mem-v nx-dim">${escapeHtml(truncate(String(v), 40))}</span></div>`).join("");
+  const epiBody = epi.slice(0, 7).map(m =>
+    `<div class="nx-mem-row col"><span class="nx-mem-src">${escapeHtml(m.source || "")}</span><span class="nx-mem-v nx-dim">${escapeHtml(truncate((m.content || "").replace(/\n/g, " "), 64))}</span></div>`).join("");
+  const atlasBody = facts.slice(0, 8).map(f => {
+    const conf = typeof f.confidence === "number" ? f.confidence : 0;
+    const stored = typeof f.stored_confidence === "number" ? f.stored_confidence : conf;
+    const decayPct = Math.round(conf * 100), storedPct = Math.round(stored * 100);
+    return `<div class="nx-fact">
+      <div class="nx-fact-triple"><b>${escapeHtml(f.subject || "")}</b> <span class="nx-dim">${escapeHtml(f.relation || "")}</span> ${escapeHtml(f.object || "")}</div>
+      <div class="nx-fact-conf" title="confidence ${conf.toFixed(3)} (stored ${stored.toFixed(3)})">
+        <div class="nx-fact-conf-track"><div class="nx-fact-conf-stored" style="width:${storedPct}%"></div><div class="nx-fact-conf-fill" style="width:${decayPct}%"></div></div>
+        <span class="nx-fact-conf-val ${f.decayed ? "decayed" : ""}">${decayPct}%${f.decayed ? " ↓" : ""}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  main.innerHTML = `
+    <div class="nx-main-inner nx-mem">
+      <header style="margin-bottom:18px">
+        <div class="nx-eyebrow" style="margin-bottom:6px">Engram · Chronicle</div>
+        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Memory &amp; Replay</div>
+        <div class="nx-dim" style="font-size:13px;margin-top:4px">Watch what the swarm remembers — and replay every decision it made, in order, from the append-only Chronicle.</div>
+      </header>
+
+      <div class="nx-mem-tiers">
+        ${tierCard("WORKING", wEntries.length, workingBody)}
+        ${tierCard("EPISODIC", (episodic && episodic.count) || epi.length, epiBody)}
+        <div class="nx-mem-tier">
+          <div class="nx-mem-tier-head"><span class="nx-mem-tier-label">ATLAS · WORLD MODEL</span><a class="nx-mem-tier-link" href="#/atlas">graph ↗</a></div>
+          <div class="nx-mem-tier-body">${atlasBody || `<span class="nx-dim" style="font-size:11px">no facts yet</span>`}</div>
+          <div class="nx-mem-tier-foot nx-dim">solid bar = decayed confidence · faint = stored. Facts fade until re-confirmed.</div>
+        </div>
+      </div>
+
+      <section class="nx-replay">
+        <div class="nx-replay-head">
+          <div class="nx-eyebrow">CHRONICLE REPLAY · ${_replayState.events.length} decisions</div>
+          <div class="nx-replay-controls">
+            <button class="nx-replay-btn" id="nx-replay-play" title="Play / pause the run">▶ replay</button>
+            <button class="nx-replay-btn" id="nx-replay-step" title="Step one decision">step ▸</button>
+            <input type="range" id="nx-replay-scrub" min="0" max="${Math.max(0, _replayState.events.length - 1)}" value="${_replayState.idx}">
+          </div>
+        </div>
+        <div class="nx-replay-body">
+          <div class="nx-replay-list" id="nx-replay-list"></div>
+          <div class="nx-replay-detail" id="nx-replay-detail"></div>
+        </div>
+      </section>
+    </div>`;
+
+  document.getElementById("nx-replay-play").addEventListener("click", toggleReplayPlay);
+  document.getElementById("nx-replay-step").addEventListener("click", () => { stepReplay(1); });
+  document.getElementById("nx-replay-scrub").addEventListener("input", (e) => { pauseReplay(); selectReplay(parseInt(e.target.value, 10)); });
+  renderReplayList();
+  selectReplay(_replayState.idx);
+}
+
+function renderReplayList() {
+  const el = document.getElementById("nx-replay-list");
+  if (!el) return;
+  const evs = _replayState.events;
+  if (!evs.length) { el.innerHTML = `<div class="nx-dim" style="font-size:12px;padding:10px">No recorded decisions yet — run a swarm, then replay it here.</div>`; return; }
+  el.innerHTML = evs.map((e, i) => {
+    const v = replayEventView(e);
+    return `<button type="button" class="nx-replay-row ${i === _replayState.idx ? "active" : ""}" data-i="${i}">
+      <span class="nx-replay-tag nx-lk-${v.kind === "response" ? "route" : v.kind === "brief" ? "memory" : v.kind}">${escapeHtml(v.label)}</span>
+      <span class="nx-replay-sum">${escapeHtml(v.summary)}</span>
+      <span class="nx-replay-time nx-dim">${escapeHtml(formatTime(e.timestamp))}</span>
+    </button>`;
+  }).join("");
+  el.querySelectorAll(".nx-replay-row[data-i]").forEach(r =>
+    r.addEventListener("click", () => { pauseReplay(); selectReplay(parseInt(r.dataset.i, 10)); }));
+}
+
+function selectReplay(i) {
+  const evs = _replayState.events;
+  if (!evs.length) return;
+  _replayState.idx = Math.max(0, Math.min(evs.length - 1, i));
+  const scrub = document.getElementById("nx-replay-scrub");
+  if (scrub) scrub.value = _replayState.idx;
+  // highlight active row + scroll into view
+  const list = document.getElementById("nx-replay-list");
+  if (list) {
+    list.querySelectorAll(".nx-replay-row").forEach((r, idx) => r.classList.toggle("active", idx === _replayState.idx));
+    const active = list.querySelector(".nx-replay-row.active");
+    if (active) active.scrollIntoView({ block: "nearest" });
+  }
+  const e = evs[_replayState.idx];
+  const v = replayEventView(e);
+  const detail = document.getElementById("nx-replay-detail");
+  if (detail) {
+    detail.innerHTML = `
+      <div class="nx-replay-detail-tag nx-lk-${v.kind === "response" ? "route" : v.kind === "brief" ? "memory" : v.kind}">${escapeHtml(v.label)}</div>
+      <div class="nx-replay-detail-when nx-mono nx-dim">${escapeHtml(e.timestamp || "")} · ${escapeHtml(e.source || "")}</div>
+      <pre class="nx-replay-detail-data">${escapeHtml(JSON.stringify(e.data || {}, null, 2))}</pre>`;
+  }
+}
+
+function stepReplay(dir) {
+  if (_replayState.idx >= _replayState.events.length - 1 && dir > 0) { pauseReplay(); return; }
+  selectReplay(_replayState.idx + dir);
+}
+
+function toggleReplayPlay() { _replayState.playing ? pauseReplay() : playReplay(); }
+function playReplay() {
+  if (!_replayState.events.length) return;
+  // restart from the top if we're already at the end
+  if (_replayState.idx >= _replayState.events.length - 1) selectReplay(0);
+  _replayState.playing = true;
+  const btn = document.getElementById("nx-replay-play");
+  if (btn) btn.textContent = "❚❚ pause";
+  _replayState.timer = setInterval(() => {
+    if (_replayState.idx >= _replayState.events.length - 1) { pauseReplay(); return; }
+    selectReplay(_replayState.idx + 1);
+  }, 650);
+}
+function pauseReplay() {
+  _replayState.playing = false;
+  if (_replayState.timer) { clearInterval(_replayState.timer); _replayState.timer = null; }
+  const btn = document.getElementById("nx-replay-play");
+  if (btn) btn.textContent = "▶ replay";
 }
 
 function renderPermLog() {
@@ -6032,7 +6197,9 @@ async function route(hash) {
   // The full-screen Watch scene owns a canvas + rAF loop; tear it down whenever
   // we navigate anywhere else so it never animates a detached canvas.
   if (!hash.startsWith("#/watch")) unregisterScene("watch");
+  if (!hash.startsWith("#/memory")) pauseReplay();
   if (hash.startsWith("#/watch")) { await renderWatch(); return; }
+  if (hash.startsWith("#/memory")) { await renderMemory(); return; }
   if (hash === "#/workspaces") { renderWorkspacesGrid(); return; }
   if (hash.startsWith("#/catalog")) { renderCatalog(); return; }
   if (hash === "#/settings") { renderSettings(); return; }
@@ -6162,6 +6329,7 @@ function attachKeybinds() {
     if (meta && e.key === "e") { e.preventDefault(); location.hash = "#/workshop"; return; }
     if (meta && (e.key === "l" || e.key === "L")) { e.preventDefault(); location.hash = "#/cortex"; return; }
     if (meta && (e.key === "j" || e.key === "J")) { e.preventDefault(); location.hash = "#/watch"; return; }
+    if (meta && (e.key === "y" || e.key === "Y")) { e.preventDefault(); location.hash = "#/memory"; return; }
     if (meta && e.key === "/") { e.preventDefault(); location.hash = "#/search"; return; }
     if (e.key === "?" && document.activeElement === document.body) {
       e.preventDefault(); renderGuide(0); return;
