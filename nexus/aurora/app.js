@@ -1398,6 +1398,8 @@ async function loadKernelScene() {
     }
     state.scene.modules = sceneModuleDescriptors(names, trustMap);
     forEachScene((s) => s.setModules(state.scene.modules));
+    renderWatchCast();
+    renderWatchStat();
   } catch {}
 }
 
@@ -1509,6 +1511,10 @@ async function renderWatch() {
           <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#f8c460"></span><span>Warm ring — <b>trust</b> rose; cool — it fell</span></div>
           <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:#c8a0ff"></span><span>Motes sink into <b>memory strata</b> as Engram writes</span></div>
         </div>
+        <div class="nx-watch-rail-sec">
+          <div class="nx-watch-rail-label">Characters · on duty <span class="nx-dim" style="text-transform:none;letter-spacing:0">— click to direct</span></div>
+          <div class="nx-cast" id="nx-watch-cast"></div>
+        </div>
         <div class="nx-watch-rail-sec grow">
           <div class="nx-watch-rail-label">Live ledger</div>
           <div class="nx-ledger" id="nx-watch-ledger"></div>
@@ -1516,11 +1522,32 @@ async function renderWatch() {
       </div>
     </div>`;
   const canvas = document.getElementById("nx-watch-canvas");
-  registerScene("watch", canvas, { compact: false });
+  // Clicking a node (in the scene) or a cast chip opens that module's character
+  // sheet — the cognitive modules are participants you watch AND direct.
+  registerScene("watch", canvas, { compact: false, onPick: (name) => openCapabilitySheet(name) });
   if (!state.scene.modules.length) await loadKernelScene();
   forEachScene((s) => s.setModules(state.scene.modules));
   renderLedger();
   renderWatchStat();
+  renderWatchCast();
+}
+
+// The cast — every on-duty cognitive module as a clickable character chip.
+function renderWatchCast() {
+  const el = document.getElementById("nx-watch-cast");
+  if (!el) return;
+  const mods = state.scene.modules;
+  if (!mods.length) { el.innerHTML = `<span class="nx-dim" style="font-size:11px">summoning the cast…</span>`; return; }
+  el.innerHTML = mods.map(m => {
+    const tier = tierForTrust(m.trust);
+    return `
+      <button type="button" class="nx-cast-chip" data-slug="${escapeHtml(m.name)}" title="${escapeHtml(m.name)} · ${escapeHtml(tier)} · trust ${m.trust.toFixed(2)} — click to open">
+        <span class="nx-cast-disc">${agentDisc(m.name, { size: 26, trust: m.trust })}</span>
+        <span class="nx-cast-name">${escapeHtml(m.name)}</span>
+      </button>`;
+  }).join("");
+  el.querySelectorAll(".nx-cast-chip[data-slug]").forEach(c =>
+    c.addEventListener("click", () => openCapabilitySheet(c.dataset.slug)));
 }
 
 function renderPermLog() {

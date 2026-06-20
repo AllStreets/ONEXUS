@@ -88,11 +88,29 @@ export class KernelScene {
     this.veil = 0;                            // emergency veil intensity 0..1
     this.energy = 0;                          // recent kernel activity 0..1
     this.t = 0; this.last = 0; this.raf = null; this.running = false;
+    this.onPick = opts.onPick || null;       // (moduleName) => void, on node click
     this._loop = this._loop.bind(this);
     this._onResize = () => this._resize();
     this._ro = new ResizeObserver(this._onResize);
     this._ro.observe(canvas.parentElement || canvas);
+    // Pointer interaction — the modules are characters you can watch AND direct.
+    if (this.onPick) {
+      this._onClick = (e) => { const n = this._pickAt(e.offsetX, e.offsetY); if (n) this.onPick(n); };
+      this._onMove = (e) => { this.canvas.style.cursor = this._pickAt(e.offsetX, e.offsetY) ? "pointer" : "default"; };
+      canvas.addEventListener("click", this._onClick);
+      canvas.addEventListener("mousemove", this._onMove);
+    }
     this._resize();
+  }
+
+  // hit-test a screen point against the live node positions (logical px)
+  _pickAt(mx, my) {
+    for (const node of this.nodes.values()) {
+      const hit = (node.r || 8) + 8 + node.activity * 6;
+      const dx = mx - node.x, dy = my - node.y;
+      if (dx * dx + dy * dy <= hit * hit) return node.name;
+    }
+    return null;
   }
 
   // ── layout ────────────────────────────────────────────────────────────────
@@ -241,7 +259,12 @@ export class KernelScene {
   // ── loop ────────────────────────────────────────────────────────────────────
   start() { if (this.running) return; this.running = true; this.last = performance.now(); this.raf = requestAnimationFrame(this._loop); }
   stop() { this.running = false; if (this.raf) cancelAnimationFrame(this.raf); this.raf = null; }
-  destroy() { this.stop(); try { this._ro.disconnect(); } catch {} }
+  destroy() {
+    this.stop();
+    try { this._ro.disconnect(); } catch {}
+    if (this._onClick) this.canvas.removeEventListener("click", this._onClick);
+    if (this._onMove) this.canvas.removeEventListener("mousemove", this._onMove);
+  }
 
   _loop(now) {
     if (!this.running) return;
