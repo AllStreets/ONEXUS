@@ -6,6 +6,7 @@
   <title>ONEXUS</title>
   <link rel="stylesheet" href="/aurora/static/tokens.css">
   <link rel="stylesheet" href="/aurora/static/mood.css">
+  <link rel="stylesheet" href="/aurora/static/scene.css">
   <link rel="stylesheet" href="/aurora/static/app.css">
 </head>
 <body class="nx-mood nx-mood-calm-focus" data-mood="calm_focus">
@@ -104,6 +105,11 @@
 
           <!-- nav links -->
           <div class="nx-section nx-section-tail">
+            <button class="nx-side-link" id="nx-open-watch">
+              <span class="nx-side-link-icon watch"></span>
+              <span>kernel · watch</span>
+              <span class="nx-side-link-kbd">⌘J</span>
+            </button>
             <button class="nx-side-link" id="nx-open-cortex">
               <span class="nx-side-link-icon"></span>
               <span>cortex launch</span>
@@ -159,7 +165,10 @@
           </div>
 
           <div class="nx-cp-section">
-            <div class="nx-section-label">KERNEL · LIVE</div>
+            <div class="nx-section-label">KERNEL · LIVE
+              <button class="nx-cp-watch-link" id="nx-open-watch-rail" title="Open the full Watch scene (⌘J)">watch ↗</button>
+            </div>
+            <div class="nx-rail-scene" id="nx-rail-scene"><canvas id="nx-rail-scene-canvas"></canvas></div>
             <div class="nx-kernel-viz" id="nx-kernel-viz"></div>
           </div>
 

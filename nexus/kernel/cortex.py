@@ -755,6 +755,21 @@ class Cortex:
 
     # -- main processing pipeline ------------------------------------------
 
+    async def _emit_engram_write(self, tier: str, source: str, content: str) -> None:
+        """Stream an Engram write onto Pulse so the live kernel scene can render
+        memory forming (a mote settling into the working/episodic/semantic/atlas
+        strata). Best-effort: the store itself already succeeded, so a failed
+        broadcast must never break routing."""
+        try:
+            preview = (content or "").strip().replace("\n", " ")[:80]
+            await self._pulse.publish(Message(
+                topic="engram.write",
+                source="engram",
+                payload={"tier": tier, "source": source, "preview": preview},
+            ))
+        except Exception:
+            pass
+
     async def process(self, message: str) -> str:
         """Route a user message to the appropriate module and return the response."""
         # 1. Classify intent -> get scored list of module matches
@@ -817,6 +832,7 @@ class Cortex:
 
         # 5. Store the user message in episodic memory
         self._engram.episodic.store(f"User: {message}", source="user_input")
+        await self._emit_engram_write("episodic", "user_input", message)
 
         # 6. Build context dict (includes aegis)
         context = self._build_context()
@@ -838,6 +854,7 @@ class Cortex:
 
         # 10. Store the response in episodic memory
         self._engram.episodic.store(f"Nexus ({target}): {response}", source=f"module.{target}")
+        await self._emit_engram_write("episodic", f"module.{target}", response)
 
         # 11. Log completion
         self._chronicle.log("cortex", "response", {

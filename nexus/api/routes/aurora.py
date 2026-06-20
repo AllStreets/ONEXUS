@@ -34,7 +34,7 @@ async def aurora_index():
     html = (_STATIC_DIR / "index.html").read_text()
     # Stamp each static asset URL with the file's mtime so any change to
     # app.js / app.css / icons.js invalidates the browser-side module cache.
-    for asset in ("tokens.css", "mood.css", "app.css", "app.js", "icons.js"):
+    for asset in ("tokens.css", "mood.css", "scene.css", "app.css", "app.js", "icons.js"):
         path = _STATIC_DIR / asset
         if path.exists():
             v = int(path.stat().st_mtime)

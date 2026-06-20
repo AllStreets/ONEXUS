@@ -6,6 +6,7 @@
 
 import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES } from "/aurora/static/icons.js";
 import { renderMarkdown } from "/aurora/static/md.js";
+import { KernelScene } from "/aurora/static/scene.js";
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
@@ -43,6 +44,12 @@ const state = {
     detections: [],       // last sigil.detection payloads
     trustSeries: {},      // module -> rolling trust scores
   },
+  scene: {                // N1 — the live Kernel Scene (constellation renderer)
+    modules: [],          // [{name, colorA, colorB, trust, tier}] from /cortex/modules + /trust
+    instances: {},        // surface-id -> KernelScene
+    ledger: [],           // newest-first feed of human-legible kernel events
+    counters: { routes: 0, gates: 0, denies: 0, memory: 0 },
+  },
   mood: {
     mood: "calm_focus",
     tone: null,
@@ -70,6 +77,11 @@ async function boot() {
   renderSidebar();
   renderCockpitRail();
   subscribeStreams();
+  // Hydrate the kernel roster and light the always-on cockpit-rail mini scene.
+  loadKernelScene().then(() => {
+    const railCanvas = document.getElementById("nx-rail-scene-canvas");
+    if (railCanvas) registerScene("rail", railCanvas, { compact: true });
+  });
   await route(location.hash);
   maybeShowTour();
 }
@@ -694,6 +706,8 @@ function applyMood(moodKey) {
   // Update mood-label in chrome
   const lbl = document.getElementById("nx-mood-label");
   if (lbl) lbl.textContent = (moodKey || "calm focus").replace(/_/g, " ");
+  // Tint the live kernel scene to match the shell's mood.
+  if (typeof forEachScene === "function") forEachScene((s) => s.setMood(moodAccent(moodKey)));
 }
 
 // ── Chrome ─────────────────────────────────────────────────────────────────
@@ -717,6 +731,8 @@ function attachShellHandlers() {
   document.getElementById("nx-open-workshop").addEventListener("click", () => location.hash = "#/workshop");
   document.getElementById("nx-open-search").addEventListener("click", () => location.hash = "#/search");
   document.getElementById("nx-open-cortex")?.addEventListener("click", () => location.hash = "#/cortex");
+  document.getElementById("nx-open-watch")?.addEventListener("click", () => location.hash = "#/watch");
+  document.getElementById("nx-open-watch-rail")?.addEventListener("click", (e) => { e.stopPropagation(); location.hash = "#/watch"; });
   document.getElementById("nx-search-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -1012,6 +1028,10 @@ function trustSparkSVG(history, direction) {
 // ── Kernel live visualization (N1.3) ───────────────────────────────────────
 function handleKernelEvent(m) {
   const kv = state.kernelViz;
+  // Drive the live Kernel Scene (constellation) on every event, in parallel
+  // with the legible text ledger below.
+  driveScenes(m);
+  renderWatchStat();
   let touched = true;
   if (m.topic === "kernel.route") {
     kv.routes.unshift(m.payload || {});
@@ -1325,6 +1345,182 @@ function emergencyVeil(m) {
   const close = () => veil.remove();
   veil.querySelector(".nx-emergency-dismiss").addEventListener("click", close);
   setTimeout(close, 12000);
+}
+
+// ── N1 — The Kernel Scene (live constellation renderer) ─────────────────────
+// One KernelScene class (scene.js) drives every surface: the full-screen Watch
+// view, the ⌘0 cockpit panel, and the cockpit-rail mini. They all subscribe to
+// the same /api/events/ws Pulse relay via driveScenes(), so cognition renders
+// identically wherever it's shown.
+
+// Aegis trust tiers — mirrors kernel/aegis.py thresholds so the ring colour and
+// tier label match what the kernel actually enforces.
+function tierForTrust(t) {
+  if (t >= 1.0) return "AUTONOMOUS";
+  if (t >= 0.75) return "EXECUTOR";
+  if (t >= 0.50) return "MONITOR";
+  if (t >= 0.25) return "ADVISOR";
+  return "OBSERVER";
+}
+
+// mood → accent hex (matches the dominant tone of each mood.css palette) so the
+// scene's atmosphere breathes with the shell.
+const MOOD_ACCENT = {
+  calm_focus: "#a8b4ff", deep_flow: "#5cd0b4", routing: "#e060c8",
+  deliberating: "#c8a0ff", creative: "#5c8cf0", reflective: "#d088b8",
+  watchful: "#5cc0c0", alert: "#f8643c",
+};
+function moodAccent(mood) { return MOOD_ACCENT[mood] || "#a8b4ff"; }
+
+// Build the node descriptors the scene lays out: every on-duty module, coloured
+// by its bespoke identity gradient, sized by its live Aegis trust.
+function sceneModuleDescriptors(moduleNames, trustMap) {
+  return (moduleNames || []).map((name) => {
+    const g = GRADIENTS[name] || ["#aab", "#556"];
+    const trust = typeof trustMap[name] === "number" ? trustMap[name] : 0.5;
+    return { name, colorA: g[0], colorB: g[1], trust, tier: tierForTrust(trust) };
+  });
+}
+
+async function loadKernelScene() {
+  try {
+    const [mr, tr] = await Promise.all([
+      fetch("/api/cortex/modules").then((r) => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/trust").then((r) => r.ok ? r.json() : null).catch(() => null),
+    ]);
+    const names = (mr && mr.modules) ? mr.modules.slice() : [];
+    const trustMap = {};
+    if (tr && Array.isArray(tr.scores)) for (const s of tr.scores) trustMap[s.module] = s.trust;
+    // seed rolling trust series so the cockpit sparklines have a baseline
+    for (const [m, v] of Object.entries(trustMap)) {
+      const series = state.kernelViz.trustSeries[m] = state.kernelViz.trustSeries[m] || [];
+      if (!series.length) series.push(v);
+    }
+    state.scene.modules = sceneModuleDescriptors(names, trustMap);
+    forEachScene((s) => s.setModules(state.scene.modules));
+  } catch {}
+}
+
+function forEachScene(fn) { for (const s of Object.values(state.scene.instances)) { try { fn(s); } catch {} } }
+
+function registerScene(id, canvas, opts = {}) {
+  unregisterScene(id);
+  const scene = new KernelScene(canvas, opts);
+  if (state.scene.modules.length) scene.setModules(state.scene.modules);
+  scene.setMood(moodAccent(state.mood.mood));
+  scene.start();
+  state.scene.instances[id] = scene;
+  // hydrate roster lazily if we haven't yet
+  if (!state.scene.modules.length) loadKernelScene();
+  return scene;
+}
+function unregisterScene(id) {
+  const s = state.scene.instances[id];
+  if (s) { s.destroy(); delete state.scene.instances[id]; }
+}
+
+// Translate a Pulse event into scene motion + a legible ledger line.
+function driveScenes(m) {
+  const p = m.payload || {};
+  const C = state.scene.counters;
+  if (m.topic === "kernel.route") {
+    C.routes++;
+    forEachScene((s) => s.route(p));
+    const top = (p.signals && p.signals[0]) ? p.signals[0].name : "";
+    pushLedger("route", `<b>${escapeHtml(p.target || "?")}</b>${top ? " · " + escapeHtml(top) : ""}`);
+  } else if (m.topic === "kernel.gate") {
+    const v = String(p.verdict || "").toLowerCase();
+    if (v === "deny") C.denies++; else C.gates++;
+    forEachScene((s) => s.gate(p));
+    pushLedger(v === "deny" ? "deny" : "gate",
+      `${escapeHtml(truncate(p.capability || "", 28))} <span class="nx-dim">${escapeHtml(p.agent || "")} · ${escapeHtml(v)}</span>`);
+  } else if (m.topic === "aegis.trust_change") {
+    forEachScene((s) => s.trust(p));
+    if (p.module && typeof p.new_score === "number") {
+      const dir = (p.new_score >= (p.old_score ?? p.new_score)) ? "↑" : "↓";
+      pushLedger("trust", `<b>${escapeHtml(p.module)}</b> ${dir} ${p.new_score.toFixed(2)} <span class="nx-dim">${escapeHtml(p.reason || "")}</span>`);
+    }
+  } else if (m.topic === "engram.write") {
+    C.memory++;
+    forEachScene((s) => s.memory(p));
+    pushLedger("memory", `<span class="nx-dim">${escapeHtml((p.tier || "episodic"))}</span> ${escapeHtml(truncate(p.preview || p.source || "", 34))}`);
+  } else if (m.topic === "sigil.detection") {
+    forEachScene((s) => s.detection(p));
+    pushLedger("alert", `<b>${escapeHtml(p.rule || "anomaly")}</b> <span class="nx-dim">${escapeHtml(p.module || "")}</span>`);
+  }
+  if (m.priority === 0) forEachScene((s) => s.emergency(p));
+}
+
+function pushLedger(kind, html) {
+  state.scene.ledger.unshift({ kind, html, t: Date.now() });
+  if (state.scene.ledger.length > 60) state.scene.ledger.length = 60;
+  renderLedger();
+}
+
+const LEDGER_KIND_CLASS = { route: "route", gate: "gate", deny: "deny", trust: "trust", memory: "memory", alert: "alert" };
+const LEDGER_KIND_LABEL = { route: "route", gate: "gate", deny: "deny", trust: "trust", memory: "write", alert: "alert" };
+
+function renderLedger() {
+  const el = document.getElementById("nx-watch-ledger");
+  if (!el) return;
+  if (!state.scene.ledger.length) {
+    el.innerHTML = `<div class="nx-ledger-empty">Waiting for kernel activity… dispatch an agent to see it think.</div>`;
+    return;
+  }
+  el.innerHTML = state.scene.ledger.map((e) => `
+    <div class="nx-ledger-row">
+      <span class="nx-ledger-kind nx-lk-${LEDGER_KIND_CLASS[e.kind] || "route"}">${LEDGER_KIND_LABEL[e.kind] || e.kind}</span>
+      <span class="nx-ledger-body">${e.html}</span>
+    </div>`).join("");
+}
+
+function renderWatchStat() {
+  const el = document.getElementById("nx-watch-stat");
+  if (!el) return;
+  const C = state.scene.counters;
+  el.innerHTML = `
+    <span class="nx-watch-chip"><span class="nx-watch-pulse"></span>${state.coreOnDuty || state.scene.modules.length} on duty</span>
+    <span class="nx-watch-chip"><b>${C.routes}</b> routes</span>
+    <span class="nx-watch-chip"><b>${C.denies}</b> denied</span>`;
+}
+
+// ── The Watch view — the headline full-surface kernel scene ─────────────────
+async function renderWatch() {
+  unregisterScene("watch");
+  const main = document.getElementById("nx-main");
+  main.innerHTML = `
+    <div class="nx-watch">
+      <div class="nx-watch-stage">
+        <div class="nx-watch-head">
+          <div class="nx-watch-eyebrow">ONEXUS · KERNEL</div>
+          <div class="nx-watch-title nx-display">Watch it think.</div>
+          <div class="nx-watch-sub">Cortex routes, Aegis grants and denies, Engram remembers — the kernel's cognition, live. Nothing is hidden.</div>
+        </div>
+        <div class="nx-watch-stat" id="nx-watch-stat"></div>
+        <canvas class="nx-watch-canvas" id="nx-watch-canvas"></canvas>
+      </div>
+      <div class="nx-watch-rail">
+        <div class="nx-watch-rail-sec">
+          <div class="nx-watch-rail-label">Reading the scene</div>
+          <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:#c9b8ff;--m:11px"></span><span>The <b>core</b> is Cortex — every route begins here</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark line" style="--c:#fbf7ff"></span><span>A travelling bead is a <b>route</b> to a module</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#9affb6"></span><span>Green flare — Aegis <b>allowed</b> a capability</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#f8643c"></span><span>Red flare / veil — <b>denied</b> or an anomaly</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#f8c460"></span><span>Warm ring — <b>trust</b> rose; cool — it fell</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:#c8a0ff"></span><span>Motes sink into <b>memory strata</b> as Engram writes</span></div>
+        </div>
+        <div class="nx-watch-rail-sec grow">
+          <div class="nx-watch-rail-label">Live ledger</div>
+          <div class="nx-ledger" id="nx-watch-ledger"></div>
+        </div>
+      </div>
+    </div>`;
+  const canvas = document.getElementById("nx-watch-canvas");
+  registerScene("watch", canvas, { compact: false });
+  if (!state.scene.modules.length) await loadKernelScene();
+  forEachScene((s) => s.setModules(state.scene.modules));
+  renderLedger();
+  renderWatchStat();
 }
 
 function renderPermLog() {
@@ -5481,6 +5677,9 @@ function openNewWorkspaceForm() {
 }
 
 function closeOverlay() {
+  // The expanded cockpit may host a live scene canvas; tear it down before the
+  // overlay root is cleared so its rAF loop doesn't outlive the canvas.
+  if (typeof unregisterScene === "function") unregisterScene("cockpit");
   document.getElementById("nx-overlay-root").innerHTML = "";
 }
 
@@ -5545,7 +5744,16 @@ async function toggleCockpitOverlay() {
             <div class="nx-dim" style="font-size:11px;margin-top:4px">ticket${state.perms.pending.length === 1 ? "" : "s"} awaiting decision</div>
           </div>
 
-          <!-- Row 3: live kernel visualization spans 4 cols -->
+          <!-- Row 3: the live Kernel Scene spans all 4 cols -->
+          <div class="nx-cockpit-panel span4">
+            <div class="nx-cockpit-panel-header">
+              <span class="nx-cockpit-panel-label">Kernel scene · live</span>
+              <span class="nx-cockpit-panel-badge">⌘J for the full Watch view</span>
+            </div>
+            <div class="nx-cockpit-scene"><canvas id="nx-cockpit-scene-canvas"></canvas></div>
+          </div>
+
+          <!-- Row 4: legible kernel ledger + sigil radar -->
           <div class="nx-cockpit-panel span2">
             <div class="nx-cockpit-panel-header">
               <span class="nx-cockpit-panel-label">Kernel · live</span>
@@ -5568,6 +5776,8 @@ async function toggleCockpitOverlay() {
   document.getElementById("nx-cockpit-overlay").addEventListener("click", (e) => {
     if (e.target.id === "nx-cockpit-overlay") closeOverlay();
   });
+  const cpCanvas = document.getElementById("nx-cockpit-scene-canvas");
+  if (cpCanvas) { registerScene("cockpit", cpCanvas, { compact: false }); if (!state.scene.modules.length) await loadKernelScene(); }
 }
 
 // ── Router ────────────────────────────────────────────────────────────────
@@ -5582,6 +5792,10 @@ async function route(hash) {
     renderWorkspacesGrid();
     return;
   }
+  // The full-screen Watch scene owns a canvas + rAF loop; tear it down whenever
+  // we navigate anywhere else so it never animates a detached canvas.
+  if (!hash.startsWith("#/watch")) unregisterScene("watch");
+  if (hash.startsWith("#/watch")) { await renderWatch(); return; }
   if (hash === "#/workspaces") { renderWorkspacesGrid(); return; }
   if (hash.startsWith("#/catalog")) { renderCatalog(); return; }
   if (hash === "#/settings") { renderSettings(); return; }
@@ -5710,6 +5924,7 @@ function attachKeybinds() {
     if (meta && (e.key === "p" || e.key === "P")) { e.preventDefault(); location.hash = "#/settings"; return; }
     if (meta && e.key === "e") { e.preventDefault(); location.hash = "#/workshop"; return; }
     if (meta && (e.key === "l" || e.key === "L")) { e.preventDefault(); location.hash = "#/cortex"; return; }
+    if (meta && (e.key === "j" || e.key === "J")) { e.preventDefault(); location.hash = "#/watch"; return; }
     if (meta && e.key === "/") { e.preventDefault(); location.hash = "#/search"; return; }
     if (e.key === "?" && document.activeElement === document.body) {
       e.preventDefault(); renderGuide(0); return;
