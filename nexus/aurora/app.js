@@ -1554,6 +1554,13 @@ function renderWatchCast() {
 // ── N6 — Memory & Replay (Engram + Chronicle made visible) ──────────────────
 const _replayState = { events: [], idx: 0, playing: false, timer: null };
 
+// Bespoke transport glyphs (no emoji — design invariant). Inline SVG only.
+const ICON_PLAY = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M3 2l7 4-7 4z"/></svg>`;
+const ICON_PAUSE = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><rect x="3" y="2.5" width="2.4" height="7" rx="0.6"/><rect x="6.6" y="2.5" width="2.4" height="7" rx="0.6"/></svg>`;
+const ICON_STEP = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M3 2.5l4 3.5-4 3.5z"/><rect x="7.6" y="2.5" width="1.8" height="7" rx="0.6"/></svg>`;
+const REPLAY_LABEL = `<span class="nx-replay-ico">${ICON_PLAY}</span> replay`;
+const PAUSE_LABEL = `<span class="nx-replay-ico">${ICON_PAUSE}</span> pause`;
+
 // Map a Chronicle/replay event to a legible (kind, label, summary) triple.
 function replayEventView(e) {
   const src = e.source || "", et = e.event_type || "", d = e.data || {};
@@ -1630,8 +1637,8 @@ async function renderMemory() {
         <div class="nx-replay-head">
           <div class="nx-eyebrow">CHRONICLE REPLAY · ${_replayState.events.length} decisions</div>
           <div class="nx-replay-controls">
-            <button class="nx-replay-btn" id="nx-replay-play" title="Play / pause the run">▶ replay</button>
-            <button class="nx-replay-btn" id="nx-replay-step" title="Step one decision">step ▸</button>
+            <button class="nx-replay-btn" id="nx-replay-play" title="Play / pause the run">${REPLAY_LABEL}</button>
+            <button class="nx-replay-btn" id="nx-replay-step" title="Step one decision">step <span class="nx-replay-ico">${ICON_STEP}</span></button>
             <input type="range" id="nx-replay-scrub" min="0" max="${Math.max(0, _replayState.events.length - 1)}" value="${_replayState.idx}">
           </div>
         </div>
@@ -1702,7 +1709,7 @@ function playReplay() {
   if (_replayState.idx >= _replayState.events.length - 1) selectReplay(0);
   _replayState.playing = true;
   const btn = document.getElementById("nx-replay-play");
-  if (btn) btn.textContent = "❚❚ pause";
+  if (btn) btn.innerHTML = PAUSE_LABEL;
   _replayState.timer = setInterval(() => {
     if (_replayState.idx >= _replayState.events.length - 1) { pauseReplay(); return; }
     selectReplay(_replayState.idx + 1);
@@ -1712,7 +1719,7 @@ function pauseReplay() {
   _replayState.playing = false;
   if (_replayState.timer) { clearInterval(_replayState.timer); _replayState.timer = null; }
   const btn = document.getElementById("nx-replay-play");
-  if (btn) btn.textContent = "▶ replay";
+  if (btn) btn.innerHTML = REPLAY_LABEL;
 }
 
 function renderPermLog() {
