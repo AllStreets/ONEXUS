@@ -11,9 +11,11 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from nexus.api.models import (
     RegisterProviderRequest,
@@ -28,6 +30,162 @@ router = APIRouter(prefix="/api/providers", tags=["providers"])
 
 def _get_kernel(request: Request):
     return request.app.state.kernel
+
+
+# ── Local-model management (Ollama) ──────────────────────────────────────────
+# Curated for ONEXUS — an agent OS that fires many tool/function calls. The
+# Qwen2.5 family is the standout for tool-calling fidelity; sizes tuned for a
+# 64 GB Apple-silicon machine. `note`/`size` are human hints for the picker.
+RECOMMENDED_LOCAL_MODELS: list[dict] = [
+    {"name": "qwen2.5:32b", "size": "~20 GB", "note": "Top pick — best agentic/tool-calling fidelity", "recommended": True},
+    {"name": "qwen2.5:14b", "size": "~9 GB",  "note": "Snappy — great balance for fast tool loops", "recommended": True},
+    {"name": "qwen2.5:7b",  "size": "~5 GB",  "note": "Lean — light + quick"},
+    {"name": "gpt-oss:20b", "size": "~14 GB", "note": "OpenAI open weights — fast, strong tool use"},
+    {"name": "llama3.3:70b","size": "~43 GB", "note": "Max power (Q4) — slower"},
+    {"name": "llama3.1:8b", "size": "~5 GB",  "note": "Small default — fallback"},
+]
+
+
+def _active_model_file(kernel) -> Path:
+    return Path(kernel.config.data_dir) / "active_local_model"
+
+
+def read_active_local_model(data_dir) -> str | None:
+    """Read the persisted active local model name, if any. Used at boot to
+    reconstruct the Ollama provider with the user's last choice."""
+    try:
+        p = Path(data_dir) / "active_local_model"
+        if p.exists():
+            v = p.read_text().strip()
+            return v or None
+    except Exception:
+        pass
+    return None
+
+
+def _write_active_local_model(kernel, name: str) -> None:
+    try:
+        _active_model_file(kernel).write_text(name.strip() + "\n")
+    except Exception:
+        pass
+
+
+def _ollama_provider(kernel):
+    router_ = kernel.provider_router
+    if router_ is None:
+        return None
+    return router_._providers.get("ollama")
+
+
+def _pull_state(request: Request) -> dict:
+    st = getattr(request.app.state, "ollama_pulls", None)
+    if st is None:
+        st = {}
+        request.app.state.ollama_pulls = st
+    return st
+
+
+class SetModelBody(BaseModel):
+    model: str
+
+
+class PullModelBody(BaseModel):
+    model: str
+    activate: bool = True   # switch to it once the pull finishes
+
+
+@router.get("/ollama/models")
+async def list_ollama_models(request: Request) -> dict:
+    """List installed Ollama models, the active one, the curated recommended
+    set, and any in-progress pulls — everything the local-model switcher needs."""
+    kernel = _get_kernel(request)
+    provider = _ollama_provider(kernel)
+    installed: list[str] = []
+    active = None
+    if provider is not None:
+        try:
+            installed = await provider.list_models()
+        except Exception:
+            installed = []
+        active = getattr(provider, "model", None)
+    installed_set = set(installed)
+    recommended = [{**m, "installed": m["name"] in installed_set} for m in RECOMMENDED_LOCAL_MODELS]
+    return {
+        "installed": installed,
+        "active": active,
+        "recommended": recommended,
+        "pulls": _pull_state(request),
+        "ollama_present": _find_ollama_binary() is not None,
+    }
+
+
+@router.post("/ollama/model")
+async def set_ollama_model(body: SetModelBody, request: Request) -> dict:
+    """Switch the active local model. The previously active model stays
+    installed and can be switched back to — only the active selection changes."""
+    kernel = _get_kernel(request)
+    provider = _ollama_provider(kernel)
+    if provider is None or not hasattr(provider, "set_model"):
+        raise HTTPException(status_code=503, detail="Ollama provider not available")
+    model = body.model.strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="model required")
+    installed = await provider.list_models()
+    if model not in installed:
+        raise HTTPException(
+            status_code=409,
+            detail=f"'{model}' is not installed in Ollama yet. Add it first (it will be pulled).",
+        )
+    previous = provider.set_model(model)
+    _write_active_local_model(kernel, model)
+    kernel.chronicle.log("providers", "local_model_switched", {"from": previous, "to": model})
+    return {"active": model, "previous": previous}
+
+
+@router.post("/ollama/pull")
+async def pull_ollama_model(body: PullModelBody, request: Request) -> dict:
+    """Add a local model: `ollama pull <model>` in the background. When it
+    finishes (and activate=True) it becomes the active model, replacing the
+    current one. Poll GET /ollama/models for `pulls[model].status`."""
+    binary = _find_ollama_binary()
+    if binary is None:
+        raise HTTPException(status_code=404, detail="ollama binary not found — install Ollama from ollama.com")
+    kernel = _get_kernel(request)
+    provider = _ollama_provider(kernel)
+    model = body.model.strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="model required")
+    pulls = _pull_state(request)
+    if pulls.get(model, {}).get("status") == "pulling":
+        return {"model": model, "status": "pulling", "already": True}
+    pulls[model] = {"status": "pulling", "detail": ""}
+
+    def _run():
+        try:
+            res = subprocess.run([binary, "pull", model], capture_output=True, text=True, timeout=3600)  # noqa: S603
+            if res.returncode == 0:
+                pulls[model] = {"status": "done", "detail": ""}
+                if body.activate and provider is not None and hasattr(provider, "set_model"):
+                    prev = provider.set_model(model)
+                    _write_active_local_model(kernel, model)
+                    try:
+                        kernel.chronicle.log("providers", "local_model_switched",
+                                             {"from": prev, "to": model, "via": "pull"})
+                    except Exception:
+                        pass
+            else:
+                pulls[model] = {"status": "error", "detail": (res.stderr or res.stdout or "pull failed")[-400:]}
+        except subprocess.TimeoutExpired:
+            pulls[model] = {"status": "error", "detail": "pull timed out (>1h)"}
+        except Exception as exc:  # noqa: BLE001
+            pulls[model] = {"status": "error", "detail": str(exc)[-400:]}
+
+    threading.Thread(target=_run, daemon=True).start()
+    try:
+        kernel.chronicle.log("providers", "local_model_pull_started", {"model": model, "activate": body.activate})
+    except Exception:
+        pass
+    return {"model": model, "status": "pulling", "activate": body.activate}
 
 
 @router.get("", response_model=ProviderListResponse)

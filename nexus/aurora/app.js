@@ -4214,10 +4214,12 @@ const _providersState = { addingKey: null /* "openai" | "anthropic" | null */ };
 async function renderProvidersTab() {
   let list = { providers: [] };
   let keys = { keys: {} };
+  let models = { installed: [], active: null, recommended: [], pulls: {}, ollama_present: false };
   try {
-    [list, keys] = await Promise.all([
+    [list, keys, models] = await Promise.all([
       fetch("/api/providers").then(r => r.ok ? r.json() : { providers: [] }),
       fetch("/api/providers/keys").then(r => r.ok ? r.json() : { keys: {} }),
+      fetch("/api/providers/ollama/models").then(r => r.ok ? r.json() : models),
     ]);
   } catch {}
 
@@ -4275,9 +4277,61 @@ async function renderProvidersTab() {
       </p>
     ` : ""}
 
+    <div class="nx-eyebrow" style="margin:18px 0 6px">LOCAL MODEL · the active brain</div>
+    ${renderLocalModelSwitcher(models)}
+
     <div class="nx-eyebrow" style="margin:18px 0 6px">CLOUD</div>
     <dl class="nx-st-rows">${cloudRows}</dl>
   `;
+}
+
+// The local-model switcher — pick which Ollama model is the kernel's active
+// brain. Switching deactivates the previous one (it stays installed, switch
+// back anytime). Recommended models can be added (pulled) in one click.
+function renderLocalModelSwitcher(models) {
+  const installed = models.installed || [];
+  const active = models.active;
+  const pulls = models.pulls || {};
+  if (!models.ollama_present && !installed.length) {
+    return `<div class="nx-model-empty nx-dim">Ollama isn't installed. Get it from <code>ollama.com</code>, then your models appear here.</div>`;
+  }
+  const installedChips = installed.length ? installed.map(m => `
+    <button type="button" class="nx-model-chip ${m === active ? "active" : ""}" data-set-model="${escapeHtml(m)}">
+      <span class="nx-model-dot"></span>${escapeHtml(m)}${m === active ? ` <span class="nx-model-active-tag">ACTIVE</span>` : ""}
+    </button>`).join("") : `<div class="nx-dim" style="font-size:12px">no models installed yet — add one below.</div>`;
+
+  const recRows = (models.recommended || []).map(r => {
+    const p = pulls[r.name];
+    const pulling = p && p.status === "pulling";
+    const err = p && p.status === "error";
+    let action;
+    if (r.installed) {
+      action = r.name === active
+        ? `<span class="nx-model-active-tag">ACTIVE</span>`
+        : `<button type="button" class="nx-model-use" data-set-model="${escapeHtml(r.name)}">use</button>`;
+    } else if (pulling) {
+      action = `<span class="nx-model-pulling"><span class="nx-spinner" aria-hidden="true"></span> pulling…</span>`;
+    } else {
+      action = `<button type="button" class="nx-model-add" data-pull-model="${escapeHtml(r.name)}">add ↓</button>`;
+    }
+    return `
+      <div class="nx-model-rec">
+        <div class="nx-model-rec-main">
+          <span class="nx-model-rec-name">${escapeHtml(r.name)}${r.recommended ? ` <span class="nx-model-rec-badge">recommended</span>` : ""}</span>
+          <span class="nx-model-rec-note nx-dim">${escapeHtml(r.note || "")} · ${escapeHtml(r.size || "")}</span>
+          ${err ? `<span class="nx-model-rec-err">pull failed: ${escapeHtml((p.detail||"").slice(0,120))}</span>` : ""}
+        </div>
+        <div class="nx-model-rec-action">${action}</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="nx-model-switcher">
+      <div class="nx-model-active-line">Active brain: <b>${escapeHtml(active || "—")}</b></div>
+      <div class="nx-model-chips">${installedChips}</div>
+      <div class="nx-model-rec-label nx-dim">Recommended for ONEXUS — Qwen2.5 leads on tool-calling. Adding one pulls it and makes it active.</div>
+      <div class="nx-model-rec-list">${recRows}</div>
+    </div>`;
 }
 
 function renderCloudProviderRow(slug, keysMap) {
@@ -4315,6 +4369,22 @@ function renderCloudProviderRow(slug, keysMap) {
       <dd>${dd}</dd>
     </div>
   `;
+}
+
+// While a model pull is in flight, refresh the providers tab so the user sees
+// progress and the auto-switch once it lands. Self-stops when no pull is active.
+let _ollamaPollTimer = null;
+function startOllamaPullPolling(panel) {
+  if (_ollamaPollTimer) return;
+  _ollamaPollTimer = setInterval(async () => {
+    if (!document.body.contains(panel)) { clearInterval(_ollamaPollTimer); _ollamaPollTimer = null; return; }
+    let models = null;
+    try { models = await fetch("/api/providers/ollama/models").then(r => r.ok ? r.json() : null); } catch {}
+    const anyPulling = models && Object.values(models.pulls || {}).some(p => p.status === "pulling");
+    panel.innerHTML = await renderProvidersTab();
+    wireProvidersHandlers(panel);
+    if (!anyPulling) { clearInterval(_ollamaPollTimer); _ollamaPollTimer = null; }
+  }, 3000);
 }
 
 // Wired by renderSettings after each providers-tab render. Re-renders the
@@ -4369,6 +4439,39 @@ function wireProvidersHandlers(panel) {
         btn.disabled = false;
         btn.textContent = prev;
       }
+    });
+  });
+
+  // Local-model switch — activate an installed model (deactivates the previous).
+  panel.querySelectorAll("[data-set-model]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const model = btn.dataset.setModel;
+      btn.disabled = true;
+      try {
+        const r = await fetch("/api/providers/ollama/model", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+        if (!r.ok) { const b = await r.json().catch(() => ({})); alert(b.detail || "switch failed"); btn.disabled = false; return; }
+      } catch (err) { alert("network error: " + err); btn.disabled = false; return; }
+      repaint();
+    });
+  });
+
+  // Add (pull) a recommended model — it becomes active when the pull lands.
+  panel.querySelectorAll("[data-pull-model]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const model = btn.dataset.pullModel;
+      btn.disabled = true; btn.textContent = "starting…";
+      try {
+        const r = await fetch("/api/providers/ollama/pull", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model, activate: true }),
+        });
+        if (!r.ok) { const b = await r.json().catch(() => ({})); alert(b.detail || "pull failed to start"); btn.disabled = false; btn.textContent = "add ↓"; return; }
+      } catch (err) { alert("network error: " + err); btn.disabled = false; btn.textContent = "add ↓"; return; }
+      repaint();
+      startOllamaPullPolling(panel);
     });
   });
 

@@ -42,6 +42,19 @@ class OllamaProvider(InferenceProvider):
         self._model = model
         self._http = http_client
 
+    @property
+    def model(self) -> str:
+        """The currently active local model name."""
+        return self._model
+
+    def set_model(self, name: str) -> str:
+        """Switch the active local model at runtime. The previously active model
+        stays installed in Ollama and can be switched back to — only the active
+        selection changes. Returns the previous model name."""
+        previous = self._model
+        self._model = name
+        return previous
+
     async def infer(
         self,
         messages: list[dict],

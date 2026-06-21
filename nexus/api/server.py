@@ -127,7 +127,11 @@ def _init_kernel(config: NexusConfig) -> KernelState:
     # provider when both are running — Ollama is what most users on a Mac
     # actually install and ONEXUS-Agents-Catalog ranks it as the easiest
     # on-device runtime. Falls back silently if Ollama isn't running.
-    ollama = OllamaProvider()
+    # Honour the user's last local-model choice (persisted by the model
+    # switcher in Settings → Providers); fall back to the default model.
+    from nexus.api.routes.providers import read_active_local_model
+    _saved_model = read_active_local_model(config.data_dir)
+    ollama = OllamaProvider(model=_saved_model) if _saved_model else OllamaProvider()
     provider_router.register(ollama)
 
     # Register the llama.cpp-compatible local provider as a secondary
