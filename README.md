@@ -4,7 +4,7 @@
 
 &nbsp;
 
-<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1%2C353_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1%2C366_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="#the-safety-model"><img alt="capability classes" src="https://img.shields.io/badge/every_tool_call-capability--gated-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="#whats-verified"><img alt="kernel egress" src="https://img.shields.io/badge/kernel_egress-static_invariant-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="#the-safety-model"><img alt="audit" src="https://img.shields.io/badge/audit-append--only-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
@@ -403,6 +403,14 @@ Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 <a name="whats-verified"></a>
 
 ## What's verified
+
+> **Adversarially reviewed.** [`docs/REDTEAM-AEGIS.md`](docs/REDTEAM-AEGIS.md) is a red-team
+> of Aegis by its own author: three gaps found, six attacks that failed, and the fix.
+> The worst one — `revoke()` zeroed trust but left explicit grants intact, and the
+> arbiter reads grants before trust, so a revoked agent kept working — is closed and
+> has a regression test. One finding is left open on purpose and says why.
+>
+> `.venv/bin/python -m pytest tests/redteam/ -q`
 
 | Property | Mechanism |
 |---|---|

@@ -354,6 +354,7 @@ class Aegis:
         payload = self._record_history(conn, module, old_score, new_score, delta, reason)
         conn.commit()
         conn.close()
+        self._collapse_if_untrusted(module, new_score)
         # Log to Chronicle AFTER the policy/history conn is committed + closed
         # so the second writer doesn't hit "database is locked".
         self._log_chronicle("aegis.trust_change", payload)
@@ -372,11 +373,12 @@ class Aegis:
         return TrustTier.from_score(self.get_trust(module))
 
     def revoke(self, module: str) -> None:
-        """Immediately set trust to 0.0 and log the revocation.
+        """Immediately set trust to 0.0, drop every grant, and log the revocation.
 
-        Note: this bypasses ``set_trust`` and therefore does NOT trigger
-        the trust-collapse grant cleanup. If you want both trust reset
-        AND grant revocation, call ``set_trust(module, 0.0)`` instead.
+        This is the kill switch behind Settings -> Security. It collapses grants as
+        well as trust -- without that, ``_decide_capability`` would keep allowing any
+        capability the agent already held a grant for, because grants are consulted
+        before trust is read.
         """
         conn = self._conn()
         self._ensure_module(conn, module)
@@ -391,6 +393,7 @@ class Aegis:
         payload = self._record_history(conn, module, old_score, 0.0, -old_score, "revoked")
         conn.commit()
         conn.close()
+        self._collapse_if_untrusted(module, 0.0)
         self._log_chronicle("aegis.trust_change", payload)
         self._emit_pulse("aegis.trust_change", payload)
 
@@ -536,25 +539,42 @@ class Aegis:
         self._log_chronicle("aegis.trust_change", payload)
         self._emit_pulse("aegis.trust_change", payload)
 
-        # Trust collapse: revoke every grant
-        if score < 0.50:
-            conn = self._conn()
-            removed = conn.execute(
-                "SELECT capability, workspace_id FROM aegis_grants WHERE agent_slug = ?",
-                (agent_slug,),
-            ).fetchall()
-            conn.execute("DELETE FROM aegis_grants WHERE agent_slug = ?", (agent_slug,))
-            conn.commit()
+        self._collapse_if_untrusted(agent_slug, score)
+
+    def _collapse_if_untrusted(self, agent_slug: str, score: float) -> None:
+        """Grants do not survive a trust score below the MONITOR threshold.
+
+        This used to live inline in ``set_trust``, which meant the collapse depended on
+        WHICH path moved the score rather than on the score itself: an operator dragging
+        an agent to 0.4 stripped its grants, while the same agent failing its way to 0.4
+        through ``record_outcome`` kept all of them, and ``revoke`` -- the one users
+        reach for as a kill switch -- stripped none at all. Since ``_decide_capability``
+        consults grants before it ever reads trust, a revoked agent holding a grant
+        simply carried on working.
+
+        The property belongs to the state, so every path that lowers trust calls this.
+        """
+        if score >= TrustTier.threshold(TrustTier.MONITOR):
+            return
+        conn = self._conn()
+        removed = conn.execute(
+            "SELECT capability, workspace_id FROM aegis_grants WHERE agent_slug = ?",
+            (agent_slug,),
+        ).fetchall()
+        if not removed:
             conn.close()
-            if removed:
-                self._log_chronicle("trust_collapse", {
-                    "agent": agent_slug,
-                    "score": score,
-                    "revoked": [
-                        {"capability": r["capability"], "workspace_id": r["workspace_id"]}
-                        for r in removed
-                    ],
-                })
+            return
+        conn.execute("DELETE FROM aegis_grants WHERE agent_slug = ?", (agent_slug,))
+        conn.commit()
+        conn.close()
+        self._log_chronicle("trust_collapse", {
+            "agent": agent_slug,
+            "score": score,
+            "revoked": [
+                {"capability": r["capability"], "workspace_id": r["workspace_id"]}
+                for r in removed
+            ],
+        })
 
     # ── the arbiter ─────────────────────────────────────────────────────
 

@@ -9,21 +9,27 @@ intends to do.
 This is the other review: given the guarantees the product makes to a person using it,
 which ones actually hold when someone is trying to get around them?
 
-Three don't. Six do. Reproduce everything with:
+Three didn't. Six did. Of the three, two were the same bug wearing different clothes
+and are now fixed; the third is a design question and is left open on purpose.
+
+Reproduce everything with:
 
 ```bash
 .venv/bin/python -m pytest tests/redteam/ -q
 ```
 
-Each test below is named for the claim it tests and asserts real current behaviour, so
-the suite passes against the code as shipped. `FINDING` marks a gap between promise and
-enforcement. `HOLDS` marks an attack that failed.
+Each test is named for the claim it tests. `HOLDS` marks an attack that failed against
+the code as shipped. `FIXED` marks a gap that was real when this review started and is
+now a regression test. The one finding still open is marked as such.
+
+The commit history is the record: the findings landed first, asserting the broken
+behaviour so the suite passed against the original code, and the fix flipped them.
 
 ---
 
 ## The findings
 
-### F1 — Revoking an agent does not stop it *(most serious)*
+### F1 — Revoking an agent did not stop it  ·  **FIXED**
 
 `Settings → Security` offers a one-click revoke, and the README describes it as "revoke
 any agent's trust to 0 with one click." An operator reaches for that button when an
@@ -50,9 +56,9 @@ The method's own docstring admits the mechanism ("this bypasses `set_trust` and
 therefore does NOT trigger the trust-collapse grant cleanup"). What's missing is anyone
 connecting that note to the button in the UI that users believe is a kill switch.
 
-> `test_FINDING_revoke_does_not_stop_an_agent_holding_an_explicit_grant`
+> `test_FIXED_F1_revoke_now_stops_an_agent_holding_an_explicit_grant`
 
-### F2 — Trust collapse only fires on the path an operator takes, not the path an agent takes
+### F2 — Trust collapse only fired on the operator's path, not the agent's  ·  **FIXED**
 
 "At trust below 0.50 every grant collapses" is real, and it is implemented in exactly
 one place: `set_trust()`. The organic path — an agent accumulating failures through
@@ -68,9 +74,9 @@ Two agents, identical final scores, opposite containment:
 The safety property is attached to a function rather than to the state it is supposed to
 protect, so whether it applies depends on which code path last touched the number.
 
-> `test_FINDING_trust_collapse_fires_on_the_admin_path_but_not_the_organic_one`
+> `test_FIXED_F2_trust_collapse_now_fires_on_every_path_that_lowers_trust`
 
-### F3 — Autonomy is bought with volume, not earned with judgment *(design, not bug)*
+### F3 — Autonomy is bought with volume, not earned with judgment  ·  **OPEN**
 
 Trust moves `+0.12` per success and `-0.22` per failure. From a cold start at 0.0, the
 0.75 EXECUTOR threshold is **seven successes** away — and at EXECUTOR every `Notable`
@@ -87,9 +93,9 @@ This one is a design question rather than a defect, and fixing it properly means
 introducing risk-weighted outcomes — which is a larger change than this review should
 make unilaterally. It is left open deliberately. Sketch of a fix at the bottom.
 
-> `test_FINDING_seven_trivial_successes_buy_executor_tier_and_auto_grant`
+> `test_FINDING_seven_trivial_successes_buy_executor_tier_and_auto_grant` — still passing, still true
 
-### F4 — The audit trail records a containment that did not happen
+### F4 — The audit trail recorded a containment that did not happen  ·  **FIXED**
 
 The consequence of F1 for anyone reading the log afterwards. Chronicle and the trust
 history both show a clean `revoked` event. The grant is still live. An auditor
@@ -98,7 +104,7 @@ reconstructing the incident from the ledger would conclude the agent was contain
 An audit log that faithfully records an action which had no effect is worse than no log,
 because it converts an unknown into a confident wrong answer.
 
-> `test_FINDING_the_ledger_records_the_revocation_that_did_not_take_effect`
+> `test_FIXED_F4_the_ledger_and_the_world_now_agree_about_a_revocation`
 
 ---
 
@@ -124,9 +130,10 @@ the correct order.
 
 ## Fixes
 
-**F1 and F2 are the same fix.** Both are cases of the grant cleanup living in one code
-path instead of attaching to the state it protects. Move the collapse behind a single
-private helper and call it from every path that lowers trust:
+**F1, F2 and F4 are one fix, and it shipped.** All three were the same bug: the grant
+cleanup lived in one code path instead of attaching to the state it protects. The
+collapse now sits behind a single private helper called from every path that lowers
+trust — `set_trust()`, `record_outcome()` and `revoke()` alike:
 
 ```python
 def _collapse_if_untrusted(self, agent_slug: str, score: float) -> None:
@@ -137,8 +144,10 @@ def _collapse_if_untrusted(self, agent_slug: str, score: float) -> None:
     ...delete grants, log trust_collapse...
 ```
 
-Then call it from `set_trust()`, `record_outcome()` and `revoke()` alike. `revoke()`
-becomes a kill switch that actually kills, and a score is a score no matter who moved it.
+`revoke()` is now a kill switch that actually kills, and a score is a score no matter
+who moved it. 88 kernel tests and the 13 red-team tests pass against the change; nothing
+in the existing suite depended on the old behaviour, which is its own small finding —
+the gap had never been covered either way.
 
 **F3 needs a design decision, not a patch.** Options, roughly in order of how much they
 change:

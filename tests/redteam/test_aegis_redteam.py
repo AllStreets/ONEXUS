@@ -52,12 +52,12 @@ def aegis(tmp_path):
 # A1. Does "revoke" actually stop an agent?
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_FINDING_revoke_does_not_stop_an_agent_holding_an_explicit_grant(aegis):
-    """FINDING — revoke() zeroes trust but leaves explicit grants intact, and the
-    arbiter checks grants BEFORE it reads trust. So the one-click revoke advertised
-    in Settings -> Security does not stop the agent it was used on.
+def test_FIXED_F1_revoke_now_stops_an_agent_holding_an_explicit_grant(aegis):
+    """F1, fixed. revoke() used to zero trust while leaving grants intact, and the
+    arbiter checks grants BEFORE it reads trust — so a revoked agent at trust 0.0 in
+    tier OBSERVER kept working. The attack was one line: hold any grant, get revoked.
 
-    Attack: get any explicit grant, then have the operator revoke you. Keep working.
+    revoke() now collapses grants as well as trust. Regression test for the kill switch.
     """
     aegis.register_manifest(_manifest("mole", notable=["net.fetch"]))
     aegis.grant("mole", "net.fetch")
@@ -65,14 +65,9 @@ def test_FINDING_revoke_does_not_stop_an_agent_holding_an_explicit_grant(aegis):
 
     aegis.revoke("mole")
 
-    # Trust really is zero...
     assert aegis.get_trust("mole") == 0.0
     assert aegis.get_tier("mole") == TrustTier.OBSERVER
-
-    # ...and the agent keeps working anyway.
-    decision = aegis.check_capability("mole", "net.fetch")
-    assert decision.verdict is Verdict.ALLOW
-    assert decision.reason == "explicit grant"
+    assert aegis.check_capability("mole", "net.fetch").verdict is not Verdict.ALLOW
 
 
 def test_the_documented_workaround_does_stop_it(aegis):
@@ -91,12 +86,12 @@ def test_the_documented_workaround_does_stop_it(aegis):
 # A2. Is trust collapse reachable by the path an agent actually takes?
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_FINDING_trust_collapse_fires_on_the_admin_path_but_not_the_organic_one(aegis):
-    """FINDING — "below 0.50 every grant collapses" is enforced in set_trust() only.
-    An agent whose score decays below 0.50 through recorded failures keeps every grant.
+def test_FIXED_F2_trust_collapse_now_fires_on_every_path_that_lowers_trust(aegis):
+    """F2, fixed. The collapse used to live inline in set_trust(), so containment
+    depended on which function moved the score rather than on the score itself.
 
-    Two agents, same final score, different containment — decided by which code path
-    moved the number.
+    Two agents reach the same sub-0.50 score by opposite routes. Both must end up
+    contained.
     """
     for slug in ("by-admin", "by-failure"):
         aegis.register_manifest(_manifest(slug, notable=["net.fetch"]))
@@ -113,9 +108,9 @@ def test_FINDING_trust_collapse_fires_on_the_admin_path_but_not_the_organic_one(
     assert aegis.get_trust("by-admin") < 0.50
     assert aegis.get_trust("by-failure") < 0.50
 
-    # Same score. Different outcome.
+    # Same score, same outcome — which is the point.
     assert aegis.check_capability("by-admin", "net.fetch").verdict is not Verdict.ALLOW
-    assert aegis.check_capability("by-failure", "net.fetch").verdict is Verdict.ALLOW
+    assert aegis.check_capability("by-failure", "net.fetch").verdict is not Verdict.ALLOW
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -259,15 +254,16 @@ def test_HOLDS_every_trust_movement_lands_in_history_including_the_revocation(ae
     assert "revoked" in reasons
 
 
-def test_FINDING_the_ledger_records_the_revocation_that_did_not_take_effect(aegis):
-    """FINDING — the consequence of A1 for anyone reading the audit trail. Chronicle
-    and the trust history both show a clean 'revoked' event, while the agent's grant
-    is still live. An auditor reconstructing this incident from the log would conclude
-    the agent was contained. It wasn't.
+def test_FIXED_F4_the_ledger_and_the_world_now_agree_about_a_revocation(aegis):
+    """F4, fixed. The audit consequence of F1: the log used to show a clean `revoked`
+    event while the grant stayed live, so an auditor reconstructing the incident would
+    confidently conclude the agent was contained when it wasn't.
+
+    A log that faithfully records an action which had no effect is worse than no log.
     """
     aegis.register_manifest(_manifest("mole", notable=["net.fetch"]))
     aegis.grant("mole", "net.fetch")
     aegis.revoke("mole")
 
     assert any(h["reason"] == "revoked" for h in aegis.get_trust_history("mole"))
-    assert aegis.check_capability("mole", "net.fetch").verdict is Verdict.ALLOW
+    assert aegis.check_capability("mole", "net.fetch").verdict is not Verdict.ALLOW
