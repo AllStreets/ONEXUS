@@ -4,11 +4,18 @@
 
 &nbsp;
 
-<a href="https://github.com/AllStreets/ONEXUS/releases/tag/v1.0"><img alt="release" src="https://img.shields.io/badge/release-v1.0-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1014_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="catalog" src="https://img.shields.io/badge/catalog-7%2C000%2B_agents-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="runnable" src="https://img.shields.io/badge/runnable_(MCP)-500%2B-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1%2C353_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="#the-safety-model"><img alt="capability classes" src="https://img.shields.io/badge/every_tool_call-capability--gated-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="#whats-verified"><img alt="kernel egress" src="https://img.shields.io/badge/kernel_egress-static_invariant-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+<a href="#the-safety-model"><img alt="audit" src="https://img.shields.io/badge/audit-append--only-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
 <a href="https://github.com/AllStreets/ONEXUS/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
+
+<br/>
+
+<img alt="release" src="https://img.shields.io/badge/release-v1.0-6b7382?style=flat-square&labelColor=0a0712"/>
+<img alt="python" src="https://img.shields.io/badge/python-3.11+-6b7382?style=flat-square&labelColor=0a0712"/>
+<img alt="local" src="https://img.shields.io/badge/inference-local_by_default-6b7382?style=flat-square&labelColor=0a0712"/>
+<img alt="catalog" src="https://img.shields.io/badge/agent_catalog-ONEXUS--Agents-6b7382?style=flat-square&labelColor=0a0712"/>
 
 &nbsp;
 
@@ -33,9 +40,26 @@
 
 ## What this is
 
-**ONEXUS runs agents the way iOS runs apps.** Built-in cognitive modules (Council, Specter, Wraith, Echo, Oracle, Legacy, Consciousness, Sentry, Autonomic, Agents-dispatcher) and **7,000+ third-party agents** from [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) — **500+ with MCP adapters** — share one runtime, one manifest, one trust model, one set of surfaces.
+**ONEXUS runs untrusted agents behind a capability arbiter.**
 
-A workspace is a room: it owns its own agents, memory, file grants, and home tone. Every tool call routes through a **capability arbiter** that gates against the agent's declared permissions, surfaces a first-use prompt when something needs your approval, and writes every byte to an immutable audit ledger.
+An agent declares what it needs — filesystem reach, specific outbound domains, which tools —
+in a manifest, before it runs. Every call it then makes is checked against that declaration
+by **Aegis**, allowed or denied, and appended to a ledger that is never rewritten. An agent
+that never declared `network.outbound.example.com` cannot reach that host, and the refusal
+is a recorded event rather than a silent failure.
+
+Trust is earned rather than assigned. Each module carries a score that moves on recorded
+outcomes, and the score decides how much rope it gets — from *suggest only*, through
+*monitor*, to *execute*, to *fully autonomous*. Revoking it is one click and takes effect on
+the next call, not the next restart.
+
+That is the whole idea. Everything else — the workspaces, the ten built-in cognitive modules,
+the in-shell editor, the mood engine, the third-party agents from
+[ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) — is the interface that makes
+living inside it bearable. **It runs agents the way iOS runs apps**: one runtime, one
+manifest format, one trust model, one set of surfaces.
+
+A workspace is a room: it owns its own agents, memory, file grants, and home tone.
 
 You don't leave the OS to do anything. Code editor, web search, file drop, mood-driven atmosphere, agent capability sheets — all in-shell.
 
@@ -43,7 +67,7 @@ You don't leave the OS to do anything. Code editor, web search, file drop, mood-
 
 ## v2 — The Missing Minds
 
-Three new cognitive layers (1,274 tests passing) turning the agent-OS into something with genuine cognition:
+Three new cognitive layers turning the agent-OS into something with genuine cognition:
 
 - **N1 — Perception.** **Sigil**, a threat radar that watches Aegis trust deltas, gate verdicts, and routing traffic, broadcasts emergency Pulse alerts and can auto-activate Specter. **Atlas**, a temporal knowledge graph in Engram with read-time confidence decay, re-confirmation, and coexisting contradictions. A **live kernel visualization** in Aurora — watch Cortex route and Aegis gate in real time, with radar pings and full-surface emergency veils.
 - **N2 — Cognition.** **Prism** cross-domain synthesis across workspace partitions (Aegis-gated), **Chronos** counterfactual reasoning over Chronicle's decision history ("what would have happened if that grant had been denied"), and **Dreamweaver** overnight distillation of the day's memory into a morning brief — surfaced as an Atlas graph view, a Chronos timeline, and a brief card.
@@ -59,7 +83,7 @@ A companion `fix/aurora-feedback` branch ships UX fixes: escape-first markdown r
 
 ```bash
 # 1. Clone ONEXUS + the agent catalog as siblings (the kernel looks for
-#    ../ONEXUS-Agents/ for the 8,000+ catalog agents).
+#    ../ONEXUS-Agents/ for the bundled agent catalog).
 git clone https://github.com/AllStreets/ONEXUS.git
 git clone https://github.com/AllStreets/ONEXUS-Agents.git
 cd ONEXUS
@@ -229,7 +253,7 @@ Press <kbd>⌘ 0</kbd> for the expanded six-panel cockpit overlay.
 
 - **General** — data dir, port, default provider
 - **Chat history** — drill from workspaces → agents → individual chats with full transcripts. 50 chats per page with prev/next pagination, polls every 5s so new exchanges appear without a refresh. Each workspace's chat cards pick up that workspace's own tone gradient on the left rail.
-- **Security** — search any of the **590** Aegis-registered modules; revoke any agent's trust to 0 with one click
+- **Security** — search every Aegis-registered module; revoke any agent's trust to 0 with one click
 - **Providers** — LOCAL section (Ollama + llama.cpp with live health dots, green for healthy / red for unavailable) and CLOUD section (`+ add OpenAI / Anthropic API key` flow described above)
 - **Federation** — peer-to-peer instance config
 - **Moods** — current MoodEngine state + 8 atmospheres with live previews
@@ -254,7 +278,7 @@ Aegis classifies every capability into one of four classes:
   <img src=".github/assets/trust-collapse-v2.svg" alt="Trust meter — at trust below 0.50 every grant collapses and alert mood fires" width="100%"/>
 </p>
 
-The kernel writes every decision to **Chronicle** (immutable append-only sqlite). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster — search any of the **590** Aegis-registered modules, click revoke to reset trust to 0.
+The kernel writes every decision to **Chronicle** (immutable append-only sqlite). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster — search every Aegis-registered module, click revoke to reset trust to 0.
 
 ---
 
@@ -309,7 +333,7 @@ Drag any file anywhere on the conversation canvas — the surface gets a mood-ti
 
 ## Catalog
 
-ONEXUS ships with the [AllStreets/ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) catalog bundled — every entry is a single JSON manifest under `catalog/<category>/<slug>.json`. **7,000+ agents** across 40 categories, **500+ runnable** via MCP adapters. Browse from the sidebar's *agent catalog* link, filter by category / runnable-only / search, click Launch on any runnable card.
+ONEXUS ships with the [AllStreets/ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) catalog bundled — every entry is a single JSON manifest under `catalog/<category>/<slug>.json`, spanning 40 categories. Entries marked `runnable` are **derived from each repo's own declared metadata**, not from anything executed here, so treat them as leads; 21 carry hand-maintained adapters. Browse from the sidebar's *agent catalog* link, filter by category / runnable-only / search, click Launch on any runnable card. Whatever you launch is still gated by Aegis like everything else.
 
 The catalog rebuilds nightly via a [GitHub Actions cron](.github/workflows/nightly-catalog.yml) that reads the catalog repo's head SHA and pushes a fresh Docker image to GHCR.
 
@@ -375,6 +399,8 @@ A `railway.json` is included. From the Railway dashboard:
 Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
+
+<a name="whats-verified"></a>
 
 ## What's verified
 
