@@ -20,13 +20,18 @@
 
 ## What this is
 
-**ONEXUS runs untrusted agents behind a capability arbiter.**
+**ONEXUS puts a capability arbiter in front of the agents it runs.**
 
-An agent declares what it needs — filesystem reach, specific outbound domains, which tools —
-in a manifest, before it runs. Every call it then makes is checked against that declaration
-by **Aegis**, allowed or denied, and appended to a ledger that is never rewritten. An agent
-that never declared `network.outbound.example.com` cannot reach that host, and the refusal
-is a recorded event rather than a silent failure.
+An agent declares what it needs (filesystem reach, specific outbound domains, which tools)
+in a manifest, before it runs. Every call it then makes through ONEXUS is checked against
+that declaration by **Aegis**, allowed or denied, and appended to the Chronicle ledger. An
+agent that never declared `network.outbound.example.com` is refused when it asks ONEXUS to
+reach that host, and the refusal is a recorded event rather than a silent failure.
+
+Third-party agents are launched as ordinary processes and are not sandboxed yet, so Aegis
+governs the calls they route through ONEXUS, not everything they could do on their own.
+The [red-team report](docs/REDTEAM-AEGIS.md#threat-model-and-non-goals) spells out exactly
+what is and isn't protected, and what closes the gap.
 
 Trust is earned rather than assigned. Each module carries a score that moves on recorded
 outcomes, and the score decides how much rope it gets — from *suggest only*, through
@@ -258,7 +263,7 @@ Aegis classifies every capability into one of four classes:
   <img src=".github/assets/trust-collapse-v2.svg" alt="Trust meter — at trust below 0.50 every grant collapses and alert mood fires" width="100%"/>
 </p>
 
-The kernel writes every decision to **Chronicle** (immutable append-only sqlite). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster — search every Aegis-registered module, click revoke to reset trust to 0.
+The kernel writes every decision to **Chronicle**, a SQLite ledger that ONEXUS only ever appends to (it isn't hash-chained yet, so it isn't tamper-evident against another process running as you). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster: search every Aegis-registered module, and click revoke to drop its trust to 0 and remove its grants.
 
 ---
 

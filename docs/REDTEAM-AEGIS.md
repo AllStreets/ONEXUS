@@ -27,6 +27,68 @@ behaviour so the suite passed against the original code, and the fix flipped the
 
 ---
 
+## Threat model and non-goals
+
+*Added 2026-10-19. This section says what Aegis protects against and what it doesn't,
+so the findings below can be read at their real size.*
+
+**What Aegis is.** Aegis decides calls that go through the ONEXUS kernel: a module or an
+agent asks to use a capability (a file path, a tool, an outbound domain), and Aegis
+allows, prompts or denies it, then writes the decision to Chronicle. The built-in
+modules run inside the ONEXUS process and reach the world only through those calls.
+
+**What this review attacked.** The decision logic itself: grants, trust scores and tiers,
+manifests, workspace scope, and path and symlink containment. Everything under "The
+findings" and "What held" is about calls that reach Aegis.
+
+**What Aegis does not protect against today.** Third-party agents from the catalog are
+launched as ordinary child processes, and nothing confines what they do outside their
+calls to ONEXUS:
+
+1. **No operating-system isolation.** `nexus/agents/launcher.py` starts an agent with
+   `subprocess.Popen(..., env=dict(os.environ))`, and when a provider router is
+   configured it adds `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` to that environment.
+   `nexus/agents/mcp_agent.py` also passes the whole `os.environ`. A launched agent runs
+   as you: it can read any file you can read, read every environment variable including
+   those keys, and start its own processes, without asking Aegis.
+2. **Network declarations cover only routed calls.** An agent that never declared
+   `network.outbound.example.com` is refused when it asks ONEXUS to reach that host. The
+   same agent can open a socket to it directly, and nothing intercepts that.
+3. **The command allowlist checks the program, not the program's behavior.**
+   `python`, `python3`, `node`, `npx`, `uv`, `uvx`, `deno`, `bun` and `docker` are
+   allowed by default, and every one of them can run arbitrary code. The allowlist
+   stops a catalog update from swapping in an unknown binary. It does not confine the
+   code that binary runs.
+4. **"The kernel never touches the network" is a static check.** A test scans kernel
+   imports for network libraries. That is a real guarantee about the kernel's own code,
+   not a runtime guarantee about anything the kernel launches.
+5. **Chronicle is append-only through ONEXUS, not on disk.** The kernel only ever
+   inserts rows, but the ledger is a SQLite file owned by your user, and any process
+   running as you could edit it. There is no hash chain yet to make tampering visible.
+
+So the honest summary is: Aegis is a correct arbiter for the calls agents route through
+it (the six attacks in "What held" failed against it), and a catalog agent that chooses
+not to route a call through it is not stopped. That gap is the next piece of work, not a
+finding this review missed by accident.
+
+**What would close it**, in the order I'd do it:
+
+1. Give each child process only the environment keys its manifest declares in
+   `env_keys`, and stop injecting provider keys the agent didn't ask for.
+2. Run catalog agents in a container with no network by default, a read-only root and
+   all Linux capabilities dropped. [SMADP's sandbox](https://github.com/AllStreets/SMADP)
+   already uses that profile for its own runs.
+3. Send any network access an agent is granted through an egress proxy that enforces
+   the declared hosts, so a refused domain is refused at the socket.
+4. Chain Chronicle entries by hash, so an edit to the file shows up on the next read.
+
+Round 2 of this review will attack that boundary the same way round 1 attacked the
+arbiter: write the attacks first (an agent reading `~` directly, opening a raw socket,
+reading a key from its environment), watch them succeed against the current code, then
+fix.
+
+---
+
 ## The findings
 
 ### F1 — Revoking an agent did not stop it  ·  **FIXED**
