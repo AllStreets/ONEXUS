@@ -7,7 +7,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'ONEXUS',
-      description: 'Open-Source Neural Executive for Unified Superintelligence',
+      description: 'A local-first runtime that checks every agent tool call against a declared manifest.',
       customCss: ['./src/styles/custom.css'],
       favicon: '/favicon.svg',
       head: [

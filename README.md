@@ -4,27 +4,7 @@
 
 &nbsp;
 
-<a href="https://github.com/AllStreets/ONEXUS/actions"><img alt="tests" src="https://img.shields.io/badge/tests-1%2C366_passing-9affb6?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="#the-safety-model"><img alt="capability classes" src="https://img.shields.io/badge/every_tool_call-capability--gated-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="#whats-verified"><img alt="kernel egress" src="https://img.shields.io/badge/kernel_egress-static_invariant-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="#the-safety-model"><img alt="audit" src="https://img.shields.io/badge/audit-append--only-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
-<a href="https://github.com/AllStreets/ONEXUS/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-b48bff?style=for-the-badge&labelColor=0a0712"/></a>
-
-<br/>
-
-<img alt="release" src="https://img.shields.io/badge/release-v1.0-6b7382?style=flat-square&labelColor=0a0712"/>
-<img alt="python" src="https://img.shields.io/badge/python-3.11+-6b7382?style=flat-square&labelColor=0a0712"/>
-<img alt="local" src="https://img.shields.io/badge/inference-local_by_default-6b7382?style=flat-square&labelColor=0a0712"/>
-<img alt="catalog" src="https://img.shields.io/badge/agent_catalog-ONEXUS--Agents-6b7382?style=flat-square&labelColor=0a0712"/>
-
-&nbsp;
-
-<a href="#quickstart"><kbd> &nbsp; <strong>Quickstart</strong> &nbsp; </kbd></a> &nbsp;
-<a href="#the-shell"><kbd> &nbsp; <strong>The Shell</strong> &nbsp; </kbd></a> &nbsp;
-<a href="#the-safety-model"><kbd> &nbsp; <strong>Safety</strong> &nbsp; </kbd></a> &nbsp;
-<a href="#built-in-agents"><kbd> &nbsp; <strong>Agents</strong> &nbsp; </kbd></a> &nbsp;
-<a href="#deploy"><kbd> &nbsp; <strong>Deploy</strong> &nbsp; </kbd></a> &nbsp;
-<a href="https://github.com/AllStreets/ONEXUS-Agents"><kbd> &nbsp; <strong>Agents catalog ↗</strong> &nbsp; </kbd></a>
+<a href="#quickstart">Quickstart</a> · <a href="#the-shell">The Shell</a> · <a href="#the-safety-model">Safety</a> · <a href="#built-in-agents">Agents</a> · <a href="#deploy">Deploy</a> · <a href="docs/REDTEAM-AEGIS.md">Red-team report</a> · <a href="https://github.com/AllStreets/ONEXUS-Agents">Agent catalog</a>
 
 </div>
 
@@ -34,7 +14,7 @@
   <img src=".github/assets/hero-calm-v2.png" alt="ONEXUS Aurora dashboard" width="100%"/>
 </p>
 
-<p align="center"><em>One process. Local-first. Five-component kernel. Every tool call gated by Aegis. Every event logged to Chronicle. The kernel never touches the network — there's a static test that proves it.</em></p>
+<p align="center"><em>Aurora, the ONEXUS shell. One local process: tool calls an agent routes through the runtime are checked by Aegis and logged to Chronicle, and a static import check keeps the kernel off the network.</em></p>
 
 ---
 
@@ -65,9 +45,9 @@ You don't leave the OS to do anything. Code editor, web search, file drop, mood-
 
 ---
 
-## v2 — The Missing Minds
+## What v2 added
 
-Three new cognitive layers turning the agent-OS into something with genuine cognition:
+Version 2 added three groups of modules on top of the runtime:
 
 - **N1 — Perception.** **Sigil**, a threat radar that watches Aegis trust deltas, gate verdicts, and routing traffic, broadcasts emergency Pulse alerts and can auto-activate Specter. **Atlas**, a temporal knowledge graph in Engram with read-time confidence decay, re-confirmation, and coexisting contradictions. A **live kernel visualization** in Aurora — watch Cortex route and Aegis gate in real time, with radar pings and full-surface emergency veils.
 - **N2 — Cognition.** **Prism** cross-domain synthesis across workspace partitions (Aegis-gated), **Chronos** counterfactual reasoning over Chronicle's decision history ("what would have happened if that grant had been denied"), and **Dreamweaver** overnight distillation of the day's memory into a morning brief — surfaced as an Atlas graph view, a Chronos timeline, and a brief card.

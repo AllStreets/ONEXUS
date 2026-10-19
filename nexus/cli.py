@@ -14,7 +14,7 @@ from nexus.config import NexusConfig
 @click.group()
 @click.version_option(__version__, prog_name="onexus")
 def main():
-    """ONEXUS -- Open-Source Neural Executive for Unified Superintelligence"""
+    """ONEXUS, a local-first runtime that checks every agent tool call against a declared manifest."""
     pass
 
 

@@ -1,7 +1,7 @@
 [project]
 name = "onexus"
 version = "0.2.0"
-description = "Open-Source Neural Executive for Unified Superintelligence"
+description = "A local-first runtime that checks every agent tool call against a declared manifest"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 dependencies = [

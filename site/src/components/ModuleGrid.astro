@@ -27,7 +27,7 @@ const modules: Module[] = [
   { name: 'Cipher', description: 'Pattern recognition engine — surfaces statistical regularities and anomalies in long-horizon time-series data.', tier: 'Intelligence' },
 
   // Action
-  { name: 'Wraith', description: 'Stealthy subprocess executor — runs shell commands in isolated contexts with full stdin/stdout capture.', tier: 'Action' },
+  { name: 'Wraith', description: 'Subprocess executor: runs shell commands as child processes and captures stdin and stdout. It is not a sandbox.', tier: 'Action' },
   { name: 'Echo', description: 'Notification and response bus — routes alerts to configured channels (terminal, webhook, file) and awaits human reply.', tier: 'Action' },
   { name: 'Sigil', description: 'Ambient threat radar — registers, prioritizes, and tracks threats across security, reputation, financial, and competitive categories.', tier: 'Action' },
   { name: 'Herald', description: 'Agent-to-agent communication handler — manages discovery, authentication, and message exchange with external agents via reputation scoring. Requires --network consent.', tier: 'Action' },
@@ -53,7 +53,7 @@ const modules: Module[] = [
   { name: 'Provenance', description: 'Reasoning chain tracer — reconstructs the full reasoning path behind any past decision from Chronicle events.', tier: 'Differentiation' },
   { name: 'Sandbox', description: 'Temporal sandbox — simulates hypothetical scenarios without modifying real memory or system state.', tier: 'Differentiation' },
   { name: 'Symbiosis', description: 'Module pathway mapping — tracks which modules route to each other and discovers emergent collaboration patterns.', tier: 'Differentiation' },
-  { name: 'Consciousness', description: 'Self-reflective awareness — journal introspection on cognitive state and emergent goal detection in a single module.', tier: 'Differentiation' },
+  { name: 'Consciousness', description: 'Journals the system\'s own recent state and flags goals that keep recurring.', tier: 'Differentiation' },
   { name: 'Ethical Prism', description: 'Seven-framework ethical analysis — evaluates decisions through Utilitarian, Deontological, Virtue, Care, Contractualist, Rights-Based, and Pragmatic lenses.', tier: 'Differentiation' },
 
   // Infrastructure
