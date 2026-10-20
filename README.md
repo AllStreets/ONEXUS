@@ -389,13 +389,15 @@ Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## What's verified
 
-> **Adversarially reviewed.** [`docs/REDTEAM-AEGIS.md`](docs/REDTEAM-AEGIS.md) is a two-round
+> **Adversarially reviewed.** [`docs/REDTEAM-AEGIS.md`](docs/REDTEAM-AEGIS.md) is a three-round
 > red-team of Aegis by its own author. Round 1 attacked the arbiter: revoking an agent
 > didn't stop it, because the arbiter reads grants before trust. Round 2 attacked the
 > boundary: launched agents could read the operator's secrets, and the ledger could be
-> edited without detection. Every finding was committed before its fix, and each is now
-> a regression test. One finding is left open on purpose, and the report says what is
-> still not protected.
+> edited without detection. Round 3 attacked what an agent does on its own: it could read
+> your files, open its own sockets and write anywhere, so an adapter can now run in a
+> locked-down container behind an egress proxy. Every finding was committed before its
+> fix. One finding is left open on purpose, and the report says what is still not
+> protected, including that no catalog adapter declares a container yet.
 >
 > `.venv/bin/python -m pytest tests/redteam/ -q`
 
@@ -407,6 +409,7 @@ test reads source code; it is not enforced while the program runs.
 | A revoked agent loses its grants, whoever lowered its trust | `tests/redteam/test_aegis_redteam.py` |
 | A launched agent sees only the environment variables and provider keys it declares | `tests/redteam/test_aegis_redteam_round2.py` (real child processes) |
 | An edited or deleted Chronicle row is named on verification | `tests/redteam/test_aegis_redteam_round2.py` |
+| A confined agent sees none of the operator's files and reaches only its declared hosts, through a proxy that refuses the rest | `tests/redteam/test_aegis_redteam_round3.py` (real containers; needs Docker) |
 | Agent launch commands are allowlisted | `tests/agents/test_launcher_allowlist.py` |
 | Optional API token gate covers HTTP and WebSocket | `tests/api_safety/test_api_token.py` |
 | Permission inbox requests round-trip to a decision | `tests/api_safety/test_permissions_routes.py` |

@@ -49,10 +49,13 @@ calls to ONEXUS:
    you can read and start its own processes without asking Aegis. Until round 2 it also
    got your whole environment, and the launcher injected `OPENAI_API_KEY` and
    `ANTHROPIC_API_KEY` into agents that never asked. *Round 2 closed the environment part
-   (R2-1 to R2-3 below); the filesystem and process part is round 3.*
+   (R2-1 to R2-3 below); round 3 confines the filesystem and processes of any catalog
+   agent whose adapter declares confinement (R3-1 to R3-3 below).*
 2. **Network declarations cover only routed calls.** An agent that never declared
    `network.outbound.example.com` is refused when it asks ONEXUS to reach that host. The
-   same agent can open a socket to it directly, and nothing intercepts that.
+   same agent can open a socket to it directly, and nothing intercepts that. *Round 3: a
+   confined agent has no network unless it declares hosts, and then only through an
+   egress proxy that refuses every other host.*
 3. **The command allowlist checks the program, not the program's behavior.**
    `python`, `python3`, `node`, `npx`, `uv`, `uvx`, `deno`, `bun` and `docker` are
    allowed by default, and every one of them can run arbitrary code. The allowlist
@@ -76,17 +79,16 @@ finding this review missed by accident.
 
 1. ~~Give each child process only the environment keys its manifest declares in
    `env_keys`, and stop injecting provider keys the agent didn't ask for.~~ Done in round 2.
-2. Run catalog agents in a container with no network by default, a read-only root and
-   all Linux capabilities dropped. [SMADP's sandbox](https://github.com/AllStreets/SMADP)
-   already uses that profile for its own runs.
-3. Send any network access an agent is granted through an egress proxy that enforces
-   the declared hosts, so a refused domain is refused at the socket.
+2. ~~Run catalog agents in a container with no network by default, a read-only root and
+   all Linux capabilities dropped.~~ Done in round 3, for adapters that declare
+   confinement.
+3. ~~Send any network access an agent is granted through an egress proxy that enforces
+   the declared hosts, so a refused domain is refused at the socket.~~ Done in round 3.
 4. ~~Chain Chronicle entries by hash, so an edit to the file shows up on the next read.~~
    Done in round 2.
 
-Steps 2 and 3 are round 3. They need a container image per catalog agent and a proxy in
-front of the network, which is infrastructure rather than a patch, and they're what would
-stop an agent that reads `~` directly or opens its own socket.
+Steps 2 and 3 are round 3. What remains is coverage, not mechanism: each catalog adapter
+needs an image with its program installed before it can declare confinement (see round 3).
 
 ---
 
@@ -126,6 +128,63 @@ for recording somewhere the agent can't write, which is what catches those.
 **What round 2 did not do.** The agent still runs as you. It can read `~`, open its own
 sockets and run its own processes. That is round 3: containers per agent and an egress
 proxy that enforces declared hosts.
+
+---
+
+## Round 3: what an agent does on its own
+
+*2026-10-20. Reproduce with `.venv/bin/python -m pytest tests/redteam/test_aegis_redteam_round3.py -q` (the confined tests need Docker and skip without it).*
+
+Rounds 1 and 2 governed what an agent asks ONEXUS for. Round 3 attacks what a launched
+agent can do without asking: the gap the threat model has named since the first round.
+The attacks landed first in commit `aa9f133`, asserting the broken behaviour, and every one
+runs a real child process launched through `AgentLauncher`.
+
+| | Attack | Unconfined (as shipped) | Confined |
+|---|---|---|---|
+| **R3-1** | Read a file in your home directory it never declared | It read your key file | It sees none of your files |
+| **R3-2** | Open a TCP connection to a host it never declared | It connected | No network at all, or only declared hosts through the proxy |
+| **R3-3** | Write a file outside its working directory | It wrote it | Read-only root; only its own `/work` and `/tmp` are writable |
+
+**The fix** is `nexus/agents/confine.py` and `nexus/agents/egress_proxy.py`. An adapter can
+now declare a `confinement` block with an image, an optional program and an optional list
+of hosts. That agent runs in a container instead of as your child process. The container
+has:
+- a read-only root, with private tmpfs mounts for `/work` and `/tmp`, and none of your files
+- no capabilities, `no-new-privileges`, and user `nobody`
+- limits on memory, CPU and process count
+- only the environment keys round 2 already allowed
+
+With no hosts declared it gets `--network none`. With hosts declared it sits on an internal
+Docker network whose only other member is the egress proxy. The proxy tunnels HTTP CONNECT
+to exactly those hosts (exact names, `*.subdomains`, an explicit port or the default 443
+and 80), refuses everything else with a 403, and logs every decision as a JSON line. The
+tests prove both directions with a real listener: the declared host is reached through the
+proxy, `example.com` is refused, and the declared host cannot be reached around the proxy.
+When the agent stops, its container, proxy and network are removed, and a test checks that.
+
+Every launch now records `confined` and the declared hosts in Chronicle. Setting
+`NEXUS_AGENT_CONFINEMENT=require` refuses to start any agent that is not confined. The
+default, `prefer`, confines what declares confinement and records the rest as unconfined.
+An adapter that declares confinement never falls back to running unconfined: without
+Docker it is refused.
+
+**What round 3 did not do**, said as plainly as rounds 1 and 2:
+
+- **No catalog adapter declares confinement yet.** Each needs an image with its program
+  installed (`aider-mcp`, an `npx` package and so on), pinned by digest. Until an adapter
+  has one it runs unconfined, and the ledger says so. `require` mode is how an operator
+  refuses that today.
+- **MCP manifest agents** (`mcp_agent.py`) still start as child processes. They got round
+  2's environment limits but not round 3's container.
+- **The runtime is Docker's default (runc), not gVisor.** SMADP's sandbox prefers gVisor
+  for syscall-level isolation. A kernel exploit inside the container is outside this
+  round's scope.
+- **The proxy decides by host name, not by what is sent.** An agent allowed to reach an
+  API can send that API anything. Content inspection would need TLS interception, which
+  this deliberately doesn't do.
+- **F3 is still open.** Confinement limits what an agent can reach; it doesn't change how
+  it earns autonomy.
 
 ---
 

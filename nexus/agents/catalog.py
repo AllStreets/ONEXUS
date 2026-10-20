@@ -72,6 +72,8 @@ class AdapterDescriptor:
     capabilities: dict[str, list[str]]
     trust_floor: float
     default_tier: str
+    # Red-team round 3: an adapter that declares this runs in a container (see confine.py)
+    confinement: dict[str, Any] | None = None
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> AdapterDescriptor:
@@ -84,6 +86,7 @@ class AdapterDescriptor:
             capabilities=data.get("capabilities", {}),
             trust_floor=data.get("trust_floor", 0.0),
             default_tier=data.get("default_tier", "OBSERVER"),
+            confinement=data.get("confinement"),
         )
 
 

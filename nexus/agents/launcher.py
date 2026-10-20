@@ -15,6 +15,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from nexus.agents.child_env import child_environment
+from nexus.agents.confine import (
+    ConfinedLaunch,
+    Confinement,
+    ConfinementError,
+    docker_available,
+    prepare,
+)
 
 logger = logging.getLogger("nexus.agents.launcher")
 
@@ -56,6 +63,14 @@ def _command_basename(command: str) -> str:
     return os.path.basename(command)
 
 
+def confinement_mode() -> str:
+    """NEXUS_AGENT_CONFINEMENT: `prefer` (default) confines every adapter that declares a
+    confinement block and records the rest as unconfined; `require` refuses to launch an
+    unconfined agent at all; `off` runs everything as a child process (for debugging)."""
+    mode = os.environ.get("NEXUS_AGENT_CONFINEMENT", "prefer").strip().lower()
+    return mode if mode in {"prefer", "require", "off"} else "prefer"
+
+
 @dataclass
 class RunningAgent:
     slug: str
@@ -64,6 +79,8 @@ class RunningAgent:
     process: subprocess.Popen
     tools: list[str]
     trust_floor: float
+    confined: bool = False
+    confinement: ConfinedLaunch | None = None
 
 
 class AgentLaunchError(Exception):
@@ -154,19 +171,52 @@ class AgentLauncher:
                     provider_keys["ANTHROPIC_API_KEY"] = key
         env = child_environment(adapter.env.keys(), provider_keys=provider_keys)
 
+        # Red-team round 3 (R3-1..R3-3): an adapter that declares confinement runs in a
+        # container that sees none of the operator's files and reaches only the hosts it
+        # declared. See confine.py.
+        mode = confinement_mode()
+        try:
+            conf = Confinement.from_adapter(getattr(adapter, "confinement", None)) if mode != "off" else None
+        except ConfinementError as exc:
+            raise AgentLaunchError(f"Adapter for '{slug}' has an invalid confinement block: {exc}", status=400)
+        if conf is None and mode == "require":
+            raise AgentLaunchError(
+                f"'{slug}' declares no confinement and NEXUS_AGENT_CONFINEMENT=require, so it "
+                f"will not run unconfined.", status=403,
+            )
+        confined: ConfinedLaunch | None = None
+        if conf is not None:
+            if not docker_available():
+                raise AgentLaunchError(
+                    f"'{slug}' declares confinement but Docker isn't available, so it will not "
+                    f"run unconfined. Start Docker, or set NEXUS_AGENT_CONFINEMENT=off to debug.",
+                    status=503,
+                )
+            try:
+                confined = prepare(conf, slug, adapter.command, adapter.args, env.keys())
+            except subprocess.CalledProcessError as exc:
+                raise AgentLaunchError(f"Could not set up confinement for '{slug}': {exc.stderr or exc}")
+            argv = confined.argv
+        else:
+            argv = [adapter.command] + adapter.args
+
         try:
             proc = subprocess.Popen(
-                [adapter.command] + adapter.args,
+                argv,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=env,
             )
         except FileNotFoundError:
+            if confined:
+                confined.cleanup()
             raise AgentLaunchError(
-                f"Command '{adapter.command}' not found. Install the agent first."
+                f"Command '{argv[0]}' not found. Install the agent first."
             )
         except Exception as exc:
+            if confined:
+                confined.cleanup()
             raise AgentLaunchError(f"Failed to launch: {exc}")
 
         tools = adapter.capabilities.get("tools", [])
@@ -177,6 +227,8 @@ class AgentLauncher:
             process=proc,
             tools=tools,
             trust_floor=adapter.trust_floor,
+            confined=confined is not None,
+            confinement=confined,
         )
         self._running[slug] = running
 
@@ -188,6 +240,8 @@ class AgentLauncher:
             "slug": slug, "name": entry.name,
             "pid": proc.pid, "tools": tools,
             "trust_floor": adapter.trust_floor,
+            "confined": confined is not None,
+            "hosts": list(conf.hosts) if conf else None,
         })
         return running
 
@@ -201,6 +255,8 @@ class AgentLauncher:
                 agent.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 agent.process.kill()
+        if agent.confinement:
+            agent.confinement.cleanup()
         self._kernel.chronicle.log("agents", "agent_stopped", {
             "slug": slug, "name": agent.name,
         })
