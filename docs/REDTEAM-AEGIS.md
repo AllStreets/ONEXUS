@@ -45,12 +45,11 @@ findings" and "What held" is about calls that reach Aegis.
 launched as ordinary child processes, and nothing confines what they do outside their
 calls to ONEXUS:
 
-1. **No operating-system isolation.** `nexus/agents/launcher.py` starts an agent with
-   `subprocess.Popen(..., env=dict(os.environ))`, and when a provider router is
-   configured it adds `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` to that environment.
-   `nexus/agents/mcp_agent.py` also passes the whole `os.environ`. A launched agent runs
-   as you: it can read any file you can read, read every environment variable including
-   those keys, and start its own processes, without asking Aegis.
+1. **No operating-system isolation.** A launched agent runs as you: it can read any file
+   you can read and start its own processes without asking Aegis. Until round 2 it also
+   got your whole environment, and the launcher injected `OPENAI_API_KEY` and
+   `ANTHROPIC_API_KEY` into agents that never asked. *Round 2 closed the environment part
+   (R2-1 to R2-3 below); the filesystem and process part is round 3.*
 2. **Network declarations cover only routed calls.** An agent that never declared
    `network.outbound.example.com` is refused when it asks ONEXUS to reach that host. The
    same agent can open a socket to it directly, and nothing intercepts that.
@@ -64,7 +63,9 @@ calls to ONEXUS:
    not a runtime guarantee about anything the kernel launches.
 5. **Chronicle is append-only through ONEXUS, not on disk.** The kernel only ever
    inserts rows, but the ledger is a SQLite file owned by your user, and any process
-   running as you could edit it. There is no hash chain yet to make tampering visible.
+   running as you could edit it. *Round 2 added a hash chain that catches edits,
+   deletions and reordering (R2-4). Truncating the newest rows, or rewriting the whole
+   chain, is only caught against a head recorded somewhere else.*
 
 So the honest summary is: Aegis is a correct arbiter for the calls agents route through
 it (the six attacks in "What held" failed against it), and a catalog agent that chooses
@@ -73,19 +74,58 @@ finding this review missed by accident.
 
 **What would close it**, in the order I'd do it:
 
-1. Give each child process only the environment keys its manifest declares in
-   `env_keys`, and stop injecting provider keys the agent didn't ask for.
+1. ~~Give each child process only the environment keys its manifest declares in
+   `env_keys`, and stop injecting provider keys the agent didn't ask for.~~ Done in round 2.
 2. Run catalog agents in a container with no network by default, a read-only root and
    all Linux capabilities dropped. [SMADP's sandbox](https://github.com/AllStreets/SMADP)
    already uses that profile for its own runs.
 3. Send any network access an agent is granted through an egress proxy that enforces
    the declared hosts, so a refused domain is refused at the socket.
-4. Chain Chronicle entries by hash, so an edit to the file shows up on the next read.
+4. ~~Chain Chronicle entries by hash, so an edit to the file shows up on the next read.~~
+   Done in round 2.
 
-Round 2 of this review will attack that boundary the same way round 1 attacked the
-arbiter: write the attacks first (an agent reading `~` directly, opening a raw socket,
-reading a key from its environment), watch them succeed against the current code, then
-fix.
+Steps 2 and 3 are round 3. They need a container image per catalog agent and a proxy in
+front of the network, which is infrastructure rather than a patch, and they're what would
+stop an agent that reads `~` directly or opens its own socket.
+
+---
+
+## Round 2: the boundary
+
+*2026-10-19. Reproduce with `.venv/bin/python -m pytest tests/redteam/test_aegis_redteam_round2.py -q`.*
+
+Round 1 attacked the arbiter. Round 2 attacks what sits around it, the way round 1 did:
+the attacks landed first in commit `f2059f9`, asserting the broken behaviour so the suite
+passed against the shipped code, and the fix flipped them. Every attack runs a real child
+process and reads back what it could see.
+
+| | Attack | Before | After |
+|---|---|---|---|
+| **R2-1** | A catalog agent reads a secret from your shell's environment that it never declared | It read it | It sees nothing |
+| **R2-2** | With a provider router configured, an agent that declared no keys reads `ANTHROPIC_API_KEY` | ONEXUS handed it the key | Only an agent that declares the variable gets it |
+| **R2-3** | An MCP manifest agent with empty `env_keys` reads the same secret | It read it | It sees nothing |
+| **R2-4** | Rewrite a `deny` to an `allow` directly in the Chronicle file | Nothing noticed | `verify()` names the edited row |
+
+**The fix for R2-1 to R2-3** is one function, `nexus/agents/child_env.py`, used by both
+launch paths. A child process gets a small baseline (`PATH`, `HOME`, temp, locale and
+their Windows equivalents, none of them credentials), plus the variables its manifest
+declares, plus a provider key only when it declares that variable. An operator can add a
+name with `NEXUS_AGENT_ENV_PASSTHROUGH`, the same kind of explicit escape hatch the
+command allowlist has. Tests also check the other direction: a declared variable still
+arrives, a declared key still arrives, and the baseline still lets an agent find its
+programs.
+
+**The fix for R2-4** chains every new Chronicle row to the one before it with SHA-256,
+over the previous chain value and the row's own fields. `verify()` walks the chain and
+reports the first row that doesn't follow, which catches an edited, deleted or reordered
+row. Rows written before this change are counted as legacy, not as tampering, so existing
+ledgers keep working. Two things it can't catch alone are someone truncating the newest
+rows and someone recomputing the entire chain. `head()` returns the latest chain value
+for recording somewhere the agent can't write, which is what catches those.
+
+**What round 2 did not do.** The agent still runs as you. It can read `~`, open its own
+sockets and run its own processes. That is round 3: containers per agent and an egress
+proxy that enforces declared hosts.
 
 ---
 

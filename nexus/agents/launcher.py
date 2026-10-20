@@ -14,6 +14,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
+from nexus.agents.child_env import child_environment
+
 logger = logging.getLogger("nexus.agents.launcher")
 
 # Command allowlist for launching agent adapters. The catalog is a sibling
@@ -139,14 +141,18 @@ class AgentLauncher:
                 status=400,
             )
 
-        env = dict(os.environ)
+        # Red-team round 2 (R2-1, R2-2): the agent gets a small baseline plus the
+        # variables its adapter declares, never the operator's whole environment, and
+        # a provider key only when it declared that variable. See child_env.py.
+        provider_keys: dict[str, str] = {}
         if self._kernel.provider_router:
             for pname, provider in self._kernel.provider_router._providers.items():
-                if hasattr(provider, "_api_key"):
-                    if pname == "openai":
-                        env.setdefault("OPENAI_API_KEY", provider._api_key)
-                    elif pname == "anthropic":
-                        env.setdefault("ANTHROPIC_API_KEY", provider._api_key)
+                key = getattr(provider, "_api_key", None)
+                if key and pname == "openai":
+                    provider_keys["OPENAI_API_KEY"] = key
+                elif key and pname == "anthropic":
+                    provider_keys["ANTHROPIC_API_KEY"] = key
+        env = child_environment(adapter.env.keys(), provider_keys=provider_keys)
 
         try:
             proc = subprocess.Popen(

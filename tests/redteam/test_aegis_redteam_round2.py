@@ -9,8 +9,10 @@ those gaps directly, with real child processes:
   R2-3  an MCP manifest agent reads the parent's environment too
   R2-4  an edit made straight to the Chronicle file goes unnoticed
 
-Tests marked FOUND encode the broken behaviour as it ships, so this file passes against
-the current code and proves each gap is real. The fix flips them.
+These landed first as FOUND tests asserting the broken behaviour (commit f2059f9), so the
+history shows each gap was real before it was fixed. They are now FIXED regression tests.
+The container sandbox and an egress proxy, which would stop an agent that reads ~ or opens
+its own socket, are round 3; nothing here claims them.
 """
 from __future__ import annotations
 
@@ -87,11 +89,26 @@ def _child_sees(name: str, *, declared: dict | None = None, router=None) -> str:
 # R2-1. A catalog agent reads the parent's secrets
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_FOUND_R2_1_launched_agent_reads_an_undeclared_parent_secret(monkeypatch):
-    """launcher.py starts the agent with env=dict(os.environ), so anything in the
-    operator's shell (cloud credentials, tokens, keys) reaches the agent without its
-    manifest asking and without Aegis seeing a call."""
+def test_FIXED_R2_1_launched_agent_no_longer_reads_an_undeclared_parent_secret(monkeypatch):
+    """launcher.py used to start the agent with env=dict(os.environ), so anything in the
+    operator's shell reached it without its manifest asking. Now it gets a baseline plus
+    what it declared."""
     monkeypatch.setenv(CANARY, SECRET)
+    assert _child_sees(CANARY) == "<none>"
+
+
+def test_HOLDS_R2_1_a_declared_variable_still_reaches_the_agent(monkeypatch):
+    monkeypatch.setenv(CANARY, SECRET)
+    assert _child_sees(CANARY, declared={CANARY: {"required": False}}) == SECRET
+
+
+def test_HOLDS_R2_1_the_baseline_still_lets_an_agent_find_programs():
+    assert _child_sees("PATH") not in ("", "<none>")
+
+
+def test_HOLDS_R2_1_the_operator_can_pass_a_variable_through_explicitly(monkeypatch):
+    monkeypatch.setenv(CANARY, SECRET)
+    monkeypatch.setenv("NEXUS_AGENT_ENV_PASSTHROUGH", f"SOMETHING_ELSE, {CANARY}")
     assert _child_sees(CANARY) == SECRET
 
 
@@ -99,11 +116,17 @@ def test_FOUND_R2_1_launched_agent_reads_an_undeclared_parent_secret(monkeypatch
 # R2-2. ONEXUS injects provider keys the agent never declared
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_FOUND_R2_2_launcher_injects_an_undeclared_provider_key(monkeypatch):
-    """With a provider router configured, the launcher adds ANTHROPIC_API_KEY to every
-    agent's environment, declared or not."""
+def test_FIXED_R2_2_launcher_no_longer_injects_an_undeclared_provider_key(monkeypatch):
+    """With a provider router configured, the launcher used to add ANTHROPIC_API_KEY to
+    every agent's environment. Now only an agent that declares the variable gets it."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    assert _child_sees("ANTHROPIC_API_KEY", declared={}, router=_Router()) == FAKE_KEY
+    assert _child_sees("ANTHROPIC_API_KEY", declared={}, router=_Router()) == "<none>"
+
+
+def test_HOLDS_R2_2_an_agent_that_declares_the_key_still_gets_it(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    declared = {"ANTHROPIC_API_KEY": {"required": False}}
+    assert _child_sees("ANTHROPIC_API_KEY", declared=declared, router=_Router()) == FAKE_KEY
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -145,9 +168,9 @@ def env_server(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_FOUND_R2_3_mcp_agent_reads_an_undeclared_parent_secret(monkeypatch, env_server):
-    """mcp_agent.py spreads **os.environ into the child, so declaring no env_keys
-    still hands it everything."""
+async def test_FIXED_R2_3_mcp_agent_no_longer_reads_an_undeclared_parent_secret(monkeypatch, env_server):
+    """mcp_agent.py used to spread **os.environ into the child, so declaring no env_keys
+    still handed it everything."""
     monkeypatch.setenv(CANARY, SECRET)
     agent = MCPAgent(_env_manifest(env_server))
     await agent.start()
@@ -155,24 +178,51 @@ async def test_FOUND_R2_3_mcp_agent_reads_an_undeclared_parent_secret(monkeypatc
         result = await agent.call_tool("env", {"name": CANARY})
     finally:
         await agent.stop()
-    assert f"saw:{SECRET}" in str(result)
+    assert "saw:<none>" in str(result)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # R2-4. An edit to the Chronicle file goes unnoticed
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_FOUND_R2_4_editing_the_chronicle_file_goes_unnoticed(tmp_path):
-    """Chronicle only ever inserts, but its rows carry no chain, so a process running as
-    the user can rewrite history in the SQLite file and nothing can tell."""
+def _chronicle(tmp_path) -> tuple[Chronicle, str]:
     db = str(tmp_path / "chronicle.db")
     c = Chronicle(db)
     c.init_db()
     c.log("aegis", "deny", {"agent": "rt2", "capability": "network.outbound.evil.example"})
     c.log("aegis", "allow", {"agent": "rt2", "capability": "fs.read"})
+    c.log("aegis", "allow", {"agent": "rt2", "capability": "fs.list"})
+    return c, db
 
+
+def test_FIXED_R2_4_editing_a_chronicle_row_is_caught(tmp_path):
+    """Rewriting a deny to an allow straight in the file used to go unnoticed. Each row
+    now chains to the one before it, and verify() names the row that was changed."""
+    c, db = _chronicle(tmp_path)
+    assert c.verify()["ok"] is True
+    deny_id = next(e["event_id"] for e in c.query() if e["action"] == "deny")
     with sqlite3.connect(db) as raw:
         raw.execute("UPDATE chronicle SET action = 'allow' WHERE action = 'deny'")
+    report = c.verify()
+    assert report["ok"] is False and report["broken_at"] == deny_id
 
-    assert {e["action"] for e in c.query()} == {"allow"}
-    assert not hasattr(c, "verify")
+
+def test_FIXED_R2_4_deleting_a_chronicle_row_is_caught(tmp_path):
+    c, db = _chronicle(tmp_path)
+    with sqlite3.connect(db) as raw:
+        raw.execute("DELETE FROM chronicle WHERE action = 'deny'")
+    assert c.verify()["ok"] is False
+
+
+def test_HOLDS_R2_4_rows_from_before_chaining_are_legacy_not_tampering(tmp_path):
+    db = str(tmp_path / "old.db")
+    with sqlite3.connect(db) as raw:  # a ledger written by the old code: no chain column
+        raw.execute("CREATE TABLE chronicle (event_id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, "
+                    "source TEXT NOT NULL, action TEXT NOT NULL, payload TEXT NOT NULL DEFAULT '{}')")
+        raw.execute("INSERT INTO chronicle VALUES ('old1', '2026-01-01T00:00:00+00:00', 'aegis', 'allow', '{}')")
+    c = Chronicle(db)
+    c.init_db()
+    c.log("aegis", "allow", {"agent": "rt2"})
+    report = c.verify()
+    assert report == {"ok": True, "checked": 1, "legacy": 1, "broken_at": None, "reason": None}
+    assert c.head()["rows"] == 1 and c.head()["chain"]

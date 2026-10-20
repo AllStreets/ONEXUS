@@ -21,6 +21,7 @@ from mcp import ClientSession, types
 from mcp.client.stdio import TextReceiveStream
 from mcp.shared.message import SessionMessage
 
+from nexus.agents.child_env import child_environment
 from nexus.agents.manifest import Manifest
 
 
@@ -90,10 +91,8 @@ class MCPAgent:
         _ready_event without blocking.  Terminates when _stop_event fires.
         """
         rc = self._manifest.runtime
-        env = {
-            **os.environ,
-            **{k: os.environ[k] for k in rc.env_keys if k in os.environ},
-        }
+        # Red-team round 2 (R2-3): a baseline plus the declared env_keys only.
+        env = child_environment(rc.env_keys)
 
         try:
             # Open subprocess via anyio so we get a proper Process object
