@@ -389,24 +389,31 @@ Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## What's verified
 
-> **Adversarially reviewed.** [`docs/REDTEAM-AEGIS.md`](docs/REDTEAM-AEGIS.md) is a red-team
-> of Aegis by its own author: three gaps found, six attacks that failed, and the fix.
-> The worst one — `revoke()` zeroed trust but left explicit grants intact, and the
-> arbiter reads grants before trust, so a revoked agent kept working — is closed and
-> has a regression test. One finding is left open on purpose and says why.
+> **Adversarially reviewed.** [`docs/REDTEAM-AEGIS.md`](docs/REDTEAM-AEGIS.md) is a two-round
+> red-team of Aegis by its own author. Round 1 attacked the arbiter: revoking an agent
+> didn't stop it, because the arbiter reads grants before trust. Round 2 attacked the
+> boundary: launched agents could read the operator's secrets, and the ledger could be
+> edited without detection. Every finding was committed before its fix, and each is now
+> a regression test. One finding is left open on purpose, and the report says what is
+> still not protected.
 >
 > `.venv/bin/python -m pytest tests/redteam/ -q`
 
-| Property | Mechanism |
+Safety and correctness properties, and the test that checks each one. "Static" means the
+test reads source code; it is not enforced while the program runs.
+
+| Property | How it's checked |
 |---|---|
-| Kernel never touches network | static test on every kernel module's imports |
-| Aurora ships zero emojis | regex test on every served HTML/JS/CSS asset |
-| Every overlay surface has a close affordance | accessibility tests in `tests/aurora/` |
-| Mood engine reacts to signals | `tests/aurora/test_mood_wiring.py` |
-| Cockpit panels stay live | `tests/aurora/test_websockets.py` |
-| Permission inbox round-trips | `tests/aurora/test_permissions_routes.py` |
-| Optional API token gate (HTTP + WS) | `tests/api_safety/test_api_token.py` |
-| Agent launch command allowlist | `tests/agents/test_launcher_allowlist.py` |
+| A revoked agent loses its grants, whoever lowered its trust | `tests/redteam/test_aegis_redteam.py` |
+| A launched agent sees only the environment variables and provider keys it declares | `tests/redteam/test_aegis_redteam_round2.py` (real child processes) |
+| An edited or deleted Chronicle row is named on verification | `tests/redteam/test_aegis_redteam_round2.py` |
+| Agent launch commands are allowlisted | `tests/agents/test_launcher_allowlist.py` |
+| Optional API token gate covers HTTP and WebSocket | `tests/api_safety/test_api_token.py` |
+| Permission inbox requests round-trip to a decision | `tests/api_safety/test_permissions_routes.py` |
+| No kernel module except Aegis imports an HTTP client | static scan of each module's source in `tests/release/test_v1_acceptance.py` |
+
+Interface behaviour (the mood engine, live cockpit panels, close buttons on every overlay)
+is covered under `tests/aurora/`. Style rules for Aurora live in the contributing notes below.
 
 ---
 
@@ -414,7 +421,7 @@ Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 The catalog is the right place to add an agent — open an issue at [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) with the agent's repo URL and a one-liner. The nightly pipeline does the rest.
 
-For kernel / Aurora work, the [spec](docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md) is the source of truth. Plans live under `docs/superpowers/plans/`.
+For kernel and Aurora work, the [spec](docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md) is the source of truth. Plans live under `docs/superpowers/plans/`. Aurora's style rules, such as no emoji in any served asset, are checked by tests under `tests/aurora/`.
 
 ---
 
