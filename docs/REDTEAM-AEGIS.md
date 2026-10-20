@@ -88,7 +88,8 @@ finding this review missed by accident.
    Done in round 2.
 
 Steps 2 and 3 are round 3. What remains is coverage, not mechanism: each catalog adapter
-needs an image with its program installed before it can declare confinement (see round 3).
+needs an image with its program installed before it can declare confinement. Two of the 22
+hand-written adapters have one so far (see round 3).
 
 ---
 
@@ -171,10 +172,16 @@ Docker it is refused.
 
 **What round 3 did not do**, said as plainly as rounds 1 and 2:
 
-- **No catalog adapter declares confinement yet.** Each needs an image with its program
-  installed (`aider-mcp`, an `npx` package and so on), pinned by digest. Until an adapter
-  has one it runs unconfined, and the ledger says so. `require` mode is how an operator
-  refuses that today.
+- **Only two catalog adapters are confined so far.** `haystack` (BM25 search) and
+  `faster-whisper` (speech to text, model baked in) now ship a server, a Dockerfile with
+  locked dependencies, and a confinement block with no network, and
+  `tests/agents/test_confined_adapters.py` launches both from the real catalog, speaks MCP
+  to them and checks from inside each container that the network and your files are out of
+  reach. Their images are built from the catalog repo and not yet published or pinned by
+  digest, so a new machine builds them first. The other twenty adapters still need an image
+  with their program installed (`aider-mcp`, an `npx` package and so on), and most still
+  need the server they point at, which hasn't been written. Until then they run unconfined,
+  or not at all, and the ledger says which. `require` mode is how an operator refuses that.
 - **MCP manifest agents** (`mcp_agent.py`) still start as child processes. They got round
   2's environment limits but not round 3's container.
 - **The runtime is Docker's default (runc), not gVisor.** SMADP's sandbox prefers gVisor

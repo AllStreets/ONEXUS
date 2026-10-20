@@ -397,7 +397,7 @@ Full guide: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 > your files, open its own sockets and write anywhere, so an adapter can now run in a
 > locked-down container behind an egress proxy. Every finding was committed before its
 > fix. One finding is left open on purpose, and the report says what is still not
-> protected, including that no catalog adapter declares a container yet.
+> protected, including that only two catalog adapters run confined so far.
 >
 > `.venv/bin/python -m pytest tests/redteam/ -q`
 
