@@ -205,7 +205,7 @@ The new README should:
 - Explain the safety model (4 permission classes + install review + first-use prompt)
 - Explain the local-first invariant (kernel does zero network I/O; verified by static test)
 - Quickstart: `pip install -e ".[all]"` → `onexus serve` → open `/aurora`
-- Link to: `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` and `docs/agents/*.md`
+- Link to: `docs/design/specs/2026-06-06-nexus-agent-os-design.md` and `docs/agents/*.md`
 - Status badges: tests passing count, Python version, license
 
 Length: aim for ~250 lines of clear, dense Markdown. No marketing fluff.

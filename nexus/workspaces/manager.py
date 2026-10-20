@@ -8,7 +8,7 @@ Storage layout (all under ``root``)::
     └── <workspace-id>/
         └── workspace.json       # WorkspaceConfig serialised as pretty JSON
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §7.2.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §7.2.
 """
 from __future__ import annotations
 

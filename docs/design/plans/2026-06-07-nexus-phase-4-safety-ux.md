@@ -23,7 +23,7 @@ Phase 4 is backend only. The actual UI panels — install review modal, first-us
 
 **Tech Stack:** Python 3.11+, pydantic 2, asyncio (mailbox), click (CLI), FastAPI (REST). No new deps.
 
-**Related spec:** `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` — §5.3 (MCP client), §5.4 (Capability filter), §9.2 (Install manifest review), §9.3 (First-use prompt), §16.1 (CLI).
+**Related spec:** `docs/design/specs/2026-06-06-nexus-agent-os-design.md` — §5.3 (MCP client), §5.4 (Capability filter), §9.2 (Install manifest review), §9.3 (First-use prompt), §16.1 (CLI).
 
 **Prior phase:** `phase-3-workspaces` tag.
 

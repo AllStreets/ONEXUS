@@ -13,7 +13,7 @@ Usage
     mgr = WorkspaceManager(root)
     ws = apply_template("coding", workspace_id="my-code", name="My Coding Room", manager=mgr)
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §7.6.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §7.6.
 """
 from __future__ import annotations
 

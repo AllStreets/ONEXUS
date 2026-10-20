@@ -17,7 +17,7 @@
 
 **Tech Stack:** Python 3.11+, pydantic 2, sqlite3, click (CLI), FastAPI (REST). No new runtime deps.
 
-**Related spec:** `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` — §7 (Workspace System), §11 (Mood Atlas), §16 (CLI Commands).
+**Related spec:** `docs/design/specs/2026-06-06-nexus-agent-os-design.md` — §7 (Workspace System), §11 (Mood Atlas), §16 (CLI Commands).
 
 **Prior phase:** `phase-2-migration` tag. The manifest registry + Cortex-from-registry + Aegis built-in registration are all in place.
 

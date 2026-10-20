@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+, standard library only (dataclasses, enum, asyncio, json, uuid, datetime, fnmatch). SQLite via Engram for pattern storage. No new dependencies.
 
-**Spec:** `docs/superpowers/specs/2026-04-27-batch6-council-autonomic-design.md`
+**Spec:** `docs/design/specs/2026-04-27-batch6-council-autonomic-design.md`
 
 ---
 

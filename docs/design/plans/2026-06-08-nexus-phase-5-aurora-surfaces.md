@@ -18,7 +18,7 @@
 
 **Tech Stack:** Vanilla HTML / CSS / JS (no framework, no bundler). FastAPI serves the assets. Polling at 1 Hz for mood + permissions + pulse waveform — WebSockets are Phase 7 polish.
 
-**Related spec:** `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` — §10 (Visual Identity), §11 (Mood Atlas), §12 (the four surfaces).
+**Related spec:** `docs/design/specs/2026-06-06-nexus-agent-os-design.md` — §10 (Visual Identity), §11 (Mood Atlas), §12 (the four surfaces).
 
 **Prior phase:** `phase-4-safety-ux` tag. The PermissionInbox + InstallPlan + agent install REST endpoints are in place; this phase consumes them.
 
@@ -70,7 +70,7 @@ The existing `tests/api/conftest.py` has a pre-existing collection error (`nexus
 
 ```css
 /* NEXUS Aurora — design tokens
- * Spec: docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §10–11
+ * Spec: docs/design/specs/2026-06-06-nexus-agent-os-design.md §10–11
  */
 :root {
   /* base surface */
@@ -905,7 +905,7 @@ git commit -m "feat(api): add /api/mood/current and /api/mood/observe endpoints"
 - Modify: `nexus/aurora/app.js` (add switcher view + ⌘K binding)
 - Modify: `nexus/aurora/index.html` (no change needed; switcher renders into `#nx-overlay-root`)
 
-The plan covers this in detail at: `git show main:docs/superpowers/plans/2026-06-08-nexus-phase-5-aurora-surfaces.md` once committed. For brevity here, the subagent should:
+The plan covers this in detail at: `git show main:docs/design/plans/2026-06-08-nexus-phase-5-aurora-surfaces.md` once committed. For brevity here, the subagent should:
 
 1. Add a `#/workspaces` view (route) that renders a grid of workspace tiles by fetching `GET /api/workspaces` (existing).
 2. Add a Cmd-K binding that pushes `#/workspaces` to the URL.

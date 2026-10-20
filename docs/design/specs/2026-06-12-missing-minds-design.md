@@ -109,7 +109,7 @@ phase-2-TBD), bundling Python in the standalone app.
 
 - Serendipity: anti-optimization discovery (deliberately surfaces low-relevance-score
   but high-novelty items from Engram/Atlas on a budget).
-- Aurora v3 responsive layout per `docs/superpowers/plans/2026-06-09-aurora-v3-layout.md`
+- Aurora v3 responsive layout per `docs/design/plans/2026-06-09-aurora-v3-layout.md`
   + finished identity glyphs for the six placeholder modules.
 
 ---

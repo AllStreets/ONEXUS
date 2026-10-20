@@ -6,7 +6,7 @@ intents, capabilities, and runtime via this manifest. Cortex reads
 `intents`; Aegis reads `capabilities`; the runtime reads `runtime`;
 the surfaces read `identity`.
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §6.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §6.
 """
 from __future__ import annotations
 

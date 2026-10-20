@@ -21,7 +21,7 @@ Three transient overlays (spec §11.2):
     falling  — trust lost  (-0.022 or larger)
     collapse — trust below 0.50 after a fall
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §11.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §11.
 """
 from __future__ import annotations
 

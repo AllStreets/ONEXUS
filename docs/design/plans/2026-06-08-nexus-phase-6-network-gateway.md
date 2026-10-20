@@ -14,7 +14,7 @@
 
 **Tech Stack:** Python 3.11+, httpx (already core dep), contextvars (stdlib), pydantic. No new deps.
 
-**Related spec:** `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` §4.5 (Aegis network gateway), §15 (Federation & local-first boundary).
+**Related spec:** `docs/design/specs/2026-06-06-nexus-agent-os-design.md` §4.5 (Aegis network gateway), §15 (Federation & local-first boundary).
 
 **Prior phase:** `phase-5-aurora-surfaces` tag.
 

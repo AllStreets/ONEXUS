@@ -16,7 +16,7 @@ of :class:`~nexus.agents.launcher.AgentLauncher`.  Instead the runtime
 holds weak references to already-running process handles (or in-process
 module instances) and issues POSIX signals or flag mutations.
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §7.4.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §7.4.
 """
 from __future__ import annotations
 

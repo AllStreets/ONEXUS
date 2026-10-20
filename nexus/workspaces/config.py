@@ -5,7 +5,7 @@ Every workspace persists its state to workspace.json using this schema.
 Covers: filesystem roots, resident agents, routing pins, home tone,
 mood biases, and timestamps.
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §7.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §7.
 """
 from __future__ import annotations
 

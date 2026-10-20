@@ -12,9 +12,9 @@
 
 **Tech Stack:** Python 3.11+, pydantic 2 (manifest model), pytest. No new runtime dependencies — this phase is purely a refactor that consolidates the source of truth.
 
-**Related spec:** `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` — §13 (Migration of the existing 9 modules), §6 (Manifest), §4.1 (Cortex routing).
+**Related spec:** `docs/design/specs/2026-06-06-nexus-agent-os-design.md` — §13 (Migration of the existing 9 modules), §6 (Manifest), §4.1 (Cortex routing).
 
-**Prior phase:** `docs/superpowers/plans/2026-06-06-nexus-foundation.md` — completed at git tag `phase-1-foundation`. The `Manifest`, `InProcessAgent`, `Aegis.register_manifest()`, `NexusModule.manifest()` ABC method (currently raising `NotImplementedError`) are all in place.
+**Prior phase:** `docs/design/plans/2026-06-06-nexus-foundation.md` — completed at git tag `phase-1-foundation`. The `Manifest`, `InProcessAgent`, `Aegis.register_manifest()`, `NexusModule.manifest()` ABC method (currently raising `NotImplementedError`) are all in place.
 
 ---
 

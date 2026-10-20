@@ -58,7 +58,7 @@ Version 2 added three groups of modules on top of the runtime:
 - **N2 — Cognition.** **Prism** cross-domain synthesis across workspace partitions (Aegis-gated), **Chronos** counterfactual reasoning over Chronicle's decision history ("what would have happened if that grant had been denied"), and **Dreamweaver** overnight distillation of the day's memory into a morning brief — surfaced as an Atlas graph view, a Chronos timeline, and a brief card.
 - **N3 — Society.** **Herald** agent-to-agent negotiation (offer → counter → accept/reject → commit) where every commitment is Aegis-gated and the full transcript lands in Chronicle, real **workspace-scoped federation sync** between instances, the **Serendipity** anti-optimization module, and the **Aurora v3** responsive layout.
 
-A companion `fix/aurora-feedback` branch ships UX fixes: escape-first markdown rendering, real dispatch in-flight/error states, true token streaming, local-codebase access, and truthful capability grounding (so agents stop inventing integrations that don't exist). Design docs and plans live under `docs/superpowers/{specs,plans}/`.
+A companion `fix/aurora-feedback` branch ships UX fixes: escape-first markdown rendering, real dispatch in-flight/error states, true token streaming, local-codebase access, and truthful capability grounding (so agents stop inventing integrations that don't exist). Design docs and plans live under `docs/design/{specs,plans}/`.
 
 ---
 
@@ -421,7 +421,9 @@ is covered under `tests/aurora/`. Style rules for Aurora live in the contributin
 
 The catalog is the right place to add an agent — open an issue at [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) with the agent's repo URL and a one-liner. The nightly pipeline does the rest.
 
-For kernel and Aurora work, the [spec](docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md) is the source of truth. Plans live under `docs/superpowers/plans/`. Aurora's style rules, such as no emoji in any served asset, are checked by tests under `tests/aurora/`.
+I built ONEXUS with coding agents. I set the direction and the constraints, and I review, test and decide what stays; the red-team above is the clearest example of that split. The design records, one decision and its reasons per file, are in [`docs/design`](docs/design).
+
+For kernel and Aurora work, the [spec](docs/design/specs/2026-06-06-nexus-agent-os-design.md) is the source of truth. Plans live under `docs/design/plans/`. Aurora's style rules, such as no emoji in any served asset, are checked by tests under `tests/aurora/`.
 
 ---
 

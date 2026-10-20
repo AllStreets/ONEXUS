@@ -112,13 +112,13 @@ This is v1.0 — no upgrade path from earlier states. The classic `/dashboard` i
 
 ## Where to look next
 
-- Architecture spec: `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md`
+- Architecture spec: `docs/design/specs/2026-06-06-nexus-agent-os-design.md`
 - Phase reference docs: `docs/agents/{foundation,workspaces,safety-ux,surfaces,network-gateway}.md`
 - Catalog of third-party agents: [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents)
 
 ## Credits
 
-NEXUS v1.0 was designed in a single brainstorming session against the spec at `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md`, then built across seven phases — manifest, migration, workspaces, safety, surfaces, gateway, release. Every visual choice — the kernel mark, the bespoke identity discs, the 8-mood atlas with its temperature-trio trust overlays, the four-surface metaphor — was settled live with the user before any code landed.
+NEXUS v1.0 was designed in a single brainstorming session against the spec at `docs/design/specs/2026-06-06-nexus-agent-os-design.md`, then built across seven phases — manifest, migration, workspaces, safety, surfaces, gateway, release. Every visual choice — the kernel mark, the bespoke identity discs, the 8-mood atlas with its temperature-trio trust overlays, the four-surface metaphor — was settled live with the user before any code landed.
 
 Built by [Connor Evans](https://github.com/AllStreets), implementation co-authored with Claude.
 

@@ -2,8 +2,8 @@
 
 **Date:** 2026-06-14
 **Branch:** `feat/missing-minds`
-**Spec:** `docs/superpowers/specs/2026-06-12-missing-minds-design.md` (Layer N3)
-**Layout ref:** `docs/superpowers/plans/2026-06-09-aurora-v3-layout.md`
+**Spec:** `docs/design/specs/2026-06-12-missing-minds-design.md` (Layer N3)
+**Layout ref:** `docs/design/plans/2026-06-09-aurora-v3-layout.md`
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -747,7 +747,7 @@ Audit the six named glyphs (wraith, oracle, autonomic, legacy, consciousness, se
 
 **Files:** `nexus/aurora/index.html`, `nexus/aurora/app.css`, `nexus/aurora/app.js`, `tests/aurora/test_v3_layout.py`
 
-Implement the layout exactly per `docs/superpowers/plans/2026-06-09-aurora-v3-layout.md`. Large mechanical CSS task — the prose below is the contract; follow the layout doc for full specifics.
+Implement the layout exactly per `docs/design/plans/2026-06-09-aurora-v3-layout.md`. Large mechanical CSS task — the prose below is the contract; follow the layout doc for full specifics.
 
 - **`index.html`**: replace the `position:fixed; inset:16px` shell with `#app-root` (grid, `grid-template-rows: var(--chrome-h,52px) 1fr`). Inside: `.nx-chrome` (row 1) and `.nx-body` (row 2, `display:grid; grid-template-columns: var(--side-w) minmax(0,1fr) var(--cockpit-w); min-height:0; overflow:hidden`). Each of `.nx-sidebar`/`.nx-main`/`.nx-cockpit-rail` gets an inner wrapper (`flex:1; min-height:0; overflow-y:auto`). The composer sits as a `flex:none` sibling of `.nx-main-inner`. Keep `lang="en"` and `<title>ONEXUS</title>`.
 - **`app.css`** (top-down rewrite): root vars + width breakpoints (1440/1200/980; cockpit retracts at ≤980), `html,body,#app-root{height:100dvh;overflow:hidden;margin:0}`, the region-discipline block, container-query declarations on `.nx-cockpit-rail` (`container-type:inline-size; container-name:cockpit`) + the `@container cockpit (...)` rules, the visual layer (layered shadows, glass chrome, spring curve `cubic-bezier(0.32,0.72,0,1)`, deep-purple darks, mood accents). **Preserve** every selector the accessibility/zero-emoji tests and the N1/N2 kernel-viz/atlas/chronos styles depend on. Do NOT touch `tokens.css`/`mood.css` media-query blocks — accessibility tests read `prefers-reduced-motion`/`prefers-reduced-data` from tokens and `prefers-contrast` from mood; keep those exact strings present.

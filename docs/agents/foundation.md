@@ -2,7 +2,7 @@
 
 The minimum runtime surface every NEXUS agent — built-in or third-party —
 goes through. See the full design at
-`docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md`
+`docs/design/specs/2026-06-06-nexus-agent-os-design.md`
 (§4 Kernel, §5 Agent Runtime, §6 Manifest, §9 Safety Model).
 
 ## Manifest
@@ -190,7 +190,7 @@ single-surface module.
 - LLM providers routing through `aegis.network()` (Phase 6).
 
 Cross-reference:
-`docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md`.
+`docs/design/specs/2026-06-06-nexus-agent-os-design.md`.
 
 ---
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+, pydantic 2 (already an `api`-extras dep — promoted to core for this phase), `mcp` Python library (already used by the existing MCP server), `httpx` (already a `federation`-extras dep — promoted to core), pytest + pytest-asyncio.
 
-**Related spec:** `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md` — sections 4 (Kernel), 5 (Agent Runtime), 6 (Manifest Schema v1), 9 (Safety Model).
+**Related spec:** `docs/design/specs/2026-06-06-nexus-agent-os-design.md` — sections 4 (Kernel), 5 (Agent Runtime), 6 (Manifest Schema v1), 9 (Safety Model).
 
 ---
 
@@ -229,7 +229,7 @@ intents, capabilities, and runtime via this manifest. Cortex reads
 `intents`; Aegis reads `capabilities`; the runtime reads `runtime`;
 the surfaces read `identity`.
 
-See docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md §6.
+See docs/design/specs/2026-06-06-nexus-agent-os-design.md §6.
 """
 from __future__ import annotations
 
@@ -2207,7 +2207,7 @@ Both expose:
 - First-use prompt UI / install review UI (Phase 4 + Phase 5).
 - Network gateway for the existing LLM providers (Phase 6).
 
-Cross-reference: `docs/superpowers/specs/2026-06-06-nexus-agent-os-design.md`.
+Cross-reference: `docs/design/specs/2026-06-06-nexus-agent-os-design.md`.
 ```
 
 - [ ] **Step 2: Commit**
