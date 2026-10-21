@@ -203,6 +203,15 @@ def test_FIXED_R3_3_confined_agent_cannot_write_outside_its_work_dir(tmp_path):
 
 
 @needs_docker
+def test_FIXED_R3_3_confined_agent_can_still_write_its_own_work_and_tmp():
+    # Found by the agent-store verifier: `-w /work` made Docker create /work owned by root,
+    # so a confined agent couldn't write its own HOME and servers that keep a config dir
+    # crashed at start. /work now belongs to the agent's user.
+    assert _probe("write", "/work/.config-probe", CONFINED).get("ok") == "written"
+    assert _probe("write", "/tmp/probe", CONFINED).get("ok") == "written"
+
+
+@needs_docker
 def test_FIXED_R3_2_the_egress_proxy_reaches_declared_hosts_and_refuses_the_rest():
     srv, port = _listener("0.0.0.0")
     declared = f"host.docker.internal:{port}"

@@ -170,6 +170,14 @@ default, `prefer`, confines what declares confinement and records the rest as un
 An adapter that declares confinement never falls back to running unconfined: without
 Docker it is refused.
 
+**Found later, by the agent store's verifier (2026-10-21).** The confinement was tighter
+than intended: starting the container in `/work` made Docker create that directory owned
+by root, so a confined agent couldn't write its own home, and servers that keep a config
+directory crashed at start. The round 3 tests checked that writes outside `/work` fail but
+never that writes inside it succeed. `/work` now belongs to the agent's user, and
+`test_FIXED_R3_3_confined_agent_can_still_write_its_own_work_and_tmp` checks both
+directions.
+
 **What round 3 did not do**, said as plainly as rounds 1 and 2:
 
 - **Only two catalog adapters are confined so far.** `haystack` (BM25 search) and

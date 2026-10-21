@@ -133,7 +133,9 @@ def prepare(conf: Confinement, slug: str, command: str, args: list[str], env_key
     argv = [
         "docker", "run", "--rm", "-i", "--name", name,
         "--network", network or "none",
-        "--read-only", "--tmpfs", "/tmp:rw,size=64m", "--tmpfs", "/work:rw,size=256m", "-w", "/work",
+        "--read-only", "--tmpfs", "/tmp:rw,size=64m,mode=1777",
+        # owned by the agent's user: with -w, Docker would otherwise create /work root-only
+        "--tmpfs", "/work:rw,size=256m,uid=65534,gid=65534", "-w", "/work",
         "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--user", "65534:65534",
         "--memory", conf.memory, "--cpus", conf.cpus, "--pids-limit", str(conf.pids),
         "-e", "HOME=/work", *proxy_env,
