@@ -155,11 +155,11 @@
 /* ── cockpit-rail mini scene (the small KERNEL · LIVE panel) ──────────────── */
 .nx-rail-scene {
   position: relative;
-  width: 100%; height: 132px;
-  border-radius: 10px; overflow: hidden;
-  border: 1px solid var(--nx-hairline);
-  background: radial-gradient(circle at 50% 45%, rgba(168,180,255,0.05), transparent 70%);
-  margin-bottom: 10px;
+  width: 100%; height: 128px;
+  border-radius: var(--nx-radius-md); overflow: hidden;
+  border: 1px solid var(--nx-line-2);
+  background: var(--nx-surface-1);
+  margin-bottom: var(--nx-space-1);
 }
 .nx-rail-scene canvas { display: block; width: 100%; height: 100%; }
 
@@ -185,27 +185,7 @@
 .nx-cast-disc { display: inline-flex; }
 .nx-cast-name { font-size: 11px; font-family: var(--nx-font-mono); }
 
-/* sidebar nav icon for the Watch view — concentric radar with a contact dot */
-.nx-side-link-icon.watch {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23a8a0c8' stroke-width='1.4' stroke-linecap='round'><circle cx='7' cy='7' r='1.4'/><path d='M3.2 7a3.8 3.8 0 0 1 7.6 0'/><path d='M1 7a6 6 0 0 1 12 0' opacity='0.55'/><circle cx='11' cy='3' r='0.7' fill='%23a8a0c8' stroke='none'/></svg>");
-}
 
-/* "watch ↗" affordance inside the KERNEL · LIVE rail section label */
-.nx-cp-watch-link {
-  float: right;
-  font-family: var(--nx-font-mono);
-  font-size: 8.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--nx-text-dim);
-  background: none;
-  border: 0;
-  cursor: pointer;
-  padding: 0;
-  opacity: 0.7;
-  transition: opacity 0.16s ease, color 0.16s ease;
-}
-.nx-cp-watch-link:hover { opacity: 1; color: var(--nx-text-high); }
 
 /* responsive — collapse the rail on narrow widths */
 @media (max-width: 1180px) {
@@ -214,9 +194,6 @@
 }
 
 /* ── Memory & Replay (Engram + Chronicle made visible) ─────────────────────*/
-.nx-side-link-icon.memory {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23a8a0c8' stroke-width='1.4' stroke-linecap='round'><path d='M2 3.5h10M2 7h10M2 10.5h10'/><circle cx='4.2' cy='3.5' r='1' fill='%23a8a0c8' stroke='none'/><circle cx='9' cy='7' r='1' fill='%23a8a0c8' stroke='none'/><circle cx='5.6' cy='10.5' r='1' fill='%23a8a0c8' stroke='none'/></svg>");
-}
 .nx-mem-tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 22px; }
 .nx-mem-tier { background: var(--nx-card-bg); border: 1px solid var(--nx-card-border); border-radius: var(--nx-radius-md, 12px); padding: 14px 16px; min-width: 0; }
 .nx-mem-tier-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }

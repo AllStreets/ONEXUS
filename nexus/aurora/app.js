@@ -4,7 +4,7 @@
  * Overlays for ⌘K switcher / ⌘N new workspace / ⌘0 cockpit / ⌘P settings.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES } from "/aurora/static/icons.js";
+import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES, icon } from "/aurora/static/icons.js";
 import { renderMarkdown } from "/aurora/static/md.js";
 import { KernelScene } from "/aurora/static/scene.js";
 
@@ -545,7 +545,7 @@ async function refreshRunnableCount() {
   const label = document.getElementById("nx-agents-label");
   if (label && state.agents) {
     const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
-    label.textContent = `${totalBuiltin} BUILT-IN · ${state.runnableCount || 0} RUNNABLE`;
+    label.textContent = `${totalBuiltin} built-in · ${state.runnableCount || 0} runnable`;
   }
   renderChromeContext();
 }
@@ -798,6 +798,17 @@ function attachShellHandlers() {
   document.getElementById("nx-cockpit-toggle").addEventListener("click", () => {
     document.body.classList.toggle("nx-cockpit-hidden");
   });
+  // Narrow screens: the sidebar becomes a drawer. Any navigation closes it.
+  const sideToggle = document.getElementById("nx-side-toggle");
+  const setSide = (open) => {
+    document.body.classList.toggle("nx-side-open", open);
+    sideToggle?.setAttribute("aria-expanded", String(open));
+  };
+  sideToggle?.addEventListener("click", () => setSide(!document.body.classList.contains("nx-side-open")));
+  document.getElementById("nx-sidebar").addEventListener("click", (e) => {
+    if (e.target.closest("button") && !e.target.closest(".nx-ws-trash")) setSide(false);
+  });
+  window.addEventListener("hashchange", () => setSide(false));
   document.getElementById("nx-open-guide").addEventListener("click", () => renderGuide(0));
   document.getElementById("nx-open-tour").addEventListener("click", () => renderTour(0));
   document.getElementById("nx-tl-fullscreen").addEventListener("click", async () => {
@@ -826,40 +837,28 @@ function renderSidebar() {
   // Workspaces
   const list = document.getElementById("nx-ws-list");
   if (!state.workspaces.length) {
-    list.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:14px 4px;font-size:11.5px">no workspaces yet · ⌘N to create one</div>`;
+    list.innerHTML = `<div class="nx-empty-line nx-side-empty">No workspaces yet. Press ⌘N to make one.</div>`;
   } else {
     list.innerHTML = state.workspaces.map(w => {
-      const tone = w.tone || "indigo";
-      const colorMap = {
-        indigo: "#a8b4ff",  amber: "#f8c460",  sage: "#9affb6",
-        plum: "#c8a0ff",    magenta: "#f86078", "calm-focus": "#a87af5",
-      };
-      const dotColor = colorMap[(tone || "").toLowerCase()] || "#a87af5";
+      const tone = (w.tone || "indigo").toLowerCase();
       // Agent count = max(distinct agents you've actually chatted with,
       //                    resident_agents declared in cfg)
       // Chronicle count comes from /api/chat-history/workspaces via loadWorkspaces.
       const liveCount = (state.workspaceAgentCounts || {})[w.workspace_id] || 0;
       const declaredCount = w.resident_agents?.length || 0;
       const agentCount = Math.max(liveCount, declaredCount);
-      const meta = w.workspace_id === state.active
-        ? `${agentCount} agents · active`
-        : `${agentCount} agents`;
+      const isActive = w.workspace_id === state.active;
+      const meta = `${agentCount}`;
       return `
-        <div class="nx-ws-row ${w.workspace_id === state.active ? "active" : ""}" data-id="${w.workspace_id}">
-          <button class="nx-ws-pill" data-id="${w.workspace_id}" aria-label="Open workspace ${escapeHtml(w.name)}">
-            <span class="ws-dot" style="background:${dotColor};color:${dotColor}"></span>
+        <div class="nx-ws-row ${isActive ? "active" : ""}" data-id="${w.workspace_id}">
+          <button class="nx-ws-pill" data-id="${w.workspace_id}" aria-label="Open workspace ${escapeHtml(w.name)}, ${agentCount} agents" ${isActive ? 'aria-current="true"' : ""}>
+            <span class="ws-dot" style="--tone:var(--nx-tone-${escapeHtml(tone)}-a, var(--nx-accent))"></span>
             <span class="ws-name">${escapeHtml(w.name || w.workspace_id)}</span>
-            <span></span>
-            <span class="ws-meta">${escapeHtml(meta)}</span>
+            <span class="ws-meta" title="${agentCount} agent${agentCount === 1 ? "" : "s"}">${escapeHtml(meta)}</span>
           </button>
           <button class="nx-ws-trash" data-id="${w.workspace_id}" data-name="${escapeHtml(w.name)}"
                   aria-label="Delete workspace ${escapeHtml(w.name)}" title="Delete workspace">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2.5 3.5h9"/>
-              <path d="M5 3.5V2.2c0-.4.3-.7.7-.7h2.6c.4 0 .7.3.7.7v1.3"/>
-              <path d="M3.5 3.5l.6 8.4c0 .3.3.6.6.6h4.6c.3 0 .6-.3.6-.6l.6-8.4"/>
-              <path d="M6 6v4M8 6v4"/>
-            </svg>
+            ${icon("trash", 14)}
           </button>
         </div>
       `;
@@ -887,7 +886,7 @@ function renderSidebar() {
         e.stopPropagation();
         const id = btn.dataset.id;
         const name = btn.dataset.name;
-        if (!confirm(`Delete workspace "${name}"? This is permanent — its memory and grants will be removed.`)) return;
+        if (!confirm(`Delete workspace "${name}"? This is permanent. Its memory and grants will be removed.`)) return;
         try {
           const r = await fetch(`/api/workspaces/${encodeURIComponent(id)}`, { method: "DELETE" });
           if (!r.ok) {
@@ -919,21 +918,21 @@ function renderSidebar() {
   // launcher too since multi-launch handles catalog agents now).
   const recentEl = document.getElementById("nx-recent-agents");
   if (!state.recentAgents.length) {
-    recentEl.innerHTML = `<div class="nx-empty" style="opacity:0.45;padding:8px 4px;font-size:11px">no agents used yet — try cortex launch (⌘L)</div>`;
+    recentEl.innerHTML = `<div class="nx-empty-line nx-side-empty">No agents used yet. Start one from Cortex launch (⌘L).</div>`;
   } else {
     recentEl.innerHTML = state.recentAgents.map(a => {
       const lastTxt = a.last_active_at
         ? chatHistoryRelative(a.last_active_at)
-        : (a.is_running ? "running" : "—");
+        : (a.is_running ? "running" : "not used yet");
       const kindBadge = a.kind === "catalog"
-        ? `<span class="nx-recent-kind cat">cat</span>`
+        ? `<span class="nx-recent-kind cat">catalog</span>`
         : (a.kind === "builtin" ? `<span class="nx-recent-kind">core</span>` : "");
       const displayName = a.kind === "catalog" && a.slug.length > 18
         ? a.slug.slice(0, 16) + "…"
         : a.slug;
       return `
         <button class="nx-agent-row" data-slug="${escapeHtml(a.slug)}" data-kind="${escapeHtml(a.kind || "builtin")}" data-workspace="${escapeHtml(a.last_workspace || "")}" title="${escapeHtml(a.tagline || a.category || a.slug)} · click to resume">
-          ${agentDisc(a.slug, { size: 26, trust: typeof a.trust_floor === "number" ? a.trust_floor : null })}
+          ${agentDisc(a.slug, { size: 24 })}
           <div class="nx-recent-meta">
             <div class="ag-name">${escapeHtml(displayName)} ${kindBadge}</div>
             <div class="ag-sub">${escapeHtml(a.chat_count ? `${a.chat_count} ${a.chat_count === 1 ? "chat" : "chats"} · ${lastTxt}` : lastTxt)}</div>
@@ -960,7 +959,7 @@ function renderSidebar() {
 function renderChromeContext() {
   const el = document.getElementById("nx-chrome-context");
   if (!el) return;
-  if (!state.active) { el.textContent = "no workspace"; return; }
+  if (!state.active) { el.innerHTML = `<span class="nx-chrome-ws">No workspace</span>`; return; }
   const w = state.workspaces.find(ws => ws.workspace_id === state.active);
   const name = w ? w.name : state.active;
   // "On duty" = the larger of this workspace's declared/active agents and the
@@ -970,7 +969,7 @@ function renderChromeContext() {
   const declared = w?.resident_agents?.length || 0;
   const chatted = (state.workspaceAgentCounts || {})[state.active] || 0;
   const count = Math.max(declared, chatted, state.coreOnDuty || 0);
-  el.textContent = `— ${name.toLowerCase()} · ${count} agent${count === 1 ? "" : "s"} on duty`;
+  el.innerHTML = `<span class="nx-chrome-ws">${escapeHtml(name)}</span><span class="nx-chrome-duty"><span class="nx-dot is-live" aria-hidden="true"></span>${count} on duty</span>`;
 }
 
 // ── Cockpit rail ──────────────────────────────────────────────────────────
@@ -1004,13 +1003,13 @@ function renderTrustCard() {
     { cls: "denied",    lbl: "denied",    val: bd.denied    || 0 },
   ];
   el.innerHTML = `
+    <div class="nx-trust-head">
+      <span class="nx-trust-delta">${dStr}</span>
+      <span class="nx-trust-state">${escapeHtml(dir)}</span>
+    </div>
     <svg class="nx-trust-spark" viewBox="0 0 320 92" preserveAspectRatio="none" aria-hidden="true">
       ${trustSparkSVG(state.trust.history, dir)}
     </svg>
-    <div class="nx-trust-head">
-      <span class="nx-trust-delta">${dStr}</span>
-      <span class="nx-trust-state">${dir.toUpperCase()}</span>
-    </div>
     <div class="nx-trust-breakdown">
       ${cells.map(c => `
         <span class="b-cell ${c.cls}">
@@ -1027,7 +1026,7 @@ function trustSparkSVG(history, direction) {
   const w = 320, h = 92;
   if (!history.length) {
     // Draw a flat baseline
-    return `<line x1="0" y1="${h * 0.7}" x2="${w}" y2="${h * 0.7}" stroke="rgba(255,224,154,0.3)" stroke-width="1"/>`;
+    return `<line x1="0" y1="${h * 0.78}" x2="${w}" y2="${h * 0.78}" stroke="rgba(255,255,255,0.10)" stroke-width="1" stroke-dasharray="2 4"/>`;
   }
   // Map history to (x,y) points; cumulative trust delta over time → simple stepped curve
   let acc = 0;
@@ -1041,24 +1040,20 @@ function trustSparkSVG(history, direction) {
   const y = (acc) => h - ((acc - minAcc) / range) * h * 0.7 - h * 0.15;
 
   const pts = points.map(p => `${p.x.toFixed(1)},${y(p.acc).toFixed(1)}`).join(" L");
-  const colorLine = direction === "collapse" ? "#ff8868"
-                  : direction === "falling"  ? "#b0d4ec"
-                                              : "#ffe09a";
-  const colorArea = direction === "collapse" ? "rgba(248,100,60,0.30)"
-                  : direction === "falling"  ? "rgba(140,184,212,0.22)"
-                                              : "rgba(255,214,128,0.32)";
+  const colorLine = direction === "collapse" ? "var(--nx-trust-collapse)"
+                  : direction === "falling"  ? "var(--nx-trust-falling)"
+                                              : "var(--nx-trust-rising)";
+  const colorArea = colorLine;
   const last = points[points.length - 1];
   return `
     <defs>
       <linearGradient id="ts-area" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="${colorArea}"/>
+        <stop offset="0%" stop-color="${colorArea}" stop-opacity="0.16"/>
         <stop offset="100%" stop-color="${colorArea}" stop-opacity="0"/>
       </linearGradient>
     </defs>
     <path d="M ${pts} L ${w},${h} L 0,${h} Z" fill="url(#ts-area)"/>
-    <path d="M ${pts}" fill="none" stroke="${colorLine}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${last.x.toFixed(1)}" cy="${y(last.acc).toFixed(1)}" r="3.5" fill="${colorLine}"/>
-    <circle cx="${last.x.toFixed(1)}" cy="${y(last.acc).toFixed(1)}" r="8" fill="none" stroke="${colorLine}" stroke-opacity="0.4"/>
+    <path d="M ${pts}" fill="none" stroke="${colorLine}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
   `;
 }
 
@@ -1134,7 +1129,7 @@ function renderMorningBrief() {
   if (!el) return;
   const b = state.n2.brief;
   if (!b || !b.headline) {
-    el.innerHTML = `<div class="nx-brief-empty nx-dim">No morning brief yet.</div>`;
+    el.innerHTML = `<div class="nx-empty-line">No brief yet. Dreamweaver writes one overnight.</div>`;
     return;
   }
   const topics = (b.topics || []).slice(0, 8);
@@ -1144,7 +1139,7 @@ function renderMorningBrief() {
   el.innerHTML = `
     <div class="nx-brief-head">${escapeHtml(b.headline)}</div>
     ${b.date ? `<div class="nx-brief-date nx-dim">${escapeHtml(b.date)}</div>` : ""}
-    <div class="nx-brief-chips">${chips || `<span class="nx-dim">no recurring topics</span>`}</div>`;
+    <div class="nx-brief-chips">${chips || `<span class="nx-empty-line">No recurring topics.</span>`}</div>`;
 }
 
 // ── N3 surfaces: Herald negotiation + federation sync ──────────────────────
@@ -1164,7 +1159,7 @@ function renderHeraldPanel() {
   const events = state.n3.herald || [];
   const open = state.n3.heraldOpen || 0;
   if (!events.length && !open) {
-    el.innerHTML = `<div class="nx-dim">No negotiations. Offers, counters, and Aegis-gated commits stream here.</div>`;
+    el.innerHTML = `<div class="nx-empty-line">No negotiations. Offers, counters and Aegis-gated commits appear here.</div>`;
     return;
   }
   const rows = events.map(e => {
@@ -1183,10 +1178,10 @@ function renderFederationSync() {
   const s = state.n3.fedSync || { pushed: 0, merged: 0, last: null };
   el.innerHTML = `
     <div class="nx-fedsync-row">
-      <span class="nx-fedsync-stat"><span class="nx-fedsync-val">${s.pushed}</span><span class="nx-dim">pushed</span></span>
-      <span class="nx-fedsync-stat"><span class="nx-fedsync-val">${s.merged}</span><span class="nx-dim">merged</span></span>
+      <span class="nx-fedsync-stat nx-stat"><span class="nx-fedsync-val nx-stat-value">${s.pushed}</span><span class="nx-stat-label">pushed</span></span>
+      <span class="nx-fedsync-stat nx-stat"><span class="nx-fedsync-val nx-stat-value">${s.merged}</span><span class="nx-stat-label">merged</span></span>
     </div>
-    <div class="nx-dim nx-fedsync-note">workspace-scoped · allowlist-only · Aegis-gated</div>`;
+    <div class="nx-fedsync-note">Workspace-scoped, allowlist only, Aegis-gated.</div>`;
 }
 
 async function renderAtlasGraph() {
@@ -1335,7 +1330,7 @@ function moduleSparkSVG(series, w = 64, h = 16) {
   const pts = series.map((v, i) =>
     `${(i / (series.length - 1) * w).toFixed(1)},${(h - 2 - (v - min) / range * (h - 4)).toFixed(1)}`
   ).join(" L");
-  return `<path d="M ${pts}" fill="none" stroke="#ffe09a" stroke-width="1.2" stroke-linecap="round"/>`;
+  return `<path d="M ${pts}" fill="none" stroke="var(--nx-trust-rising)" stroke-width="1.25" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
 }
 
 function radarPingHTML(det) {
@@ -1354,27 +1349,27 @@ function radarPingHTML(det) {
 function kernelVizHTML() {
   const kv = state.kernelViz;
   const routes = kv.routes.slice(0, 4).map(r => {
-    const top = (r.signals && r.signals[0]) ? r.signals[0].name : "—";
+    const top = (r.signals && r.signals[0]) ? r.signals[0].name : "";
     return `<div class="nx-kv-row nx-kv-route">
-      <span class="nx-dim">route</span>
+      <span class="nx-kv-tag">route</span>
       <span class="nx-kv-target">${escapeHtml(r.target || "?")}</span>
-      <span class="nx-dim" style="margin-left:auto">${escapeHtml(top)}</span>
+      <span class="nx-kv-trail">${escapeHtml(top)}</span>
     </div>`;
-  }).join("") || `<div class="nx-dim" style="font-size:11px">no routing yet</div>`;
+  }).join("") || `<div class="nx-empty-line">No routing yet.</div>`;
   const gates = kv.gates.slice(0, 4).map(g => {
     const v = String(g.verdict || "").toLowerCase();
     const pc = String(g.permission_class || "routine").toLowerCase();
     return `<div class="nx-kv-row">
       <span class="nx-kv-gate-dot v-${v} pc-${pc}" aria-hidden="true"></span>
       <span class="nx-kv-cap" title="${escapeHtml(g.capability || "")}">${escapeHtml(truncate(g.capability || "", 26))}</span>
-      <span class="nx-dim" style="margin-left:auto">${escapeHtml(g.agent || "")} · ${escapeHtml(v)}</span>
+      <span class="nx-kv-trail">${escapeHtml(g.agent || "")} · ${escapeHtml(v)}</span>
     </div>`;
   }).join("");
   const sparks = Object.entries(kv.trustSeries).slice(0, 5).map(([mod, series]) => `
     <div class="nx-kv-row nx-kv-spark">
       <span class="nx-kv-mod">${escapeHtml(mod)}</span>
       <svg viewBox="0 0 64 16" width="64" height="16" preserveAspectRatio="none" aria-hidden="true">${moduleSparkSVG(series)}</svg>
-      <span class="nx-dim">${series[series.length - 1].toFixed(2)}</span>
+      <span class="nx-kv-trail nx-mono">${series[series.length - 1].toFixed(2)}</span>
     </div>`).join("");
   const pings = kv.detections.map(radarPingHTML).join("");
   return `
@@ -1400,9 +1395,9 @@ function emergencyVeil(m) {
   veil.className = "nx-emergency-veil";
   veil.innerHTML = `
     <div class="nx-emergency-card" role="alertdialog" aria-label="Emergency broadcast">
-      <div class="nx-emergency-title">EMERGENCY — ${escapeHtml(p.rule || m.topic || "broadcast")}</div>
+      <div class="nx-emergency-title">${icon("alert-triangle", 16)}<span>Emergency: ${escapeHtml(p.rule || m.topic || "broadcast")}</span></div>
       <div class="nx-emergency-body">${escapeHtml(p.description || "")}${p.module ? " · module: " + escapeHtml(p.module) : ""}</div>
-      <button class="nx-emergency-dismiss">acknowledge</button>
+      <button class="nx-emergency-dismiss nx-btn nx-btn-danger" type="button">Acknowledge</button>
     </div>`;
   root.appendChild(veil);
   const close = () => veil.remove();
@@ -1428,12 +1423,13 @@ function tierForTrust(t) {
 
 // mood → accent hex (matches the dominant tone of each mood.css palette) so the
 // scene's atmosphere breathes with the shell.
+// Mirrors the --nx-accent value of each mood in mood.css.
 const MOOD_ACCENT = {
-  calm_focus: "#a8b4ff", deep_flow: "#5cd0b4", routing: "#e060c8",
-  deliberating: "#c8a0ff", creative: "#5c8cf0", reflective: "#d088b8",
-  watchful: "#5cc0c0", alert: "#f8643c",
+  calm_focus: "#4ed5d5", deep_flow: "#7ad59c", routing: "#f197c2",
+  deliberating: "#f4b768", creative: "#96b4ff", reflective: "#d9a8ef",
+  watchful: "#6bcbf7", alert: "#fb817a",
 };
-function moodAccent(mood) { return MOOD_ACCENT[mood] || "#a8b4ff"; }
+function moodAccent(mood) { return MOOD_ACCENT[mood] || MOOD_ACCENT.calm_focus; }
 
 // Build the node descriptors the scene lays out: every on-duty module, coloured
 // by its bespoke identity gradient, sized by its live Aegis trust.
@@ -1801,7 +1797,7 @@ function renderPermLog() {
   if (!el) return;
   const rows = state.perms.recent.slice(0, 6);
   if (!rows.length) {
-    el.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:14px 4px;font-size:11px">no recent activity</div>`;
+    el.innerHTML = `<div class="nx-empty-line">No permission activity yet.</div>`;
     return;
   }
   el.innerHTML = rows.map(r => {
@@ -1816,7 +1812,7 @@ function renderPermLog() {
           ${r.target ? `<span class="tgt" title="${escapeHtml(r.target)}">${escapeHtml(r.target)}</span>` : ""}
         </div>
         <div class="nx-perm-meta">
-          <span class="nx-perm-status s-${status}">${status.toUpperCase()}</span>
+          <span class="nx-perm-status s-${status}">${escapeHtml(status)}</span>
           ${t ? `<span class="nx-perm-time">${escapeHtml(t)}</span>` : ""}
         </div>
       </div>
@@ -1829,19 +1825,18 @@ function renderMoodCard() {
   if (!el) return;
   const name = (state.mood.mood || "calm_focus").replace(/_/g, " ");
   const reason = state.mood.reason || "";
+  const key = (state.mood.mood || "calm_focus").replace(/_/g, "-");
   el.innerHTML = `
-    <div class="nx-mood-mesh"></div>
+    <span class="nx-mood-mesh nx-mood-preview-${escapeHtml(key)}" aria-hidden="true"></span>
     <div class="nx-mood-caption">
       <div class="nx-mood-caption-name">${escapeHtml(name)}</div>
-      <div class="nx-mood-caption-sub">${escapeHtml(reason.toLowerCase())}</div>
+      <div class="nx-mood-caption-sub">${escapeHtml(reason || "Ambient, following the kernel")}</div>
     </div>
   `;
   // reasons block
   const r = document.getElementById("nx-mood-reasons");
   r.innerHTML = `
-    <div>↳ mood: ${escapeHtml(name)}</div>
-    <div>↳ ${escapeHtml(reason || "ambient")}</div>
-    <div>↳ ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ${state.perms.pending.length} pending</div>
+    <div>${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ${state.perms.pending.length} pending</div>
   `;
 }
 
@@ -1851,10 +1846,10 @@ function renderAgentDiscs() {
   const BUILTINS = ["oracle", "council", "wraith", "echo", "prism", "chronos"];
   const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
   document.getElementById("nx-agents-label").textContent =
-    `${totalBuiltin} BUILT-IN · ${state.runnableCount || 0} RUNNABLE`;
+    `${totalBuiltin} built-in · ${state.runnableCount || 0} runnable`;
   const overflow = Math.max(0, totalBuiltin - BUILTINS.length);
   el.innerHTML = BUILTINS.map(slug => `<button class="nx-disc-btn" data-slug="${slug}" title="${escapeHtml(BUILTIN_CAPABILITIES[slug]?.tagline || slug)}">${agentDisc(slug, { size: 28 })}</button>`).join("") +
-    (overflow > 0 ? `<button class="nx-agent-overflow" title="Browse catalog">+${overflow}</button>` : "");
+    (overflow > 0 ? `<button class="nx-agent-overflow" type="button" title="Browse the catalog">+${overflow}</button>` : "");
   const overEl = el.querySelector(".nx-agent-overflow");
   if (overEl) overEl.addEventListener("click", () => location.hash = "#/catalog");
   // Click any built-in disc → show its capability sheet

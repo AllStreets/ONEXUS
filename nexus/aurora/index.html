@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
   <title>ONEXUS</title>
   <link rel="stylesheet" href="/aurora/static/tokens.css">
   <link rel="stylesheet" href="/aurora/static/mood.css">
@@ -11,201 +12,188 @@
   <link rel="stylesheet" href="/aurora/static/app.css">
 </head>
 <body class="nx-mood nx-mood-calm-focus" data-mood="calm_focus">
-  <!-- Ambient atmosphere — the mood-driven mesh that fills the whole viewport -->
+  <!-- Ambient light: a faint horizon in the current mood's accent -->
   <div class="nx-ambient" aria-hidden="true"></div>
 
-  <!-- Shell — a CSS Grid: row 1 = chrome, row 2 = body -->
+  <!-- Shell: row 1 is the chrome bar, row 2 the body grid -->
   <div class="nx-shell" id="nx-shell">
 
-    <!-- ── chrome bar ───────────────────────────────────────────────── -->
-    <!-- The browser already owns window controls. When ONEXUS is wrapped
-         in a Tauri/Electron standalone shell, the host window will provide
-         its own native traffic lights. Don't duplicate them here. -->
+    <!-- Chrome bar. Window controls belong to the browser or the native
+         Tauri shell, so they are not drawn here. -->
     <header class="nx-chrome">
       <div class="nx-chrome-left">
-        <button class="nx-chrome-icon nx-icon-focus" id="nx-tl-focus" title="Focus mode — hide sidebar &amp; cockpit (esc to exit)" aria-label="Toggle focus mode">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 5V2h3M9 2h3v3M2 9v3h3M9 12h3v-3"/>
-          </svg>
+        <button class="nx-icon-btn nx-chrome-menu" id="nx-side-toggle" type="button" title="Show the sidebar" aria-label="Toggle sidebar" aria-controls="nx-sidebar" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <button class="nx-chrome-icon" id="nx-tl-fullscreen" title="Toggle browser fullscreen" aria-label="Toggle fullscreen">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 5V2h3M9 2h3v3M2 9v3h3M9 12h3v-3"/>
-            <path d="M6 6l-3-3M11 11l-3-3M6 8l-3 3M11 3L8 6"/>
-          </svg>
-        </button>
-      </div>
-
-      <div class="nx-chrome-center">
-        <button class="nx-chrome-home" id="nx-chrome-home" title="Return to workspace home">
+        <button class="nx-chrome-home" id="nx-chrome-home" type="button" title="Return to workspace home">
           <span class="nx-chrome-mark" id="nx-kernel-mark"></span>
           <span class="nx-chrome-brand">ONEXUS</span>
         </button>
-        <span class="nx-chrome-sep">/</span>
-        <button class="nx-chrome-context" id="nx-chrome-context">no workspace</button>
+        <span class="nx-chrome-sep" aria-hidden="true">/</span>
+        <button class="nx-chrome-context" id="nx-chrome-context" type="button">no workspace</button>
       </div>
 
       <div class="nx-chrome-right">
-        <button class="nx-chrome-icon" id="nx-open-tour" title="Replay the welcome walkthrough" aria-label="Replay walkthrough">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M7 1.4 L7.9 5.1 L11.6 6 L7.9 6.9 L7 10.6 L6.1 6.9 L2.4 6 L6.1 5.1 Z"/>
-            <circle cx="11.2" cy="11" r="0.8"/>
-          </svg>
+        <button class="nx-icon-btn nx-chrome-icon" id="nx-tl-focus" type="button" title="Focus mode: hide the sidebar and rail (Esc to exit)" aria-label="Toggle focus mode">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
         </button>
-        <button class="nx-chrome-icon" id="nx-open-guide" title="Open the guide (?)" aria-label="Open guide">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="7" cy="7" r="5.4"/>
-            <path d="M5.4 5.4a1.6 1.6 0 1 1 2.4 1.4c-.6.3-.8.7-.8 1.2"/>
-            <circle cx="7" cy="10.2" r="0.5" fill="currentColor" stroke="none"/>
-          </svg>
+        <button class="nx-icon-btn nx-chrome-icon" id="nx-tl-fullscreen" type="button" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/></svg>
         </button>
-        <button class="nx-chrome-icon" id="nx-cockpit-toggle" title="Show/hide cockpit rail" aria-label="Toggle cockpit rail">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="1.5" y="2.5" width="11" height="9" rx="1.4"/>
-            <path d="M9 2.5v9"/>
-          </svg>
+        <button class="nx-icon-btn nx-chrome-icon" id="nx-open-tour" type="button" title="Replay the welcome tour" aria-label="Replay the welcome tour">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
         </button>
-        <button class="nx-mood-pill" id="nx-mood-pill" title="Ambient mood (⌘0 for expanded cockpit)">
-          <span class="nx-mood-dot"></span>
+        <button class="nx-icon-btn nx-chrome-icon" id="nx-open-guide" type="button" title="Open the guide (?)" aria-label="Open the guide">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
+        <button class="nx-icon-btn nx-chrome-icon" id="nx-cockpit-toggle" type="button" title="Show or hide the cockpit rail" aria-label="Toggle the cockpit rail">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+        </button>
+        <span class="nx-chrome-divider" aria-hidden="true"></span>
+        <button class="nx-mood-pill" id="nx-mood-pill" type="button" title="Ambient mood (Cmd+0 opens the expanded cockpit)">
+          <span class="nx-mood-dot" aria-hidden="true"></span>
           <span class="nx-mood-label" id="nx-mood-label">calm focus</span>
         </button>
-        <span class="nx-chrome-clock" id="nx-clock">--:--</span>
+        <span class="nx-chrome-clock nx-mono" id="nx-clock">--:--</span>
       </div>
     </header>
 
-    <!-- ── body grid: sidebar / main / cockpit ─────────────────────── -->
+    <!-- Body grid: sidebar, main canvas, cockpit rail -->
     <div class="nx-body" id="nx-body">
 
-      <!-- ── sidebar ─────────────────────────────────────────────── -->
-      <aside class="nx-region nx-sidebar" id="nx-sidebar">
+      <aside class="nx-region nx-sidebar" id="nx-sidebar" aria-label="Navigation">
         <div class="nx-region-inner nx-sidebar-inner">
-          <!-- search -->
           <div class="nx-search">
-            <span class="nx-search-icon" aria-hidden="true"></span>
+            <svg class="nx-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.35-4.35"/></svg>
             <input class="nx-search-input" id="nx-search-input"
-                   placeholder="search · ⌘K"
-                   aria-label="Search workspaces and agents">
+                   placeholder="Search the catalog"
+                   aria-label="Search the agent catalog">
+            <span class="nx-kbd" aria-hidden="true">/</span>
           </div>
 
-          <!-- workspaces -->
-          <div class="nx-section">
-            <div class="nx-section-label">WORKSPACES</div>
-            <div class="nx-ws-list" id="nx-ws-list"></div>
-            <button class="nx-new-ws" id="nx-new-ws" title="New workspace (⌘N)">
-              <span class="nx-new-ws-plus" aria-hidden="true"></span>
-              <span class="nx-new-ws-label">new workspace</span>
-              <span class="nx-new-ws-kbd">⌘N</span>
-            </button>
-          </div>
-
-          <!-- recent agents -->
-          <div class="nx-section">
-            <div class="nx-section-label">RECENT AGENTS</div>
-            <div class="nx-agent-list" id="nx-recent-agents"></div>
-          </div>
-
-          <!-- nav links -->
-          <div class="nx-section nx-section-tail">
-            <button class="nx-side-link" id="nx-open-watch">
-              <span class="nx-side-link-icon watch"></span>
-              <span>kernel · watch</span>
-              <span class="nx-side-link-kbd">⌘J</span>
-            </button>
-            <button class="nx-side-link" id="nx-open-memory">
-              <span class="nx-side-link-icon memory"></span>
-              <span>memory · replay</span>
-              <span class="nx-side-link-kbd">⌘Y</span>
-            </button>
-            <button class="nx-side-link" id="nx-open-cortex">
-              <span class="nx-side-link-icon"></span>
-              <span>cortex launch</span>
+          <nav class="nx-section nx-nav" aria-label="Tools">
+            <button class="nx-side-link" id="nx-open-cortex" type="button">
+              <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="6" height="6" x="3" y="15" rx="1"/><rect width="6" height="6" x="15" y="15" rx="1"/><rect width="6" height="6" x="9" y="3" rx="1"/><path d="M6 15v-2a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v2"/><path d="M12 12V9"/></svg>
+              <span>Cortex launch</span>
               <span class="nx-side-link-kbd">⌘L</span>
             </button>
-            <button class="nx-side-link" id="nx-open-workshop">
-              <span class="nx-side-link-icon"></span>
-              <span>workshop</span>
+            <button class="nx-side-link" id="nx-open-watch" type="button">
+              <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+              <span>Kernel watch</span>
+              <span class="nx-side-link-kbd">⌘J</span>
+            </button>
+            <button class="nx-side-link" id="nx-open-memory" type="button">
+              <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+              <span>Memory replay</span>
+              <span class="nx-side-link-kbd">⌘Y</span>
+            </button>
+            <button class="nx-side-link" id="nx-open-workshop" type="button">
+              <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
+              <span>Workshop</span>
               <span class="nx-side-link-kbd">⌘E</span>
             </button>
-            <button class="nx-side-link" id="nx-open-search">
-              <span class="nx-side-link-icon search"></span>
-              <span>web search</span>
+            <button class="nx-side-link" id="nx-open-search" type="button">
+              <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              <span>Web search</span>
               <span class="nx-side-link-kbd">⌘/</span>
             </button>
-            <button class="nx-side-link" id="nx-open-catalog">
-              <span class="nx-side-link-icon catalog"></span>
-              <span>agent catalog</span>
-              <span class="nx-side-link-arrow">↗</span>
+            <button class="nx-side-link" id="nx-open-catalog" type="button">
+              <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+              <span>Agent catalog</span>
+              <span class="nx-side-link-kbd"></span>
             </button>
-            <button class="nx-side-link" id="nx-open-settings">
-              <span class="nx-side-link-icon settings"></span>
-              <span>settings</span>
-              <span class="nx-side-link-kbd">⌘P</span>
+          </nav>
+
+          <div class="nx-section">
+            <div class="nx-section-head">
+              <div class="nx-section-label">Workspaces</div>
+              <span class="nx-kbd" title="New workspace" aria-hidden="true">⌘N</span>
+            </div>
+            <div class="nx-ws-list" id="nx-ws-list"></div>
+            <button class="nx-new-ws" id="nx-new-ws" type="button" title="New workspace (⌘N)">
+              <svg class="nx-new-ws-plus" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              <span class="nx-new-ws-label">New workspace</span>
             </button>
+          </div>
+
+          <div class="nx-section">
+            <div class="nx-section-head">
+              <div class="nx-section-label">Recent agents</div>
+            </div>
+            <div class="nx-agent-list" id="nx-recent-agents"></div>
           </div>
         </div>
 
-        <!-- user footer — sibling of inner so it stays pinned -->
-        <div class="nx-user-footer" id="nx-user-footer">
-          <div class="nx-user-avatar"><span id="nx-user-initials">CE</span></div>
-          <div class="nx-user-meta">
-            <div class="nx-user-name" id="nx-user-name">you</div>
-            <div class="nx-user-sub">sovereign · local</div>
+        <!-- Footer: a sibling of the scroll area so it stays pinned -->
+        <div class="nx-side-foot">
+          <button class="nx-side-link" id="nx-open-settings" type="button">
+            <svg class="nx-side-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+            <span>Settings</span>
+            <span class="nx-side-link-kbd">⌘P</span>
+          </button>
+          <div class="nx-user-footer" id="nx-user-footer">
+            <div class="nx-user-avatar nx-avatar"><span id="nx-user-initials">CE</span></div>
+            <div class="nx-user-meta">
+              <div class="nx-user-name" id="nx-user-name">you</div>
+              <div class="nx-user-sub">Local and sovereign</div>
+            </div>
           </div>
         </div>
       </aside>
 
-      <!-- ── main canvas — rendered by JS per route ─────────────── -->
+      <!-- Main canvas: rendered by JS per route -->
       <main class="nx-region nx-main" id="nx-main"></main>
 
-      <!-- ── cockpit rail ────────────────────────────────────────── -->
-      <aside class="nx-region nx-cockpit-rail" id="nx-cockpit-rail">
+      <!-- Cockpit rail -->
+      <aside class="nx-region nx-cockpit-rail" id="nx-cockpit-rail" aria-label="Cockpit">
         <div class="nx-region-inner nx-cockpit-inner">
-          <div class="nx-cp-section">
-            <div class="nx-section-label">TRUST · LAST 60M</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label">Trust, last 60 min</div></div>
             <div class="nx-trust-card" id="nx-trust-card"></div>
-          </div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label">RECENT PERMISSIONS</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label">Recent permissions</div></div>
             <div class="nx-perm-log" id="nx-perm-log"></div>
-          </div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label">KERNEL · LIVE
-              <button class="nx-cp-watch-link" id="nx-open-watch-rail" title="Open the full Watch scene (⌘J)">watch ↗</button>
+          <section class="nx-cp-section">
+            <div class="nx-section-head">
+              <div class="nx-section-label">KERNEL, LIVE</div>
+              <button class="nx-cp-watch-link nx-link" id="nx-open-watch-rail" type="button" title="Open the full Watch scene (⌘J)">Watch</button>
             </div>
             <div class="nx-rail-scene" id="nx-rail-scene"><canvas id="nx-rail-scene-canvas"></canvas></div>
             <div class="nx-kernel-viz" id="nx-kernel-viz"></div>
-          </div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label">MORNING BRIEF</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label">MORNING BRIEF</div></div>
             <div class="nx-morning-brief" id="nx-morning-brief"></div>
-          </div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label">NEGOTIATIONS · HERALD</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label">Negotiations</div></div>
             <div class="nx-herald-panel" id="nx-herald-panel"></div>
-          </div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label">FEDERATION SYNC</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label">Federation sync</div></div>
             <div class="nx-fedsync-panel" id="nx-fedsync-panel"></div>
-          </div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label">AMBIENT MOOD</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label">Ambient mood</div></div>
             <div class="nx-mood-card" id="nx-mood-card"></div>
-            <div class="nx-mood-reasons nx-mono" id="nx-mood-reasons"></div>
-          </div>
+            <div class="nx-mood-reasons" id="nx-mood-reasons"></div>
+          </section>
 
-          <div class="nx-cp-section">
-            <div class="nx-section-label" id="nx-agents-label">10 BUILT-IN · 7K+ CATALOG</div>
+          <section class="nx-cp-section">
+            <div class="nx-section-head"><div class="nx-section-label" id="nx-agents-label">10 built-in, 7K+ in the catalog</div></div>
             <div class="nx-agent-discs" id="nx-agent-discs"></div>
-          </div>
+          </section>
         </div>
 
-        <!-- footer — sibling of inner so it stays pinned -->
+        <!-- Footer: a sibling of the scroll area so it stays pinned -->
         <div class="nx-cp-foot nx-mono">
           <div>v1.0 · <span id="nx-tests-line">1075 tests passing</span></div>
           <div>kernel.network.io = ∅ <span class="nx-cp-foot-sub">(static-verified)</span></div>
@@ -215,7 +203,7 @@
     </div><!-- /nx-body -->
   </div><!-- /nx-shell -->
 
-  <!-- Overlay root (switcher, new-ws form, cockpit modal, tour, capability sheet, install review, first-use prompt) -->
+  <!-- Overlay root: switcher, new workspace, cockpit, tour, capability sheet, guide -->
   <div id="nx-overlay-root"></div>
 
   <script type="module" src="/aurora/static/app.js"></script>
