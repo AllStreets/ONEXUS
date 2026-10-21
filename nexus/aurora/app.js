@@ -113,49 +113,49 @@ const TOUR_SCENES = [
   {
     eyebrow: "ONEXUS",
     title: "An operating system for agents.",
-    body: "ONEXUS runs agents the way iOS runs apps. A short tour — eight scenes, sixty seconds, skip whenever.",
+    body: "ONEXUS runs agents the way iOS runs apps. This is a short tour: eight scenes, about a minute, skip whenever you like.",
     diagram: () => sceneWelcome(),
   },
   {
-    eyebrow: "01 · WORKSPACES",
+    eyebrow: "01 · Workspaces",
     title: "Each room is its own world.",
     body: "A workspace owns its agents, its memory, its grants, and its home tone. Switch between them with ⌘K. Each one stays private to itself.",
     diagram: () => sceneWorkspaces(),
   },
   {
-    eyebrow: "02 · CONVERSATION",
+    eyebrow: "02 · Conversation",
     title: "Talk to a room of agents at once.",
-    body: "Send a message — Cortex routes it to whoever is best placed to answer. Mention an agent by name with @ to call them directly.",
+    body: "Send a message and Cortex routes it to whoever is best placed to answer. Mention an agent with @ to call it directly.",
     diagram: () => sceneConversation(),
   },
   {
-    eyebrow: "03 · SAFETY MODEL",
+    eyebrow: "03 · Safety model",
     title: "Every sensitive tool call asks first.",
-    body: "Aegis classifies every capability — routine, notable, sensitive, privileged. Sensitive calls pause until you allow once, always-in-workspace, or deny.",
+    body: "Aegis classifies every capability as routine, notable, sensitive or privileged. Sensitive calls pause until you allow once, allow always in this workspace, or deny.",
     diagram: () => sceneSafety(),
   },
   {
-    eyebrow: "04 · TRUST",
+    eyebrow: "04 · Trust",
     title: "Trust is earned, asymmetrically.",
-    body: "Outcomes nudge an agent's trust score. Above 0.75 it earns auto-grants on notable calls. Below 0.50, every grant collapses — instantly.",
+    body: "Outcomes nudge an agent's trust score. Above 0.75 it earns auto-grants on notable calls. Below 0.50, every grant collapses at once.",
     diagram: () => sceneTrust(),
   },
   {
-    eyebrow: "05 · COCKPIT",
+    eyebrow: "05 · Cockpit",
     title: "See what the kernel sees.",
     body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Press ⌘0 for the expanded six-panel cockpit.",
     diagram: () => sceneCockpit(),
   },
   {
-    eyebrow: "06 · AGENTS",
+    eyebrow: "06 · Agents",
     title: "Ten built-in. Seven thousand more in the catalog.",
     body: "Council deliberates, Specter red-teams, Oracle reads, Legacy remembers, Wraith forgets, Sentry watches. Install third-party agents like apps.",
     diagram: () => sceneAgents(),
   },
   {
-    eyebrow: "READY",
+    eyebrow: "Ready",
     title: "Your turn.",
-    body: "⌘K switch · ⌘N new workspace · ⌘0 cockpit · ⌘P settings · click the trash on any workspace to delete it. Have fun.",
+    body: "⌘K switches workspace, ⌘N makes a new one, ⌘0 opens the cockpit and ⌘P opens settings. Hover a workspace to delete it.",
     diagram: () => sceneReady(),
   },
 ];
@@ -180,11 +180,11 @@ function renderTour(index) {
   const scene = TOUR_SCENES[index];
   const total = TOUR_SCENES.length;
   const dots = TOUR_SCENES.map((_, i) =>
-    `<span class="nx-tour-dot ${i === index ? "active" : (i < index ? "done" : "")}" data-i="${i}"></span>`
+    `<button type="button" class="nx-tour-dot ${i === index ? "active" : (i < index ? "done" : "")}" data-i="${i}" aria-label="Scene ${i + 1} of ${TOUR_SCENES.length}" ${i === index ? 'aria-current="step"' : ""}></button>`
   ).join("");
   const html = `
     <div class="nx-tour-overlay" id="nx-tour-overlay" role="dialog" aria-modal="true" aria-label="Tour">
-      <button class="nx-tour-skip" id="nx-tour-skip" aria-label="Skip tour">Skip · esc</button>
+      <button class="nx-tour-skip nx-btn nx-btn-sm nx-btn-ghost" type="button" id="nx-tour-skip" aria-label="Skip tour">Skip<span class="nx-kbd">esc</span></button>
       <div class="nx-tour-stage">
         <div class="nx-tour-diagram" id="nx-tour-diagram" aria-hidden="true">${scene.diagram()}</div>
         <div class="nx-tour-eyebrow">${escapeHtml(scene.eyebrow)}</div>
@@ -192,10 +192,10 @@ function renderTour(index) {
         <p class="nx-tour-body">${escapeHtml(scene.body)}</p>
       </div>
       <div class="nx-tour-nav">
-        <button class="nx-tour-prev" id="nx-tour-prev" ${index === 0 ? "disabled" : ""} aria-label="Previous scene">←</button>
+        <button class="nx-tour-prev nx-btn nx-btn-icon" type="button" id="nx-tour-prev" ${index === 0 ? "disabled" : ""} aria-label="Previous scene">${icon("arrow-left", 16)}</button>
         <div class="nx-tour-dots">${dots}</div>
-        <button class="nx-tour-next" id="nx-tour-next" aria-label="${index === total - 1 ? "Begin" : "Next scene"}">
-          ${index === total - 1 ? "Begin →" : "Next →"}
+        <button class="nx-tour-next nx-btn nx-btn-primary" type="button" id="nx-tour-next" aria-label="${index === total - 1 ? "Begin" : "Next scene"}">
+          ${index === total - 1 ? "Begin" : "Next"}${icon("arrow-right", 16)}
         </button>
       </div>
     </div>
@@ -244,137 +244,98 @@ function renderTour(index) {
   );
 }
 
-// Tour scenes — each returns SVG with boomerang (alternate-infinite) motion.
-// Animations use animation-direction: alternate so motion springs forward
-// then back, like an Instagram boomerang.
+// Tour scenes: flat line drawings in the shell's own language (graphite
+// surfaces, hairlines, one accent). Motion is a slow boomerang
+// (alternate-infinite) and stops entirely under prefers-reduced-motion.
+
+const TOUR_MARK = (r = 30) => `
+  <circle r="${r}" fill="none" stroke="var(--nx-accent)" stroke-width="${(r / 12).toFixed(1)}" opacity="0.9"/>
+  <circle r="${(r * 0.36).toFixed(1)}" fill="var(--nx-accent)" class="nx-tour-anim-core"/>
+  <circle cx="${(r * 0.707).toFixed(1)}" cy="${(-r * 0.707).toFixed(1)}" r="${(r * 0.23).toFixed(1)}" fill="var(--nx-accent)" stroke="var(--nx-surface-canvas)" stroke-width="${(r / 10).toFixed(1)}"/>`;
 
 function sceneWelcome() {
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <defs>
-        <radialGradient id="t-orb" cx="40%" cy="35%">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="25%" stop-color="#f0e6ff"/>
-          <stop offset="60%" stop-color="#c9b8ff"/>
-          <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0.3"/>
-        </radialGradient>
-      </defs>
-      <g transform="translate(160 110)">
-        <circle r="80" fill="url(#t-orb)" opacity="0.30" class="nx-tour-anim-corona"/>
-        <circle r="56" fill="url(#t-orb)" class="nx-tour-anim-orb"/>
-        <circle r="20" fill="#ffffff" opacity="0.7" class="nx-tour-anim-core"/>
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(200 130)">
+        <circle r="112" fill="none" stroke="var(--nx-line-2)" stroke-width="1" class="nx-tour-anim-ring2"/>
+        <circle r="84" fill="none" stroke="var(--nx-line-3)" stroke-width="1" stroke-dasharray="2 6" class="nx-tour-anim-ring1"/>
+        <circle r="62" fill="rgba(var(--nx-accent-rgb), 0.06)"/>
+        ${TOUR_MARK(40)}
       </g>
     </svg>
   `;
 }
 
 function sceneWorkspaces() {
-  // 4 workspace tiles in a 2×2 grid around a central orb. The whole group
-  // gently breathes via a CSS scale animation, so we need extra padding
-  // inside the viewBox to keep nothing clipping at the larger end of the
-  // breath cycle. Positions are absolute (no SVG-attribute transform), so
-  // the CSS transform doesn't double-apply with an SVG translate.
-  const cx = 200, cy = 145;   // viewBox centre
+  // Four rooms, each a graphite card marked by its tone, around the mark.
+  const cx = 200, cy = 130;
   const tones = [
-    { x: cx - 70, y: cy - 36, c1: "#5a6cd0", c2: "#2c3a78" },
-    { x: cx + 70, y: cy - 36, c1: "#88a888", c2: "#3e5840" },
-    { x: cx - 70, y: cy + 36, c1: "#c060a0", c2: "#5e2050" },
-    { x: cx + 70, y: cy + 36, c1: "#e8a06c", c2: "#844820" },
+    { x: cx - 78, y: cy - 44, c: "var(--nx-tone-indigo-a)", n: "Research" },
+    { x: cx + 78, y: cy - 44, c: "var(--nx-tone-sage-a)", n: "Home lab" },
+    { x: cx - 78, y: cy + 44, c: "var(--nx-tone-magenta-a)", n: "Writing" },
+    { x: cx + 78, y: cy + 44, c: "var(--nx-tone-amber-a)", n: "Release" },
   ];
   return `
-    <svg viewBox="0 0 400 290" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        ${tones.map(t => `
-          <linearGradient id="g-${t.c1.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="${t.c1}"/>
-            <stop offset="100%" stop-color="${t.c2}"/>
-          </linearGradient>
-        `).join("")}
-      </defs>
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
       <g class="nx-tour-anim-rooms" style="transform-origin:${cx}px ${cy}px">
         ${tones.map(t => `
           <g>
-            <rect x="${t.x - 46}" y="${t.y - 26}" width="92" height="52" rx="9"
-                  fill="url(#g-${t.c1.replace('#','')})" opacity="0.95"/>
-            <circle cx="${t.x - 32}" cy="${t.y - 14}" r="3" fill="#ffffff" opacity="0.8"/>
+            <rect x="${t.x - 60}" y="${t.y - 30}" width="120" height="60" rx="8" fill="var(--nx-surface-1)" stroke="var(--nx-line-3)"/>
+            <rect x="${t.x - 60}" y="${t.y - 30}" width="120" height="2" fill="${t.c}"/>
+            <rect x="${t.x - 48}" y="${t.y - 18}" width="12" height="12" rx="3" fill="${t.c}"/>
+            <text x="${t.x - 48}" y="${t.y + 16}" font-family="var(--nx-font-ui)" font-size="12" font-weight="600" fill="var(--nx-fg-1)">${t.n}</text>
           </g>
         `).join("")}
-        <circle cx="${cx}" cy="${cy}" r="14" fill="url(#t-orb)"/>
       </g>
+      <g transform="translate(${cx} ${cy})">${TOUR_MARK(10)}</g>
     </svg>
   `;
 }
 
 function sceneConversation() {
-  // Two message bubbles trade back and forth
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <defs>
-        <radialGradient id="ag-disc" cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stop-color="#a8e8ff"/>
-          <stop offset="100%" stop-color="#346b9c"/>
-        </radialGradient>
-      </defs>
-      <g transform="translate(40 70)">
-        <circle cx="14" cy="14" r="14" fill="url(#ag-disc)" class="nx-tour-anim-disc"/>
-        <rect x="36" y="4" width="170" height="22" rx="11" fill="rgba(232,222,252,0.08)" class="nx-tour-anim-bubble-a"/>
-        <rect x="36" y="32" width="120" height="14" rx="7" fill="rgba(232,222,252,0.05)" class="nx-tour-anim-bubble-a"/>
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(150 70)" class="nx-tour-anim-bubble-b">
+        <rect x="0" y="0" width="200" height="34" rx="12" fill="var(--nx-surface-2)" stroke="var(--nx-line-3)"/>
+        <text x="16" y="22" font-family="var(--nx-font-ui)" font-size="12" fill="var(--nx-fg-1)">Summarize the kernel runtime</text>
       </g>
-      <g transform="translate(80 130)" class="nx-tour-anim-bubble-b">
-        <rect x="0" y="0" width="200" height="26" rx="13" fill="rgba(168,180,255,0.18)"/>
-        <text x="14" y="17" font-family="ui-sans-serif,sans-serif" font-size="11" fill="#e2e6ff">summarize the kernel runtime</text>
+      <g transform="translate(50 132)">
+        <rect x="0" y="0" width="30" height="30" rx="8" fill="#163645" stroke="rgba(168,232,255,0.35)" class="nx-tour-anim-disc"/>
+        <path d="M7 15c2.5-4 5-6 8-6s5.5 2 8 6c-2.5 4-5 6-8 6s-5.5-2-8-6z" fill="none" stroke="#c9efff" stroke-width="1.4" transform="translate(0 0)"/>
+        <text x="44" y="12" font-family="var(--nx-font-ui)" font-size="12" font-weight="600" fill="var(--nx-fg-1)">Oracle</text>
+        <g class="nx-tour-anim-bubble-a">
+          <rect x="44" y="22" width="240" height="8" rx="4" fill="var(--nx-gray-400)"/>
+          <rect x="44" y="38" width="200" height="8" rx="4" fill="var(--nx-gray-400)"/>
+          <rect x="44" y="54" width="140" height="8" rx="4" fill="var(--nx-gray-400)"/>
+        </g>
       </g>
     </svg>
   `;
 }
 
 function sceneSafety() {
-  // Permission prompt — two-row layout so the class label, target path,
-  // and the three decision pills each get their own line and don't
-  // overlap. The card pulses gently; the pills slide in from the left.
+  // The real permission card: class and capability, who and where, and the
+  // three decisions. The outer group does the static row offset; the inner
+  // group runs the CSS slide-in, since a CSS transform would replace an SVG
+  // transform on the same element.
   return `
-    <svg viewBox="0 0 400 290" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-      <g transform="translate(200 145)">
-        <!-- Card (300 × 116, two rows tall) -->
-        <rect x="-150" y="-58" width="300" height="116" rx="14"
-              fill="rgba(248,196,96,0.08)"
-              stroke="rgba(248,196,96,0.40)" stroke-width="1.2"
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <g transform="translate(200 130)">
+        <rect x="-170" y="-62" width="340" height="124" rx="10"
+              fill="rgba(var(--nx-warn-rgb), 0.06)" stroke="rgba(var(--nx-warn-rgb), 0.45)" stroke-width="1"
               class="nx-tour-anim-card"/>
-
-        <!-- Row 1: pulse + class label + path -->
-        <circle cx="-126" cy="-28" r="6" fill="#f8c460" class="nx-tour-anim-pulse-dot"/>
-        <circle cx="-126" cy="-28" r="11" fill="none" stroke="rgba(248,196,96,0.55)" stroke-width="1.2"
-                class="nx-tour-anim-ping"/>
-        <text x="-110" y="-32" font-family="ui-monospace,monospace" font-size="11"
-              letter-spacing="2.4" fill="#f8c460" font-weight="700">FS.WRITE</text>
-        <text x="-110" y="-18" font-family="ui-monospace,monospace" font-size="9"
-              letter-spacing="2" fill="rgba(248,196,96,0.78)">SENSITIVE</text>
-
-        <text x="-110" y="6" font-family="ui-sans-serif,sans-serif" font-size="11"
-              fill="#e8defc">oracle → src/kernel/cortex.py</text>
-
-        <!-- Row 2: three decision pills. The outer group handles the static
-             y-shift to the second row via an SVG-attribute transform — the
-             inner group runs the slide-in CSS animation (translateX). They
-             must be separate because a CSS transform REPLACES the SVG
-             attribute transform on the same element, which would zero out
-             the y-shift mid-animation. -->
-        <g transform="translate(0 34)">
+        <circle cx="-146" cy="-32" r="5" fill="var(--nx-warn)" class="nx-tour-anim-pulse-dot"/>
+        <circle cx="-146" cy="-32" r="10" fill="none" stroke="rgba(var(--nx-warn-rgb), 0.6)" stroke-width="1" class="nx-tour-anim-ping"/>
+        <text x="-128" y="-28" font-family="var(--nx-font-ui)" font-size="11" font-weight="700" letter-spacing="0.8" fill="var(--nx-warn)">SENSITIVE · FS.WRITE</text>
+        <text x="-128" y="-6" font-family="var(--nx-font-ui)" font-size="12" fill="var(--nx-fg-1)">oracle on src/kernel/cortex.py</text>
+        <g transform="translate(0 30)">
           <g class="nx-tour-anim-pills">
-            <rect x="-126" y="-12" width="68" height="24" rx="12"
-                  fill="rgba(154,255,182,0.16)" stroke="rgba(154,255,182,0.50)"/>
-            <text x="-92" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
-                  font-weight="600" fill="#a8f4c0" text-anchor="middle">allow</text>
-
-            <rect x="-50" y="-12" width="88" height="24" rx="12"
-                  fill="rgba(168,124,232,0.20)" stroke="rgba(168,124,232,0.55)"/>
-            <text x="-6" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
-                  font-weight="600" fill="#e0d0ff" text-anchor="middle">always</text>
-
-            <rect x="46" y="-12" width="62" height="24" rx="12"
-                  fill="rgba(248,96,120,0.12)" stroke="rgba(248,96,120,0.40)"/>
-            <text x="77" y="4" font-family="ui-sans-serif,sans-serif" font-size="11"
-                  font-weight="600" fill="#f8a0b0" text-anchor="middle">deny</text>
+            <rect x="-146" y="-14" width="82" height="28" rx="6" fill="var(--nx-accent)"/>
+            <text x="-105" y="4" font-family="var(--nx-font-ui)" font-size="11.5" font-weight="600" fill="var(--nx-fg-on-accent)" text-anchor="middle">Allow once</text>
+            <rect x="-56" y="-14" width="122" height="28" rx="6" fill="var(--nx-surface-2)" stroke="var(--nx-line-3)"/>
+            <text x="5" y="4" font-family="var(--nx-font-ui)" font-size="11.5" font-weight="500" fill="var(--nx-fg-1)" text-anchor="middle">Always in workspace</text>
+            <rect x="74" y="-14" width="56" height="28" rx="6" fill="none" stroke="rgba(var(--nx-danger-rgb), 0.5)"/>
+            <text x="102" y="4" font-family="var(--nx-font-ui)" font-size="11.5" font-weight="500" fill="var(--nx-danger)" text-anchor="middle">Deny</text>
           </g>
         </g>
       </g>
@@ -383,43 +344,42 @@ function sceneSafety() {
 }
 
 function sceneTrust() {
-  // Sparkline that draws itself going up, mirrors to baseline (boomerang)
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true">
       <defs>
         <linearGradient id="t-fill" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#ffd680" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#ffd680" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="t-line" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ffb878"/>
-          <stop offset="100%" stop-color="#ffe09a"/>
+          <stop offset="0%" stop-color="var(--nx-warn)" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="var(--nx-warn)" stop-opacity="0"/>
         </linearGradient>
       </defs>
-      <g transform="translate(30 30)">
-        <path d="M0 160 L0 130 L30 125 L60 122 L90 110 L120 100 L150 95 L180 80 L210 70 L240 56 L260 50 L260 160 Z"
-              fill="url(#t-fill)" class="nx-tour-anim-area"/>
-        <path d="M0 130 L30 125 L60 122 L90 110 L120 100 L150 95 L180 80 L210 70 L240 56 L260 50"
-              fill="none" stroke="url(#t-line)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      <g transform="translate(60 40)">
+        <text x="0" y="20" font-family="var(--nx-font-display)" font-size="24" font-weight="600" fill="var(--nx-fg-1)">+0.12</text>
+        <text x="74" y="19" font-family="var(--nx-font-ui)" font-size="12" font-weight="600" fill="var(--nx-warn)">Rising</text>
+        <line x1="0" y1="80" x2="280" y2="80" stroke="var(--nx-line-1)"/>
+        <line x1="0" y1="130" x2="280" y2="130" stroke="var(--nx-line-1)"/>
+        <line x1="0" y1="180" x2="280" y2="180" stroke="var(--nx-line-2)"/>
+        <path d="M0 180 L0 160 L35 156 L70 152 L105 140 L140 130 L175 124 L210 108 L245 96 L280 84 L280 180 Z" fill="url(#t-fill)" class="nx-tour-anim-area"/>
+        <path d="M0 160 L35 156 L70 152 L105 140 L140 130 L175 124 L210 108 L245 96 L280 84"
+              fill="none" stroke="var(--nx-warn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
               class="nx-tour-anim-line"/>
-        <circle cx="260" cy="50" r="4" fill="#ffe09a" class="nx-tour-anim-dot"/>
-        <text x="0" y="20" font-family="ui-monospace,monospace" font-size="18" font-weight="700" fill="#ffe09a">+0.12</text>
-        <text x="60" y="20" font-family="ui-monospace,monospace" font-size="10" letter-spacing="2" fill="#f8c460">RISING</text>
+        <circle cx="280" cy="84" r="4" fill="var(--nx-warn)" class="nx-tour-anim-dot"/>
       </g>
     </svg>
   `;
 }
 
 function sceneCockpit() {
+  const p = (x, y, w, h, d, accent) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="var(--nx-surface-1)" stroke="${accent ? "var(--nx-accent-line)" : "var(--nx-line-3)"}" class="nx-tour-anim-panel" style="animation-delay:${d}s"/>`;
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <g transform="translate(40 40)">
-        <rect x="0"   y="0"   width="60" height="40" rx="6" fill="rgba(255,214,128,0.10)" stroke="rgba(255,214,128,0.30)" class="nx-tour-anim-panel" style="animation-delay:0s"/>
-        <rect x="72"  y="0"   width="76" height="40" rx="6" fill="rgba(168,180,255,0.08)" stroke="rgba(168,180,255,0.28)" class="nx-tour-anim-panel" style="animation-delay:0.2s"/>
-        <rect x="160" y="0"   width="80" height="40" rx="6" fill="rgba(168,124,232,0.08)" stroke="rgba(168,124,232,0.28)" class="nx-tour-anim-panel" style="animation-delay:0.4s"/>
-        <rect x="0"   y="52"  width="100" height="48" rx="6" fill="rgba(154,255,182,0.07)" stroke="rgba(154,255,182,0.26)" class="nx-tour-anim-panel" style="animation-delay:0.6s"/>
-        <rect x="112" y="52"  width="128" height="48" rx="6" fill="rgba(140,184,212,0.07)" stroke="rgba(140,184,212,0.24)" class="nx-tour-anim-panel" style="animation-delay:0.8s"/>
-        <rect x="0"   y="112" width="240" height="32" rx="6" fill="rgba(248,196,96,0.06)" stroke="rgba(248,196,96,0.24)" class="nx-tour-anim-panel" style="animation-delay:1.0s"/>
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(60 40)">
+        ${p(0, 0, 136, 56, 0, true)}${p(146, 0, 68, 56, 0.2)}${p(224, 0, 56, 56, 0.4)}
+        ${p(0, 66, 214, 50, 0.6)}${p(224, 66, 56, 50, 0.8)}
+        ${p(0, 126, 280, 54, 1.0)}
+        <path d="M12 40 L40 34 L68 30 L96 24 L124 18" fill="none" stroke="var(--nx-warn)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="140" cy="153" r="7" fill="var(--nx-accent)" opacity="0.9"/>
+        <circle cx="100" cy="146" r="3" fill="var(--nx-fg-3)"/><circle cx="180" cy="160" r="3" fill="var(--nx-fg-3)"/>
+        <circle cx="70" cy="160" r="3" fill="var(--nx-fg-3)"/><circle cx="210" cy="144" r="3" fill="var(--nx-fg-3)"/>
       </g>
     </svg>
   `;
@@ -428,52 +388,37 @@ function sceneCockpit() {
 function sceneAgents() {
   const SLUGS = ["council", "oracle", "specter", "wraith", "echo", "autonomic", "legacy", "consciousness"];
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <g transform="translate(160 110)" class="nx-tour-anim-discs">
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(200 130)">
+        <circle r="84" fill="none" stroke="var(--nx-line-2)" stroke-dasharray="2 6"/>
+        <g class="nx-tour-anim-discs">
         ${SLUGS.map((s, i) => {
           const angle = (i / SLUGS.length) * Math.PI * 2 - Math.PI / 2;
-          const r = 70;
-          const x = Math.cos(angle) * r;
-          const y = Math.sin(angle) * r;
-          const grads = {
-            council:["#ffd2a0","#c47a32"], oracle:["#a8e8ff","#346b9c"],
-            specter:["#ff9eb8","#8c2e54"], wraith:["#9affc8","#2a6a4e"],
-            echo:["#a8e8ff","#346b9c"], autonomic:["#c8a0ff","#5e3a9c"],
-            legacy:["#ffd680","#9c6a1a"], consciousness:["#e0c8ff","#5a3a8c"],
-          };
-          const g = grads[s] || ["#c8c8ff","#3a3a8c"];
-          const gid = `td-${s}`;
-          return `
-            <defs>
-              <radialGradient id="${gid}" cx="35%" cy="30%" r="70%">
-                <stop offset="0%" stop-color="${g[0]}"/>
-                <stop offset="100%" stop-color="${g[1]}"/>
-              </radialGradient>
-            </defs>
-            <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" fill="url(#${gid})" class="nx-tour-anim-disc-pop" style="animation-delay:${(i * 0.1).toFixed(2)}s"/>
-          `;
+          const x = Math.cos(angle) * 84, y = Math.sin(angle) * 84;
+          const g = GRADIENTS[s] || ["#c8c8ff", "#3a3a8c"];
+          return `<rect x="${(x - 15).toFixed(1)}" y="${(y - 15).toFixed(1)}" width="30" height="30" rx="8"
+                    fill="color-mix(in srgb, ${g[1]} 40%, #16191e)" stroke="${g[0]}" stroke-opacity="0.45"
+                    class="nx-tour-anim-disc-pop" style="animation-delay:${(i * 0.1).toFixed(2)}s"/>`;
         }).join("")}
-        <circle r="22" fill="url(#t-orb)"/>
+        </g>
+        ${TOUR_MARK(18)}
       </g>
     </svg>
   `;
 }
 
 function sceneReady() {
+  const keys = ["⌘K", "⌘N", "⌘0", "⌘P"];
   return `
-    <svg viewBox="0 0 320 220" width="100%" height="100%" aria-hidden="true">
-      <defs>
-        <radialGradient id="r-orb" cx="40%" cy="35%">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="25%" stop-color="#f0e6ff"/>
-          <stop offset="60%" stop-color="#c9b8ff"/>
-          <stop offset="100%" stop-color="#5a4ac4" stop-opacity="0.3"/>
-        </radialGradient>
-      </defs>
-      <g transform="translate(160 110)">
-        <circle r="48" fill="url(#r-orb)" class="nx-tour-anim-core"/>
-        <circle r="60" fill="none" stroke="rgba(201,184,255,0.30)" stroke-width="1" class="nx-tour-anim-ring1"/>
-        <circle r="80" fill="none" stroke="rgba(201,184,255,0.20)" stroke-width="1" class="nx-tour-anim-ring2"/>
+    <svg viewBox="0 0 400 260" width="100%" height="100%" aria-hidden="true">
+      <g transform="translate(200 104)">
+        <circle r="64" fill="none" stroke="var(--nx-line-3)" class="nx-tour-anim-ring1"/>
+        <circle r="88" fill="none" stroke="var(--nx-line-2)" class="nx-tour-anim-ring2"/>
+        ${TOUR_MARK(32)}
+      </g>
+      <g transform="translate(${200 - (keys.length * 52 - 8) / 2} 216)">
+        ${keys.map((k, i) => `<rect x="${i * 52}" y="0" width="44" height="28" rx="5" fill="var(--nx-surface-1)" stroke="var(--nx-line-3)"/>
+          <text x="${i * 52 + 22}" y="18" font-family="var(--nx-font-ui)" font-size="12" font-weight="500" fill="var(--nx-fg-2)" text-anchor="middle">${k}</text>`).join("")}
       </g>
     </svg>
   `;
@@ -1871,13 +1816,13 @@ function trustMeterHTML(score, floor) {
     <div class="nx-trust-meter">
       <div class="nx-trust-meter-top">
         <span class="nx-trust-meter-score" style="color:${col}">${score.toFixed(2)}</span>
-        <span class="nx-trust-meter-tier">${escapeHtml(tier)}</span>
+        <span class="nx-trust-meter-tier nx-pill">${escapeHtml(tier.charAt(0) + tier.slice(1).toLowerCase())}</span>
       </div>
-      <div class="nx-trust-meter-track">
-        <div class="nx-trust-meter-fill" style="width:${pct}%;background:${col}"></div>
-        ${floorPct != null ? `<div class="nx-trust-meter-floor" style="left:${floorPct}%" title="trust floor ${floor.toFixed(2)}"></div>` : ""}
+      <div class="nx-trust-meter-track nx-meter">
+        <div class="nx-trust-meter-fill nx-meter-fill" style="width:${pct}%;background:${col}"></div>
+        ${floorPct != null ? `<div class="nx-trust-meter-floor nx-meter-mark" style="left:${floorPct}%" title="Trust floor ${floor.toFixed(2)}"></div>` : ""}
       </div>
-      <div class="nx-trust-meter-foot nx-dim">${floorPct != null ? `floor ${floor.toFixed(2)} · ` : ""}below 0.50, Aegis collapses every grant</div>
+      <div class="nx-trust-meter-foot">${floorPct != null ? `Floor ${floor.toFixed(2)}. ` : ""}Below 0.50, Aegis collapses every grant.</div>
     </div>`;
 }
 
@@ -1888,44 +1833,45 @@ async function openCapabilitySheet(slug) {
   const gradient = GRADIENTS[slug] || ["#a87af5", "#5a4ac4"];
   const floorSeed = isBuiltin ? caps.trust_floor : null;
   root.innerHTML = `
-    <div class="nx-cap-overlay" id="nx-cap-overlay" role="dialog" aria-modal="true">
-      <div class="nx-cap-sheet" style="--cap-grad-a:${gradient[0]};--cap-grad-b:${gradient[1]}">
-        <button class="nx-cap-close" id="nx-cap-close" aria-label="Close">×</button>
-        <div class="nx-cap-head">
-          ${agentDisc(slug, { size: 64 })}
+    <div class="nx-cap-overlay nx-scrim" id="nx-cap-overlay" role="dialog" aria-modal="true" aria-labelledby="nx-cap-name">
+      <div class="nx-cap-sheet nx-modal" style="--cap-grad-a:${gradient[0]};--cap-grad-b:${gradient[1]}">
+        <div class="nx-modal-body nx-cap-body">
+        <div class="nx-cap-head nx-detail-head">
+          ${agentDisc(slug, { size: 56 })}
           <div>
-            <div class="nx-cap-eyebrow">${isBuiltin ? "BUILT-IN AGENT" : "CATALOG AGENT"}</div>
-            <div class="nx-cap-name">${escapeHtml(slug)}</div>
-            <div class="nx-cap-tag" id="nx-cap-tag">${escapeHtml(isBuiltin ? caps.tagline : "loading…")}</div>
+            <div class="nx-cap-eyebrow nx-eyebrow">${isBuiltin ? "Built-in agent" : "Catalog agent"}</div>
+            <h2 class="nx-cap-name nx-detail-title" id="nx-cap-name">${escapeHtml(slug)}</h2>
+            <div class="nx-cap-tag nx-detail-sub" id="nx-cap-tag">${escapeHtml(isBuiltin ? caps.tagline : "Loading")}</div>
           </div>
+          <button class="nx-cap-close nx-icon-btn" type="button" id="nx-cap-close" aria-label="Close">${icon("x", 16)}</button>
         </div>
         ${isBuiltin ? `<p class="nx-cap-desc">${escapeHtml(caps.description)}</p>` : `<p class="nx-cap-desc" id="nx-cap-desc"></p>`}
 
         <div class="nx-cap-section nx-cap-section-trust">
-          <div class="nx-cap-label">LIVE TRUST</div>
+          <div class="nx-cap-label nx-section-label">Live trust</div>
           <div id="nx-cap-trust">${trustMeterHTML(floorSeed != null ? floorSeed : 0.5, floorSeed)}</div>
         </div>
 
         ${!isBuiltin ? `
         <div class="nx-cap-section nx-cap-section-pedigree">
-          <div class="nx-cap-label">BENCHMARK PEDIGREE · ONEXUS</div>
-          <div id="nx-cap-pedigree" class="nx-pedigree-grid"><span class="nx-dim" style="font-size:12px">loading pedigree…</span></div>
+          <div class="nx-cap-label nx-section-label">ONEXUS benchmark pedigree</div>
+          <div id="nx-cap-pedigree" class="nx-pedigree-grid">${[0, 1, 2].map(() => `<div class="nx-pedigree-cell"><span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-short"></span></div>`).join("")}</div>
         </div>` : ""}
 
         <div class="nx-cap-grid">
           ${isBuiltin ? `
           <div class="nx-cap-section">
-            <div class="nx-cap-label">INTENTS</div>
-            <div class="nx-cap-chips">${caps.intents.map(i => `<span class="cap-chip">${escapeHtml(i)}</span>`).join("")}</div>
+            <div class="nx-cap-label nx-section-label">Intents</div>
+            <div class="nx-cap-chips">${caps.intents.map(i => `<span class="cap-chip nx-pill">${escapeHtml(i)}</span>`).join("")}</div>
           </div>
           <div class="nx-cap-section">
-            <div class="nx-cap-label">PERMISSION CLASSES</div>
+            <div class="nx-cap-label nx-section-label">Permission classes</div>
             <div class="nx-cap-chips">${caps.permission_classes.map(c => `
-              <span class="cap-chip class-${c.toLowerCase()}">${escapeHtml(c)}</span>
+              <span class="cap-chip nx-pc nx-pc-${c.toLowerCase()}">${escapeHtml(c)}</span>
             `).join("")}</div>
           </div>
           <div class="nx-cap-section nx-cap-section-tools">
-            <div class="nx-cap-label">TOOLS DECLARED</div>
+            <div class="nx-cap-label nx-section-label">Tools declared</div>
             <div class="nx-cap-tools">
               ${caps.tools.map(t => `
                 <div class="cap-tool">
@@ -1937,21 +1883,22 @@ async function openCapabilitySheet(slug) {
             </div>
           </div>
           <div class="nx-cap-section">
-            <div class="nx-cap-label">NETWORK</div>
-            <div class="nx-cap-net ${caps.network ? 'on' : 'off'}">${caps.network ? "REACHES NETWORK" : "LOCAL-ONLY"}</div>
+            <div class="nx-cap-label nx-section-label">Network</div>
+            <div class="nx-cap-net ${caps.network ? 'on' : 'off'}"><span class="nx-status ${caps.network ? "is-warn" : "is-ok"}">${caps.network ? "Reaches the network" : "Local only"}</span></div>
           </div>` : ""}
         </div>
 
         <div class="nx-cap-section nx-cap-section-history">
-          <div class="nx-cap-label">CHRONICLE · recent decisions for this agent</div>
-          <div id="nx-cap-history" class="nx-cap-history"><span class="nx-dim" style="font-size:12px">reading the audit log…</span></div>
+          <div class="nx-cap-label nx-section-label">Chronicle, recent decisions for this agent</div>
+          <div id="nx-cap-history" class="nx-cap-history"><div class="nx-loading"><span class="nx-spinner" aria-hidden="true"></span>Reading the audit log</div></div>
+        </div>
         </div>
 
-        <div class="nx-cap-actions">
-          <button class="nx-cap-mention" data-slug="${slug}">@${slug} — start a message</button>
-          <button class="nx-cap-watch" id="nx-cap-compose">compose ↗</button>
-          <button class="nx-cap-watch" id="nx-cap-watch">watch live ↗</button>
-          <button class="nx-cap-revoke" id="nx-cap-revoke" title="Drop trust to 0.00 and collapse every standing grant">revoke trust</button>
+        <div class="nx-cap-actions nx-modal-foot">
+          <button class="nx-cap-revoke nx-btn nx-btn-danger" type="button" id="nx-cap-revoke" title="Drop trust to 0.00 and collapse every standing grant">Revoke trust</button>
+          <button class="nx-cap-watch nx-btn nx-btn-ghost" type="button" id="nx-cap-watch">${icon("activity", 14)}Watch live</button>
+          <button class="nx-cap-watch nx-btn" type="button" id="nx-cap-compose">${icon("workflow", 14)}Compose</button>
+          <button class="nx-cap-mention nx-btn nx-btn-primary" type="button" data-slug="${slug}">${icon("message", 14)}Message @${slug}</button>
         </div>
       </div>
     </div>
@@ -1973,14 +1920,14 @@ async function openCapabilitySheet(slug) {
   document.getElementById("nx-cap-compose")?.addEventListener("click", () => { closeOverlay(); location.hash = `#/cortex?agent=${encodeURIComponent(slug)}`; });
   document.getElementById("nx-cap-revoke").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
-    if (btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = "click again to confirm revoke"; btn.classList.add("armed"); return; }
-    btn.disabled = true; btn.textContent = "revoking…";
+    if (btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = "Click again to confirm"; btn.classList.add("armed", "is-armed"); return; }
+    btn.disabled = true; btn.textContent = "Revoking";
     try {
       await fetch(`/api/trust/${encodeURIComponent(slug)}/revoke`, { method: "POST" });
       await hydrateTrustSheet(slug, floorSeed);
-      btn.classList.remove("armed"); btn.dataset.armed = "0";
+      btn.classList.remove("armed", "is-armed"); btn.dataset.armed = "0";
     } catch {}
-    btn.disabled = false; btn.textContent = "revoke trust";
+    btn.disabled = false; btn.textContent = "Revoke trust";
   });
   // async hydrate the live sections
   hydrateTrustSheet(slug, floorSeed);
@@ -1998,7 +1945,7 @@ async function hydrateTrustSheet(slug, floorSeed) {
         el.innerHTML = trustMeterHTML(typeof d.trust === "number" ? d.trust : (floorSeed ?? 0.5), floorSeed);
       } else {
         el.innerHTML = trustMeterHTML(floorSeed ?? 0.0, floorSeed) +
-          `<div class="nx-dim" style="font-size:11px;margin-top:6px">no live trust record yet — shown at its trust floor until first run.</div>`;
+          `<div class="nx-trust-meter-foot">No live trust record yet. It is shown at its trust floor until its first run.</div>`;
       }
     }
   } catch {}
@@ -2012,7 +1959,7 @@ async function hydrateTrustSheet(slug, floorSeed) {
         const p = e.payload || {};
         return p.module === slug || p.agent === slug;
       }).slice(0, 10);
-      if (!rows.length) { el.innerHTML = `<span class="nx-dim" style="font-size:12px">no recorded decisions for this agent yet.</span>`; return; }
+      if (!rows.length) { el.innerHTML = `<div class="nx-empty-line">No recorded decisions for this agent yet.</div>`; return; }
       el.innerHTML = rows.map(e => {
         const p = e.payload || {};
         const t = formatTime(e.timestamp);
@@ -2033,21 +1980,21 @@ async function hydrateCatalogPedigree(slug) {
     if (!r.ok) return;
     const a = await r.json();
     const tagEl = document.getElementById("nx-cap-tag");
-    if (tagEl) tagEl.textContent = a.tagline || "—";
+    if (tagEl) tagEl.textContent = a.tagline || "No tagline";
     const descEl = document.getElementById("nx-cap-desc");
-    if (descEl) descEl.textContent = (a.category ? a.category.replace(/-/g, " ") + " · " : "") + (a.runnable ? "runnable via MCP adapter" : "manifest-only");
+    if (descEl) descEl.textContent = (a.category ? a.category.replace(/-/g, " ") + " · " : "") + (a.runnable ? "runnable through an MCP adapter" : "manifest only");
     const el = document.getElementById("nx-cap-pedigree");
     if (!el) return;
-    const fmt = (n) => n == null ? "—" : (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n));
-    const stat = (label, val, sub = "") => `<div class="nx-pedigree-cell"><div class="nx-pedigree-val">${val}</div><div class="nx-pedigree-lbl nx-dim">${label}${sub ? ` <span class="nx-softer">${sub}</span>` : ""}</div></div>`;
+    const fmt = (n) => n == null ? "n/a" : (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n));
+    const stat = (label, val, sub = "") => `<div class="nx-pedigree-cell"><div class="nx-pedigree-val">${val}</div><div class="nx-pedigree-lbl">${label}${sub ? ` <span class="nx-softer">${sub}</span>` : ""}</div></div>`;
     el.innerHTML =
-      stat("benchmark score", a.composite_score != null ? a.composite_score.toFixed(3) : "—") +
-      stat("rank in category", a.rank_in_category != null ? "#" + a.rank_in_category : "—", a.category ? a.category.replace(/-/g, " ") : "") +
-      stat("github stars", fmt(a.stars)) +
-      stat("downloads · 30d", fmt(a.downloads_30d)) +
-      stat("trust floor", a.trust_floor != null ? a.trust_floor.toFixed(2) : "—") +
-      stat("license", `<span style="font-size:13px">${escapeHtml(a.license || "—")}</span>`) +
-      (a.source_github ? `<a class="nx-pedigree-cell link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener"><div class="nx-pedigree-val">↗</div><div class="nx-pedigree-lbl nx-dim">source · github</div></a>` : "");
+      stat("Benchmark score", a.composite_score != null ? a.composite_score.toFixed(3) : "n/a") +
+      stat("Rank in category", a.rank_in_category != null ? "#" + a.rank_in_category : "n/a", a.category ? a.category.replace(/-/g, " ") : "") +
+      stat("GitHub stars", fmt(a.stars)) +
+      stat("Downloads, 30 days", fmt(a.downloads_30d)) +
+      stat("Trust floor", a.trust_floor != null ? a.trust_floor.toFixed(2) : "n/a") +
+      stat("License", `<span class="nx-pedigree-small">${escapeHtml(a.license || "n/a")}</span>`) +
+      (a.source_github ? `<a class="nx-pedigree-cell link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener"><div class="nx-pedigree-val">${icon("external-link", 16)}</div><div class="nx-pedigree-lbl">Source on GitHub</div></a>` : "");
   } catch {}
 }
 
@@ -5086,24 +5033,26 @@ function openMoodPicker() {
 
   const pop = document.createElement("div");
   pop.id = "nx-mood-picker";
-  pop.className = "nx-mood-picker";
+  pop.className = "nx-mood-picker nx-popover";
+  pop.setAttribute("role", "dialog");
+  pop.setAttribute("aria-label", "Choose a mood");
   pop.style.top = (rect.bottom + 8) + "px";
   pop.style.right = (window.innerWidth - rect.right) + "px";
   pop.innerHTML = `
     <div class="nx-mp-head">
-      <div class="nx-mp-eyebrow">CHOOSE MOOD ${state.mood.override ? `· <span style="color:var(--nx-mood-primary)">OVERRIDE</span>` : `· AUTO`}</div>
-      <div class="nx-mp-hint">drives the whole shell · the kernel sees ${escapeHtml(state.mood.kernelMood || state.mood.mood || "calm_focus")} right now</div>
+      <div class="nx-mp-eyebrow">Mood ${state.mood.override ? `· <span class="nx-mp-override">Override</span>` : `· Auto`}</div>
+      <div class="nx-mp-hint">Sets the accent for the whole shell. The kernel senses ${escapeHtml((state.mood.kernelMood || state.mood.mood || "calm_focus").replace(/_/g, " "))} right now.</div>
     </div>
-    <button class="nx-mp-auto ${isAuto ? "active" : ""}" data-action="auto">
-      <span class="nx-mp-auto-icon">∞</span>
+    <button class="nx-mp-auto ${isAuto ? "active" : ""}" type="button" data-action="auto" aria-pressed="${isAuto}">
+      <span class="nx-mp-auto-icon">${icon("refresh", 14)}</span>
       <span class="nx-mp-auto-text">
-        <span class="nx-mp-auto-name">Auto · follow the kernel</span>
-        <span class="nx-mp-auto-note">currently sensing ${escapeHtml((state.mood.kernelMood || "calm_focus").replace(/_/g, " "))}</span>
+        <span class="nx-mp-auto-name">Auto, follow the kernel</span>
+        <span class="nx-mp-auto-note">Currently sensing ${escapeHtml((state.mood.kernelMood || "calm_focus").replace(/_/g, " "))}</span>
       </span>
     </button>
     <div class="nx-mp-grid">
       ${MOOD_OPTIONS.map(m => `
-        <button class="nx-mp-cell ${m.key === current && !isAuto ? "active" : ""}" data-mood="${m.key}" title="${escapeHtml(m.note)}">
+        <button class="nx-mp-cell ${m.key === current && !isAuto ? "active" : ""}" type="button" data-mood="${m.key}" title="${escapeHtml(m.note)}">
           <span class="nx-mp-swatch nx-mood-preview-${m.key.replace(/_/g, "-")}"></span>
           <span class="nx-mp-name">${escapeHtml(m.name)}</span>
           <span class="nx-mp-note">${escapeHtml(m.note)}</span>
@@ -5120,7 +5069,7 @@ function openMoodPicker() {
     pop.querySelectorAll(".nx-mp-cell").forEach(c => c.classList.toggle("active", !state.mood.override ? false : c.dataset.mood === state.mood.mood));
     pop.querySelector(".nx-mp-auto").classList.toggle("active", !state.mood.override);
     const eyebrow = pop.querySelector(".nx-mp-eyebrow");
-    if (eyebrow) eyebrow.innerHTML = `CHOOSE MOOD ${state.mood.override ? `· <span style="color:var(--nx-mood-primary)">OVERRIDE</span>` : `· AUTO`}`;
+    if (eyebrow) eyebrow.innerHTML = `Mood ${state.mood.override ? `· <span class="nx-mp-override">Override</span>` : `· Auto`}`;
   };
 
   // Auto button → clear override, snap back to kernel mood
@@ -5165,51 +5114,51 @@ const GUIDE_PAGES = [
     eyebrow: "PAGE 1 / 13",
     chapter: "WELCOME",
     title: "An operating system for agents.",
-    body: "ONEXUS runs agents the way iOS runs apps — workspaces with their own memory, agents with their own trust, and every tool call gated by Aegis. This guide walks every surface in eight minutes. Use ← → to flip pages, click any dot to jump, press Esc to leave.",
+    body: "ONEXUS runs agents the way iOS runs apps: workspaces with their own memory, agents with their own trust, and every tool call gated by Aegis. This guide walks every surface in about eight minutes. Use the arrow keys to flip pages, click a number to jump, and press Esc to leave.",
     shot: "/aurora/static/guide/01-welcome.png",
     callouts: [
-      { x: 10, y: 30, label: "1", note: "Sidebar — workspaces, recent agents, in-OS tools." },
-      { x: 50, y: 50, label: "2", note: "Main canvas — workspace home with agent prompts." },
-      { x: 89, y: 18, label: "3", note: "Cockpit rail — trust meter, permissions, mood." },
+      { x: 10, y: 30, label: "1", note: "Sidebar: the tools, your workspaces and recent agents." },
+      { x: 50, y: 50, label: "2", note: "Main canvas: the workspace home with agent prompts." },
+      { x: 89, y: 18, label: "3", note: "Cockpit rail: trust, permissions, the live kernel and mood." },
     ],
-    cta: { label: "Continue →", action: null },
+    cta: { label: "Continue", action: null },
   },
   {
     eyebrow: "PAGE 2 / 13",
     chapter: "WORKSPACES",
     title: "Each workspace is its own room.",
-    body: "Rooms have their own agents, memory, grants, and home tone. Switch between them with ⌘K. Create new ones with ⌘N. Delete by hovering the row and clicking the neon-red trash icon. Each room stays private to itself — what's remembered here doesn't leak there.",
+    body: "Rooms have their own agents, memory, grants and home tone. Switch between them with ⌘K and create new ones with ⌘N. To delete one, hover its row and click the trash icon. Each room stays private: what's remembered here doesn't leak there.",
     shot: "/aurora/static/guide/09-sidebar.png",
     fullSidebar: true,
     callouts: [
-      { x: 50, y: 13, label: "1", note: "Workspace pills — click to switch, click active again for home." },
-      { x: 78, y: 28, label: "2", note: "Hover any row to reveal the delete trash." },
-      { x: 50, y: 40, label: "3", note: "+ new workspace · ⌘N." },
+      { x: 50, y: 13, label: "1", note: "Workspace rows: click to switch, click the active one again for its home." },
+      { x: 78, y: 28, label: "2", note: "Hover any row to reveal the trash icon." },
+      { x: 50, y: 40, label: "3", note: "New workspace, or press ⌘N." },
     ],
-    cta: { label: "Try it · ⌘K", action: "switcher" },
+    cta: { label: "Try it with ⌘K", action: "switcher" },
   },
   {
     eyebrow: "PAGE 3 / 13",
     chapter: "CONVERSATION",
     title: "Talk to a room of agents at once.",
-    body: "Send a message and Cortex routes it to whoever is best placed to answer. @ mention an agent (@oracle, @council) to call them directly. Press ⌘⏎ to send. The composer stays pinned at the bottom; the thread scrolls above it.",
+    body: "Send a message and Cortex routes it to whoever is best placed to answer. Mention an agent (@oracle, @council) to call it directly. Press ⌘⏎ to send. The composer stays pinned at the bottom and the thread scrolls above it.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 24, y: 16, label: "1", note: "Agent identity disc + module name." },
-      { x: 52, y: 23, label: "2", note: "Inline permission prompt — fires on first sensitive call." },
-      { x: 50, y: 93, label: "3", note: "Composer · type, paste, drop files, hit ⌘⏎." },
+      { x: 24, y: 16, label: "1", note: "Agent identity tile and module name." },
+      { x: 52, y: 23, label: "2", note: "Inline permission card, shown on the first sensitive call." },
+      { x: 50, y: 93, label: "3", note: "Composer: type, paste or drop files, then press ⌘⏎." },
     ],
-    cta: { label: "Try it · type to a room", action: "compose" },
+    cta: { label: "Try it in a room", action: "compose" },
   },
   {
     eyebrow: "PAGE 4 / 13",
     chapter: "FILES",
     title: "Drag, drop, attach.",
-    body: "Drop any file anywhere on the conversation surface to attach it. The blue glow overlay confirms drop. Files are stored in <code>.onexus/uploads/</code> under the workspace root, hashed for dedup, registered with Engram so the agent can recall them, and logged to Chronicle. The composer's + button does the same with a file picker.",
+    body: "Drop a file anywhere on the conversation to attach it; an outline in the mood color confirms the drop. Files are stored in <code>.onexus/uploads/</code> under the workspace root, hashed to avoid duplicates, registered with Engram so the agent can recall them, and logged to Chronicle. The paperclip in the composer does the same with a file picker.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 35, y: 93, label: "1", note: "The + button opens a file picker." },
-      { x: 50, y: 55, label: "2", note: "Drag a file anywhere on the canvas — the overlay glows mood-color." },
+      { x: 35, y: 93, label: "1", note: "The paperclip opens a file picker." },
+      { x: 50, y: 55, label: "2", note: "Drag a file anywhere on the canvas to drop it in." },
       { x: 60, y: 87, label: "3", note: "Attached files appear as chips above the composer." },
     ],
     cta: { label: "Done", action: null },
@@ -5218,12 +5167,12 @@ const GUIDE_PAGES = [
     eyebrow: "PAGE 5 / 13",
     chapter: "SAFETY MODEL",
     title: "Every sensitive call asks first.",
-    body: "Aegis classifies every capability — routine / notable / sensitive / privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always for this workspace, or deny. The cockpit log keeps a record of every decision with a colored class dot.",
+    body: "Aegis classifies every capability as routine, notable, sensitive or privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always in this workspace, or deny. The cockpit log keeps a record of every decision, marked by class.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 32, y: 22, label: "1", note: "Amber pulse — sensitive permission requested." },
-      { x: 52, y: 23, label: "2", note: "Three pill buttons: allow once · always · here · deny." },
-      { x: 89, y: 32, label: "3", note: "Cockpit log records the decision." },
+      { x: 32, y: 22, label: "1", note: "The amber pulse marks a sensitive request." },
+      { x: 52, y: 23, label: "2", note: "Three decisions: allow once, always in this workspace, or deny." },
+      { x: 89, y: 32, label: "3", note: "The cockpit log records the decision." },
     ],
     cta: { label: "See it in action", action: "seed-permission" },
   },
@@ -5231,12 +5180,12 @@ const GUIDE_PAGES = [
     eyebrow: "PAGE 6 / 13",
     chapter: "TRUST",
     title: "Trust is earned, asymmetrically.",
-    body: "Click the thumb-up or thumb-down icon under any agent message to mark it useful or wrong. Useful = +0.12 to that agent's Aegis trust. Wrong = −0.22. Above 0.75 the agent auto-grants its Notable capabilities. Below 0.50, every grant collapses instantly. The cockpit's trust meter shows the rolling 60-minute delta.",
+    body: "Click the thumbs up or thumbs down under any agent message to mark it useful or wrong. Useful adds 0.12 to that agent's Aegis trust; wrong takes away 0.22. Above 0.75 the agent auto-grants its notable capabilities. Below 0.50, every grant collapses at once. The cockpit's trust readout shows the rolling 60-minute change.",
     shot: "/aurora/static/guide/08-cockpit.png",
     cockpitOnly: true,
     callouts: [
-      { x: 28, y: 8, label: "1", note: "Trust meter — gold rising / steel falling / crimson collapse." },
-      { x: 28, y: 13, label: "2", note: "Class breakdown by colored dot." },
+      { x: 28, y: 8, label: "1", note: "Trust readout: rising in amber, falling in steel, collapse in red." },
+      { x: 28, y: 13, label: "2", note: "Breakdown by permission class." },
     ],
     cta: { label: "Done", action: null },
   },
@@ -5244,79 +5193,79 @@ const GUIDE_PAGES = [
     eyebrow: "PAGE 7 / 13",
     chapter: "COCKPIT",
     title: "Watch what the kernel sees.",
-    body: "The right rail keeps trust, permissions, mood, and the agent roster live in view. Toggle it with the chrome icon (top-right). Press ⌘0 for the expanded six-panel cockpit. Every panel auto-refreshes as the kernel runs.",
+    body: "The right rail keeps trust, permissions, the live kernel, mood and the agent roster in view. Toggle it with the panel icon at the top right. Press ⌘0 for the expanded cockpit. Every panel refreshes as the kernel runs.",
     shot: "/aurora/static/guide/08-cockpit.png",
     cockpitOnly: true,
     callouts: [
-      { x: 28, y: 8,  label: "1", note: "TRUST · last 60 minutes." },
-      { x: 28, y: 22, label: "2", note: "RECENT PERMISSIONS log." },
-      { x: 28, y: 40, label: "3", note: "AMBIENT MOOD — drives the whole shell." },
-      { x: 12, y: 62, label: "4", note: "Built-in agents — click any disc for capabilities." },
+      { x: 28, y: 8,  label: "1", note: "Trust over the last 60 minutes." },
+      { x: 28, y: 22, label: "2", note: "Recent permissions log." },
+      { x: 28, y: 40, label: "3", note: "Ambient mood, which sets the shell's accent." },
+      { x: 12, y: 62, label: "4", note: "Built-in agents: click any tile for its capabilities." },
     ],
-    cta: { label: "Open the expanded cockpit · ⌘0", action: "cockpit" },
+    cta: { label: "Open the cockpit with ⌘0", action: "cockpit" },
   },
   {
     eyebrow: "PAGE 8 / 13",
-    chapter: "MOOD · ATMOSPHERE",
+    chapter: "MOOD",
     title: "The shell shifts color with what's happening.",
-    body: "Click the mood pill (top-right of the title bar) to open a color switcher. Pick any of the 8 atmospheres — Calm focus, Deep flow, Routing, Deliberating, Creative, Reflective, Watchful, Alert — and the <em>whole shell</em> crossfades: ambient mesh, workspace pills, composer focus ring, buttons, capability sheet edge, all of it. Press <code>Auto · follow the kernel</code> at the top to release back to automatic, which picks based on CPU load, engram activity, time of day, and trust events.",
+    body: "Click the mood pill at the top right of the title bar to open the mood picker. Pick any of the eight moods (calm focus, deep flow, routing, deliberating, creative, reflective, watchful, alert) and the <em>whole shell</em> takes its accent: the horizon light, the active workspace, the composer focus ring, primary buttons and live dots. Press <code>Auto, follow the kernel</code> to go back to automatic, which picks based on CPU load, Engram activity, time of day and trust events.",
     shot: "/aurora/static/guide/10-mood-picker.png",
     callouts: [
-      { x: 73, y: 7,  label: "1", note: "The mood pill — click to open the switcher." },
-      { x: 78, y: 16, label: "2", note: "Auto · follow the kernel — releases manual override." },
-      { x: 78, y: 38, label: "3", note: "8 swatches — pick one to override the whole atmosphere." },
+      { x: 73, y: 7,  label: "1", note: "The mood pill: click to open the picker." },
+      { x: 78, y: 16, label: "2", note: "Auto, follow the kernel: releases a manual pick." },
+      { x: 78, y: 38, label: "3", note: "Eight moods: pick one to set the accent yourself." },
     ],
-    cta: { label: "Try it · pick a mood", action: "moodpicker" },
+    cta: { label: "Try it and pick a mood", action: "moodpicker" },
   },
   {
     eyebrow: "PAGE 9 / 13",
     chapter: "AGENTS",
-    title: "Ten built-in. Click any disc.",
-    body: "Council deliberates. Specter red-teams. Oracle reads. Legacy remembers. Wraith forgets. Sentry watches. Autonomic automates. Echo mirrors. Consciousness regulates mood. Agents-dispatcher routes to installed third-parties. Click any disc to see its declared capabilities + trust floor + network reach.",
+    title: "Ten built-in. Click any tile.",
+    body: "Council deliberates. Specter red-teams. Oracle reads. Legacy remembers. Wraith forgets. Sentry watches. Autonomic automates. Echo mirrors. Consciousness regulates mood. The agents dispatcher routes to installed third-party agents. Click any tile to see its declared capabilities, trust floor and network reach.",
     shot: "/aurora/static/guide/03-capability-sheet.png",
     callouts: [
-      { x: 40, y: 27, label: "1", note: "Identity disc + name." },
-      { x: 50, y: 65, label: "2", note: "Tools declared + class color." },
-      { x: 50, y: 82, label: "3", note: "Trust floor + network reach." },
+      { x: 40, y: 27, label: "1", note: "Identity tile and name." },
+      { x: 50, y: 65, label: "2", note: "Tools declared, each with its permission class." },
+      { x: 50, y: 82, label: "3", note: "Live trust, trust floor and network reach." },
     ],
     cta: { label: "Done", action: null },
   },
   {
     eyebrow: "PAGE 10 / 13",
     chapter: "WORKSHOP",
-    title: "Code + sandbox — without leaving.",
-    body: "Open the Workshop from the sidebar (or press ⌘E). Pick a runtime: Python, JavaScript, or shell. Hit Run (or ⌘⏎). Code executes in a subprocess sandbox with a stripped env, an 8-second timeout, and captured stdout/stderr. Every run lands in Chronicle.",
+    title: "Code and a sandbox, without leaving.",
+    body: "Open the Workshop from the sidebar or press ⌘E. Pick a runtime such as Python, JavaScript or shell, then press Run or ⌘⏎. Code runs in a subprocess sandbox with a stripped environment, an 8-second timeout, and captured stdout and stderr. Every run lands in Chronicle.",
     shot: "/aurora/static/guide/04-workshop.png",
     callouts: [
-      { x: 28, y: 14, label: "1", note: "Language selector." },
-      { x: 50, y: 35, label: "2", note: "Code editor — JetBrains Mono, 12.5px." },
-      { x: 50, y: 78, label: "3", note: "Output panel — exit code, elapsed ms, stdout + stderr." },
+      { x: 28, y: 14, label: "1", note: "Language picker." },
+      { x: 50, y: 35, label: "2", note: "Code editor in a monospaced well." },
+      { x: 50, y: 78, label: "3", note: "Output: exit code, elapsed time, stdout and stderr." },
     ],
-    cta: { label: "Open Workshop · ⌘E", action: "workshop" },
+    cta: { label: "Open the Workshop with ⌘E", action: "workshop" },
   },
   {
     eyebrow: "PAGE 11 / 13",
     chapter: "WEB SEARCH",
-    title: "Search the web — without leaving.",
-    body: "Press ⌘/ to open Search. Queries route through aegis.network() to DuckDuckGo's instant-answer API by default — no tracking. Set NEXUS_BRAVE_KEY for organic results via Brave Search. Wikipedia is always a fallback so you never see an empty page.",
+    title: "Search the web without leaving.",
+    body: "Press ⌘/ to open Search. Queries route through aegis.network() to DuckDuckGo's instant-answer API by default, with no tracking. Set NEXUS_BRAVE_KEY for organic results from Brave Search. Wikipedia is always a fallback, so you never see an empty page.",
     shot: "/aurora/static/guide/05-search.png",
     callouts: [
-      { x: 45, y: 13, label: "1", note: "Search input — ⌘/ to focus from anywhere." },
-      { x: 45, y: 30, label: "2", note: "Hits — title + URL + snippet + source." },
+      { x: 45, y: 13, label: "1", note: "The search bar. Press ⌘/ from anywhere to get here." },
+      { x: 45, y: 30, label: "2", note: "Results: title, URL, snippet and source." },
     ],
-    cta: { label: "Open Search · ⌘/", action: "search" },
+    cta: { label: "Open Search with ⌘/", action: "search" },
   },
   {
     eyebrow: "PAGE 12 / 13",
     chapter: "CATALOG",
     title: "6,745 agents · 571 runnable.",
-    body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar (or press ⌘? — not yet). Filter by runnable-only to see the 571 with MCP adapters that you can launch with one click. Each card links to its source repo.",
+    body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar. Turn on Runnable only to see the 571 with MCP adapters that you can launch in one click. Each card links to its source repo.",
     shot: "/aurora/static/guide/06-catalog.png",
     callouts: [
-      { x: 55, y: 13, label: "1", note: "Filters: search · category · runnable-only." },
-      { x: 35, y: 35, label: "2", note: "Each card has Launch + source link." },
+      { x: 55, y: 13, label: "1", note: "Filters: search, category and Runnable only." },
+      { x: 35, y: 35, label: "2", note: "Each card has Launch, Compose, Trust and a source link." },
     ],
-    cta: { label: "Browse catalog →", action: "catalog" },
+    cta: { label: "Browse the catalog", action: "catalog" },
   },
   {
     eyebrow: "PAGE 13 / 13",
@@ -5325,17 +5274,20 @@ const GUIDE_PAGES = [
     body: "Master these and you barely touch the mouse.",
     shot: null,
     keys: [
-      ["⌘K",   "open workspace switcher"],
-      ["⌘N",   "new workspace"],
-      ["⌘0",   "expanded cockpit"],
-      ["⌘E",   "open workshop"],
-      ["⌘/",   "web search"],
-      ["⌘P",   "settings"],
-      ["⌘⏎",   "send message"],
-      ["←  →",  "flip guide pages"],
-      ["Esc",  "close any overlay / exit focus mode"],
+      ["⌘K",   "Open the workspace switcher"],
+      ["⌘N",   "New workspace"],
+      ["⌘0",   "Expanded cockpit"],
+      ["⌘L",   "Cortex launch"],
+      ["⌘J",   "Kernel watch"],
+      ["⌘Y",   "Memory replay"],
+      ["⌘E",   "Open the Workshop"],
+      ["⌘/",   "Web search"],
+      ["⌘P",   "Settings"],
+      ["⌘⏎",   "Send a message"],
+      ["←  →",  "Flip guide pages"],
+      ["Esc",  "Close any overlay or leave focus mode"],
     ],
-    cta: { label: "Done — start using ONEXUS", action: "close" },
+    cta: { label: "Done, start using ONEXUS", action: "close" },
   },
 ];
 
@@ -5366,32 +5318,32 @@ function renderGuide(pageIndex) {
     <div class="nx-g-keys">
       ${p.keys.map(([k, v]) => `
         <div class="nx-g-key-row">
-          <span class="nx-g-key-kbd">${escapeHtml(k)}</span>
+          <span class="nx-g-key-kbd nx-kbd">${escapeHtml(k)}</span>
           <span class="nx-g-key-desc">${escapeHtml(v)}</span>
         </div>
       `).join("")}
     </div>
     <div class="nx-g-dismiss-hint">
-      click anywhere · press <span class="kbd">esc</span> · or click <span class="kbd">Done</span> · arrow-left to go back
+      Click anywhere, press <span class="nx-kbd">esc</span> or choose <span class="nx-kbd">Done</span> to close. The left arrow goes back.
     </div>
   ` : "";
 
   const dotsHTML = GUIDE_PAGES.map((_, i) =>
-    `<button class="nx-g-dot ${i === pageIndex ? "active" : (i < pageIndex ? "done" : "")}" data-i="${i}" aria-label="Page ${i+1}: ${escapeHtml(GUIDE_PAGES[i].chapter)}" title="Page ${i+1} · ${escapeHtml(GUIDE_PAGES[i].chapter)}">${i+1}</button>`
+    `<button type="button" class="nx-g-dot ${i === pageIndex ? "active" : (i < pageIndex ? "done" : "")}" data-i="${i}" ${i === pageIndex ? 'aria-current="page"' : ""} aria-label="Page ${i+1}: ${escapeHtml(GUIDE_PAGES[i].chapter.toLowerCase())}" title="Page ${i+1} · ${escapeHtml(GUIDE_PAGES[i].chapter.toLowerCase())}">${i+1}</button>`
   ).join("");
 
   const showShot = p.shot && !p.keys;
 
   const html = `
-    <div class="nx-guide-overlay" id="nx-guide-overlay" role="dialog" aria-modal="true">
-      <button class="nx-g-close-btn" id="nx-g-close" aria-label="Close guide">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>
+    <div class="nx-guide-overlay" id="nx-guide-overlay" role="dialog" aria-modal="true" aria-label="Guide">
+      <button class="nx-g-close-btn nx-btn nx-btn-sm nx-btn-ghost" type="button" id="nx-g-close" aria-label="Close guide">
+        ${icon("x", 14)}
         <span>Close</span>
-        <span class="kbd">esc</span>
+        <span class="nx-kbd">esc</span>
       </button>
 
       <div class="nx-guide-stage">
-        <div class="nx-g-eyebrow">${escapeHtml(p.eyebrow)} · ${escapeHtml(p.chapter)}</div>
+        <div class="nx-g-eyebrow nx-eyebrow">${escapeHtml(p.eyebrow.replace("PAGE", "Page"))} · ${escapeHtml(p.chapter.charAt(0) + p.chapter.slice(1).toLowerCase())}</div>
         <h2 class="nx-g-title">${escapeHtml(p.title)}</h2>
         <div class="nx-g-body">${p.body}</div>
 
@@ -5405,21 +5357,21 @@ function renderGuide(pageIndex) {
       </div>
 
       <div class="nx-guide-nav">
-        <button class="nx-g-arrow" id="nx-g-prev" ${pageIndex === 0 ? "disabled" : ""} aria-label="Previous page" title="Previous page (←)">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 6 9l5 5"/></svg>
+        <button class="nx-g-arrow nx-btn nx-btn-icon" type="button" id="nx-g-prev" ${pageIndex === 0 ? "disabled" : ""} aria-label="Previous page" title="Previous page (←)">
+          ${icon("arrow-left", 16)}
         </button>
         <div class="nx-g-dots">${dotsHTML}</div>
         <div class="nx-g-right">
           ${p.cta && p.cta.action ? `
-            <button class="nx-g-cta" id="nx-g-next" title="${escapeHtml(p.cta.label)}">
+            <button class="nx-g-cta nx-btn nx-btn-tinted" type="button" id="nx-g-next" title="${escapeHtml(p.cta.label)}">
               <span>${escapeHtml(p.cta.label)}</span>
             </button>
           ` : ""}
-          <button class="nx-g-arrow nx-g-arrow-next" id="nx-g-advance"
+          <button class="nx-g-arrow nx-g-arrow-next nx-btn nx-btn-primary nx-btn-icon" type="button" id="nx-g-advance"
                   ${pageIndex === total - 1 ? "disabled" : ""}
                   aria-label="${pageIndex === total - 1 ? "Last page" : "Next page"}"
-                  title="${pageIndex === total - 1 ? "Done — close the guide" : "Next page (→)"}">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5-5 5"/></svg>
+                  title="${pageIndex === total - 1 ? "Last page" : "Next page (→)"}">
+            ${icon("arrow-right", 16)}
           </button>
         </div>
       </div>
@@ -6166,34 +6118,44 @@ async function renderSearch(hash) {
 // ── Overlay: workspace switcher (⌘K) ──────────────────────────────────────
 function renderSwitcher() {
   const root = document.getElementById("nx-overlay-root");
-  const tiles = state.workspaces.map(w => `
-    <div class="nx-ws-tile nx-tone-${w.tone || "indigo"} ${w.workspace_id === state.active ? "active" : ""}"
-         data-id="${w.workspace_id}">
-      <div class="tile-eyebrow">${escapeHtml((w.tone || "indigo").toUpperCase())}</div>
-      <div class="tile-name">${escapeHtml(w.name)}</div>
-      <div class="tile-footer">
-        <div class="disc-stack">
-          ${(w.resident_agents || []).slice(0, 3).map(a => agentDisc(a, { size: 22 })).join("")}
-        </div>
-        <span class="nx-mono" style="opacity:0.8">${w.workspace_id === state.active ? "active" : (w.last_active_at ? "seen" : "—")}</span>
-      </div>
-    </div>
-  `).join("");
+  const tiles = state.workspaces.map(w => {
+    const tone = (w.tone || "indigo").toLowerCase();
+    const isActive = w.workspace_id === state.active;
+    return `
+    <button type="button" class="nx-switch-row nx-row nx-row-interactive ${isActive ? "active is-selected" : ""}" role="option" aria-selected="${isActive}"
+         data-id="${w.workspace_id}" style="--tone:var(--nx-tone-${escapeHtml(tone)}-a, var(--nx-accent))">
+      <span class="ws-dot nx-switch-dot" aria-hidden="true"></span>
+      <span class="nx-row-main">
+        <span class="nx-row-title tile-name">${escapeHtml(w.name)}</span>
+        <span class="nx-row-sub tile-eyebrow">${escapeHtml(tone)} · ${escapeHtml(w.workspace_id)}</span>
+      </span>
+      <span class="nx-row-trail">${isActive ? `<span class="nx-status is-live">Active</span>` : (w.last_active_at ? `Seen ${escapeHtml(chatHistoryRelative(w.last_active_at))}` : "")}</span>
+    </button>
+  `;
+  }).join("");
   root.innerHTML = `
-    <div class="nx-switcher-overlay" id="nx-switcher-overlay">
-      <div class="nx-switcher">
-        <h3>Workspaces</h3>
-        <div class="nx-switcher-grid">
-          ${tiles}
-          <div class="nx-ws-tile new" id="nx-new-workspace-overlay">
-            ${UI.plus(22)}
-            <div style="font-size:13px;margin-top:6px">New workspace</div>
+    <div class="nx-switcher-overlay nx-scrim nx-scrim-top" id="nx-switcher-overlay">
+      <div class="nx-switcher nx-modal" role="dialog" aria-modal="true" aria-labelledby="nx-switcher-title">
+        <div class="nx-modal-head">
+          <div>
+            <h3 class="nx-modal-title" id="nx-switcher-title">Switch workspace</h3>
+            <p class="nx-modal-sub">${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} on this machine.</p>
           </div>
+          <span class="nx-kbd">esc</span>
+        </div>
+        <div class="nx-modal-body nx-switcher-body">
+          <div class="nx-switcher-grid nx-list" role="listbox" aria-label="Workspaces">
+            ${tiles}
+          </div>
+        </div>
+        <div class="nx-modal-foot">
+          <button type="button" class="nx-btn" id="nx-new-workspace-overlay">${icon("plus", 14)}New workspace<span class="nx-kbd">⌘N</span></button>
         </div>
       </div>
     </div>
   `;
-  root.querySelectorAll(".nx-ws-tile[data-id]").forEach(el => {
+  root.querySelector(".nx-switch-row")?.focus();
+  root.querySelectorAll(".nx-switch-row[data-id]").forEach(el => {
     el.addEventListener("click", async () => {
       await fetch(`/api/workspaces/${el.dataset.id}/switch`, { method: "POST" });
       await loadWorkspaces();
@@ -6229,31 +6191,45 @@ function openNewWorkspaceForm() {
   let selectedTone = "indigo";
 
   const toneSwatchHTML = WORKSPACE_TONES.map(t => `
-    <button type="button" class="nx-ws-tone-swatch ${t === selectedTone ? "selected" : ""}" data-tone="${t}" title="${t}">
-      <span class="dot" style="background:linear-gradient(135deg, var(--nx-tone-${t}-a), var(--nx-tone-${t}-b))"></span>
+    <button type="button" class="nx-ws-tone-swatch ${t === selectedTone ? "selected" : ""}" data-tone="${t}" title="${t}" aria-pressed="${t === selectedTone}" style="--tone:var(--nx-tone-${t}-a)">
+      <span class="dot" aria-hidden="true"></span>
       <span class="label">${t}</span>
     </button>
   `).join("");
 
   root.innerHTML = `
-    <div class="nx-switcher-overlay" id="nx-newws-overlay">
-      <form class="nx-switcher nx-newws" id="nx-newws-form" style="max-width:560px" autocomplete="off">
-        <h3>New workspace</h3>
-        <div class="nx-newws-fields">
-          <input id="ws-name" class="nx-newws-input" placeholder="Name (e.g. Client work)" required autofocus>
-          <input id="ws-id" class="nx-newws-input" placeholder="workspace-id (kebab-case — auto-derived from name)" pattern="^[a-z][a-z0-9-]{0,63}$">
+    <div class="nx-switcher-overlay nx-scrim" id="nx-newws-overlay">
+      <form class="nx-switcher nx-newws nx-modal" id="nx-newws-form" autocomplete="off" role="dialog" aria-modal="true" aria-labelledby="nx-newws-title">
+        <div class="nx-modal-head">
+          <div>
+            <h3 class="nx-modal-title" id="nx-newws-title">New workspace</h3>
+            <p class="nx-modal-sub">A room with its own agents, memory and grants.</p>
+          </div>
+        </div>
+        <div class="nx-modal-body nx-newws-fields">
+          <label class="nx-field">
+            <span class="nx-field-label">Name</span>
+            <input id="ws-name" class="nx-newws-input nx-input nx-input-lg" placeholder="Client work" required autofocus>
+          </label>
+          <label class="nx-field">
+            <span class="nx-field-label">ID</span>
+            <input id="ws-id" class="nx-newws-input nx-input nx-input-mono" placeholder="client-work" pattern="^[a-z][a-z0-9-]{0,63}$">
+            <span class="nx-field-hint">Lowercase letters, numbers and hyphens. Filled in from the name.</span>
+          </label>
 
-          <div class="nx-newws-tones-label">Color · pick a home tone</div>
-          <div class="nx-newws-tones" id="ws-tones">
-            ${toneSwatchHTML}
+          <div class="nx-field">
+            <span class="nx-field-label nx-newws-tones-label">Tone</span>
+            <div class="nx-newws-tones" id="ws-tones">
+              ${toneSwatchHTML}
+            </div>
           </div>
           <input type="hidden" id="ws-tone" value="${selectedTone}">
 
-          <div id="ws-error" class="nx-newws-error"></div>
+          <div id="ws-error" class="nx-newws-error nx-field-error" role="alert"></div>
         </div>
-        <div class="nx-newws-actions">
-          <button type="button" class="nx-newws-cancel" id="ws-cancel">Cancel</button>
-          <button type="submit" class="nx-newws-create" id="ws-create">Create workspace</button>
+        <div class="nx-modal-foot nx-newws-actions">
+          <button type="button" class="nx-newws-cancel nx-btn nx-btn-ghost" id="ws-cancel">Cancel</button>
+          <button type="submit" class="nx-newws-create nx-btn nx-btn-primary" id="ws-create">Create workspace</button>
         </div>
       </form>
     </div>`;
@@ -6261,8 +6237,9 @@ function openNewWorkspaceForm() {
   // Wire swatch selection
   root.querySelectorAll(".nx-ws-tone-swatch[data-tone]").forEach(btn => {
     btn.addEventListener("click", () => {
-      root.querySelectorAll(".nx-ws-tone-swatch").forEach(b => b.classList.remove("selected"));
+      root.querySelectorAll(".nx-ws-tone-swatch").forEach(b => { b.classList.remove("selected"); b.setAttribute("aria-pressed", "false"); });
       btn.classList.add("selected");
+      btn.setAttribute("aria-pressed", "true");
       document.getElementById("ws-tone").value = btn.dataset.tone;
     });
   });
@@ -6297,7 +6274,7 @@ function openNewWorkspaceForm() {
       id = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
     }
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(id)) {
-      errEl.textContent = "ID must be kebab-case (a-z, 0-9, hyphens), starting with a letter.";
+      errEl.textContent = "The ID must start with a letter and use only lowercase letters, numbers and hyphens.";
       return;
     }
     try {
@@ -6314,8 +6291,8 @@ function openNewWorkspaceForm() {
         closeOverlay();
         location.hash = `#/conversation/${id}`;
       } else {
-        const err = await r.json().catch(() => ({ detail: "request failed" }));
-        errEl.textContent = err.detail || "failed";
+        const err = await r.json().catch(() => ({ detail: "The request failed." }));
+        errEl.textContent = err.detail || "Could not create the workspace.";
       }
     } catch (err) {
       errEl.textContent = "Network error: " + err.message;
@@ -6335,13 +6312,17 @@ async function toggleCockpitOverlay() {
   const root = document.getElementById("nx-overlay-root");
   if (root.querySelector(".nx-cockpit-overlay")) { closeOverlay(); return; }
   root.innerHTML = `
-    <div class="nx-cockpit-overlay" id="nx-cockpit-overlay">
-      <div class="nx-cockpit">
-        <div class="nx-cockpit-scan"></div>
-        <div class="nx-cockpit-header">
-          <span class="nx-cockpit-title">COCKPIT — ${escapeHtml(state.mood.mood)}</span>
-          <button class="nx-cockpit-close" id="nx-cockpit-close">ESC</button>
+    <div class="nx-cockpit-overlay nx-scrim" id="nx-cockpit-overlay">
+      <div class="nx-cockpit nx-modal nx-modal-wide" role="dialog" aria-modal="true" aria-labelledby="nx-cockpit-title">
+        <div class="nx-cockpit-scan" aria-hidden="true"></div>
+        <div class="nx-cockpit-header nx-modal-head">
+          <div>
+            <div class="nx-eyebrow">Cockpit · ${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
+            <h3 class="nx-cockpit-title nx-modal-title" id="nx-cockpit-title">Everything the kernel is doing</h3>
+          </div>
+          <button class="nx-cockpit-close nx-btn nx-btn-sm nx-btn-ghost" type="button" id="nx-cockpit-close">Close<span class="nx-kbd">esc</span></button>
         </div>
+        <div class="nx-modal-body">
         <div class="nx-cockpit-grid">
           <!-- Row 1: Trust spans 2 cols on the left · Mood · Workspaces -->
           <div class="nx-cockpit-panel span2">
@@ -6349,26 +6330,25 @@ async function toggleCockpitOverlay() {
               <span class="nx-cockpit-panel-label">Trust · 60m</span>
               <span class="nx-cockpit-panel-badge">${state.trust.history.length} events</span>
             </div>
-            <svg viewBox="0 0 320 110" preserveAspectRatio="none" style="width:100%;height:110px">
-              ${trustSparkSVG(state.trust.history.length ? state.trust.history : [], state.trust.direction)
-                  .replace('viewBox="0 0 320 92"', '')}
-            </svg>
-            <div style="margin-top:10px;font-family:var(--nx-font-display);font-size:22px;color:#f3ecff;">
-              ${state.trust.delta > 0 ? "+" : ""}${state.trust.delta.toFixed(2)}
-              <span style="font-family:var(--nx-font-mono);font-size:11px;opacity:0.7;letter-spacing:0.16em;margin-left:8px;text-transform:uppercase">${escapeHtml(state.trust.direction || "—")}</span>
+            <div class="nx-cockpit-stat">
+              <span class="nx-stat-value">${state.trust.delta > 0 ? "+" : ""}${state.trust.delta.toFixed(2)}</span>
+              <span class="nx-trust-state">${escapeHtml(state.trust.direction || "steady")}</span>
             </div>
+            <svg class="nx-cockpit-spark" viewBox="0 0 320 92" preserveAspectRatio="none" aria-hidden="true">
+              ${trustSparkSVG(state.trust.history.length ? state.trust.history : [], state.trust.direction)}
+            </svg>
           </div>
           <div class="nx-cockpit-panel">
             <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Ambient mood</span></div>
-            <div style="font-family:var(--nx-font-display);font-size:20px;color:#f3ecff;margin-bottom:6px">${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
-            <div class="nx-dim" style="font-size:11px;line-height:1.4">${escapeHtml(state.mood.reason || "")}</div>
+            <div class="nx-cockpit-mood"><span class="nx-mp-swatch nx-mood-preview-${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, "-"))}" aria-hidden="true"></span><span class="nx-cockpit-big">${escapeHtml((state.mood.mood || "calm_focus").replace(/_/g, " "))}</span></div>
+            <div class="nx-cockpit-note">${escapeHtml(state.mood.reason || "")}</div>
           </div>
           <div class="nx-cockpit-panel">
             <div class="nx-cockpit-panel-header">
               <span class="nx-cockpit-panel-label">Workspaces</span>
               <span class="nx-cockpit-panel-badge">${state.workspaces.length}</span>
             </div>
-            <div style="font-size:12px;line-height:1.8">${state.workspaces.map(w => `<div>· ${escapeHtml(w.name)}</div>`).join("") || "<div class='nx-dim'>none</div>"}</div>
+            <div class="nx-cockpit-list">${state.workspaces.map(w => `<div><span class="nx-cockpit-dot" style="--tone:var(--nx-tone-${escapeHtml((w.tone || "indigo").toLowerCase())}-a)"></span>${escapeHtml(w.name)}</div>`).join("") || "<div class='nx-empty-line'>None yet.</div>"}</div>
           </div>
 
           <!-- Row 2: Recent permissions spans 3 cols · Pending tickets on the right -->
@@ -6377,25 +6357,23 @@ async function toggleCockpitOverlay() {
               <span class="nx-cockpit-panel-label">Recent permissions</span>
               <span class="nx-cockpit-panel-badge">${state.perms.recent.length}</span>
             </div>
-            <div style="font-size:11.5px;line-height:1.7">
+            <div class="nx-cockpit-list">
               ${(state.perms.recent.slice(0, 6).map(r =>
-                `<div class="nx-cockpit-tail-row">${escapeHtml(r.capability || "")} → ${escapeHtml(r.target || "—")} <span style="float:right;opacity:0.55">${escapeHtml(r.status || "")}</span></div>`
-              )).join("") || "<div class='nx-dim'>no activity</div>"}
+                `<div class="nx-cockpit-tail-row"><span class="nx-mono">${escapeHtml(r.capability || "")}</span><span class="nx-cockpit-target">${escapeHtml(r.target || "")}</span><span class="nx-perm-status s-${escapeHtml((r.status || "auto").toLowerCase())}">${escapeHtml(r.status || "")}</span></div>`
+              )).join("") || "<div class='nx-empty-line'>No permission activity yet.</div>"}
             </div>
           </div>
           <div class="nx-cockpit-panel">
             <div class="nx-cockpit-panel-header"><span class="nx-cockpit-panel-label">Pending</span></div>
-            <div style="font-family:var(--nx-font-display);font-size:26px;color:#f3ecff">
-              ${state.perms.pending.length}
-            </div>
-            <div class="nx-dim" style="font-size:11px;margin-top:4px">ticket${state.perms.pending.length === 1 ? "" : "s"} awaiting decision</div>
+            <div class="nx-stat-value ${state.perms.pending.length ? "nx-cockpit-warn" : ""}">${state.perms.pending.length}</div>
+            <div class="nx-cockpit-note">ticket${state.perms.pending.length === 1 ? "" : "s"} awaiting a decision</div>
           </div>
 
           <!-- Row 3: the live Kernel Scene spans all 4 cols -->
           <div class="nx-cockpit-panel span4">
             <div class="nx-cockpit-panel-header">
               <span class="nx-cockpit-panel-label">Kernel scene · live</span>
-              <span class="nx-cockpit-panel-badge">⌘J for the full Watch view</span>
+              <span class="nx-cockpit-panel-badge">⌘J opens the full Watch view</span>
             </div>
             <div class="nx-cockpit-scene"><canvas id="nx-cockpit-scene-canvas"></canvas></div>
           </div>
@@ -6413,8 +6391,9 @@ async function toggleCockpitOverlay() {
               <span class="nx-cockpit-panel-label">Sigil radar</span>
               <span class="nx-cockpit-panel-badge">${state.kernelViz.detections.length} pings</span>
             </div>
-            <div>${state.kernelViz.detections.map(radarPingHTML).join("") || "<div class='nx-dim'>radar clear</div>"}</div>
+            <div>${state.kernelViz.detections.map(radarPingHTML).join("") || "<div class='nx-empty-line'>Radar clear. No anomalies.</div>"}</div>
           </div>
+        </div>
         </div>
       </div>
     </div>
