@@ -1,172 +1,122 @@
-/* Aurora mood meshes — 8 ambient states tied to kernel observations.
+/* ONEXUS Aurora: moods
  *
- * Each mood sets a palette of CSS variables (--nx-primary, --nx-mesh-1..3,
- * --nx-glow) that the rest of the shell consumes — so when the mood
- * changes, the entire window shifts color: ambient mesh, active workspace
- * pill, composer glow, accent text, feedback buttons, the kernel mark
- * gradient — not just a small card.
+ * Aegis reads the kernel (load, memory activity, trust events, time of day)
+ * and picks one of eight moods. A mood re-points exactly one thing: the
+ * accent family in tokens.css. Every component that reads --nx-accent
+ * (focus rings, the active workspace, primary buttons, live dots, the
+ * composer edge) recolors together, and nothing else moves.
+ *
+ * All eight accents sit at the same perceived lightness (OKLCH L 0.74 to
+ * 0.82, C 0.11 to 0.15) so no mood is louder than another, and each clears
+ * 6.5:1 against the lightest surface.
+ *
+ * --nx-mood-* names are kept for the scene and older markup; they alias
+ * the accent so there is still a single value per mood.
  */
 
-:root {
-  /* defaults (calm focus) — overridden by each .nx-mood-* class */
-  --nx-mood-bg: #06040c;
-  --nx-mood-primary: #a87af5;
-  --nx-mood-mesh-1: rgba(120, 96, 200, 0.55);
-  --nx-mood-mesh-2: rgba(168, 122, 245, 0.22);
-  --nx-mood-mesh-3: rgba( 76,  92, 168, 0.42);
-  --nx-mood-mesh-4: rgba(  0,   0,   0, 0);
-  --nx-mood-glow:   rgba(168, 122, 245, 0.55);
-  --nx-mood-drift:  24s;
+:root,
+.nx-mood {
+  /* Derived accent tokens are re-declared here, on the element that carries
+   * the mood class, so they resolve against that mood's --nx-accent-rgb
+   * instead of inheriting the :root value. */
+  --nx-accent-soft: rgba(var(--nx-accent-rgb), 0.12);
+  --nx-accent-line: rgba(var(--nx-accent-rgb), 0.40);
+  --nx-accent-glow: rgba(var(--nx-accent-rgb), 0.45);
+  --nx-ring:      0 0 0 1px var(--nx-accent), 0 0 0 4px rgba(var(--nx-accent-rgb), 0.22);
+  --nx-glow-live: 0 0 8px var(--nx-accent-glow);
+  --nx-glow-soft: 0 0 24px -6px var(--nx-accent-glow);
+
+  --nx-mood-primary: var(--nx-accent);
+  --nx-mood-glow:    var(--nx-accent-glow);
+  --nx-mood-bg:      var(--nx-surface-canvas);
+  --nx-mood-mesh-1:  rgba(var(--nx-accent-rgb), 0.10);
+  --nx-mood-mesh-2:  rgba(var(--nx-accent-rgb), 0.05);
+  --nx-mood-mesh-3:  transparent;
+  --nx-mood-mesh-4:  transparent;
 }
 
-/* The .nx-ambient div in the shell uses these vars for the background mesh,
- * so the whole window's atmosphere shifts when mood changes. */
+/* The ambient layer is a single, faint horizon light along the top edge.
+ * It tells you the mood at a glance without competing with content. */
 .nx-ambient {
   background:
-    radial-gradient(60% 50% at 18% -5%,  var(--nx-mood-mesh-1) 0%, transparent 60%),
-    radial-gradient(45% 55% at 95% 100%, var(--nx-mood-mesh-2) 0%, transparent 55%),
-    radial-gradient(35% 45% at 88% 8%,   var(--nx-mood-mesh-3) 0%, transparent 55%),
-    radial-gradient(40% 40% at 5% 95%,   var(--nx-mood-mesh-4) 0%, transparent 55%),
-    var(--nx-mood-bg);
-  transition: background 1.6s ease;
+    radial-gradient(120% 70% at 50% -38%, rgba(var(--nx-accent-rgb), 0.075) 0%, transparent 62%),
+    var(--nx-surface-canvas);
+  transition: background var(--nx-dur-3) var(--nx-ease-io);
 }
 
-/* The ambient also drifts slowly, like an aurora. */
-.nx-ambient::before {
-  content: "";
-  position: absolute; inset: -10%;
-  background:
-    radial-gradient(40% 30% at 30% 40%, var(--nx-mood-mesh-1) 0%, transparent 70%),
-    radial-gradient(35% 30% at 70% 65%, var(--nx-mood-mesh-2) 0%, transparent 70%);
-  filter: blur(80px);
-  opacity: 0.5;
-  pointer-events: none;
-  animation: nx-drift var(--nx-mood-drift, 24s) ease-in-out infinite alternate;
-  mix-blend-mode: screen;
-}
-@keyframes nx-drift {
-  from { transform: translate(-1.5%, -1%) rotate(-2deg) scale(1.00); }
-  to   { transform: translate( 2.5%,  1.5%) rotate( 4deg) scale(1.06); }
-}
+/* ── The eight moods ──────────────────────────────────────────────────── */
 
-/* ── 8 mood palettes ────────────────────────────────────────────────────── */
-
-/* — calm focus — base — indigo / violet / amber */
-/* All primaries bumped +5% brightness from v1. Creative is now a vivid
- * navy blue (was coral, too close to alert's crimson). Watchful +
- * Deliberating are now multicolored (cool/warm contrast) instead of
- * single-tone amber/brass — they used to read as the same mood. */
-
+/* calm focus: the ONEXUS default. Aurora teal. */
 .nx-mood-calm-focus {
-  --nx-mood-bg: #08051a;
-  --nx-mood-primary: #b48bff;
-  --nx-mood-mesh-1: rgba(140, 112, 224, 0.62);
-  --nx-mood-mesh-2: rgba(255, 196, 132, 0.24);
-  --nx-mood-mesh-3: rgba( 96, 116, 200, 0.50);
-  --nx-mood-mesh-4: rgba(184, 140, 250, 0.22);
-  --nx-mood-glow:   rgba(180, 138, 250, 0.62);
-  --nx-mood-drift:  24s;
+  --nx-accent: #4ed5d5; --nx-accent-strong: #00bcbd; --nx-accent-rgb: 78, 213, 213;
+  --nx-fg-on-accent: #001616;
 }
-
-/* — deep flow — jewel green / oceanic — brighter */
+/* deep flow: long uninterrupted work. Jade. */
 .nx-mood-deep-flow {
-  --nx-mood-bg: #021412;
-  --nx-mood-primary: #5ce0b4;
-  --nx-mood-mesh-1: rgba( 40, 152, 124, 0.62);
-  --nx-mood-mesh-2: rgba( 80, 184, 152, 0.48);
-  --nx-mood-mesh-3: rgba( 28,  92, 104, 0.62);
-  --nx-mood-mesh-4: rgba(240, 200, 116, 0.20);
-  --nx-mood-glow:   rgba( 92, 224, 180, 0.62);
-  --nx-mood-drift:  38s;
+  --nx-accent: #7ad59c; --nx-accent-strong: #57bc80; --nx-accent-rgb: 122, 213, 156;
+  --nx-fg-on-accent: #06150c;
 }
-
-/* — routing — electric magenta + cyan + indigo — brighter */
+/* routing: Cortex is fanning work out. Rose. */
 .nx-mood-routing {
-  --nx-mood-bg: #060418;
-  --nx-mood-primary: #6fdeff;
-  --nx-mood-mesh-1: rgba(236,  92, 216, 0.62);
-  --nx-mood-mesh-2: rgba( 64, 220, 252, 0.58);
-  --nx-mood-mesh-3: rgba( 96,  68, 200, 0.62);
-  --nx-mood-mesh-4: rgba(140, 220, 252, 0.34);
-  --nx-mood-glow:   rgba(111, 222, 255, 0.65);
-  --nx-mood-drift:  14s;
+  --nx-accent: #f197c2; --nx-accent-strong: #da7baa; --nx-accent-rgb: 241, 151, 194;
+  --nx-fg-on-accent: #1b0c13;
 }
-
-/* — deliberating — multicolored: amber + teal + magenta (warm + cool
- *   clash, like a panel weighing options). No longer single-tone amber. */
+/* deliberating: a council is weighing options. Amber. */
 .nx-mood-deliberating {
-  --nx-mood-bg: #100804;
-  --nx-mood-primary: #ffc080;
-  --nx-mood-mesh-1: rgba(252, 184, 100, 0.65);
-  --nx-mood-mesh-2: rgba( 80, 196, 188, 0.50);
-  --nx-mood-mesh-3: rgba(208,  88, 160, 0.50);
-  --nx-mood-mesh-4: rgba(252, 224, 168, 0.24);
-  --nx-mood-glow:   rgba(255, 192, 132, 0.62);
-  --nx-mood-drift:  26s;
+  --nx-accent: #f4b768; --nx-accent-strong: #dd9c42; --nx-accent-rgb: 244, 183, 104;
+  --nx-fg-on-accent: #1a0f03;
 }
-
-/* — creative — VIVID NAVY BLUE (was coral; too close to alert) */
+/* creative: open-ended generation. Periwinkle. */
 .nx-mood-creative {
-  --nx-mood-bg: #04081c;
-  --nx-mood-primary: #6fa0ff;
-  --nx-mood-mesh-1: rgba( 88, 124, 244, 0.65);
-  --nx-mood-mesh-2: rgba(100, 172, 252, 0.52);
-  --nx-mood-mesh-3: rgba( 48,  76, 196, 0.62);
-  --nx-mood-mesh-4: rgba(168, 140, 248, 0.30);
-  --nx-mood-glow:   rgba(111, 160, 255, 0.65);
-  --nx-mood-drift:  22s;
+  --nx-accent: #96b4ff; --nx-accent-strong: #7c9aef; --nx-accent-rgb: 150, 180, 255;
+  --nx-fg-on-accent: #0c111f;
 }
-
-/* — reflective — plum + rose ember — brighter */
+/* reflective: memory and replay. Orchid. */
 .nx-mood-reflective {
-  --nx-mood-bg: #0a0612;
-  --nx-mood-primary: #d4a8e4;
-  --nx-mood-mesh-1: rgba(112,  56, 132, 0.78);
-  --nx-mood-mesh-2: rgba( 68,  44, 108, 0.60);
-  --nx-mood-mesh-3: rgba(236, 168, 188, 0.22);
-  --nx-mood-mesh-4: rgba(132,  84, 156, 0.38);
-  --nx-mood-glow:   rgba(212, 168, 228, 0.62);
-  --nx-mood-drift:  42s;
+  --nx-accent: #d9a8ef; --nx-accent-strong: #c18dd8; --nx-accent-rgb: 217, 168, 239;
+  --nx-fg-on-accent: #170d1b;
 }
-
-/* — watchful — multicolored: teal + ember + violet (sentinel scanning
- *   across cool/warm/deep). No longer brass-only. */
+/* watchful: sentries are scanning. Sky. */
 .nx-mood-watchful {
-  --nx-mood-bg: #050c0e;
-  --nx-mood-primary: #5cd4c0;
-  --nx-mood-mesh-1: rgba( 80, 212, 196, 0.58);
-  --nx-mood-mesh-2: rgba(244, 156,  92, 0.50);
-  --nx-mood-mesh-3: rgba(132,  92, 208, 0.50);
-  --nx-mood-mesh-4: rgba( 96, 116, 144, 0.42);
-  --nx-mood-glow:   rgba( 92, 212, 192, 0.65);
-  --nx-mood-drift:  16s;
+  --nx-accent: #6bcbf7; --nx-accent-strong: #43b2e1; --nx-accent-rgb: 107, 203, 247;
+  --nx-fg-on-accent: #03141c;
 }
-
-/* — alert — crimson / blood-orange — brighter */
+/* alert: an anomaly or a trust collapse. Signal red. */
 .nx-mood-alert {
-  --nx-mood-bg: #0c0306;
-  --nx-mood-primary: #ff7878;
-  --nx-mood-mesh-1: rgba(168,  44,  56, 0.78);
-  --nx-mood-mesh-2: rgba(252, 116, 100, 0.58);
-  --nx-mood-mesh-3: rgba( 52,  16,  24, 0.70);
-  --nx-mood-mesh-4: rgba(252,  92,  92, 0.46);
-  --nx-mood-glow:   rgba(255, 120, 120, 0.68);
-  --nx-mood-drift:  7s;
+  --nx-accent: #fb817a; --nx-accent-strong: #e3645e; --nx-accent-rgb: 251, 129, 122;
+  --nx-fg-on-accent: #1d0c0b;
 }
 
-/* When the user prefers more contrast, mute the mesh to near-flat. */
+/* Mood swatches (picker, settings, cockpit card): one flat chip of the
+ * mood's accent on a graphite well, so they compare at a glance. */
+.nx-mood-preview-calm-focus   { --sw: 78, 213, 213; }
+.nx-mood-preview-deep-flow    { --sw: 122, 213, 156; }
+.nx-mood-preview-routing      { --sw: 241, 151, 194; }
+.nx-mood-preview-deliberating { --sw: 244, 183, 104; }
+.nx-mood-preview-creative     { --sw: 150, 180, 255; }
+.nx-mood-preview-reflective   { --sw: 217, 168, 239; }
+.nx-mood-preview-watchful     { --sw: 107, 203, 247; }
+.nx-mood-preview-alert        { --sw: 251, 129, 122; }
+[class*="nx-mood-preview-"] {
+  background:
+    radial-gradient(circle at 50% 50%, rgb(var(--sw)) 0 34%, rgba(var(--sw), 0.22) 35% 100%);
+  box-shadow: inset 0 0 0 1px rgba(var(--sw), 0.45);
+}
+
+/* When the user prefers more contrast, drop the ambient light entirely. */
 @media (prefers-contrast: more) {
-  .nx-ambient::before { display: none !important; }
-  .nx-ambient { background: var(--nx-mood-bg) !important; }
+  .nx-ambient { background: var(--nx-surface-canvas) !important; }
+  :root { --nx-line-1: rgba(255, 255, 255, 0.14); --nx-line-2: rgba(255, 255, 255, 0.22); }
 }
 
-/* prefers-reduced-data: skip the mesh entirely */
+/* prefers-reduced-data: skip the ambient light */
 @media (prefers-reduced-data: reduce) {
-  .nx-ambient::before { display: none !important; }
+  .nx-ambient { background: var(--nx-surface-canvas) !important; }
 }
 
-/* ── Trust event temperature overlays (unchanged) ───────────────────────── */
-
+/* ── Trust event temperature washes ───────────────────────────────────────
+ * A brief edge light when trust rises, falls or collapses. It frames the
+ * window rather than covering content. */
 body.nx-trust-wash-rising,
 body.nx-trust-wash-falling,
 body.nx-trust-wash-collapse {
@@ -180,16 +130,16 @@ body.nx-trust-wash-collapse::after {
   animation: nx-wash-fade 1.5s ease-out forwards;
 }
 body.nx-trust-wash-rising::after {
-  background: radial-gradient(circle at 50% 50%, var(--nx-trust-rising) 0%, transparent 60%);
+  box-shadow: inset 0 0 0 1px var(--nx-trust-rising), inset 0 0 120px -40px var(--nx-trust-rising);
 }
 body.nx-trust-wash-falling::after {
-  background: radial-gradient(circle at 50% 50%, var(--nx-trust-falling) 0%, transparent 60%);
+  box-shadow: inset 0 0 0 1px var(--nx-trust-falling), inset 0 0 120px -40px var(--nx-trust-falling);
 }
 body.nx-trust-wash-collapse::after {
-  background: radial-gradient(circle at 50% 50%, var(--nx-trust-collapse) 0%, transparent 60%);
+  box-shadow: inset 0 0 0 2px var(--nx-trust-collapse), inset 0 0 160px -30px var(--nx-trust-collapse);
 }
 @keyframes nx-wash-fade {
   0%   { opacity: 0; }
-  25%  { opacity: 0.35; }
+  20%  { opacity: 0.9; }
   100% { opacity: 0; }
 }

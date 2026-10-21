@@ -1,152 +1,284 @@
-/* NEXUS Aurora — design tokens
- * Spec: docs/design/specs/2026-06-06-nexus-agent-os-design.md §10–11
+/* ONEXUS Aurora: design tokens
+ *
+ * The single source of truth for every visual value in Aurora. Nothing in
+ * components.css, app.css, scene.css or the JS templates may use a literal
+ * color, font size, radius, shadow or duration that is not defined here.
+ * The rules for using these tokens live in docs/design/AURORA-DESIGN-SYSTEM.md.
+ *
+ * Layers, in load order:
+ *   tokens.css      values (this file) plus the base reset
+ *   mood.css        the eight moods; each one only re-points the accent
+ *   components.css  the shared component set (buttons, cards, rows, pills...)
+ *   scene.css       the kernel scene canvas frame
+ *   app.css         shell layout and per-view layout; composes components
  */
 :root {
-  /* base surface */
-  --nx-bg: #0c0a14;
-  --nx-text-high: #f0e9ff;
-  --nx-text-mid: #e8e4f0;
-  --nx-text-dim: rgba(232, 228, 240, 0.62);
-  --nx-text-softer: rgba(232, 228, 240, 0.42);
-  --nx-hairline: rgba(255, 255, 255, 0.07);
+  color-scheme: dark;
 
-  /* glass card */
-  --nx-card-bg: rgba(255, 255, 255, 0.05);
-  --nx-card-border: rgba(255, 255, 255, 0.08);
-  --nx-card-radius: 14px;
-  --nx-card-blur: 20px;
-  --nx-card-saturate: 140%;
+  /* ── Neutrals: cool graphite. Surfaces step up in lightness, never in hue. */
+  --nx-gray-0:   #08090b;  /* sunken: rails, wells behind code            */
+  --nx-gray-50:  #0b0c0f;  /* canvas: app background                     */
+  --nx-gray-100: #111317;  /* surface 1: cards, panels                     */
+  --nx-gray-150: #14161b;  /* popover and modal surface                    */
+  --nx-gray-200: #16191e;  /* surface 2: hover, raised rows                */
+  --nx-gray-300: #1c2026;  /* surface 3: pressed, selected, input focus    */
+  --nx-gray-400: #262b32;  /* track fills, skeleton highlight              */
 
-  /* permission class accents */
-  --nx-routine:    #9affb6; /* jewel green */
-  --nx-notable:    #a8b4ff; /* calm violet-blue */
-  --nx-sensitive:  #f8c460; /* warm amber */
-  --nx-privileged: #f86078; /* coral */
+  --nx-surface-sunken:  var(--nx-gray-0);
+  --nx-surface-canvas:  var(--nx-gray-50);
+  --nx-surface-1:       var(--nx-gray-100);
+  --nx-surface-2:       var(--nx-gray-200);
+  --nx-surface-3:       var(--nx-gray-300);
+  --nx-surface-overlay: var(--nx-gray-150);
+  --nx-scrim:           rgba(4, 5, 7, 0.72);
 
-  /* trust event temperatures */
-  --nx-trust-rising:   #f8c460; /* warm gold */
-  --nx-trust-falling:  #8cb8d4; /* cool steel */
-  --nx-trust-collapse: #f8643c; /* hot crimson */
+  /* Text. Contrast is measured against surface 3, the lightest surface text
+   * sits on. fg-1 14:1, fg-2 8.5:1, fg-3 5.3:1. fg-4 is 3:1 and is reserved
+   * for disabled text and text 18px or larger; never use it for small copy. */
+  --nx-fg-1: #eceef2;
+  --nx-fg-2: #b6bcc6;
+  --nx-fg-3: #8d949f;
+  --nx-fg-4: #646b76;
+  --nx-fg-on-accent: #061214;
 
-  /* N2 — Chronos counterfactual branch accent */
-  --nx-chronos-branch: #b8c4ff; /* periwinkle — decision branch points */
+  /* Lines. line-1/2/3 are decorative separators. line-control is the
+   * boundary of an input or toggle and clears 3:1 on every surface. */
+  --nx-line-1: rgba(255, 255, 255, 0.06);
+  --nx-line-2: rgba(255, 255, 255, 0.10);
+  --nx-line-3: rgba(255, 255, 255, 0.16);
+  --nx-line-control: rgba(255, 255, 255, 0.34);
 
-  /* workspace home tones — 25 across the spectrum */
-  /* cool — blues / violets / teals */
-  --nx-tone-indigo-a:    #5a6cd0;  --nx-tone-indigo-b:    #2c3a78;
-  --nx-tone-violet-a:    #8a6cee;  --nx-tone-violet-b:    #3a2868;
+  /* ── Accent: one family. mood.css re-points these per mood; components
+   * only ever read --nx-accent and its derived mixes below. */
+  --nx-accent:        #4ed5d5;
+  --nx-accent-strong: #2fc0c2;
+  --nx-accent-rgb:    78, 213, 213;
+  --nx-accent-soft:   rgba(var(--nx-accent-rgb), 0.12);  /* tinted fill     */
+  --nx-accent-line:   rgba(var(--nx-accent-rgb), 0.40);  /* tinted border   */
+  --nx-accent-glow:   rgba(var(--nx-accent-rgb), 0.45);  /* live, focus     */
+
+  /* ── Semantic status. Distinct from the accent on purpose: status always
+   * carries a label too, color is never the only signal. */
+  --nx-ok:     #76cf8a;
+  --nx-info:   #8fb0f8;
+  --nx-warn:   #f5b75b;
+  --nx-danger: #f17070;
+  --nx-ok-rgb:     118, 207, 138;
+  --nx-info-rgb:   143, 176, 248;
+  --nx-warn-rgb:   245, 183, 91;
+  --nx-danger-rgb: 241, 112, 112;
+
+  /* Aegis permission classes map onto the status scale. */
+  --nx-routine:    var(--nx-ok);
+  --nx-notable:    var(--nx-info);
+  --nx-sensitive:  var(--nx-warn);
+  --nx-privileged: var(--nx-danger);
+
+  /* Trust event temperatures. */
+  --nx-trust-rising:   var(--nx-warn);
+  --nx-trust-falling:  #8fb6cf;
+  --nx-trust-collapse: #f4785a;
+
+  /* Chronos decision branches. */
+  --nx-chronos-branch: var(--nx-info);
+
+  /* ── Workspace tones: identity colors for rooms. Only the -a value is
+   * used as a mark (dot, edge, swatch); -b is kept for the swatch gradient. */
+  --nx-tone-indigo-a:    #6f7fe0;  --nx-tone-indigo-b:    #2c3a78;
+  --nx-tone-violet-a:    #9a7ef0;  --nx-tone-violet-b:    #3a2868;
   --nx-tone-lavender-a:  #b4a8f0;  --nx-tone-lavender-b:  #5a4d8c;
-  --nx-tone-cobalt-a:    #4a78f0;  --nx-tone-cobalt-b:    #1c3878;
+  --nx-tone-cobalt-a:    #5a86f0;  --nx-tone-cobalt-b:    #1c3878;
   --nx-tone-sky-a:       #5cb8f0;  --nx-tone-sky-b:       #1c5078;
   --nx-tone-ocean-a:     #4cb4d0;  --nx-tone-ocean-b:     #1c4858;
   --nx-tone-teal-a:      #4cd4c0;  --nx-tone-teal-b:      #1c5854;
-
-  /* fresh — greens / mints */
   --nx-tone-mint-a:      #80e8a8;  --nx-tone-mint-b:      #2c6840;
-  --nx-tone-sage-a:      #88a888;  --nx-tone-sage-b:      #3e5840;
+  --nx-tone-sage-a:      #98b898;  --nx-tone-sage-b:      #3e5840;
   --nx-tone-emerald-a:   #4cd068;  --nx-tone-emerald-b:   #1c5024;
   --nx-tone-lime-a:      #b8d860;  --nx-tone-lime-b:      #4c5818;
-
-  /* warm — yellows / oranges / reds */
   --nx-tone-amber-a:     #e8a06c;  --nx-tone-amber-b:     #844820;
   --nx-tone-honey-a:     #f0c870;  --nx-tone-honey-b:     #84541c;
   --nx-tone-tangerine-a: #f08c4c;  --nx-tone-tangerine-b: #843818;
   --nx-tone-coral-a:     #f06a78;  --nx-tone-coral-b:     #842830;
   --nx-tone-rose-a:      #f070a0;  --nx-tone-rose-b:      #842854;
-  --nx-tone-crimson-a:   #d04848;  --nx-tone-crimson-b:   #581c1c;
+  --nx-tone-crimson-a:   #e05858;  --nx-tone-crimson-b:   #581c1c;
+  --nx-tone-magenta-a:   #d070b0;  --nx-tone-magenta-b:   #5e2050;
+  --nx-tone-fuchsia-a:   #d868d0;  --nx-tone-fuchsia-b:   #5c1c54;
+  --nx-tone-plum-a:      #a080c0;  --nx-tone-plum-b:      #2c1c44;
+  --nx-tone-orchid-a:    #b878e0;  --nx-tone-orchid-b:    #4c2868;
+  --nx-tone-mocha-a:     #b89070;  --nx-tone-mocha-b:     #4c382c;
+  --nx-tone-slate-a:     #98a0a8;  --nx-tone-slate-b:     #383c44;
+  --nx-tone-graphite-a:  #7c8088;  --nx-tone-graphite-b:  #1c2028;
+  --nx-tone-midnight-a:  #6870b0;  --nx-tone-midnight-b:  #0c1024;
 
-  /* pinks + magentas */
-  --nx-tone-magenta-a:   #c060a0;  --nx-tone-magenta-b:   #5e2050;
-  --nx-tone-fuchsia-a:   #d058c8;  --nx-tone-fuchsia-b:   #5c1c54;
-  --nx-tone-plum-a:      #7e5ea0;  --nx-tone-plum-b:      #2c1c44;
-  --nx-tone-orchid-a:    #b070d8;  --nx-tone-orchid-b:    #4c2868;
+  /* ── Type. System faces: Aurora is local-first and ships no web fonts. */
+  --nx-font-ui:      -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --nx-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif;
+  --nx-font-mono:    "SF Mono", SFMono-Regular, ui-monospace, Menlo, "JetBrains Mono", Consolas, monospace;
 
-  /* earthy + neutrals */
-  --nx-tone-mocha-a:     #b08868;  --nx-tone-mocha-b:     #4c382c;
-  --nx-tone-slate-a:     #889098;  --nx-tone-slate-b:     #383c44;
-  --nx-tone-graphite-a:  #5c6068;  --nx-tone-graphite-b:  #1c2028;
-  --nx-tone-midnight-a:  #3a4078;  --nx-tone-midnight-b:   #0c1024;
+  /* Type scale. Eight steps; nothing in Aurora is set smaller than 11px. */
+  --nx-fs-micro:   11px;   /* eyebrow labels, kbd hints, counters  */
+  --nx-fs-caption: 12px;   /* metadata, helper text, table cells    */
+  --nx-fs-ui:      13px;   /* controls, list rows, dense body       */
+  --nx-fs-body:    14px;   /* reading text, messages                */
+  --nx-fs-lead:    16px;   /* lead paragraphs, card titles          */
+  --nx-fs-h3:      18px;   /* section titles                        */
+  --nx-fs-h2:      22px;   /* panel and modal titles                */
+  --nx-fs-h1:      28px;   /* page titles                           */
+  --nx-fs-display: 40px;   /* tour and welcome only                 */
 
-  /* type */
-  --nx-font-display: "Inter Display", "SF Pro Display", -apple-system, system-ui, sans-serif;
-  --nx-font-ui:      "Inter", "SF Pro Text", -apple-system, system-ui, sans-serif;
-  --nx-font-mono:    "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+  --nx-lh-tight: 1.2;
+  --nx-lh-snug:  1.35;
+  --nx-lh-body:  1.55;
 
-  /* sizing */
-  --nx-radius-sm: 8px;
-  --nx-radius-md: 12px;
-  --nx-radius-lg: 16px;
-  --nx-pad-card: 18px;
+  --nx-fw-regular: 400;
+  --nx-fw-medium:  500;
+  --nx-fw-semi:    600;
+  --nx-fw-bold:    700;
 
-  /* eyebrow label */
-  --nx-eyebrow-size: 9.5px;
-  --nx-eyebrow-tracking: 0.22em;
+  --nx-track-display: -0.022em;
+  --nx-track-title:   -0.012em;
+  --nx-track-label:   0.06em;
+
+  /* ── Space. A 4px grid. */
+  --nx-space-0-5: 2px;
+  --nx-space-1:   4px;
+  --nx-space-1-5: 6px;
+  --nx-space-2:   8px;
+  --nx-space-3:   12px;
+  --nx-space-4:   16px;
+  --nx-space-5:   20px;
+  --nx-space-6:   24px;
+  --nx-space-8:   32px;
+  --nx-space-10:  40px;
+  --nx-space-12:  48px;
+  --nx-space-16:  64px;
+
+  /* ── Radii. */
+  --nx-radius-xs:   4px;   /* kbd, tags, inline code   */
+  --nx-radius-sm:   6px;   /* buttons, inputs, rows    */
+  --nx-radius-md:   8px;   /* cards                    */
+  --nx-radius-lg:   12px;  /* panels, modals, popovers */
+  --nx-radius-full: 999px; /* pills, status dots       */
+
+  /* ── Elevation. Borders carry structure; shadows only lift floating layers. */
+  --nx-shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.35);
+  --nx-shadow-2: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--nx-line-2);
+  --nx-shadow-3: 0 28px 72px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--nx-line-2);
+
+  /* ── Glow. Only for focus, live and active states. */
+  --nx-ring:      0 0 0 1px var(--nx-accent), 0 0 0 4px rgba(var(--nx-accent-rgb), 0.22);
+  --nx-glow-live: 0 0 8px var(--nx-accent-glow);
+  --nx-glow-soft: 0 0 24px -6px var(--nx-accent-glow);
+
+  /* ── Motion. */
+  --nx-dur-1: 120ms;  /* hover, press           */
+  --nx-dur-2: 200ms;  /* state change, toggle   */
+  --nx-dur-3: 320ms;  /* enter, slide-over      */
+  --nx-ease:     cubic-bezier(0.2, 0.8, 0.2, 1);
+  --nx-ease-io:  cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Layout. */
+  --nx-chrome-h: 48px;
+  --nx-side-w:   256px;
+  --nx-rail-w:   320px;
+  --nx-page-pad-x: var(--nx-space-8);
+  --nx-page-pad-y: var(--nx-space-6);
+  --nx-page-max: 1120px;
+  --nx-reading-max: 760px;
+  --nx-control-h: 32px;
+  --nx-control-h-sm: 26px;
+  --nx-control-h-lg: 40px;
+
+  /* ── Legacy names. Older markup and the scene still read these; each one
+   * points at a token above so there is still only one value. */
+  --nx-bg: var(--nx-surface-canvas);
+  --nx-text-high: var(--nx-fg-1);
+  --nx-text-mid: var(--nx-fg-2);
+  --nx-text-dim: var(--nx-fg-3);
+  --nx-text-softer: var(--nx-fg-3);
+  --nx-text: var(--nx-fg-1);
+  --nx-hairline: var(--nx-line-1);
+  --nx-card-bg: var(--nx-surface-1);
+  --nx-card-border: var(--nx-line-2);
+  --nx-card-radius: var(--nx-radius-md);
+  --nx-pad-card: var(--nx-space-4);
+  --nx-eyebrow-size: var(--nx-fs-micro);
+  --nx-eyebrow-tracking: var(--nx-track-label);
 }
 
-/* reset minimal */
+/* ── Base ─────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
-html { background: var(--nx-bg); color-scheme: dark; }
+html { background: var(--nx-surface-canvas); color-scheme: dark; }
 body {
   margin: 0;
-  background: var(--nx-bg);
-  color: var(--nx-text-mid);
+  background: var(--nx-surface-canvas);
+  color: var(--nx-fg-2);
   font-family: var(--nx-font-ui);
-  letter-spacing: -0.005em;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: var(--nx-fs-body);
+  line-height: var(--nx-lh-body);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
 }
+button, input, select, textarea { font: inherit; color: inherit; }
+::selection { background: rgba(var(--nx-accent-rgb), 0.28); color: var(--nx-fg-1); }
 
-.nx-display { font-family: var(--nx-font-display); font-weight: 500; letter-spacing: -0.02em; }
-.nx-mono    { font-family: var(--nx-font-mono); font-feature-settings: "ss01", "ss02"; }
+/* Keyboard focus is app-wide and must survive every component skin. A
+ * component may move the ring (offset) but no rule may remove it. */
+:where(button, a[href], input, select, textarea, summary, [tabindex], [role="button"],
+       [role="tab"], [role="option"], [role="switch"], [role="checkbox"]):focus-visible {
+  outline: 2px solid var(--nx-accent);
+  outline-offset: 2px;
+}
+:where(input, select, textarea):focus-visible { outline-offset: 0; }
+
+/* Native select popups are painted by the browser; give them the dark scheme. */
+select { color-scheme: dark; }
+select option, select optgroup { background: var(--nx-surface-overlay); color: var(--nx-fg-1); }
+
+/* Scrollbars: thin, quiet, consistent everywhere. */
+* { scrollbar-width: thin; scrollbar-color: var(--nx-gray-400) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--nx-gray-400);
+  border: 3px solid transparent; background-clip: padding-box;
+  border-radius: var(--nx-radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background-color: #343a43; }
+
+/* ── Type roles. Prefer these classes over ad hoc sizes. ─────────────── */
+.nx-display { font-family: var(--nx-font-display); font-weight: var(--nx-fw-semi); letter-spacing: var(--nx-track-display); color: var(--nx-fg-1); }
+.nx-mono    { font-family: var(--nx-font-mono); font-variant-numeric: tabular-nums; }
 .nx-eyebrow {
-  font-size: var(--nx-eyebrow-size);
-  letter-spacing: var(--nx-eyebrow-tracking);
+  font-size: var(--nx-fs-micro);
+  font-weight: var(--nx-fw-semi);
+  letter-spacing: var(--nx-track-label);
   text-transform: uppercase;
-  opacity: 0.55;
-  font-weight: 500;
+  color: var(--nx-fg-3);
 }
-.nx-dim    { opacity: 0.62; }
-.nx-softer { opacity: 0.42; }
+.nx-dim    { color: var(--nx-fg-3); }
+.nx-softer { color: var(--nx-fg-3); }
+.nx-num    { font-variant-numeric: tabular-nums; }
 
-.nx-card {
-  background: var(--nx-card-bg);
-  backdrop-filter: blur(var(--nx-card-blur)) saturate(var(--nx-card-saturate));
-  -webkit-backdrop-filter: blur(var(--nx-card-blur)) saturate(var(--nx-card-saturate));
-  border: 1px solid var(--nx-card-border);
-  border-radius: var(--nx-card-radius);
+/* Visually hidden, still announced. */
+.nx-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
-.nx-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 9px; border-radius: 999px;
-  background: var(--nx-card-bg);
-  border: 1px solid var(--nx-card-border);
-  font-size: 11px;
-}
-
-/* permission class pills */
-.nx-pc          { padding: 2px 9px; border-radius: 999px; font-size: 11px;
-                  display: inline-flex; align-items: center; gap: 5px; }
-.nx-pc::before  { content: ""; width: 7px; height: 7px; border-radius: 50%; }
-.nx-pc-routine   { background: rgba(154,255,182,0.10); color: #b8f4cc; border: 1px solid rgba(154,255,182,0.22); }
-.nx-pc-routine::before   { background: var(--nx-routine);   box-shadow: 0 0 6px var(--nx-routine); }
-.nx-pc-notable   { background: rgba(168,180,255,0.10); color: #c6cfff; border: 1px solid rgba(168,180,255,0.25); }
-.nx-pc-notable::before   { background: var(--nx-notable);   box-shadow: 0 0 6px var(--nx-notable); }
-.nx-pc-sensitive { background: rgba(248,196,96,0.10); color: #f8d480; border: 1px solid rgba(248,196,96,0.28); }
-.nx-pc-sensitive::before { background: var(--nx-sensitive); box-shadow: 0 0 6px var(--nx-sensitive); }
-.nx-pc-privileged{ background: rgba(248,100,120,0.10); color: #ffb8c0; border: 1px solid rgba(248,100,120,0.30); }
-.nx-pc-privileged::before{ background: var(--nx-privileged);box-shadow: 0 0 6px var(--nx-privileged); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* prefers-reduced-data → drop the mesh entirely */
+/* prefers-reduced-data: drop the ambient light entirely */
 @media (prefers-reduced-data: reduce) {
   .nx-mood { background-image: none !important; }
-  .nx-mood::before, .nx-mood::after { display: none !important; }
+  .nx-ambient::before, .nx-ambient::after { display: none !important; }
 }
