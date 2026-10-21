@@ -2752,3 +2752,49 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-swarm-card-count { font-size: var(--nx-fs-micro); color: var(--nx-fg-3); margin-left: var(--nx-space-3); }
 
 .nx-st-revoke:hover { color: var(--nx-danger); background: rgba(var(--nx-danger-rgb), 0.10); }
+
+/* ── Agent store (#/store, #/store/<slug>) ──────────────────────────────
+ * Layout only; every look comes from components.css. */
+.nx-store-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--nx-space-3); margin-bottom: var(--nx-space-5); }
+.nx-store-search { flex: 1 1 280px; max-width: 460px; }
+.nx-store-show { display: flex; gap: var(--nx-space-2); }
+.nx-store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--nx-space-3);
+}
+.nx-store-card { display: flex; flex-direction: column; gap: var(--nx-space-3); color: inherit; text-decoration: none; min-width: 0; }
+.nx-store-card-head { display: flex; align-items: center; gap: var(--nx-space-3); min-width: 0; }
+.nx-store-card-id { flex: 1; min-width: 0; }
+.nx-store-card-id .nx-card-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-store-card-tag {
+  margin: 0; color: var(--nx-fg-2); font-size: var(--nx-fs-ui); line-height: var(--nx-lh-body);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.nx-store-card-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--nx-space-2); margin-top: auto; }
+.nx-store-note { margin: var(--nx-space-6) 0 0; max-width: 72ch; color: var(--nx-fg-3); font-size: var(--nx-fs-caption); line-height: var(--nx-lh-body); }
+
+.nx-store-back { display: inline-flex; align-items: center; gap: var(--nx-space-1); margin-bottom: var(--nx-space-4); font-size: var(--nx-fs-ui); }
+.nx-store-detail .nx-detail-head { margin-bottom: var(--nx-space-5); }
+.nx-store-detail .nx-detail-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--nx-space-2); margin-top: var(--nx-space-2); }
+.nx-store-detail .nx-detail-facts .nx-link { display: inline-flex; align-items: center; gap: var(--nx-space-1); font-size: var(--nx-fs-ui); }
+#nx-store-msg:not(:empty) { margin-bottom: var(--nx-space-4); }
+.nx-store-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--nx-space-4); }
+.nx-store-how { grid-column: 1 / -1; }
+.nx-store-sections .nx-panel { min-width: 0; }
+.nx-store-sections .nx-section-head + .nx-list, .nx-store-p + .nx-list { margin-bottom: var(--nx-space-4); }
+.nx-store-p { margin: 0 0 var(--nx-space-3); color: var(--nx-fg-3); font-size: var(--nx-fs-caption); line-height: var(--nx-lh-body); }
+.nx-store-tools .nx-row, .nx-store-hosts .nx-row { min-width: 0; }
+.nx-store-hosts .nx-row-sub, .nx-si-hosts .nx-row-sub { overflow-wrap: anywhere; }
+.nx-si-hosts .nx-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--nx-space-2) var(--nx-space-4); }
+#nx-si-form .nx-section-label { margin: var(--nx-space-2) 0 var(--nx-space-2); }
+#nx-si-form .nx-field { margin-bottom: var(--nx-space-3); }
+@media (max-width: 760px) {
+  .nx-store-sections { grid-template-columns: minmax(0, 1fr); }
+}
+.nx-store-overlay { z-index: 70; }
+.nx-store-detail ul.nx-list, .nx-si-hosts { list-style: none; margin: 0; padding: 0; }
+.nx-store-sections .nx-row, .nx-si-hosts .nx-row { grid-template-columns: minmax(0, 1fr) auto auto; padding-left: 0; padding-right: 0; }
+.nx-si-form, .nx-si-progress { display: flex; flex-direction: column; min-height: 0; }
+#nx-si-err[hidden] { display: none; }
+.nx-store-sections .nx-row > .nx-code-inline, .nx-store-sections .nx-row-title.nx-code-inline { justify-self: start; width: fit-content; max-width: 100%; overflow-wrap: anywhere; }

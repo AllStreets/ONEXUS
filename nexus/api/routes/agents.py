@@ -31,10 +31,11 @@ class AgentSummary(BaseModel):
     stars: int | None = None
     source_github: str | None = None
     trust_floor: float = 0.0
+    # a hand-written adapter under adapters/ can launch; "mcp/stdio" only says it speaks MCP
+    adapter_ref: str | None = None
 
 
 class AgentDetail(AgentSummary):
-    adapter_ref: str | None = None
     source_huggingface: str | None = None
     homepage: str | None = None
     downloads_30d: int | None = None
@@ -95,6 +96,7 @@ def _entry_to_summary(e) -> AgentSummary:
         stars=e.stars,
         source_github=e.source_github,
         trust_floor=e.trust_floor,
+        adapter_ref=e.adapter_ref,
     )
 
 

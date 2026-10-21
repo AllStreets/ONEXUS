@@ -87,7 +87,7 @@ async function boot() {
   // tool surface (workshop, watch, memory, …). So ⌘R / refresh always brings you
   // back to your workspace, not whatever tool page you happened to be on.
   // Conversations and the guided tour still restore in place.
-  const TOOL_ROUTE = /^#\/(workshop|cortex|watch|memory|catalog|settings|atlas|chronos|search|workspaces)\b/;
+  const TOOL_ROUTE = /^#\/(workshop|cortex|watch|memory|store|catalog|settings|atlas|chronos|search|workspaces)\b/;
   const startHash = TOOL_ROUTE.test(location.hash) ? "" : location.hash;
   await route(startHash);
   maybeShowTour();
@@ -708,6 +708,7 @@ function attachShellHandlers() {
   document.getElementById("nx-new-ws").addEventListener("click", openNewWorkspaceForm);
   document.getElementById("nx-mood-pill").addEventListener("click", openMoodPicker);
   document.getElementById("nx-open-catalog").addEventListener("click", () => location.hash = "#/catalog");
+  document.getElementById("nx-open-store").addEventListener("click", () => location.hash = "#/store");
   document.getElementById("nx-open-settings").addEventListener("click", () => location.hash = "#/settings");
   document.getElementById("nx-open-workshop").addEventListener("click", () => location.hash = "#/workshop");
   document.getElementById("nx-open-search").addEventListener("click", () => location.hash = "#/search");
@@ -1995,7 +1996,7 @@ async function hydrateCatalogPedigree(slug) {
     const tagEl = document.getElementById("nx-cap-tag");
     if (tagEl) tagEl.textContent = a.tagline || "No tagline";
     const descEl = document.getElementById("nx-cap-desc");
-    if (descEl) descEl.textContent = (a.category ? a.category.replace(/-/g, " ") + " · " : "") + (a.runnable ? "runnable through an MCP adapter" : "manifest only");
+    if (descEl) descEl.textContent = (a.category ? a.category.replace(/-/g, " ") + " · " : "") + (a.runnable ? "declares MCP" : "listed");
     const el = document.getElementById("nx-cap-pedigree");
     if (!el) return;
     const fmt = (n) => n == null ? "n/a" : (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n));
@@ -3060,6 +3061,323 @@ function renderWorkspacesGrid() {
   document.getElementById("nx-inline-new-workspace").addEventListener("click", openNewWorkspaceForm);
 }
 
+// ── Main view: agent store ────────────────────────────────────────────────
+//
+// Agents from the catalog that a program proved install: each was built from its
+// published package, started in a locked-down container and asked for its tools over
+// MCP (ONEXUS-Agents pipeline/recipes). Installing builds or downloads that image, checks
+// it again on this machine, and records it; launching runs it with none of your files
+// and only the hosts you approve. Backed by /api/store.
+
+// Taglines come from upstream repositories; the store shows them without emoji.
+const noEmoji = (t) => String(t || "").replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "").replace(/\s{2,}/g, " ").trim();
+const KIND_LABEL = { npm: "npm package", pypi: "PyPI package", oci: "Container image" };
+const FROM_LABEL = { "server.json": "its server.json", "readme-config": "its README's MCP config", "package-manifest": "its package manifest" };
+
+function storeHeaderHTML(title, sub, actions = "") {
+  return `<header class="nx-page-head">
+      <div class="nx-page-head-text">
+        <div class="nx-eyebrow nx-page-eyebrow">Agent store</div>
+        <h1 class="nx-page-title">${title}</h1>
+        ${sub ? `<p class="nx-page-sub">${sub}</p>` : ""}
+      </div>
+      ${actions ? `<div class="nx-page-actions">${actions}</div>` : ""}
+    </header>`;
+}
+
+async function renderStore(hash) {
+  const slug = decodeURIComponent((hash.match(/^#\/store\/([^?]+)/) || [])[1] || "");
+  if (slug) return renderStoreAgent(slug);
+  const main = document.getElementById("nx-main");
+  const params = new URLSearchParams(hash.split("?")[1] || "");
+  const q = params.get("q") || "";
+  const show = params.get("show") === "installed" ? "installed" : "all";
+  main.innerHTML = `<div class="nx-main-inner">
+      ${storeHeaderHTML(`<span class="nx-skeleton nx-skeleton-title"></span>`, "")}
+      <div class="nx-store-grid" aria-busy="true">${Array.from({ length: 6 }, () => `<div class="nx-card nx-card-pad"><span class="nx-skeleton nx-skeleton-avatar"></span><span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-line"></span></div>`).join("")}</div>
+    </div>`;
+  let body;
+  try {
+    const r = await fetch(`/api/store/agents?q=${encodeURIComponent(q)}`);
+    body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.detail || `the store answered ${r.status}`);
+  } catch (e) {
+    main.innerHTML = `<div class="nx-main-inner">${storeHeaderHTML("Install an agent", "")}
+      <div class="nx-alert is-danger" role="alert">${icon("alert-circle", 16)}<div class="nx-alert-body"><div class="nx-alert-title">Could not load the store</div>${escapeHtml(e.message)}</div></div></div>`;
+    return;
+  }
+  const all = body.agents || [];
+  const installedCount = all.filter(a => a.installed).length;
+  const agents = show === "installed" ? all.filter(a => a.installed) : all;
+  const s = body.summary || {};
+  const sub = `${s.verified_installable ?? all.length} agents that were built from their published package, started in a locked-down container and asked for their tools. Each one runs with none of your files and only the hosts you approve.`;
+  main.innerHTML = `<div class="nx-main-inner">
+      ${storeHeaderHTML("Install an agent", sub, `<a class="nx-btn nx-btn-ghost" href="#/catalog">${icon("grid", 16)}Browse the whole catalog</a>`)}
+      <form class="nx-toolbar nx-store-filters" id="nx-store-filters" role="search">
+        <div class="nx-search-field nx-store-search">
+          ${icon("search", 14)}
+          <input type="search" id="nx-store-q" class="nx-input" value="${escapeHtml(q)}" placeholder="Search by name, purpose or tool" aria-label="Search the store">
+        </div>
+        <div class="nx-store-show" role="group" aria-label="Show">
+          <button type="button" class="nx-chip" data-show="all" aria-pressed="${show === "all"}">All ${all.length}</button>
+          <button type="button" class="nx-chip" data-show="installed" aria-pressed="${show === "installed"}">Installed ${installedCount}</button>
+        </div>
+      </form>
+      ${agents.length ? `<div class="nx-store-grid">${agents.map(storeCardHTML).join("")}</div>`
+        : emptyStateHTML(show === "installed" && !q
+          ? { icon: "package", title: "Nothing installed yet", body: "Pick an agent from the store to install it. It runs confined, and you choose what it can reach.", actions: `<a class="nx-btn" href="#/store">See all agents</a>` }
+          : { icon: "search", title: "No agents match", body: `Nothing in the store matches “${escapeHtml(q)}”. The whole catalog has more, though most of it can't be installed by a program yet.`, actions: `<a class="nx-btn" href="#/store">Clear the search</a> <a class="nx-btn nx-btn-ghost" href="#/catalog?q=${encodeURIComponent(q)}">Search the catalog</a>` })}
+      ${s.without_recipe != null ? `<p class="nx-store-note">${(s.entries_read || 0).toLocaleString()} catalog agents say they speak MCP. ${s.recipes} had an install a program could read exactly, and ${s.verified_installable} passed the check. The rest are apps that use MCP, or need something only their author can fill in.</p>` : ""}
+    </div>`;
+  const go = (next) => {
+    const p = new URLSearchParams();
+    const val = document.getElementById("nx-store-q").value.trim();
+    if (val) p.set("q", val);
+    if (next === "installed") p.set("show", "installed");
+    location.hash = `#/store${p.toString() ? "?" + p : ""}`;
+  };
+  document.getElementById("nx-store-filters").addEventListener("submit", (e) => { e.preventDefault(); go(show); });
+  const qEl = document.getElementById("nx-store-q");
+  qEl.addEventListener("input", debounceCortexInput(() => go(show), 300));
+  if (q) { qEl.focus(); qEl.setSelectionRange(q.length, q.length); }
+  main.querySelectorAll(".nx-store-show [data-show]").forEach(b => b.addEventListener("click", () => go(b.dataset.show)));
+}
+
+function storeCardHTML(a) {
+  const stars = fmtCount(a.stars);
+  return `<a class="nx-card nx-card-pad nx-card-interactive nx-store-card" href="#/store/${encodeURIComponent(a.slug)}">
+      <div class="nx-store-card-head">
+        ${agentDisc(a.slug, { size: 36 })}
+        <div class="nx-store-card-id">
+          <div class="nx-card-title">${escapeHtml(a.name)}</div>
+          <div class="nx-card-sub">${escapeHtml((a.category || "").replace(/-/g, " "))}</div>
+        </div>
+        ${a.installed ? `<span class="nx-status is-ok">Installed</span>` : ""}
+      </div>
+      <p class="nx-store-card-tag">${escapeHtml(noEmoji(a.tagline))}</p>
+      <div class="nx-store-card-facts">
+        <span class="nx-pill nx-pill-mono">${a.tools.length} ${a.tools.length === 1 ? "tool" : "tools"}</span>
+        <span class="nx-pill">${escapeHtml(KIND_LABEL[a.kind] || a.kind)}</span>
+        ${a.needs_keys.length ? `<span class="nx-pill nx-pill-warn">Needs ${a.needs_keys.length === 1 ? "a key" : a.needs_keys.length + " keys"}</span>` : ""}
+        ${stars ? `<span class="nx-card-stars" title="GitHub stars">${STAR_GLYPH}${stars}</span>` : ""}
+      </div>
+    </a>`;
+}
+
+async function renderStoreAgent(slug) {
+  const main = document.getElementById("nx-main");
+  main.innerHTML = `<div class="nx-main-inner" aria-busy="true"><span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-line"></span></div>`;
+  let a;
+  try {
+    const r = await fetch(`/api/store/agents/${encodeURIComponent(slug)}`);
+    a = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(a.detail || `the store answered ${r.status}`);
+  } catch (e) {
+    main.innerHTML = `<div class="nx-main-inner">${storeHeaderHTML(escapeHtml(slug), "")}
+      <div class="nx-alert is-danger" role="alert">${icon("alert-circle", 16)}<div class="nx-alert-body"><div class="nx-alert-title">Could not load this agent</div>${escapeHtml(e.message)}</div></div>
+      <a class="nx-btn" href="#/store">${icon("arrow-left", 16)}Back to the store</a></div>`;
+    return;
+  }
+  const v = a.verified || {};
+  const inst = a.install || {};
+  const what = inst.kind === "oci" ? `${inst.image}` : `${inst.package}@${inst.version}`;
+  const commit = (a.source || {}).commit || "";
+  const hosts = (a.hosts || {}).proposed || [];
+  const evidence = (a.hosts || {}).evidence || {};
+  const rec = a.record;
+  const tools = v.tools || [];
+  const actions = rec
+    ? `<button class="nx-btn nx-btn-primary" type="button" id="nx-store-launch">${icon("play", 16)}Launch</button>
+       <button class="nx-btn nx-btn-danger" type="button" id="nx-store-remove">${icon("trash", 16)}Remove</button>`
+    : a.installable
+      ? `<button class="nx-btn nx-btn-primary" type="button" id="nx-store-install">${icon("download", 16)}Install</button>`
+      : `<span class="nx-status is-warn">Not installable</span>`;
+  main.innerHTML = `<div class="nx-main-inner nx-store-detail">
+      <a class="nx-link nx-store-back" href="#/store">${icon("arrow-left", 14)}Agent store</a>
+      <header class="nx-detail-head">
+        ${agentDisc(a.slug, { size: 56 })}
+        <div class="nx-detail-text">
+          <h1 class="nx-detail-title">${escapeHtml(a.name)}</h1>
+          <p class="nx-detail-sub">${escapeHtml(noEmoji(a.tagline))}</p>
+          <div class="nx-detail-facts">
+            ${rec ? `<span class="nx-status is-ok">Installed</span>` : ""}
+            <span class="nx-pill">${escapeHtml(a.license || "Unknown license")}</span>
+            ${a.stars ? `<span class="nx-card-stars">${STAR_GLYPH}${fmtCount(a.stars)}</span>` : ""}
+            ${a.repo ? `<a class="nx-link" href="https://github.com/${escapeHtml(a.repo)}" target="_blank" rel="noopener noreferrer">${escapeHtml(a.repo)}${icon("external-link", 12)}</a>` : ""}
+          </div>
+        </div>
+        <div class="nx-detail-actions">${actions}</div>
+      </header>
+      <div id="nx-store-msg"></div>
+      <div class="nx-store-sections">
+        <section class="nx-panel">
+          <div class="nx-section-head"><div class="nx-section-label">Tools it offers, ${tools.length}</div></div>
+          <ul class="nx-list nx-store-tools">${tools.slice(0, 14).map(t => `<li class="nx-row"><span class="nx-code-inline">${escapeHtml(t)}</span></li>`).join("")}</ul>
+          ${tools.length > 14 ? `<button class="nx-btn nx-btn-ghost nx-btn-sm" type="button" id="nx-store-more">Show all ${tools.length}</button>` : ""}
+        </section>
+        <section class="nx-panel">
+          <div class="nx-section-head"><div class="nx-section-label">Network</div></div>
+          ${hosts.length ? `<p class="nx-store-p">It talks to these, found in its own code. You choose which to allow when you install; nothing else is reachable.</p>
+            <ul class="nx-list nx-store-hosts">${hosts.map(h => `<li class="nx-row"><div class="nx-row-main"><div class="nx-row-title nx-code-inline">${escapeHtml(h)}</div><div class="nx-row-sub">${escapeHtml((evidence[h] || []).join(", "))}</div></div>${rec && rec.hosts.includes(h) ? `<span class="nx-status is-ok">Allowed</span>` : ""}</li>`).join("")}</ul>`
+          : `<p class="nx-store-p">No hosts found in its code, so it installs with no network at all.</p>`}
+          <div class="nx-section-head"><div class="nx-section-label">Keys</div></div>
+          ${(a.env || []).length ? `<ul class="nx-list">${a.env.map(e => `<li class="nx-row"><div class="nx-row-main"><div class="nx-row-title nx-code-inline">${escapeHtml(e.name)}</div>${e.description ? `<div class="nx-row-sub">${escapeHtml(e.description)}</div>` : ""}</div><span class="nx-pill ${e.required ? "nx-pill-warn" : ""}">${e.required ? "Required" : "Optional"}</span>${rec && rec.keys_given.includes(e.name) ? `<span class="nx-status is-ok">Saved</span>` : ""}</li>`).join("")}</ul>`
+          : `<p class="nx-store-p">It doesn't need any keys.</p>`}
+        </section>
+        <section class="nx-panel nx-store-how">
+          <div class="nx-section-head"><div class="nx-section-label">How it runs</div></div>
+          <dl class="nx-kv">
+            <div class="nx-kv-pair"><dt class="nx-kv-key">Installs</dt><dd class="nx-kv-val"><span class="nx-code-inline">${escapeHtml(what)}</span>, ${escapeHtml(KIND_LABEL[inst.kind] || "")}</dd></div>
+            <div class="nx-kv-pair"><dt class="nx-kv-key">Recipe</dt><dd class="nx-kv-val">Read from ${escapeHtml(FROM_LABEL[a.derived_from] || "its repository")}${commit ? ` at <a class="nx-link" href="https://github.com/${escapeHtml(a.repo || "")}/commit/${escapeHtml(commit)}" target="_blank" rel="noopener noreferrer"><span class="nx-code-inline">${escapeHtml(commit.slice(0, 7))}</span></a>` : ""}</dd></div>
+            <div class="nx-kv-pair"><dt class="nx-kv-key">Checked</dt><dd class="nx-kv-val">${v.ok ? `Started confined and answered with ${tools.length} tools${v.at ? `, ${escapeHtml(new Date(v.at).toLocaleDateString())}` : ""}` : escapeHtml(v.reason || "Not verified")}</dd></div>
+            <div class="nx-kv-pair"><dt class="nx-kv-key">Sandbox</dt><dd class="nx-kv-val">None of your files, a read-only system, no extra privileges, 1 GB of memory</dd></div>
+            ${rec ? `<div class="nx-kv-pair"><dt class="nx-kv-key">Installed</dt><dd class="nx-kv-val">${escapeHtml(new Date(rec.installed_at).toLocaleString())}</dd></div>` : ""}
+          </dl>
+        </section>
+      </div>
+    </div>`;
+  const more = document.getElementById("nx-store-more");
+  more?.addEventListener("click", () => {
+    main.querySelector(".nx-store-tools").innerHTML = tools.map(t => `<li class="nx-row"><span class="nx-code-inline">${escapeHtml(t)}</span></li>`).join("");
+    more.remove();
+  });
+  document.getElementById("nx-store-install")?.addEventListener("click", (e) => openStoreInstall(a, e.currentTarget));
+  document.getElementById("nx-store-launch")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true; btn.setAttribute("aria-busy", "true");
+    const r = await fetch(`/api/agents/${encodeURIComponent(a.slug)}/launch`, { method: "POST" }).catch(() => null);
+    const out = r ? await r.json().catch(() => ({})) : {};
+    btn.removeAttribute("aria-busy"); btn.disabled = false;
+    storeMessage(r && r.ok
+      ? { kind: "info", title: "Running, confined", body: `${a.name} is running in its container. It shows in Kernel watch and its calls go through Aegis.` }
+      : { kind: "danger", title: "It didn't start", body: out.detail || out.message || "No answer from ONEXUS." });
+  });
+  const rm = document.getElementById("nx-store-remove");
+  rm?.addEventListener("click", async () => {
+    if (!rm.classList.contains("is-armed")) {
+      rm.classList.add("is-armed");
+      rm.innerHTML = `${icon("trash", 16)}Remove ${escapeHtml(a.name)}?`;
+      setTimeout(() => { rm.classList.remove("is-armed"); rm.innerHTML = `${icon("trash", 16)}Remove`; }, 4000);
+      return;
+    }
+    rm.disabled = true;
+    const r = await fetch(`/api/store/agents/${encodeURIComponent(a.slug)}`, { method: "DELETE" }).catch(() => null);
+    if (r && r.ok) renderStoreAgent(a.slug);
+    else storeMessage({ kind: "danger", title: "Couldn't remove it", body: "ONEXUS didn't confirm the removal. Try again." });
+  });
+}
+
+function storeMessage({ kind, title, body }) {
+  const el = document.getElementById("nx-store-msg");
+  if (!el) return;
+  el.innerHTML = `<div class="nx-alert is-${kind}" ${kind === "danger" ? 'role="alert"' : 'role="status"'}>${icon(kind === "danger" ? "alert-circle" : "check", 16)}<div class="nx-alert-body"><div class="nx-alert-title">${escapeHtml(title)}</div>${escapeHtml(body)}</div></div>`;
+}
+
+// The install dialog: keys, then which hosts it may reach, then live progress. Hosts the
+// agent's own declared keys point at start allowed; hosts found only in its code start off,
+// so nothing is reachable unless the evidence or the person says so.
+function openStoreInstall(a, opener) {
+  const hosts = (a.hosts || {}).proposed || [];
+  const evidence = (a.hosts || {}).evidence || {};
+  const keyBacked = (h) => (evidence[h] || []).some(x => x.startsWith("env "));
+  const wrap = document.createElement("div");
+  wrap.className = "nx-scrim nx-store-overlay";
+  wrap.innerHTML = `<div class="nx-modal" role="dialog" aria-modal="true" aria-labelledby="nx-si-title">
+      <div class="nx-modal-head">
+        <div><h2 class="nx-modal-title" id="nx-si-title">Install ${escapeHtml(a.name)}</h2>
+        <p class="nx-modal-sub">It runs in a container with none of your files. Choose what it can reach.</p></div>
+        <button class="nx-icon-btn" type="button" data-close aria-label="Close">${icon("x", 16)}</button>
+      </div>
+      <form class="nx-si-form" id="nx-si-form"><div class="nx-modal-body">
+        ${(a.env || []).length ? `<div class="nx-section-label">Keys</div>
+          ${a.env.map(e => `<label class="nx-field"><span class="nx-field-label">${escapeHtml(e.name)}${e.required ? "" : " (optional)"}</span>
+            <input class="nx-input nx-input-mono" name="env:${escapeHtml(e.name)}" type="${e.secret ? "password" : "text"}" autocomplete="off" ${e.required ? "required" : ""}>
+            ${e.description ? `<span class="nx-field-hint">${escapeHtml(e.description)}</span>` : ""}</label>`).join("")}
+          <p class="nx-field-hint">Kept in a file only your user can read, given to this agent only, never logged.</p>` : ""}
+        <div class="nx-section-label">Network access</div>
+        ${hosts.length ? `<p class="nx-field-hint">Ticked hosts are ones its own keys point at. Without a host it still starts, but tools that need that host will fail. You can change this later.</p>
+          <ul class="nx-list nx-si-hosts">${hosts.map(h => `<li class="nx-row"><label class="nx-check"><input type="checkbox" name="host" value="${escapeHtml(h)}" ${keyBacked(h) ? "checked" : ""}><span class="nx-code-inline">${escapeHtml(h)}</span></label><span class="nx-row-sub">${escapeHtml((evidence[h] || [])[0] || "")}</span></li>`).join("")}</ul>`
+          : `<p class="nx-field-hint">No hosts found in its code. It will have no network.</p>`}
+        <label class="nx-field"><span class="nx-field-label">Allow another host</span>
+          <input class="nx-input nx-input-mono" name="extra" placeholder="api.example.com" autocomplete="off"></label>
+        <div class="nx-alert is-danger" role="alert" id="nx-si-err" hidden></div>
+        </div>
+        <div class="nx-modal-foot">
+          <button class="nx-btn nx-btn-ghost" type="button" data-close>Cancel</button>
+          <button class="nx-btn nx-btn-primary" type="submit">${icon("download", 16)}Install</button>
+        </div>
+      </form>
+    </div>`;
+  document.body.appendChild(wrap);
+  const modal = wrap.querySelector(".nx-modal");
+  let polling = null;
+  const close = () => { clearInterval(polling); wrap.remove(); document.removeEventListener("keydown", onKey); opener?.focus(); };
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.preventDefault(); close(); return; }
+    if (e.key !== "Tab") return;
+    const f = [...modal.querySelectorAll("button, input, a[href]")].filter(x => !x.disabled && x.offsetParent);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  };
+  document.addEventListener("keydown", onKey);
+  wrap.addEventListener("click", (e) => { if (e.target === wrap || e.target.closest("[data-close]")) close(); });
+  (modal.querySelector("input") || modal.querySelector("button[type=submit]")).focus();
+
+  const form = modal.querySelector("#nx-si-form");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const env = {};
+    for (const [k, val] of fd.entries()) if (k.startsWith("env:") && String(val).trim()) env[k.slice(4)] = String(val).trim();
+    const chosen = fd.getAll("host").map(String);
+    const extra = String(fd.get("extra") || "").trim().toLowerCase();
+    if (extra) chosen.push(extra);
+    const err = modal.querySelector("#nx-si-err");
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.setAttribute("aria-busy", "true");
+    const r = await fetch(`/api/store/agents/${encodeURIComponent(a.slug)}/install`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hosts: chosen, env }),
+    }).catch(() => null);
+    const job = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) {
+      btn.disabled = false; btn.removeAttribute("aria-busy");
+      err.hidden = false;
+      err.innerHTML = `${icon("alert-circle", 16)}<div class="nx-alert-body"><div class="nx-alert-title">Can't install yet</div>${escapeHtml(job.detail || "No answer from ONEXUS.")}</div>`;
+      return;
+    }
+    showProgress(job);
+    polling = setInterval(async () => {
+      const s = await fetch(`/api/store/jobs/${job.id}`).then(x => x.json()).catch(() => null);
+      if (!s) return;
+      showProgress(s);
+      if (s.state !== "running") clearInterval(polling);
+    }, 700);
+  });
+
+  const STEP_LABEL = { get: "Get the image", check: "Start it confined and ask for its tools", save: "Save the install" };
+  function showProgress(job) {
+    const steps = job.steps.map((st, i) => `<li class="nx-step ${st.status === "done" ? "is-done" : st.status === "running" ? "is-active" : st.status === "failed" ? "is-error" : ""}">
+        <span class="nx-step-marker">${st.status === "done" ? icon("check", 12) : st.status === "failed" ? icon("x", 12) : i + 1}</span>
+        <div><div class="nx-step-label">${STEP_LABEL[st.name] || st.name}</div>${st.detail ? `<div class="nx-step-detail">${escapeHtml(st.detail)}</div>` : ""}</div>
+        <span class="nx-step-meta">${st.status === "running" ? "working" : ""}</span></li>`).join("");
+    const done = job.state === "done", failed = job.state === "failed";
+    (modal.querySelector("#nx-si-form") || modal.querySelector(".nx-si-progress")).outerHTML = `<div class="nx-si-progress"><div class="nx-modal-body" aria-live="polite">
+        <ol class="nx-steps">${steps}</ol>
+        ${done ? `<div class="nx-alert is-info" role="status">${icon("check", 16)}<div class="nx-alert-body"><div class="nx-alert-title">Installed</div>It offered ${job.tools.length} tools. Launch it here or from Cortex.</div></div>` : ""}
+        ${failed ? `<div class="nx-alert is-danger" role="alert">${icon("alert-circle", 16)}<div class="nx-alert-body"><div class="nx-alert-title">The install stopped</div>${escapeHtml(job.error)} Nothing was saved.</div></div>` : ""}
+        </div>
+        <div class="nx-modal-foot">
+          ${done ? `<button class="nx-btn nx-btn-primary" type="button" id="nx-si-done">Done</button>`
+            : failed ? `<button class="nx-btn" type="button" data-close>Close</button>`
+            : `<button class="nx-btn nx-btn-ghost" type="button" data-close>Hide, keep installing</button>`}
+        </div>
+      </div>`;
+    modal.querySelector("#nx-si-done")?.addEventListener("click", () => { close(); renderStoreAgent(a.slug); });
+    (modal.querySelector("#nx-si-done") || modal.querySelector("[data-close]"))?.focus();
+  }
+}
+
 // ── Main view: catalog (spatial grid) ─────────────────────────────────────
 async function renderCatalog() {
   const main = document.getElementById("nx-main");
@@ -3085,18 +3403,23 @@ async function renderCatalog() {
     if (runnableOnly) params.set("runnable_only", "true");
     if (category) params.set("category", category);
     const endpoint = search ? `/api/agents/search?q=${encodeURIComponent(search)}&limit=48` : `/api/agents?${params}`;
+    // Which catalog agents the store can install, and which are installed (optional: the
+    // catalog still renders if the store is unavailable).
+    const storeP = fetch("/api/store/agents").then(x => x.ok ? x.json() : { agents: [] }).catch(() => ({ agents: [] }));
     const r = await fetch(endpoint);
     if (!r.ok) throw new Error("catalog fetch failed");
     const body = await r.json();
     const agents = body.agents || [];
     const cats = body.categories || [];
+    const store = new Map(((await storeP).agents || []).map(x => [x.slug, x]));
+    agents.forEach(a => { a._store = store.get(a.slug) || null; });
     main.innerHTML = `
       <div class="nx-main-inner">
         <header class="nx-spatial-header nx-page-head">
           <div class="nx-page-head-text">
-            <div class="nx-eyebrow nx-page-eyebrow">Agent store · ONEXUS catalog</div>
-            <h1 class="nx-page-title">${(body.total || 0).toLocaleString()} agents, graded and runnable</h1>
-            <p class="nx-page-sub">${search ? `${agents.length} matching “${escapeHtml(search)}” across the whole catalog` : `Showing ${agents.length} ${category ? "in " + escapeHtml(category.replace(/-/g, " ")) : "featured"}, ranked by ONEXUS benchmark score`}${runnableOnly && !search ? ". Runnable through an MCP adapter." : ""}</p>
+            <div class="nx-eyebrow nx-page-eyebrow">Agent catalog</div>
+            <h1 class="nx-page-title">${(state.catalogTotal || body.total || 0).toLocaleString()} agents in the catalog</h1>
+            <p class="nx-page-sub">${search ? `${agents.length} matching “${escapeHtml(search)}” across the whole catalog` : `Showing ${agents.length} ${category ? "in " + escapeHtml(category.replace(/-/g, " ")) : "featured"}, ranked by ONEXUS benchmark score`}${runnableOnly && !search ? ", only the ones that declare MCP" : ""}. <a class="nx-link" href="#/store">${store.size} install in one click</a>.</p>
           </div>
         </header>
         <form class="nx-cat-filters nx-toolbar" id="nx-cat-filters" role="search">
@@ -3110,12 +3433,12 @@ async function renderCatalog() {
           </select>
           <label class="nx-cat-toggle nx-check">
             <input type="checkbox" id="nx-cat-runnable" ${runnableOnly?"checked":""}>
-            Runnable only
+            Declares MCP only
           </label>
         </form>
         ${agents.length ? `<div class="nx-spatial">
           ${agents.map(renderCatalogCard).join("")}
-        </div>` : emptyStateHTML({ icon: "search", title: "No agents match", body: search ? `Nothing in the catalog matches “${escapeHtml(search)}”. Try a shorter word or clear the filters.` : "No agents in this category yet. Try another category or turn off Runnable only.", actions: `<a class="nx-btn" href="#/catalog">Clear filters</a>` })}
+        </div>` : emptyStateHTML({ icon: "search", title: "No agents match", body: search ? `Nothing in the catalog matches “${escapeHtml(search)}”. Try a shorter word or clear the filters.` : "No agents in this category yet. Try another category or turn off Declares MCP only.", actions: `<a class="nx-btn" href="#/catalog">Clear filters</a>` })}
       </div>
     `;
     // Wire filter changes
@@ -3190,7 +3513,12 @@ function fmtCount(n) {
 const STAR_GLYPH = icon("star", 12);
 
 function renderCatalogCard(a) {
-  const runnable = a.runnable || a.is_builtin;
+  // Launch only where launching works: built-in agents, store installs and hand-written
+  // adapters. "runnable" in the catalog only means the agent says it speaks MCP.
+  const st = a._store;
+  const launchable = a.is_builtin || (st && st.installed) || (a.adapter_ref || "").startsWith("adapters/");
+  const status = a.is_builtin ? ["is-ok", "Built in"] : st ? (st.installed ? ["is-ok", "Installed"] : ["is-info", "Installs"])
+    : launchable ? ["is-ok", "Adapter"] : a.runnable ? ["", "Declares MCP"] : ["", "Listed"];
   // ONEXUS benchmark pedigree — the grading that turns a catalog into an app store.
   const score = typeof a.composite_score === "number" ? a.composite_score : null;
   const scorePct = score != null ? Math.round(score * 100) : null;
@@ -3203,7 +3531,7 @@ function renderCatalogCard(a) {
         ${rank != null && rank <= 3 ? `<span class="nx-card-rank nx-pill nx-pill-warn" title="Rank ${rank} in ${escapeHtml(a.category || "category")}">#${rank} in category</span>` : ""}
       </div>
       <div class="name">${escapeHtml(a.name || a.slug)}</div>
-      <div class="tagline">${escapeHtml(a.tagline || a.description || "")}</div>
+      <div class="tagline">${escapeHtml(noEmoji(a.tagline || a.description || ""))}</div>
       ${score != null ? `
         <div class="nx-card-bench" title="ONEXUS benchmark score ${score.toFixed(3)}">
           <span class="nx-card-bench-lbl">Benchmark</span>
@@ -3211,12 +3539,13 @@ function renderCatalogCard(a) {
           <span class="nx-card-bench-val">${score.toFixed(2)}</span>
         </div>` : ""}
       <div class="status">
-        <span class="nx-status ${runnable ? "is-ok" : ""}">${runnable ? "Runnable" : "Manifest only"}</span>
+        <span class="nx-status ${status[0]}">${status[1]}</span>
         ${stars ? `<span class="nx-card-stars" title="GitHub stars">${STAR_GLYPH}${stars}</span>` : ""}
         <span class="badge-system">${escapeHtml((a.category || "").replace(/-/g, " "))}</span>
       </div>
       <div class="nx-card-actions">
-        ${runnable ? `<button class="launch-btn nx-btn nx-btn-sm" type="button">${icon("play", 12)}Launch</button>` : ""}
+        ${launchable ? `<button class="launch-btn nx-btn nx-btn-sm" type="button">${icon("play", 12)}Launch</button>`
+          : st ? `<a class="nx-btn nx-btn-sm nx-btn-tinted" href="#/store/${encodeURIComponent(a.slug)}">${icon("download", 12)}Install</a>` : ""}
         <button class="compose-btn nx-btn nx-btn-sm nx-btn-ghost" type="button" title="Add to a Cortex launch">Compose</button>
         <button class="trust-btn nx-btn nx-btn-sm nx-btn-ghost" type="button" title="Open the trust sheet">Trust</button>
         ${a.source_github ? `<a class="src-link nx-icon-btn" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener noreferrer" title="Source on GitHub" aria-label="Source on GitHub">${icon("external-link", 14)}</a>` : ""}
@@ -6438,6 +6767,7 @@ async function route(hash) {
   if (hash.startsWith("#/watch")) { await renderWatch(); return; }
   if (hash.startsWith("#/memory")) { await renderMemory(); return; }
   if (hash === "#/workspaces") { renderWorkspacesGrid(); return; }
+  if (hash.startsWith("#/store")) { renderStore(hash); return; }
   if (hash.startsWith("#/catalog")) { renderCatalog(); return; }
   if (hash === "#/settings") { renderSettings(); return; }
   if (hash.startsWith("#/cortex")) { renderCortexLauncher(hash); return; }
