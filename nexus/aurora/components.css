@@ -56,7 +56,7 @@
   border-color: var(--nx-accent-line);
   color: var(--nx-accent);
 }
-.nx-btn-tinted:hover, .nx-btn[aria-pressed="true"]:hover { background: rgba(var(--nx-accent-rgb), 0.18); border-color: var(--nx-accent); }
+.nx-btn-tinted:hover, .nx-btn[aria-pressed="true"]:hover { background: color-mix(in srgb, var(--nx-accent) 18%, transparent); border-color: var(--nx-accent); }
 
 .nx-btn-ghost { background: transparent; border-color: transparent; color: var(--nx-fg-2); }
 .nx-btn-ghost:hover { background: var(--nx-surface-2); border-color: transparent; color: var(--nx-fg-1); }
@@ -123,7 +123,7 @@
 .nx-input:focus, .nx-select:focus, .nx-textarea:focus,
 .nx-input:focus-visible, .nx-select:focus-visible, .nx-textarea:focus-visible {
   border-color: var(--nx-accent);
-  box-shadow: 0 0 0 3px rgba(var(--nx-accent-rgb), 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-accent) 18%, transparent);
   outline: none;
 }
 .nx-input[aria-invalid="true"] { border-color: var(--nx-danger); }
@@ -427,25 +427,38 @@
 .nx-pc-sensitive  { color: var(--nx-sensitive);  background: rgba(var(--nx-warn-rgb), 0.08);   border-color: rgba(var(--nx-warn-rgb), 0.30); }
 .nx-pc-privileged { color: var(--nx-privileged); background: rgba(var(--nx-danger-rgb), 0.08); border-color: rgba(var(--nx-danger-rgb), 0.30); }
 
-/* ── Avatar ─────────────────────────────────────────────────────────────
- * Agent identity tile. icons.js renders the glyph; this sets the frame. */
-.nx-id-disc {
-  --id-fg: color-mix(in srgb, var(--id-a, #9aa8ff) 78%, white);
-  position: relative; flex: none; display: inline-block;
-}
-.nx-id-tile {
-  position: absolute; inset: var(--id-inset, 0px);
-  display: flex; align-items: center; justify-content: center;
-  border-radius: calc(var(--id-r, 10px) - var(--id-inset, 0px) * 0.6);
+/* ── Agent mark and tint ────────────────────────────────────────────────
+ * An agent mark is one SVG from icons.js (identityDisc / agentDisc): a
+ * faceted tile in the agent's colors with a glyph or monogram. This sets
+ * only its frame. A card or header can be set in the agent's own colors
+ * with .nx-agent-tinted or .nx-agent-hero (--mark-a light, --mark-b deep,
+ * set inline by agentTintStyle in app.js); text stays on the dark side. */
+.nx-id-disc, .nx-mark { position: relative; flex: none; display: inline-flex; }
+.nx-mark .nx-mark-svg { display: block; overflow: visible; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.35)); }
+.nx-agent-tinted {
+  position: relative;
+  isolation: isolate;
   background:
-    linear-gradient(160deg, color-mix(in srgb, var(--id-a, #9aa8ff) 22%, transparent), transparent 70%),
-    color-mix(in srgb, var(--id-b, #4d5bcf) 32%, var(--nx-surface-2));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--id-a, #9aa8ff) 30%, transparent);
+    radial-gradient(70% 90% at 0% 0%, color-mix(in srgb, var(--mark-a, var(--nx-accent)) 13%, transparent) 0%, transparent 60%),
+    var(--nx-surface-1);
+  border-color: color-mix(in srgb, var(--mark-a, var(--nx-accent)) 18%, var(--nx-line-2));
+  transition: border-color var(--nx-dur-2) var(--nx-ease), transform var(--nx-dur-2) var(--nx-ease), box-shadow var(--nx-dur-2) var(--nx-ease);
 }
-.nx-id-tile svg[stroke="#fff"], .nx-id-tile svg [stroke="#fff"] { stroke: var(--id-fg); }
-.nx-id-tile svg[fill="#fff"], .nx-id-tile svg [fill="#fff"] { fill: var(--id-fg); }
-.nx-id-tile svg { display: block; }
-.nx-id-ring { position: absolute; inset: 0; overflow: visible; }
+.nx-agent-tinted:hover {
+  border-color: color-mix(in srgb, var(--mark-a, var(--nx-accent)) 50%, transparent);
+  box-shadow: 0 16px 36px -20px color-mix(in srgb, var(--mark-a, var(--nx-accent)) 60%, transparent);
+  transform: translateY(-1px);
+}
+.nx-agent-hero {
+  padding: var(--nx-space-5);
+  border-radius: var(--nx-radius-lg);
+  border: 1px solid color-mix(in srgb, var(--mark-a, var(--nx-accent)) 26%, var(--nx-line-2));
+  background:
+    radial-gradient(60% 140% at 0% 0%, color-mix(in srgb, var(--mark-a, var(--nx-accent)) 22%, transparent) 0%, transparent 65%),
+    linear-gradient(120deg, color-mix(in oklab, var(--mark-b, var(--nx-accent-strong)) 32%, var(--nx-gray-100)), var(--nx-surface-1) 70%);
+}
+
+/* ── Avatar ───────────────────────────────────────────────────────────── */
 .nx-avatar {
   display: inline-flex; align-items: center; justify-content: center;
   flex: none;

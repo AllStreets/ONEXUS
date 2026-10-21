@@ -12,6 +12,17 @@
  *   scene.css       the kernel scene canvas frame
  *   app.css         shell layout and per-view layout; composes components
  */
+
+/* Mood colors are registered so a mood change can crossfade them (an
+ * unregistered custom property can only jump). Defaults are calm focus. */
+@property --nx-accent        { syntax: "<color>"; inherits: true; initial-value: #4ed5d5; }
+@property --nx-accent-strong { syntax: "<color>"; inherits: true; initial-value: #00bcbd; }
+@property --nx-fg-on-accent  { syntax: "<color>"; inherits: true; initial-value: #001616; }
+@property --nx-mood-1        { syntax: "<color>"; inherits: true; initial-value: #0d2d30; }
+@property --nx-mood-2        { syntax: "<color>"; inherits: true; initial-value: #0c2a49; }
+@property --nx-mood-3        { syntax: "<color>"; inherits: true; initial-value: #0f2e22; }
+@property --nx-mood-tint     { syntax: "<color>"; inherits: true; initial-value: #4ed5d5; }
+
 :root {
   color-scheme: dark;
 
@@ -33,11 +44,12 @@
   --nx-scrim:           rgba(4, 5, 7, 0.72);
 
   /* Text. Contrast is measured against surface 3, the lightest surface text
-   * sits on. fg-1 14:1, fg-2 8.5:1, fg-3 5.3:1. fg-4 is 3:1 and is reserved
-   * for disabled text and text 18px or larger; never use it for small copy. */
+   * sits on: fg-1 14:1, fg-2 8.5:1, fg-3 6:1. On the open canvas, at the
+   * brightest point of any mood's field, fg-3 still clears 4.8:1. fg-4 is
+   * 3:1 and is reserved for disabled text and text 18px or larger. */
   --nx-fg-1: #eceef2;
   --nx-fg-2: #b6bcc6;
-  --nx-fg-3: #8d949f;
+  --nx-fg-3: #9ba2ad;
   --nx-fg-4: #646b76;
   --nx-fg-on-accent: #061214;
 
@@ -52,10 +64,14 @@
    * only ever read --nx-accent and its derived mixes below. */
   --nx-accent:        #4ed5d5;
   --nx-accent-strong: #2fc0c2;
-  --nx-accent-rgb:    78, 213, 213;
-  --nx-accent-soft:   rgba(var(--nx-accent-rgb), 0.12);  /* tinted fill     */
-  --nx-accent-line:   rgba(var(--nx-accent-rgb), 0.40);  /* tinted border   */
-  --nx-accent-glow:   rgba(var(--nx-accent-rgb), 0.45);  /* live, focus     */
+  --nx-accent-rgb:    78, 213, 213;   /* legacy; prefer color-mix on --nx-accent */
+  --nx-mood-1: #0d2d30;
+  --nx-mood-2: #0c2a49;
+  --nx-mood-3: #0f2e22;
+  --nx-mood-tint: #4ed5d5;
+  --nx-accent-soft:   color-mix(in srgb, var(--nx-accent) 12%, transparent);  /* tinted fill     */
+  --nx-accent-line:   color-mix(in srgb, var(--nx-accent) 40%, transparent);  /* tinted border   */
+  --nx-accent-glow:   color-mix(in srgb, var(--nx-accent) 45%, transparent);  /* live, focus     */
 
   /* ── Semantic status. Distinct from the accent on purpose: status always
    * carries a label too, color is never the only signal. */
@@ -167,7 +183,7 @@
   --nx-shadow-3: 0 28px 72px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--nx-line-2);
 
   /* ── Glow. Only for focus, live and active states. */
-  --nx-ring:      0 0 0 1px var(--nx-accent), 0 0 0 4px rgba(var(--nx-accent-rgb), 0.22);
+  --nx-ring:      0 0 0 1px var(--nx-accent), 0 0 0 4px color-mix(in srgb, var(--nx-accent) 22%, transparent);
   --nx-glow-live: 0 0 8px var(--nx-accent-glow);
   --nx-glow-soft: 0 0 24px -6px var(--nx-accent-glow);
 
@@ -223,7 +239,7 @@ body {
   font-feature-settings: "cv11", "ss01";
 }
 button, input, select, textarea { font: inherit; color: inherit; }
-::selection { background: rgba(var(--nx-accent-rgb), 0.28); color: var(--nx-fg-1); }
+::selection { background: color-mix(in srgb, var(--nx-accent) 28%, transparent); color: var(--nx-fg-1); }
 
 /* Keyboard focus is app-wide and must survive every component skin. A
  * component may move the ring (offset) but no rule may remove it. */

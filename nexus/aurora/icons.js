@@ -1,7 +1,7 @@
 /* ONEXUS Aurora: icon library
  * Every glyph is hand-drawn SVG. No emoji. UI icons follow the Lucide line
  * style (24px grid, 1.75 stroke, round caps) so they read as one family.
- * Agent glyphs are bespoke and sit inside an identity tile.
+ * Agents are drawn as marks: see "Agent marks" below.
  */
 
 /* The ONEXUS mark: an orbit with a core and one node on the ring. It takes
@@ -13,24 +13,156 @@ export const KERNEL_MARK = (size = 24) => `
   <circle cx="17.83" cy="6.17" r="1.9" fill="currentColor" stroke="var(--nx-surface-canvas, #0b0c0f)" stroke-width="1.4"/>
 </svg>`;
 
-/* Identity tile: a rounded square tinted with the agent's own color, the
- * glyph centered, and an optional trust ring drawn as an arc beneath it. */
-export function identityDisc({ size = 44, gradient = ["#9aa8ff", "#4d5bcf"], trust = null, glyph = "" }) {
-  const r = Math.round(size * 0.28);
-  const ring = trust == null ? "" : `
-    <svg class="nx-id-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
-      <rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${r}" pathLength="100"
-            stroke="rgba(255,255,255,0.10)" stroke-width="1.5" fill="none"/>
-      <rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${r}" pathLength="100"
-            stroke="${gradient[0]}" stroke-width="1.5" fill="none" stroke-linecap="round"
-            stroke-dasharray="${Math.max(0, Math.min(1, trust)) * 100} 100"/>
-    </svg>`;
-  const inset = trust == null ? 0 : 3;
-  return `
-    <div class="nx-id-disc" style="width:${size}px;height:${size}px;--id-a:${gradient[0]};--id-b:${gradient[1]};--id-r:${r}px;--id-inset:${inset}px">
-      ${ring}
-      <div class="nx-id-tile">${glyph}</div>
-    </div>`;
+/* ── Agent marks ─────────────────────────────────────────────────────────
+ * Every agent has a mark: a faceted tile in its own two-color gradient,
+ * with a top light, a fine inner edge and a figure on top.
+ *   - Built-in agents sit on the hex "core" tile with a hand-drawn glyph.
+ *   - Catalog agents get a mark generated from their slug: a tile shape,
+ *     a color pair, a background pattern and a monogram, all chosen by a
+ *     hash, so the same agent always looks the same.
+ * Marks are one crisp SVG on a 48-unit grid and are legible from 16px up.
+ */
+
+// Rounded polygon path from points [[x, y], ...] with corner radius r.
+function roundedPoly(pts, r) {
+  const n = pts.length;
+  let d = "";
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], prev = pts[(i - 1 + n) % n], next = pts[(i + 1) % n];
+    const v1 = [prev[0] - p[0], prev[1] - p[1]], v2 = [next[0] - p[0], next[1] - p[1]];
+    const l1 = Math.hypot(...v1), l2 = Math.hypot(...v2);
+    const rr = Math.min(r, l1 / 2.2, l2 / 2.2);
+    const a = [p[0] + (v1[0] / l1) * rr, p[1] + (v1[1] / l1) * rr];
+    const b = [p[0] + (v2[0] / l2) * rr, p[1] + (v2[1] / l2) * rr];
+    d += `${i === 0 ? "M" : "L"}${a[0].toFixed(2)} ${a[1].toFixed(2)}Q${p[0]} ${p[1]} ${b[0].toFixed(2)} ${b[1].toFixed(2)}`;
+  }
+  return d + "Z";
+}
+
+const MARK_SHAPES = {
+  // built-in agents: a pointy-top hexagon
+  core: roundedPoly([[24, 2], [43, 13], [43, 35], [24, 46], [5, 35], [5, 13]], 5.5),
+  squircle: "M24 2.5C38.5 2.5 45.5 9.5 45.5 24S38.5 45.5 24 45.5 2.5 38.5 2.5 24 9.5 2.5 24 2.5Z",
+  chamfer: roundedPoly([[14, 3], [45, 3], [45, 34], [34, 45], [3, 45], [3, 14]], 4),
+  shield: roundedPoly([[4, 4], [44, 4], [44, 28], [24, 46], [4, 28]], 5),
+  octagon: roundedPoly([[15, 3], [33, 3], [45, 15], [45, 33], [33, 45], [15, 45], [3, 33], [3, 15]], 3.5),
+  tab: roundedPoly([[3, 3], [33, 3], [45, 15], [45, 45], [3, 45]], 6),
+  diamond: roundedPoly([[24, 1.5], [46.5, 24], [24, 46.5], [1.5, 24]], 7),
+};
+const CATALOG_SHAPES = ["squircle", "chamfer", "shield", "octagon", "tab", "diamond"];
+
+// Curated color pairs, light then deep. Some are one hue, some cross two.
+const MARK_PALETTE = [
+  ["#5eead4", "#0f5257"], ["#7dd3fc", "#123a6b"], ["#a5b4fc", "#2b2f7a"],
+  ["#c4b5fd", "#3d2470"], ["#f0abfc", "#5b1d5f"], ["#fda4af", "#6b1d33"],
+  ["#fdba74", "#6e2d12"], ["#fcd34d", "#6b4a0c"], ["#bef264", "#335214"],
+  ["#86efac", "#14532d"], ["#67e8f9", "#164e63"], ["#f9a8d4", "#6d1a46"],
+  ["#5eead4", "#3b1d8f"], ["#fdba74", "#831843"], ["#a3e635", "#0e4f5c"],
+  ["#93c5fd", "#7c1d6f"], ["#fde68a", "#7c2d12"], ["#d4d4d8", "#33343c"],
+];
+
+// Background patterns, clipped to the tile, drawn in white at low opacity.
+const MARK_PATTERNS = {
+  rings:    `<path d="M48 48m-40 0a40 40 0 0 1 40-40M48 48m-30 0a30 30 0 0 1 30-30M48 48m-20 0a20 20 0 0 1 20-20" fill="none" stroke="#fff" stroke-width="2"/>`,
+  stripes:  `<path d="M-6 30 30-6M-6 44 44-6M6 54 54 6M20 54 54 20" stroke="#fff" stroke-width="3"/>`,
+  grid:     `<path d="M12 0v48M24 0v48M36 0v48M0 12h48M0 24h48M0 36h48" stroke="#fff" stroke-width="1"/>`,
+  chevrons: `<path d="M0 40 12 30 24 40 36 30 48 40M0 50 12 40 24 50 36 40 48 50" fill="none" stroke="#fff" stroke-width="2.4"/>`,
+  facets:   `<path d="M0 0h48L0 48Z" fill="#fff" opacity="0.5"/><path d="M48 0v48L24 24Z" fill="#fff" opacity="0.25"/>`,
+  waves:    `<path d="M0 34c8-6 16-6 24 0s16 6 24 0M0 42c8-6 16-6 24 0s16 6 24 0" fill="none" stroke="#fff" stroke-width="2.2"/>`,
+  orbit:    `<ellipse cx="24" cy="24" rx="30" ry="11" fill="none" stroke="#fff" stroke-width="1.8" transform="rotate(-28 24 24)"/><ellipse cx="24" cy="24" rx="30" ry="11" fill="none" stroke="#fff" stroke-width="1.2" transform="rotate(32 24 24)"/>`,
+  bars:     `<path d="M10 48V30M18 48V20M26 48V34M34 48V14M42 48V26" stroke="#fff" stroke-width="3.2"/>`,
+};
+const PATTERN_KEYS = Object.keys(MARK_PATTERNS);
+
+function hashSlug(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+const MONO_SKIP = new Set(["mcp", "ai", "the", "server", "agent", "agents", "app", "js", "py", "sdk", "api", "cli"]);
+function monogram(slug, two) {
+  const words = String(slug || "?").replace(/([a-z])([A-Z])/g, "$1 $2").split(/[\s_.\-/]+/).filter(Boolean);
+  const kept = words.filter(w => !MONO_SKIP.has(w.toLowerCase()));
+  const use = kept.length ? kept : words;
+  if (!use.length) return "?";
+  if (two && use.length > 1) return (use[0][0] + use[1][0]).toUpperCase();
+  return use[0][0].toUpperCase();
+}
+
+/* The look of a catalog agent's mark, derived from its slug alone. */
+export function markSpec(slug) {
+  const h = hashSlug(String(slug || ""));
+  return {
+    shape: CATALOG_SHAPES[h % CATALOG_SHAPES.length],
+    colors: MARK_PALETTE[(h >>> 3) % MARK_PALETTE.length],
+    pattern: PATTERN_KEYS[(h >>> 8) % PATTERN_KEYS.length],
+    flip: ((h >>> 13) & 1) === 1,
+  };
+}
+
+let _markSeq = 0;
+/* Build one mark as an SVG string. `figure` is inner SVG markup drawn on the
+ * 48-unit grid (a glyph or a monogram). `xmlns` makes it usable as an image. */
+function markSVG({ size, shape, colors, pattern = null, flip = false, figure = "", trust = null, xmlns = false }) {
+  const id = `nxm${++_markSeq}`;
+  const path = MARK_SHAPES[shape] || MARK_SHAPES.squircle;
+  const [a, b] = colors;
+  const pat = pattern ? `<g clip-path="url(#${id}c)" opacity="0.16"${flip ? ' transform="matrix(-1 0 0 1 48 0)"' : ""}>${MARK_PATTERNS[pattern]}</g>` : "";
+  const t = trust == null ? "" : (() => {
+    const v = Math.max(0, Math.min(1, trust));
+    return `<rect x="13" y="38.5" width="22" height="2.6" rx="1.3" fill="#000" opacity="0.35"/>
+      <rect x="13" y="38.5" width="${(22 * v).toFixed(1)}" height="2.6" rx="1.3" fill="#fff" opacity="0.92"/>`;
+  })();
+  return `<svg ${xmlns ? 'xmlns="http://www.w3.org/2000/svg" ' : ""}class="nx-mark-svg" width="${size}" height="${size}" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/>
+      </linearGradient>
+      <linearGradient id="${id}h" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity="0.34"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>
+      <radialGradient id="${id}s" cx="0.5" cy="0.55" r="0.5">
+        <stop offset="0" stop-color="#000" stop-opacity="0.26"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
+      </radialGradient>
+      <clipPath id="${id}c"><path d="${path}"/></clipPath>
+    </defs>
+    <path d="${path}" fill="url(#${id}g)"/>
+    ${pat}
+    <path d="${path}" fill="url(#${id}s)"/>
+    <path d="${path}" fill="url(#${id}h)"/>
+    <path d="${path}" fill="none" stroke="#fff" stroke-opacity="0.28" stroke-width="1.2"/>
+    ${figure}
+    ${t}
+  </svg>`;
+}
+
+function monogramFigure(slug, size) {
+  const two = size >= 28;
+  const text = monogram(slug, two);
+  const fs = text.length > 1 ? 17 : 21;
+  return `<text x="24" y="24" dy="0.36em" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif" font-size="${fs}" font-weight="700" letter-spacing="-0.02em" fill="#fff" fill-opacity="0.96">${text}</text>`;
+}
+
+function glyphFigure(glyph, size = 48) {
+  // place a 24-unit glyph in the centre of the 48 grid; small marks get a
+  // larger glyph so it still reads at 16 to 24px
+  const g = size <= 24 ? 28 : 22, o = (48 - g) / 2;
+  return glyph.trim().replace(/^<svg width="[\d.]+" height="[\d.]+"/, `<svg x="${o}" y="${o}" width="${g}" height="${g}" overflow="visible"`);
+}
+
+/* The identity mark for any agent, wrapped for layout. Kept under its old
+ * name so existing call sites work. `gradient` sets the color pair; `glyph`
+ * is a built-in glyph's SVG; `slug` drives a generated mark when no glyph. */
+export function identityDisc({ size = 44, gradient = null, trust = null, glyph = "", slug = "", shape = null } = {}) {
+  let svg;
+  if (glyph) {
+    svg = markSVG({ size, shape: shape || "core", colors: gradient || ["#9aa8ff", "#4d5bcf"], figure: glyphFigure(glyph, size), trust });
+  } else {
+    const spec = markSpec(slug);
+    svg = markSVG({ size, shape: shape || spec.shape, colors: gradient || spec.colors, pattern: spec.pattern, flip: spec.flip, figure: monogramFigure(slug, size), trust });
+  }
+  return `<span class="nx-id-disc nx-mark" style="width:${size}px;height:${size}px">${svg}</span>`;
 }
 
 /* Lucide-style line icons for the interface. Usage: icon("search", 16). */
@@ -122,152 +254,135 @@ export function icon(name, size = 16, cls = "") {
 }
 export const ICON_NAMES = Object.keys(P);
 
-/* — 9 built-in agent glyphs — all stroke="#fff", small viewbox — */
+/* — built-in agent glyphs — 24px grid, white line art, drawn to sit inside
+ * an agent mark. Each one is its own idea; none is a circle with a dot. — */
 export const GLYPHS = {
-  /* council — four compass points + centre */
+  /* council — two brackets weighing a bar: deliberation, balance */
   council: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="#fff">
-      <circle cx="11" cy="3"  r="1.6"/>
-      <circle cx="19" cy="11" r="1.6"/>
-      <circle cx="11" cy="19" r="1.6"/>
-      <circle cx="3"  cy="11" r="1.6"/>
-      <circle cx="11" cy="11" r="1.3" opacity="0.8"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 5H5.5v14H8"/>
+      <path d="M16 5h2.5v14H16"/>
+      <path d="M9.5 10h5M9.5 14h5"/>
     </svg>`,
 
-  /* specter — warning triangle with line + dot */
+  /* specter — a crosshair set in a diamond: red-team, stress test */
   specter: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none"
-         stroke="#fff" stroke-width="1.5" stroke-linejoin="round">
-      <path d="M11 4l6.5 12h-13z"/>
-      <path d="M11 11v3" stroke-linecap="round"/>
-      <circle cx="11" cy="16.2" r="0.7" fill="#fff" stroke="none"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.5 20.5 12 12 20.5 3.5 12Z"/>
+      <path d="M12 8.5v7M8.5 12h7"/>
     </svg>`,
 
-  /* autonomic — concentric rings (autopilot) */
+  /* autonomic — an endless loop: routines that run themselves */
   autonomic: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4">
-      <circle cx="11" cy="11" r="2"/>
-      <path d="M5 11a6 6 0 0 1 12 0"/>
-      <path d="M2 11a9 9 0 0 1 18 0" opacity="0.55"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7.5 8.5C4.5 8.5 3 10.4 3 12s1.5 3.5 4.5 3.5c3.5 0 5.5-7 9-7 3 0 4.5 1.9 4.5 3.5s-1.5 3.5-4.5 3.5c-3.5 0-5.5-7-9-7Z"/>
     </svg>`,
 
-  /* oracle — eye-and-pupil */
+  /* oracle — a lens with a diamond iris: the first, careful read */
   oracle: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.5">
-      <path d="M2 11c2.5-4 6-6 9-6s6.5 2 9 6c-2.5 4-6 6-9 6s-6.5-2-9-6z"/>
-      <circle cx="11" cy="11" r="2.3" fill="#fff" stroke="none"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.5 12C5 7.5 8.5 5.5 12 5.5S19 7.5 21.5 12C19 16.5 15.5 18.5 12 18.5S5 16.5 2.5 12Z"/>
+      <path d="M12 9.2 14.8 12 12 14.8 9.2 12Z" fill="#fff" stroke="none"/>
     </svg>`,
 
-  /* wraith — wisp with three trailing dots */
+  /* wraith — lines that shorten and fade: controlled forgetting */
   wraith: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
-      <path d="M4 8c0-3 3-4 7-4s7 2 7 5c0 2-2 4-4 4-1.5 0-2.5-1-4-1s-2.5 1-3 1z"/>
-      <circle cx="6"  cy="16" r="0.9" fill="#fff" stroke="none" opacity="0.85"/>
-      <circle cx="10" cy="18" r="0.8" fill="#fff" stroke="none" opacity="0.55"/>
-      <circle cx="14" cy="17" r="0.7" fill="#fff" stroke="none" opacity="0.30"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round">
+      <path d="M4.5 6.5h15"/>
+      <path d="M4.5 12h10" opacity="0.7"/>
+      <path d="M4.5 17.5h5" opacity="0.4"/>
     </svg>`,
 
-  /* legacy — open book / parchment */
+  /* legacy — a cut crystal: memory made durable */
   legacy: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round">
-      <path d="M4 5l7 1 7-1v12l-7 1-7-1z"/>
-      <path d="M11 6v12" opacity="0.5"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 4h10l4 5-9 11L3 9Z"/>
+      <path d="M3 9h18M9.5 4 8 9l4 11 4-11-1.5-5" opacity="0.65"/>
     </svg>`,
 
-  /* consciousness — spiral */
+  /* consciousness — one square turning inside another: inner state */
   consciousness: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
-      <path d="M11 11
-               m-1 0 a1 1 0 1 1 2 0
-               a3 3 0 1 1 -4 0
-               a5 5 0 1 1 7 0
-               a7 7 0 1 1 -10 0"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="3.5"/>
+      <path d="M12 7.2 16.8 12 12 16.8 7.2 12Z" opacity="0.8"/>
     </svg>`,
 
-  /* sentry — minimalist heartbeat */
+  /* sentry — a pulse inside a shield: watching over long tasks */
   sentry: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 11h4l2-4 3 8 2-6 2 2h5"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3 19 6v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6Z"/>
+      <path d="M7.5 12.5h2.2l1.3-2.5 2 4.5 1.3-2h2.2"/>
     </svg>`,
 
-  /* echo — nested arcs */
+  /* echo — two chevrons mirrored across an axis: restating you */
   echo: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
-      <path d="M4 15a7 7 0 0 1 14 0"/>
-      <path d="M7 15a4 4 0 0 1 8 0" opacity="0.7"/>
-      <circle cx="11" cy="15" r="0.9" fill="#fff"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.5 6.5 4 12l5.5 5.5"/>
+      <path d="M14.5 6.5 20 12l-5.5 5.5"/>
+      <path d="M12 4.5v15" stroke-dasharray="1.6 2.6" opacity="0.7"/>
     </svg>`,
 
-  /* agents (dispatcher) — three small docked tiles */
+  /* agents (dispatcher) — three docked tiles and an open slot */
   agents: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round">
-      <rect x="3" y="3" width="6" height="6" rx="1.4"/>
-      <rect x="13" y="3" width="6" height="6" rx="1.4"/>
-      <rect x="3" y="13" width="6" height="6" rx="1.4"/>
-      <rect x="13" y="13" width="6" height="6" rx="1.4" opacity="0.5" stroke-dasharray="2 2"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/>
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/>
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/>
+      <path d="M16.75 14v5.5M14 16.75h5.5"/>
     </svg>`,
 
-  /* sigil — concentric radar arcs with sweep contact */
+  /* sigil — a radar quadrant with its sweep and one contact */
   sigil: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
-      <path d="M4 13a7 7 0 0 1 14 0"/>
-      <path d="M7 13a4 4 0 0 1 8 0" opacity="0.7"/>
-      <path d="M11 13v5" opacity="0.5"/>
-      <circle cx="11" cy="13" r="1.1" fill="#fff" stroke="none"/>
-      <circle cx="16.4" cy="7.4" r="0.9" fill="#fff" stroke="none" opacity="0.85"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20A16 16 0 0 1 20 4"/>
+      <path d="M4 20a9.5 9.5 0 0 1 9.5-9.5" opacity="0.7"/>
+      <path d="M4 20 15 7"/>
+      <path d="M17 9.2l1.6 1.6-1.6 1.6-1.6-1.6Z" fill="#fff" stroke="none"/>
     </svg>`,
 
-  /* atlas — meridian globe (world model) */
+  /* atlas — an isometric cube: a world model with structure */
   atlas: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4">
-      <circle cx="11" cy="11" r="7"/>
-      <ellipse cx="11" cy="11" rx="3" ry="7" opacity="0.7"/>
-      <path d="M4 11h14" opacity="0.7"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3 20 7.5v9L12 21l-8-4.5v-9Z"/>
+      <path d="M4 7.5 12 12l8-4.5M12 12v9" opacity="0.75"/>
     </svg>`,
 
-  /* prism — refracting triangular prism splitting a beam (cross-domain synthesis) */
+  /* prism — a prism splitting one beam into three: synthesis */
   prism: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M11 4 4 16h14L11 4Z"/>
-      <path d="M2 11h4" opacity="0.8"/>
-      <path d="M14 11h6" opacity="0.85"/>
-      <path d="M14 13.5h6" opacity="0.55"/>
-      <path d="M14 8.5h6" opacity="0.55"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4 19 18H5Z"/>
+      <path d="M2 12.5h6.5" opacity="0.85"/>
+      <path d="M15.5 11 22 8.5M15.5 12.5H22M15.5 14l6.5 2.5" opacity="0.7"/>
     </svg>`,
 
-  /* chronos — clock face with a forking branch (counterfactual timeline) */
+  /* chronos — a timeline that forks: the counterfactual branch */
   chronos: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="9" cy="9" r="6"/>
-      <path d="M9 5.5V9l2.4 1.6"/>
-      <path d="M14 13l3 3" opacity="0.85"/>
-      <path d="M17 16l3-1.5M17 16l-1.5 3" opacity="0.7"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12h7"/>
+      <path d="M10 12l4.5-5.5H21M10 12l4.5 5.5H21" />
+      <path d="M5.5 10v4" opacity="0.6"/>
     </svg>`,
 
-  /* serendipity — scattered constellation + one off-axis bright node (anti-optimization) */
+  /* serendipity — a large spark and a small one, off axis */
   serendipity: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
-      <circle cx="6" cy="14" r="0.9" fill="#fff" stroke="none" opacity="0.5"/>
-      <circle cx="11" cy="9" r="0.9" fill="#fff" stroke="none" opacity="0.5"/>
-      <circle cx="16" cy="13" r="0.9" fill="#fff" stroke="none" opacity="0.5"/>
-      <path d="M6 14 11 9 16 13" opacity="0.45"/>
-      <path d="M15 4l0.9 2 2 0.9-2 0.9L15 10l-0.9-2-2-0.9 2-0.9z" fill="#fff" stroke="none"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7Z"/>
+      <path d="M17.5 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9Z" fill="#fff" stroke="none"/>
     </svg>`,
 
-  /* herald — pennant on a staff (messenger / negotiation) */
+  /* herald — a pennant on a staff: the messenger */
   herald: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 3v16"/>
-      <path d="M6 4h10l-2.4 3L16 10H6z"/>
-      <circle cx="6" cy="3" r="0.9" fill="#fff" stroke="none"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 21V3.5"/>
+      <path d="M6 4.5h12l-3.2 4.2L18 13H6"/>
     </svg>`,
 
-  /* federation — two linked nodes (peer-to-peer sync) */
+  /* federation — two hex nodes, linked: peer-to-peer sync */
   federation: (s = 20) => `
-    <svg width="${s}" height="${s}" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round">
-      <circle cx="6" cy="8" r="2.4"/>
-      <circle cx="16" cy="14" r="2.4"/>
-      <path d="M8 9.6 14 12.4" opacity="0.7"/>
+    <svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3.5l4 2.3v4.6L8 12.7 4 10.4V5.8Z"/>
+      <path d="M16 11.3l4 2.3v4.6l-4 2.3-4-2.3v-4.6Z"/>
+      <path d="M11 11l2 1.5" opacity="0.8"/>
     </svg>`,
 };
 
@@ -302,11 +417,27 @@ export const UI = {
   command: (s = 14) => icon("command", s),
 };
 
-/* helper: build an agent identity card */
+/* The mark for an agent by slug: built-ins get their glyph on the core
+ * tile, everything else a generated mark. */
 export function agentDisc(slug, { trust = null, size = 44 } = {}) {
-  const gradient = GRADIENTS[slug] || ["#aaa", "#666"];
-  const glyph = (GLYPHS[slug] || GLYPHS.agents)(Math.round(size * 0.5));
-  return identityDisc({ size, gradient, trust, glyph });
+  if (GLYPHS[slug]) {
+    return identityDisc({ size, gradient: GRADIENTS[slug] || ["#9aa8ff", "#4d5bcf"], trust, glyph: GLYPHS[slug](22) });
+  }
+  return identityDisc({ size, trust, slug });
+}
+
+/* An agent's color pair, light then deep, for tinting the surfaces around it. */
+export function agentColors(slug) {
+  return GLYPHS[slug] ? (GRADIENTS[slug] || ["#9aa8ff", "#4d5bcf"]) : markSpec(slug).colors;
+}
+
+/* A standalone mark as a data URL, for canvas drawing (the kernel scene). */
+export function agentMarkDataURL(slug, size = 64) {
+  const isBuiltin = !!GLYPHS[slug];
+  const svg = isBuiltin
+    ? markSVG({ size, shape: "core", colors: GRADIENTS[slug] || ["#9aa8ff", "#4d5bcf"], figure: glyphFigure(GLYPHS[slug](22), size), xmlns: true })
+    : (() => { const s = markSpec(slug); return markSVG({ size, shape: s.shape, colors: s.colors, pattern: s.pattern, flip: s.flip, figure: monogramFigure(slug, size), xmlns: true }); })();
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
 
 /* Capability sheet for the 10 built-in agents. Each entry lists what the

@@ -1,117 +1,179 @@
 /* ONEXUS Aurora: moods
  *
  * Aegis reads the kernel (load, memory activity, trust events, time of day)
- * and picks one of eight moods. A mood re-points exactly one thing: the
- * accent family in tokens.css. Every component that reads --nx-accent
- * (focus rings, the active workspace, primary buttons, live dots, the
- * composer edge) recolors together, and nothing else moves.
+ * and picks one of eight moods. The mood sets the whole color atmosphere:
  *
- * All eight accents sit at the same perceived lightness (OKLCH L 0.74 to
- * 0.82, C 0.11 to 0.15) so no mood is louder than another, and each clears
- * 6.5:1 against the lightest surface.
+ *   --nx-accent        the interactive accent (focus, primary, live, active)
+ *   --nx-mood-1..3     three field colors: the ambient light behind content
+ *   --nx-mood-tint     the hue mixed into surfaces, edges and the chrome
  *
- * --nx-mood-* names are kept for the scene and older markup; they alias
- * the accent so there is still a single value per mood.
+ * Changing mood crossfades every one of these (they are registered with
+ * @property in tokens.css, so the browser can interpolate them). Under
+ * prefers-reduced-motion the global rule collapses the transition and the
+ * change snaps.
+ *
+ * Contrast: the field colors were tuned so that the brightest point of the
+ * field, plus the accent horizon, keeps --nx-fg-3 at 4.8:1 or better and
+ * --nx-fg-2 at 6.5:1 or better in every mood (see the design doc). Every
+ * accent clears 6.5:1 on the lightest surface.
+ *
+ * --nx-mood-* legacy names are kept for the scene and older markup.
  */
 
 :root,
 .nx-mood {
-  /* Derived accent tokens are re-declared here, on the element that carries
-   * the mood class, so they resolve against that mood's --nx-accent-rgb
-   * instead of inheriting the :root value. */
-  --nx-accent-soft: rgba(var(--nx-accent-rgb), 0.12);
-  --nx-accent-line: rgba(var(--nx-accent-rgb), 0.40);
-  --nx-accent-glow: rgba(var(--nx-accent-rgb), 0.45);
-  --nx-ring:      0 0 0 1px var(--nx-accent), 0 0 0 4px rgba(var(--nx-accent-rgb), 0.22);
+  /* Derived tokens are re-declared on the element that carries the mood
+   * class, so they resolve against that mood's colors (and animate with
+   * them) instead of inheriting the :root values. */
+  --nx-accent-soft: color-mix(in srgb, var(--nx-accent) 12%, transparent);
+  --nx-accent-line: color-mix(in srgb, var(--nx-accent) 40%, transparent);
+  --nx-accent-glow: color-mix(in srgb, var(--nx-accent) 45%, transparent);
+  --nx-ring:      0 0 0 1px var(--nx-accent), 0 0 0 4px color-mix(in srgb, var(--nx-accent) 22%, transparent);
   --nx-glow-live: 0 0 8px var(--nx-accent-glow);
   --nx-glow-soft: 0 0 24px -6px var(--nx-accent-glow);
+
+  /* Mood-tinted surfaces and edges. The tint is small (3 to 8 percent),
+   * so lightness, and with it text contrast, barely moves. */
+  --nx-surface-sunken:  color-mix(in oklab, var(--nx-mood-tint) 3%, var(--nx-gray-0));
+  --nx-surface-canvas:  color-mix(in oklab, var(--nx-mood-tint) 2%, var(--nx-gray-50));
+  --nx-surface-1:       color-mix(in oklab, var(--nx-mood-tint) 5%, var(--nx-gray-100));
+  --nx-surface-2:       color-mix(in oklab, var(--nx-mood-tint) 6%, var(--nx-gray-200));
+  --nx-surface-3:       color-mix(in oklab, var(--nx-mood-tint) 7%, var(--nx-gray-300));
+  --nx-surface-overlay: color-mix(in oklab, var(--nx-mood-tint) 5%, var(--nx-gray-150));
+  --nx-line-1: color-mix(in srgb, var(--nx-mood-tint) 10%, rgba(255, 255, 255, 0.06));
+  --nx-line-2: color-mix(in srgb, var(--nx-mood-tint) 14%, rgba(255, 255, 255, 0.10));
+  --nx-line-3: color-mix(in srgb, var(--nx-mood-tint) 18%, rgba(255, 255, 255, 0.16));
+  /* Glass: the shell regions let the field show through, a little. */
+  --nx-glass-sunken: color-mix(in srgb, var(--nx-surface-sunken) 64%, transparent);
+  --nx-glass-chrome: color-mix(in srgb, var(--nx-surface-canvas) 70%, transparent);
 
   --nx-mood-primary: var(--nx-accent);
   --nx-mood-glow:    var(--nx-accent-glow);
   --nx-mood-bg:      var(--nx-surface-canvas);
-  --nx-mood-mesh-1:  rgba(var(--nx-accent-rgb), 0.10);
-  --nx-mood-mesh-2:  rgba(var(--nx-accent-rgb), 0.05);
-  --nx-mood-mesh-3:  transparent;
+  --nx-mood-mesh-1:  var(--nx-mood-1);
+  --nx-mood-mesh-2:  var(--nx-mood-2);
+  --nx-mood-mesh-3:  var(--nx-mood-3);
   --nx-mood-mesh-4:  transparent;
 }
 
-/* The ambient layer is a single, faint horizon light along the top edge.
- * It tells you the mood at a glance without competing with content. */
+/* The mood crossfade. Every mood color is a registered property, so these
+ * interpolate; components that derive from them follow along. */
+body.nx-mood {
+  transition:
+    --nx-accent 1100ms var(--nx-ease-io),
+    --nx-accent-strong 1100ms var(--nx-ease-io),
+    --nx-mood-1 1400ms var(--nx-ease-io),
+    --nx-mood-2 1400ms var(--nx-ease-io),
+    --nx-mood-3 1400ms var(--nx-ease-io),
+    --nx-mood-tint 1400ms var(--nx-ease-io),
+    --nx-fg-on-accent 1100ms var(--nx-ease-io);
+}
+
+/* The ambient field: three lights, set apart so they never stack, plus the
+ * accent horizon along the top. A slow drift keeps it alive. */
 .nx-ambient {
   background:
-    radial-gradient(120% 70% at 50% -38%, rgba(var(--nx-accent-rgb), 0.075) 0%, transparent 62%),
+    radial-gradient(42% 52% at 8% 4%, var(--nx-mood-1) 0%, transparent 70%),
+    radial-gradient(38% 50% at 96% 96%, var(--nx-mood-2) 0%, transparent 70%),
+    radial-gradient(34% 40% at 72% 18%, var(--nx-mood-3) 0%, transparent 70%),
+    radial-gradient(120% 60% at 50% -30%, color-mix(in srgb, var(--nx-accent) 7%, transparent) 0%, transparent 60%),
     var(--nx-surface-canvas);
-  transition: background var(--nx-dur-3) var(--nx-ease-io);
+}
+.nx-ambient::before {
+  content: "";
+  position: absolute; inset: -12%;
+  background:
+    radial-gradient(30% 34% at 30% 60%, color-mix(in srgb, var(--nx-mood-3) 70%, transparent) 0%, transparent 70%),
+    radial-gradient(26% 30% at 78% 52%, color-mix(in srgb, var(--nx-mood-1) 70%, transparent) 0%, transparent 70%);
+  opacity: 0.8;
+  animation: nx-drift 48s var(--nx-ease-io) infinite alternate;
+  pointer-events: none;
+}
+@keyframes nx-drift {
+  from { transform: translate(-2%, -1%) scale(1); }
+  to   { transform: translate(2%, 1.5%) scale(1.05); }
 }
 
 /* ── The eight moods ──────────────────────────────────────────────────── */
 
-/* calm focus: the ONEXUS default. Aurora teal. */
+/* calm focus: the default. Aurora teal over deep sea and pine. */
 .nx-mood-calm-focus {
   --nx-accent: #4ed5d5; --nx-accent-strong: #00bcbd; --nx-accent-rgb: 78, 213, 213;
   --nx-fg-on-accent: #001616;
+  --nx-mood-1: #0d2d30; --nx-mood-2: #0c2a49; --nx-mood-3: #0f2e22; --nx-mood-tint: #4ed5d5;
 }
-/* deep flow: long uninterrupted work. Jade. */
+/* deep flow: long uninterrupted work. Jade, lagoon and a low gold. */
 .nx-mood-deep-flow {
   --nx-accent: #7ad59c; --nx-accent-strong: #57bc80; --nx-accent-rgb: 122, 213, 156;
   --nx-fg-on-accent: #06150c;
+  --nx-mood-1: #0e2d1f; --nx-mood-2: #0b2e2f; --nx-mood-3: #302910; --nx-mood-tint: #7ad59c;
 }
-/* routing: Cortex is fanning work out. Rose. */
+/* routing: Cortex fanning work out. Magenta rose, coral and violet. */
 .nx-mood-routing {
   --nx-accent: #f197c2; --nx-accent-strong: #da7baa; --nx-accent-rgb: 241, 151, 194;
   --nx-fg-on-accent: #1b0c13;
+  --nx-mood-1: #4a1835; --nx-mood-2: #452018; --nx-mood-3: #2f1a52; --nx-mood-tint: #f197c2;
 }
-/* deliberating: a council is weighing options. Amber. */
+/* deliberating: a council weighing options. Amber, copper and oxblood. */
 .nx-mood-deliberating {
   --nx-accent: #f4b768; --nx-accent-strong: #dd9c42; --nx-accent-rgb: 244, 183, 104;
   --nx-fg-on-accent: #1a0f03;
+  --nx-mood-1: #36270f; --nx-mood-2: #451d10; --nx-mood-3: #451426; --nx-mood-tint: #f4b768;
 }
-/* creative: open-ended generation. Periwinkle. */
+/* creative: open-ended generation. Ultramarine against a warm coral. */
 .nx-mood-creative {
   --nx-accent: #96b4ff; --nx-accent-strong: #7c9aef; --nx-accent-rgb: 150, 180, 255;
   --nx-fg-on-accent: #0c111f;
+  --nx-mood-1: #19245f; --nx-mood-2: #44221b; --nx-mood-3: #0e2d41; --nx-mood-tint: #96b4ff;
 }
-/* reflective: memory and replay. Orchid. */
+/* reflective: memory and replay. Orchid, mulberry and dusk. */
 .nx-mood-reflective {
   --nx-accent: #d9a8ef; --nx-accent-strong: #c18dd8; --nx-accent-rgb: 217, 168, 239;
   --nx-fg-on-accent: #170d1b;
+  --nx-mood-1: #3d1a4b; --nx-mood-2: #451c31; --nx-mood-3: #22204a; --nx-mood-tint: #d9a8ef;
 }
-/* watchful: sentries are scanning. Sky. */
+/* watchful: sentries scanning. Sky, steel and cold water. */
 .nx-mood-watchful {
   --nx-accent: #6bcbf7; --nx-accent-strong: #43b2e1; --nx-accent-rgb: 107, 203, 247;
   --nx-fg-on-accent: #03141c;
+  --nx-mood-1: #0d2b42; --nx-mood-2: #1e2b37; --nx-mood-3: #0d2c33; --nx-mood-tint: #6bcbf7;
 }
-/* alert: an anomaly or a trust collapse. Signal red. */
+/* alert: an anomaly or a trust collapse. Signal red, ember and blood. */
 .nx-mood-alert {
   --nx-accent: #fb817a; --nx-accent-strong: #e3645e; --nx-accent-rgb: 251, 129, 122;
   --nx-fg-on-accent: #1d0c0b;
+  --nx-mood-1: #541317; --nx-mood-2: #45220e; --nx-mood-3: #3b0c1a; --nx-mood-tint: #fb817a;
 }
 
-/* Mood swatches (picker, settings, cockpit card): one flat chip of the
- * mood's accent on a graphite well, so they compare at a glance. */
-.nx-mood-preview-calm-focus   { --sw: 78, 213, 213; }
-.nx-mood-preview-deep-flow    { --sw: 122, 213, 156; }
-.nx-mood-preview-routing      { --sw: 241, 151, 194; }
-.nx-mood-preview-deliberating { --sw: 244, 183, 104; }
-.nx-mood-preview-creative     { --sw: 150, 180, 255; }
-.nx-mood-preview-reflective   { --sw: 217, 168, 239; }
-.nx-mood-preview-watchful     { --sw: 107, 203, 247; }
-.nx-mood-preview-alert        { --sw: 251, 129, 122; }
+/* Mood swatches (picker, settings, cockpit, rail): a small square of the
+ * mood's own field, lit by its accent, so each reads at a glance. */
+.nx-mood-preview-calm-focus   { --sw-a: #4ed5d5; --sw-1: #0d2d30; --sw-2: #0c2a49; --sw-3: #0f2e22; }
+.nx-mood-preview-deep-flow    { --sw-a: #7ad59c; --sw-1: #0e2d1f; --sw-2: #0b2e2f; --sw-3: #302910; }
+.nx-mood-preview-routing      { --sw-a: #f197c2; --sw-1: #4a1835; --sw-2: #452018; --sw-3: #2f1a52; }
+.nx-mood-preview-deliberating { --sw-a: #f4b768; --sw-1: #36270f; --sw-2: #451d10; --sw-3: #451426; }
+.nx-mood-preview-creative     { --sw-a: #96b4ff; --sw-1: #19245f; --sw-2: #44221b; --sw-3: #0e2d41; }
+.nx-mood-preview-reflective   { --sw-a: #d9a8ef; --sw-1: #3d1a4b; --sw-2: #451c31; --sw-3: #22204a; }
+.nx-mood-preview-watchful     { --sw-a: #6bcbf7; --sw-1: #0d2b42; --sw-2: #1e2b37; --sw-3: #0d2c33; }
+.nx-mood-preview-alert        { --sw-a: #fb817a; --sw-1: #541317; --sw-2: #45220e; --sw-3: #3b0c1a; }
 [class*="nx-mood-preview-"] {
   background:
-    radial-gradient(circle at 50% 50%, rgb(var(--sw)) 0 34%, rgba(var(--sw), 0.22) 35% 100%);
-  box-shadow: inset 0 0 0 1px rgba(var(--sw), 0.45);
+    linear-gradient(135deg, color-mix(in srgb, var(--sw-a) 85%, white) 0%, var(--sw-a) 30%, transparent 62%),
+    radial-gradient(80% 80% at 90% 90%, color-mix(in srgb, var(--sw-2) 100%, white 12%) 0%, transparent 80%),
+    linear-gradient(135deg, var(--sw-1), var(--sw-3));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sw-a) 45%, transparent);
 }
 
-/* When the user prefers more contrast, drop the ambient light entirely. */
+/* When the user prefers more contrast, drop the field and the tints. */
 @media (prefers-contrast: more) {
-  .nx-ambient { background: var(--nx-surface-canvas) !important; }
-  :root { --nx-line-1: rgba(255, 255, 255, 0.14); --nx-line-2: rgba(255, 255, 255, 0.22); }
+  .nx-ambient { background: var(--nx-gray-50) !important; }
+  .nx-ambient::before { display: none !important; }
+  :root, .nx-mood { --nx-mood-tint: #808080; --nx-line-1: rgba(255, 255, 255, 0.14); --nx-line-2: rgba(255, 255, 255, 0.22); }
 }
 
-/* prefers-reduced-data: skip the ambient light */
+/* prefers-reduced-data: skip the field */
 @media (prefers-reduced-data: reduce) {
   .nx-ambient { background: var(--nx-surface-canvas) !important; }
+  .nx-ambient::before { display: none !important; }
 }
 
 /* ── Trust event temperature washes ───────────────────────────────────────
