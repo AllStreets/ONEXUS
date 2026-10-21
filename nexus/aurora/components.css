@@ -562,7 +562,7 @@
   border-radius: var(--nx-radius-full);
   background: var(--nx-gray-400);
 }
-.nx-meter-fill { height: 100%; border-radius: inherit; background: var(--nx-accent); transition: width var(--nx-dur-3) var(--nx-ease); }
+.nx-meter-fill { display: block; height: 100%; border-radius: inherit; background: var(--nx-accent); transition: width var(--nx-dur-3) var(--nx-ease); }
 .nx-meter-mark {
   position: absolute; top: -3px; width: 2px; height: 12px;
   background: var(--nx-fg-1); border-radius: 1px; transform: translateX(-1px);

@@ -3270,31 +3270,36 @@ async function renderSettings() {
   const main = document.getElementById("nx-main");
   main.innerHTML = `
     <div class="nx-main-inner">
-      <header style="margin-bottom:18px">
-        <div class="nx-eyebrow" style="margin-bottom:6px">Configure</div>
-        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Settings</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">Local-first · changes apply immediately · sovereign data dir</div>
+      <header class="nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Configure</div>
+          <h1 class="nx-page-title">Settings</h1>
+          <p class="nx-page-sub">Local-first. Changes apply immediately and stay in your own data directory.</p>
+        </div>
       </header>
       <div class="nx-settings-shell">
-        <nav class="nx-settings-tabs">
-          <button class="active" data-tab="general">General</button>
-          <button data-tab="chat-history">Chat history</button>
-          <button data-tab="security">Security</button>
-          <button data-tab="providers">Providers</button>
-          <button data-tab="federation">Federation</button>
-          <button data-tab="moods">Moods</button>
-          <button data-tab="about">About</button>
+        <nav class="nx-settings-tabs nx-tabs nx-tabs-vertical" role="tablist" aria-label="Settings sections">
+          <button class="nx-tab active" type="button" role="tab" aria-selected="true" data-tab="general">${icon("sliders", 16)}General</button>
+          <button class="nx-tab" type="button" role="tab" aria-selected="false" data-tab="chat-history">${icon("message", 16)}Chat history</button>
+          <button class="nx-tab" type="button" role="tab" aria-selected="false" data-tab="security">${icon("shield", 16)}Security</button>
+          <button class="nx-tab" type="button" role="tab" aria-selected="false" data-tab="providers">${icon("cpu", 16)}Providers</button>
+          <button class="nx-tab" type="button" role="tab" aria-selected="false" data-tab="federation">${icon("share", 16)}Federation</button>
+          <button class="nx-tab" type="button" role="tab" aria-selected="false" data-tab="moods">${icon("contrast", 16)}Moods</button>
+          <button class="nx-tab" type="button" role="tab" aria-selected="false" data-tab="about">${icon("info", 16)}About</button>
         </nav>
-        <section class="nx-card nx-settings-panel" id="nx-settings-panel"></section>
+        <section class="nx-card nx-panel nx-settings-panel" id="nx-settings-panel" role="tabpanel"></section>
       </div>
     </div>
   `;
   const panel = document.getElementById("nx-settings-panel");
   const renderTab = async (tab) => {
-    main.querySelectorAll(".nx-settings-tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+    main.querySelectorAll(".nx-settings-tabs button").forEach(x => {
+      x.classList.toggle("active", x.dataset.tab === tab);
+      x.setAttribute("aria-selected", String(x.dataset.tab === tab));
+    });
     // Stop chat-history's polling timer whenever we navigate away from it.
     stopChatHistoryRefresh();
-    panel.innerHTML = `<div class="nx-empty" style="opacity:0.5;font-size:12px;padding:18px">loading…</div>`;
+    panel.innerHTML = SETTINGS_LOADING_HTML;
     if (tab === "chat-history") {
       await renderChatHistory(panel);
       return;
@@ -3346,7 +3351,7 @@ async function renderSettings() {
         if (more) {
           more.style.display = matched.length > 80 ? "" : "none";
           more.textContent = matched.length > 80
-            ? `showing first 80 of ${matched.length} matches · narrow further`
+            ? `Showing the first 80 of ${matched.length} matches. Narrow the search to see more.`
             : "";
         }
         wireRevokes();
@@ -3359,8 +3364,10 @@ async function renderSettings() {
   renderTab("general");
 }
 
+const SETTINGS_LOADING_HTML = `<div aria-busy="true"><span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-short"></span><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-line"></span></div>`;
+
 function renderTrustRows(rows) {
-  if (!rows.length) return `<div class="nx-empty" style="opacity:0.55;padding:18px;font-size:12px">no matches</div>`;
+  if (!rows.length) return `<div class="nx-empty-line nx-st-nomatch">No modules match that search.</div>`;
   return rows.map(s => {
     const score = s.trust ?? 0;
     const tier = score >= 0.75 ? "EXECUTOR"
@@ -3369,10 +3376,10 @@ function renderTrustRows(rows) {
     return `
       <div class="nx-st-trust-row">
         <div class="nx-st-trust-name">${escapeHtml(s.module)}</div>
-        <div class="nx-st-trust-bar"><span style="width:${(score * 100).toFixed(1)}%"></span></div>
+        <div class="nx-st-trust-bar nx-meter"><span class="nx-meter-fill" style="width:${(score * 100).toFixed(1)}%"></span></div>
         <div class="nx-st-trust-score">${score.toFixed(2)}</div>
-        <div class="nx-st-trust-tier">${tier}</div>
-        <button class="nx-st-revoke" data-module="${escapeHtml(s.module)}">revoke</button>
+        <div class="nx-st-trust-tier">${tier.charAt(0) + tier.slice(1).toLowerCase()}</div>
+        <button class="nx-st-revoke nx-btn nx-btn-sm nx-btn-ghost" type="button" data-module="${escapeHtml(s.module)}">Revoke</button>
       </div>
     `;
   }).join("");
@@ -4266,10 +4273,10 @@ async function renderProvidersTab() {
     const statusText = p.healthy ? "healthy" : "unavailable";
     return `
       <div class="nx-st-row">
-        <dt>${escapeHtml(meta.label)} ${p.is_default ? '<span class="nx-st-pill">DEFAULT</span>' : ""}</dt>
+        <dt>${escapeHtml(meta.label)} ${p.is_default ? '<span class="nx-st-pill nx-pill nx-pill-accent">Default</span>' : ""}</dt>
         <dd>
-          <span class="nx-st-status-dot ${dotClass}" aria-hidden="true"></span><span class="${dotClass}">${escapeHtml(statusText)}</span>
-          ${meta.note ? `<span class="nx-dim" style="margin-left:10px;font-size:11px">· ${escapeHtml(meta.note)}</span>` : ""}
+          <span class="nx-status ${p.healthy ? "is-ok" : "is-danger"}">${escapeHtml(statusText.charAt(0).toUpperCase() + statusText.slice(1))}</span>
+          ${meta.note ? `<span class="nx-st-note">${escapeHtml(meta.note)}</span>` : ""}
         </dd>
       </div>
     `;
@@ -4284,29 +4291,35 @@ async function renderProvidersTab() {
 
   return `
     <h3>LLM providers</h3>
-    <p class="nx-dim" style="font-size:13px;margin-bottom:14px">
+    <p class="nx-panel-sub">
       Local providers (Ollama, llama.cpp) run offline with no API key.
-      Add an OpenAI or Anthropic key below to enable cloud providers — keys are stored locally with restricted file permissions and never re-displayed.
+      Add an OpenAI or Anthropic key below to enable cloud providers. Keys are stored locally with restricted file permissions and never shown again.
     </p>
 
-    <div class="nx-eyebrow" style="margin:8px 0 6px">LOCAL</div>
-    <dl class="nx-st-rows">${rowsLive || `<div class="nx-empty">no providers registered</div>`}</dl>
-    <div class="nx-ollama-controls" style="margin:6px 14px 0;display:flex;align-items:center;gap:10px">
-      <button type="button" class="nx-st-keysave" data-ollama-restart>Restart Ollama</button>
-      <span class="nx-ollama-status nx-dim" style="font-size:11px"></span>
+    <div class="nx-st-group">
+      <div class="nx-section-label">Local</div>
+      <dl class="nx-st-rows">${rowsLive || `<div class="nx-empty-line">No providers are registered.</div>`}</dl>
+      <div class="nx-ollama-controls">
+        <button type="button" class="nx-st-keysave nx-btn nx-btn-sm" data-ollama-restart>${icon("refresh", 14)}Restart Ollama</button>
+        <span class="nx-ollama-status" aria-live="polite"></span>
+      </div>
+      ${!hasLlamaCpp ? `
+        <p class="nx-st-footnote">
+          The llama.cpp HTTP server isn't running on port 8384, so Ollama covers local inference.
+          To add llama.cpp too, start a server on <code class="nx-code-inline">localhost:8384</code> and it will appear here.
+        </p>
+      ` : ""}
     </div>
-    ${!hasLlamaCpp ? `
-      <p class="nx-dim" style="font-size:11px;margin:6px 14px 0;line-height:1.5">
-        llama.cpp HTTP server isn't running on port 8384 — Ollama covers the local-inference slot.
-        If you want to add llama.cpp too, start a server on <code>localhost:8384</code> and it'll show up here automatically.
-      </p>
-    ` : ""}
 
-    <div class="nx-eyebrow" style="margin:18px 0 6px">LOCAL MODEL · the active brain</div>
-    ${renderLocalModelSwitcher(models)}
+    <div class="nx-st-group">
+      <div class="nx-section-label">Local model, the active brain</div>
+      ${renderLocalModelSwitcher(models)}
+    </div>
 
-    <div class="nx-eyebrow" style="margin:18px 0 6px">CLOUD</div>
-    <dl class="nx-st-rows">${cloudRows}</dl>
+    <div class="nx-st-group">
+      <div class="nx-section-label">Cloud</div>
+      <dl class="nx-st-rows">${cloudRows}</dl>
+    </div>
   `;
 }
 
@@ -4318,12 +4331,12 @@ function renderLocalModelSwitcher(models) {
   const active = models.active;
   const pulls = models.pulls || {};
   if (!models.ollama_present && !installed.length) {
-    return `<div class="nx-model-empty nx-dim">Ollama isn't installed. Get it from <code>ollama.com</code>, then your models appear here.</div>`;
+    return `<div class="nx-model-empty nx-alert is-info">${icon("info", 16)}<div class="nx-alert-body">Ollama isn't installed. Get it from <code class="nx-code-inline">ollama.com</code> and your models will appear here.</div></div>`;
   }
   const installedChips = installed.length ? installed.map(m => `
-    <button type="button" class="nx-model-chip ${m === active ? "active" : ""}" data-set-model="${escapeHtml(m)}">
-      <span class="nx-model-dot"></span>${escapeHtml(m)}${m === active ? ` <span class="nx-model-active-tag">ACTIVE</span>` : ""}
-    </button>`).join("") : `<div class="nx-dim" style="font-size:12px">no models installed yet — add one below.</div>`;
+    <button type="button" class="nx-model-chip nx-chip ${m === active ? "active selected" : ""}" aria-pressed="${m === active}" data-set-model="${escapeHtml(m)}">
+      <span class="nx-model-dot nx-dot ${m === active ? "is-live" : ""}"></span>${escapeHtml(m)}${m === active ? ` <span class="nx-model-active-tag nx-pill nx-pill-accent">Active</span>` : ""}
+    </button>`).join("") : `<div class="nx-empty-line">No models installed yet. Add one below.</div>`;
 
   const recRows = (models.recommended || []).map(r => {
     const p = pulls[r.name];
@@ -4332,19 +4345,20 @@ function renderLocalModelSwitcher(models) {
     let action;
     if (r.installed) {
       action = r.name === active
-        ? `<span class="nx-model-active-tag">ACTIVE</span>`
-        : `<button type="button" class="nx-model-use" data-set-model="${escapeHtml(r.name)}">use</button>`;
+        ? `<span class="nx-model-active-tag nx-pill nx-pill-accent">Active</span>`
+        : `<button type="button" class="nx-model-use nx-btn nx-btn-sm" data-set-model="${escapeHtml(r.name)}">Use</button>`;
     } else if (pulling) {
-      action = `<span class="nx-model-pulling"><span class="nx-spinner" aria-hidden="true"></span> pulling…</span>`;
+      action = `<span class="nx-model-pulling nx-status is-live">Pulling</span>`;
     } else {
-      action = `<button type="button" class="nx-model-add" data-pull-model="${escapeHtml(r.name)}">add ↓</button>`;
+      action = `<button type="button" class="nx-model-add nx-btn nx-btn-sm" data-pull-model="${escapeHtml(r.name)}">${icon("download", 14)}Add</button>`;
     }
     return `
       <div class="nx-model-rec">
         <div class="nx-model-rec-main">
-          <span class="nx-model-rec-name">${escapeHtml(r.name)}${r.recommended ? ` <span class="nx-model-rec-badge">recommended</span>` : ""}</span>
-          <span class="nx-model-rec-note nx-dim">${escapeHtml(r.note || "")} · ${escapeHtml(r.size || "")}</span>
-          ${err ? `<span class="nx-model-rec-err">pull failed: ${escapeHtml((p.detail||"").slice(0,120))}</span>` : ""}
+          <span class="nx-model-rec-name">${escapeHtml(r.name)}${r.recommended ? ` <span class="nx-model-rec-badge nx-pill nx-pill-warn">Recommended</span>` : ""}</span>
+          <span class="nx-model-rec-note">${escapeHtml(r.note || "")} · ${escapeHtml(r.size || "")}</span>
+          ${pulling ? `<div class="nx-progress is-indeterminate" aria-hidden="true"><div class="nx-progress-bar"></div></div>` : ""}
+          ${err ? `<span class="nx-model-rec-err">Pull failed: ${escapeHtml((p.detail||"").slice(0,120))}</span>` : ""}
         </div>
         <div class="nx-model-rec-action">${action}</div>
       </div>`;
@@ -4352,10 +4366,10 @@ function renderLocalModelSwitcher(models) {
 
   return `
     <div class="nx-model-switcher">
-      <div class="nx-model-active-line">Active brain: <b>${escapeHtml(active || "—")}</b></div>
+      <div class="nx-model-active-line">Active brain: <b>${escapeHtml(active || "none selected")}</b></div>
       <div class="nx-model-chips">${installedChips}</div>
-      <div class="nx-model-rec-label nx-dim">Recommended for ONEXUS — Qwen2.5 leads on tool-calling. Adding one pulls it and makes it active.</div>
-      <div class="nx-model-rec-list">${recRows}</div>
+      <div class="nx-model-rec-label">Recommended for ONEXUS. Qwen2.5 leads on tool calling. Adding one pulls it and makes it active.</div>
+      <div class="nx-model-rec-list nx-list nx-list-boxed">${recRows}</div>
     </div>`;
 }
 
@@ -4369,23 +4383,24 @@ function renderCloudProviderRow(slug, keysMap) {
   if (isAdding) {
     dd = `
       <form class="nx-st-keyform" data-add="${escapeHtml(slug)}">
-        <input type="password" name="apiKey" class="nx-st-keyinput"
+        <input type="password" name="apiKey" class="nx-st-keyinput nx-input nx-input-mono"
                placeholder="${slug === "openai" ? "sk-..." : "sk-ant-..."}"
+               aria-label="${escapeHtml(meta.label)} API key"
                autocomplete="off" spellcheck="false" autofocus>
-        <button type="submit" class="nx-st-keysave">save</button>
-        <button type="button" class="nx-st-keycancel" data-cancel="${escapeHtml(slug)}">cancel</button>
+        <button type="submit" class="nx-st-keysave nx-btn nx-btn-primary nx-btn-sm">Save</button>
+        <button type="button" class="nx-st-keycancel nx-btn nx-btn-ghost nx-btn-sm" data-cancel="${escapeHtml(slug)}">Cancel</button>
       </form>
     `;
   } else if (isConfigured) {
     const fp = info.fingerprint || "configured";
     dd = `
-      <span class="nx-st-status-dot ok" aria-hidden="true"></span><span class="ok">configured</span>
-      <code style="margin-left:10px">${escapeHtml(fp)}</code>
-      <button type="button" class="nx-st-keyremove" data-remove="${escapeHtml(slug)}">remove</button>
+      <span class="nx-status is-ok">Configured</span>
+      <code class="nx-code-inline nx-st-fp">${escapeHtml(fp)}</code>
+      <button type="button" class="nx-st-keyremove nx-btn nx-btn-sm nx-btn-danger" data-remove="${escapeHtml(slug)}">Remove</button>
     `;
   } else {
     dd = `
-      <button type="button" class="nx-st-keyadd" data-add="${escapeHtml(slug)}">+ add ${escapeHtml(meta.label)} API key</button>
+      <button type="button" class="nx-st-keyadd nx-btn nx-btn-sm" data-add="${escapeHtml(slug)}">${icon("key", 14)}Add ${escapeHtml(meta.label)} API key</button>
     `;
   }
   return `
@@ -4445,7 +4460,7 @@ function wireProvidersHandlers(panel) {
       const status = panel.querySelector(".nx-ollama-status");
       const prev = btn.textContent;
       btn.disabled = true;
-      btn.textContent = "restarting…";
+      btn.textContent = "Restarting";
       if (status) status.textContent = "";
       try {
         const r = await fetch("/api/providers/ollama/restart", { method: "POST" });
@@ -4455,12 +4470,12 @@ function wireProvidersHandlers(panel) {
           // Give the server a moment to bind its port, then refresh health dots.
           setTimeout(repaint, 1500);
         } else {
-          if (status) status.textContent = body.detail || `failed (${r.status})`;
+          if (status) status.textContent = body.detail || `Failed (HTTP ${r.status})`;
           btn.disabled = false;
           btn.textContent = prev;
         }
       } catch (err) {
-        if (status) status.textContent = `network error: ${err}`;
+        if (status) status.textContent = `Network error: ${err}`;
         btn.disabled = false;
         btn.textContent = prev;
       }
@@ -4487,14 +4502,14 @@ function wireProvidersHandlers(panel) {
   panel.querySelectorAll("[data-pull-model]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const model = btn.dataset.pullModel;
-      btn.disabled = true; btn.textContent = "starting…";
+      btn.disabled = true; btn.textContent = "Starting";
       try {
         const r = await fetch("/api/providers/ollama/pull", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model, activate: true }),
         });
-        if (!r.ok) { const b = await r.json().catch(() => ({})); alert(b.detail || "pull failed to start"); btn.disabled = false; btn.textContent = "add ↓"; return; }
-      } catch (err) { alert("network error: " + err); btn.disabled = false; btn.textContent = "add ↓"; return; }
+        if (!r.ok) { const b = await r.json().catch(() => ({})); alert(b.detail || "The pull failed to start."); btn.disabled = false; btn.textContent = "Add"; return; }
+      } catch (err) { alert("Network error: " + err); btn.disabled = false; btn.textContent = "Add"; return; }
       repaint();
       startOllamaPullPolling(panel);
     });
@@ -4508,7 +4523,7 @@ function wireProvidersHandlers(panel) {
       const key = (input?.value || "").trim();
       if (!key) return;
       const submitBtn = form.querySelector(".nx-st-keysave");
-      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "saving…"; }
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Saving"; }
       try {
         const r = await fetch("/api/providers/keys", {
           method: "POST",
@@ -4518,7 +4533,7 @@ function wireProvidersHandlers(panel) {
         if (!r.ok) {
           const body = await r.json().catch(() => ({}));
           alert(`failed to save ${slug} key: ${body.detail || r.status}`);
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "save"; }
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save"; }
           return;
         }
         // Clear input immediately (so the key never lingers in DOM) and flip out of edit mode.
@@ -4526,8 +4541,8 @@ function wireProvidersHandlers(panel) {
         _providersState.addingKey = null;
         repaint();
       } catch (err) {
-        alert(`network error: ${err}`);
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "save"; }
+        alert(`Network error: ${err}`);
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Save"; }
       }
     });
   });
@@ -4592,7 +4607,7 @@ async function renderChatHistory(panel) {
 
 async function paintChatHistory(panel, { silent = false } = {}) {
   if (!silent) {
-    panel.innerHTML = `<div class="nx-empty" style="opacity:0.5;font-size:12px;padding:18px">loading…</div>`;
+    panel.innerHTML = SETTINGS_LOADING_HTML;
   }
   const view = chatHistoryState.view;
   let html;
@@ -4666,7 +4681,7 @@ async function renderChatHistoryWorkspaces() {
   const cards = ws.map(w => {
     const tone = (w.tone || "indigo").toLowerCase();
     return `
-      <button class="nx-ch-ws-card" data-workspace="${escapeHtml(w.workspace_id || "_unscoped")}" data-name="${escapeHtml(w.name)}" data-tone="${escapeHtml(tone)}">
+      <button class="nx-ch-ws-card" type="button" data-workspace="${escapeHtml(w.workspace_id || "_unscoped")}" data-name="${escapeHtml(w.name)}" data-tone="${escapeHtml(tone)}" style="--tone:var(--nx-tone-${escapeHtml(tone)}-a, var(--nx-accent))">
         <div class="nx-ch-ws-swatch nx-tone-${escapeHtml(tone)}"></div>
         <div class="nx-ch-ws-body">
           <div class="nx-ch-ws-name">${escapeHtml(w.name)}</div>
@@ -4675,26 +4690,26 @@ async function renderChatHistoryWorkspaces() {
             <span class="nx-ch-sep">·</span>
             <span><b>${w.agent_count}</b> ${w.agent_count === 1 ? "agent" : "agents"}</span>
           </div>
-          <div class="nx-ch-ws-last">last · ${chatHistoryRelative(w.last_active_at)}</div>
+          <div class="nx-ch-ws-last">Last active ${chatHistoryRelative(w.last_active_at)}</div>
         </div>
-        <div class="nx-ch-chev" aria-hidden="true">›</div>
+        <div class="nx-ch-chev" aria-hidden="true">${icon("chevron-right", 16)}</div>
       </button>
     `;
   }).join("");
 
   return `
     <div class="nx-ch-head">
-      <h3 style="margin:0">Chat history</h3>
-      <div class="nx-ch-live"><span class="nx-ch-live-dot"></span> live</div>
+      <h3>Chat history</h3>
+      <div class="nx-ch-live nx-status is-live">Live</div>
     </div>
-    <p class="nx-dim" style="font-size:13px;margin:6px 0 18px">
+    <p class="nx-panel-sub">
       <b>${totalChats}</b> ${totalChats === 1 ? "chat" : "chats"}
       across <b>${ws.length}</b> ${ws.length === 1 ? "workspace" : "workspaces"}
       with <b>${totalAgents}</b> ${totalAgents === 1 ? "agent slot" : "agent slots"}.
-      Click a workspace to see who you've been talking to.
+      Open a workspace to see who you've been talking to.
     </p>
     ${ws.length === 0
-      ? `<div class="nx-empty" style="padding:32px;text-align:center;font-size:13px;opacity:0.6">no chats yet — send a message from the home screen to start your history</div>`
+      ? emptyStateHTML({ icon: "message", title: "No chats yet", body: "Send a message from a workspace and your history starts here." })
       : `<div class="nx-ch-ws-grid">${cards}</div>`}
   `;
 }
@@ -4718,7 +4733,7 @@ async function renderChatHistoryAgents() {
       ? agentDisc(slug, { size: 32 })
       : `<div class="nx-ch-agent-fallback" style="background:linear-gradient(135deg,${gradient[0]},${gradient[1]})"></div>`;
     return `
-      <button class="nx-ch-agent-row" data-module="${escapeHtml(slug)}">
+      <button class="nx-ch-agent-row" type="button" data-module="${escapeHtml(slug)}">
         <div class="nx-ch-agent-icon">${disc}</div>
         <div class="nx-ch-agent-body">
           <div class="nx-ch-agent-name">${escapeHtml(slug)}</div>
@@ -4728,26 +4743,26 @@ async function renderChatHistoryAgents() {
           <div class="nx-ch-agent-count"><b>${a.chat_count}</b> ${a.chat_count === 1 ? "chat" : "chats"}</div>
           <div class="nx-ch-agent-last">${chatHistoryRelative(a.last_active_at)}</div>
         </div>
-        <div class="nx-ch-chev" aria-hidden="true">›</div>
+        <div class="nx-ch-chev" aria-hidden="true">${icon("chevron-right", 16)}</div>
       </button>
     `;
   }).join("");
 
   return `
     <div class="nx-ch-head">
-      <h3 style="margin:0">Chat history</h3>
-      <div class="nx-ch-live"><span class="nx-ch-live-dot"></span> live</div>
+      <h3>Chat history</h3>
+      <div class="nx-ch-live nx-status is-live">Live</div>
     </div>
     <div class="nx-ch-crumbs">
-      <button class="nx-ch-crumb-link" data-nav="workspaces">All workspaces</button>
-      <span class="nx-ch-crumb-sep">›</span>
+      <button class="nx-ch-crumb-link" type="button" data-nav="workspaces">All workspaces</button>
+      <span class="nx-ch-crumb-sep" aria-hidden="true">${icon("chevron-right", 12)}</span>
       <span class="nx-ch-crumb-here">${escapeHtml(chatHistoryState.workspace_name || wsId)}</span>
     </div>
-    <p class="nx-dim" style="font-size:13px;margin:6px 0 18px">
-      <b>${agents.length}</b> ${agents.length === 1 ? "agent" : "agents"} you've spoken to in this workspace. Click one to read full transcripts.
+    <p class="nx-panel-sub">
+      <b>${agents.length}</b> ${agents.length === 1 ? "agent" : "agents"} you've spoken to in this workspace. Open one to read the full transcripts.
     </p>
     ${agents.length === 0
-      ? `<div class="nx-empty" style="padding:32px;text-align:center;font-size:13px;opacity:0.6">no chats yet in this workspace</div>`
+      ? emptyStateHTML({ icon: "message", title: "No chats in this workspace", body: "Chats you have here will be listed by agent." })
       : `<div class="nx-ch-agent-list">${rows}</div>`}
   `;
 }
@@ -4776,7 +4791,7 @@ async function renderChatHistoryChats() {
   const panels = chats.map(c => {
     const t = c.transcript || {};
     const truncatedHint = t.truncated
-      ? `<div class="nx-ch-msg-truncated nx-dim" style="font-size:11px;margin-top:6px">transcript memory not found — showing chronicle preview (${t.agent_response_chars || 0} char response)</div>`
+      ? `<div class="nx-ch-msg-truncated">The transcript memory was not found, so this is the Chronicle preview (${t.agent_response_chars || 0} character response).</div>`
       : "";
     return `
       <article class="nx-ch-chat">
@@ -4785,7 +4800,7 @@ async function renderChatHistoryChats() {
           <span class="nx-ch-chat-rel nx-dim">${chatHistoryRelative(c.timestamp)}</span>
         </header>
         <div class="nx-ch-msg nx-ch-msg-you">
-          <span class="nx-ch-msg-tag">you</span>
+          <span class="nx-ch-msg-tag">You</span>
           <div class="nx-ch-msg-text">${escapeHtml(t.user || "")}</div>
         </div>
         <div class="nx-ch-msg nx-ch-msg-agent">
@@ -4801,7 +4816,7 @@ async function renderChatHistoryChats() {
   const nextDisabled = !body.has_more;
   const pagination = total > limit ? `
     <nav class="nx-ch-pager">
-      <button class="nx-ch-pager-btn" data-pager="prev" ${prevDisabled ? "disabled" : ""}>← prev</button>
+      <button class="nx-ch-pager-btn nx-btn nx-btn-sm" type="button" data-pager="prev" ${prevDisabled ? "disabled" : ""}>${icon("chevron-left", 14)}Previous</button>
       <div class="nx-ch-pager-status">
         <span class="nx-ch-pager-page">${showingFrom}–${showingTo}</span>
         <span class="nx-dim">of</span>
@@ -4809,29 +4824,29 @@ async function renderChatHistoryChats() {
         <span class="nx-dim">·</span>
         <span class="nx-dim">page ${currentPage} / ${totalPages}</span>
       </div>
-      <button class="nx-ch-pager-btn" data-pager="next" ${nextDisabled ? "disabled" : ""}>next →</button>
+      <button class="nx-ch-pager-btn nx-btn nx-btn-sm" type="button" data-pager="next" ${nextDisabled ? "disabled" : ""}>Next${icon("chevron-right", 14)}</button>
     </nav>
   ` : "";
 
   return `
     <div class="nx-ch-head">
-      <h3 style="margin:0">Chat history</h3>
-      <div class="nx-ch-live"><span class="nx-ch-live-dot"></span> live</div>
+      <h3>Chat history</h3>
+      <div class="nx-ch-live nx-status is-live">Live</div>
     </div>
     <div class="nx-ch-crumbs">
-      <button class="nx-ch-crumb-link" data-nav="workspaces">All workspaces</button>
-      <span class="nx-ch-crumb-sep">›</span>
-      <button class="nx-ch-crumb-link" data-nav="agents">${escapeHtml(chatHistoryState.workspace_name || wsId)}</button>
-      <span class="nx-ch-crumb-sep">›</span>
+      <button class="nx-ch-crumb-link" type="button" data-nav="workspaces">All workspaces</button>
+      <span class="nx-ch-crumb-sep" aria-hidden="true">${icon("chevron-right", 12)}</span>
+      <button class="nx-ch-crumb-link" type="button" data-nav="agents">${escapeHtml(chatHistoryState.workspace_name || wsId)}</button>
+      <span class="nx-ch-crumb-sep" aria-hidden="true">${icon("chevron-right", 12)}</span>
       <span class="nx-ch-crumb-here">${escapeHtml(module)}</span>
     </div>
-    <p class="nx-dim" style="font-size:13px;margin:6px 0 18px">
+    <p class="nx-panel-sub">
       ${total === 0
-        ? "no chats with this agent yet"
-        : `showing <b>${showingFrom}–${showingTo}</b> of <b>${total}</b> ${total === 1 ? "chat" : "chats"} · newest first · 50 per page`}
+        ? "No chats with this agent yet."
+        : `Showing <b>${showingFrom}–${showingTo}</b> of <b>${total}</b> ${total === 1 ? "chat" : "chats"}, newest first, 50 per page.`}
     </p>
     ${chats.length === 0
-      ? `<div class="nx-empty" style="padding:32px;text-align:center;font-size:13px;opacity:0.6">no chats on this page</div>`
+      ? emptyStateHTML({ icon: "inbox", title: "Nothing on this page", body: "Go back a page, or pick another agent." })
       : `<div class="nx-ch-chat-list">${panels}</div>`}
     ${pagination}
   `;
@@ -4894,7 +4909,7 @@ async function renderSettingsTab(tab) {
       const sys = await fetch("/api/system/config").then(r => r.ok ? r.json() : {}).catch(() => ({}));
       return `
         <h3>General</h3>
-        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">Where ONEXUS keeps its data, how it runs.</p>
+        <p class="nx-panel-sub">Where ONEXUS keeps its data and how it runs.</p>
         <dl class="nx-st-rows">
           <div class="nx-st-row">
             <dt>Data directory</dt>
@@ -4925,21 +4940,22 @@ async function renderSettingsTab(tab) {
       // Cache full list for client-side filtering
       state._securityModules = sorted;
       return `
-        <h3>Security · Trust</h3>
-        <p class="nx-dim" style="font-size:13px;margin-bottom:14px">
-          <span id="nx-st-trust-count">${sorted.length}</span> module${sorted.length === 1 ? "" : "s"} registered with Aegis. Click revoke to reset a module's trust to 0 — all its grants collapse.
+        <h3>Security and trust</h3>
+        <p class="nx-panel-sub">
+          <span id="nx-st-trust-count">${sorted.length}</span> module${sorted.length === 1 ? "" : "s"} registered with Aegis. Revoke resets a module's trust to 0 and collapses all of its grants.
         </p>
-        <div class="nx-st-search">
-          <span class="nx-st-search-icon" aria-hidden="true"></span>
-          <input id="nx-st-trust-search" type="search"
-                 placeholder="search modules · 590 MCP agents · type to filter"
-                 aria-label="Search modules">
-          <span class="nx-st-search-count" id="nx-st-search-count">${sorted.length}</span>
+        <div class="nx-st-search nx-search-field">
+          ${icon("search", 14)}
+          <input id="nx-st-trust-search" type="search" class="nx-input"
+                 placeholder="Filter modules and MCP agents"
+                 aria-label="Filter modules">
+          <span class="nx-st-search-count nx-pill nx-pill-mono" id="nx-st-search-count">${sorted.length}</span>
         </div>
+        <div class="nx-st-trust-head" aria-hidden="true"><span>Module</span><span>Trust</span><span></span><span>Tier</span><span></span></div>
         <div class="nx-st-trust-list" id="nx-st-trust-list">
           ${renderTrustRows(sorted.slice(0, 60))}
         </div>
-        ${sorted.length > 60 ? `<div class="nx-dim" id="nx-st-trust-more" style="font-size:12px;margin-top:10px">showing first 60 of ${sorted.length} · use the search to narrow</div>` : ""}
+        ${sorted.length > 60 ? `<div class="nx-st-footnote" id="nx-st-trust-more">Showing the first 60 of ${sorted.length}. Use the filter to narrow.</div>` : ""}
       `;
     }
     case "providers": {
@@ -4950,17 +4966,17 @@ async function renderSettingsTab(tab) {
       try { peers = await fetch("/api/federation/peers").then(r => r.ok ? r.json() : {peers:[]}); } catch {}
       return `
         <h3>Federation</h3>
-        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">
-          Connect ONEXUS instances peer-to-peer. Set <code>NEXUS_FEDERATION_ENABLED=1</code> to enable on this instance.
+        <p class="nx-panel-sub">
+          Connect ONEXUS instances peer to peer. Set <code class="nx-code-inline">NEXUS_FEDERATION_ENABLED=1</code> to enable it on this instance.
         </p>
         <dl class="nx-st-rows">
           <div class="nx-st-row">
             <dt>Status</dt>
-            <dd><code>${peers.peers ? "enabled" : "disabled"}</code></dd>
+            <dd><span class="nx-status ${peers.peers ? "is-ok" : ""}">${peers.peers ? "Enabled" : "Disabled"}</span></dd>
           </div>
           <div class="nx-st-row">
             <dt>Peers</dt>
-            <dd>${(peers.peers || []).length === 0 ? `<span class="nx-dim">none connected</span>` : (peers.peers || []).map(p => `<code>${escapeHtml(p.peer_id || p.id)}</code>`).join(", ")}</dd>
+            <dd>${(peers.peers || []).length === 0 ? `<span class="nx-dim">None connected</span>` : (peers.peers || []).map(p => `<code>${escapeHtml(p.peer_id || p.id)}</code>`).join(", ")}</dd>
           </div>
         </dl>
       `;
@@ -4969,19 +4985,22 @@ async function renderSettingsTab(tab) {
       const current = await fetch("/api/mood/current").then(r => r.ok ? r.json() : {}).catch(() => ({}));
       return `
         <h3>Moods</h3>
-        <p class="nx-dim" style="font-size:13px;margin-bottom:18px">
-          The MoodEngine watches CPU, engram busy-ratio, trust events, time-of-day, and resident agents.
-          Eight palettes shift the whole shell.
+        <p class="nx-panel-sub">
+          The MoodEngine watches CPU, Engram busy ratio, trust events, time of day and resident agents.
+          Each of the eight moods sets the accent color the whole shell uses.
         </p>
         <div class="nx-st-mood-now">
-          <div class="nx-eyebrow">RIGHT NOW</div>
-          <div class="nx-st-mood-name">${escapeHtml((current.mood || state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
-          <div class="nx-st-mood-reason">${escapeHtml(current.reason || "")}</div>
+          <span class="nx-st-mood-swatch nx-mood-preview-${escapeHtml((current.mood || state.mood.mood || "calm_focus").replace(/_/g, "-"))}" aria-hidden="true"></span>
+          <div>
+            <div class="nx-eyebrow">Right now</div>
+            <div class="nx-st-mood-name">${escapeHtml((current.mood || state.mood.mood || "calm_focus").replace(/_/g, " "))}</div>
+            <div class="nx-st-mood-reason">${escapeHtml(current.reason || "")}</div>
+          </div>
           ${state.mood.override ? `
             <div class="nx-st-mood-override">
-              manual override active · <button class="nx-st-mood-clear-btn" id="nx-settings-mood-clear">return to auto</button>
+              <span class="nx-status is-warn">Manual override</span> <button class="nx-st-mood-clear-btn nx-btn nx-btn-sm" type="button" id="nx-settings-mood-clear">Return to auto</button>
             </div>
-          ` : `<div class="nx-st-mood-auto">auto · following the kernel</div>`}
+          ` : `<div class="nx-st-mood-auto nx-status is-ok">Auto, following the kernel</div>`}
         </div>
         <div class="nx-st-mood-grid">
           ${MOOD_OPTIONS.map(m => `
@@ -5006,11 +5025,11 @@ async function renderSettingsTab(tab) {
       const fmt = n => (n === null || n === undefined) ? "?" : Number(n).toLocaleString();
       return `
         <h3>About ONEXUS</h3>
-        <p class="nx-dim" style="font-size:13px;line-height:1.6">
+        <p class="nx-panel-sub">
           An operating system for agents. Local-first, sovereign, gated by Aegis.
-          The kernel never touches the network — there's a static test that proves it.
+          The kernel never touches the network, and a static test proves it.
         </p>
-        <dl class="nx-st-rows" style="margin-top:18px">
+        <dl class="nx-st-rows">
           <div class="nx-st-row">
             <dt>Version</dt>
             <dd><code>v1.0</code></dd>
@@ -5019,19 +5038,19 @@ async function renderSettingsTab(tab) {
             <dt>Tests</dt>
             <dd>
               <span class="ok">${fmt(tests.total)}</span> declared
-              <span class="nx-dim" style="font-size:11px;margin-left:8px">scanned live from <code>tests/</code></span>
+              <span class="nx-st-note">Scanned live from <code class="nx-code-inline">tests/</code></span>
             </dd>
           </div>
           <div class="nx-st-row">
             <dt>Catalog</dt>
             <dd>
               ${fmt(all.total)} agents · ${fmt(runnable.total)} runnable
-              <span class="nx-dim" style="font-size:11px;margin-left:8px">(MCP adapter present)</span>
+              <span class="nx-st-note">Runnable means an MCP adapter is present</span>
             </dd>
           </div>
           <div class="nx-st-row">
             <dt>Source</dt>
-            <dd><a href="https://github.com/AllStreets/ONEXUS" target="_blank" rel="noopener" class="nx-st-link">github.com/AllStreets/ONEXUS ↗</a></dd>
+            <dd><a href="https://github.com/AllStreets/ONEXUS" target="_blank" rel="noopener" class="nx-st-link nx-link">github.com/AllStreets/ONEXUS ${icon("external-link", 12)}</a></dd>
           </div>
           <div class="nx-st-row">
             <dt>License</dt>
@@ -5041,19 +5060,19 @@ async function renderSettingsTab(tab) {
       `;
     }
   }
-  return `<h3>${tab}</h3><p class="nx-dim">unknown tab</p>`;
+  return `<h3>${escapeHtml(tab)}</h3><p class="nx-panel-sub">This section doesn't exist.</p>`;
 }
 
 // ── Mood picker (click the mood pill) ─────────────────────────────────────
 const MOOD_OPTIONS = [
-  { key: "calm_focus",    name: "calm focus",    note: "violet · default · low load, eyes-down work" },
-  { key: "deep_flow",     name: "deep flow",     note: "jewel green · long uninterrupted stretches" },
-  { key: "routing",       name: "routing",       note: "magenta + cyan · cortex dispatching, lots of small tasks" },
-  { key: "deliberating",  name: "deliberating",  note: "amber + teal + magenta · council weighing options" },
-  { key: "creative",      name: "creative",      note: "vivid navy · open-ended generation, deep ideation" },
-  { key: "reflective",    name: "reflective",    note: "plum + rose · review, summarise, look back" },
-  { key: "watchful",      name: "watchful",      note: "teal + ember + violet · sentry on, scanning" },
-  { key: "alert",         name: "alert",         note: "crimson · trust collapse, denied call, override" },
+  { key: "calm_focus",    name: "calm focus",    note: "teal · default · low load, eyes-down work" },
+  { key: "deep_flow",     name: "deep flow",     note: "jade · long uninterrupted stretches" },
+  { key: "routing",       name: "routing",       note: "rose · cortex dispatching, lots of small tasks" },
+  { key: "deliberating",  name: "deliberating",  note: "amber · council weighing options" },
+  { key: "creative",      name: "creative",      note: "periwinkle · open-ended generation, deep ideation" },
+  { key: "reflective",    name: "reflective",    note: "orchid · review, summarise, look back" },
+  { key: "watchful",      name: "watchful",      note: "sky · sentry on, scanning" },
+  { key: "alert",         name: "alert",         note: "signal red · trust collapse, denied call, override" },
 ];
 
 function openMoodPicker() {
