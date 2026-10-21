@@ -22,7 +22,20 @@
  *   scene.start();  scene.stop();  scene.destroy();
  */
 
+import { agentMarkDataURL } from "/aurora/static/icons.js";
+
 const TAU = Math.PI * 2;
+
+// Each module is drawn with its own agent mark, rasterised once per name.
+const _markImages = new Map();
+function markImage(name) {
+  if (_markImages.has(name)) return _markImages.get(name);
+  const img = new Image();
+  img.decoding = "async";
+  img.src = agentMarkDataURL(name, 96);
+  _markImages.set(name, img);
+  return img;
+}
 const GOLDEN = 2.399963229728653; // golden angle (rad)
 
 // memory tiers, top→bottom, deepest tier sinks lowest (semantic/atlas = bedrock)
@@ -30,7 +43,7 @@ const GOLDEN = 2.399963229728653; // golden angle (rad)
 // frame): status ok/info/warn/danger, the trust temperatures and fg tones.
 const TOKENS = {
   ok: "#76cf8a", info: "#8fb0f8", warn: "#f5b75b", collapse: "#f4785a",
-  falling: "#8fb6cf", fg1: "#eceef2", fg2: "#b6bcc6", fg3: "#8d949f",
+  falling: "#8fb6cf", fg1: "#eceef2", fg2: "#b6bcc6", fg3: "#9ba2ad",
   surface: "#16191e", canvas: "#0b0c0f",
 };
 const UI_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif";
@@ -183,10 +196,11 @@ export class KernelScene {
           activity: 0, label: 1, temp: null, tempT: 0,
           colorA: m.colorA || "#8fb0f8", colorB: m.colorB || "#3a4a9c",
           tier: m.tier || "",
-          r: this.compact ? 5.5 : 8.5,
+          r: this.compact ? 7 : 12,
           hx: this.core ? this.core.x : 0, hy: this.core ? this.core.y : 0,
           x: this.core ? this.core.x : 0, y: this.core ? this.core.y : 0,
           seed: j,
+          img: markImage(m.name),
         };
         this.nodes.set(m.name, node);
       } else {
@@ -392,25 +406,27 @@ export class KernelScene {
         c.drawImage(glowSprite(node.colorA), node.x - halo, node.y - halo, halo * 2, halo * 2);
         c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
       }
-      // body: a flat disc in the agent's deep tone, edged in its light tone
-      c.beginPath(); c.arc(node.x, node.y, baseR, 0, TAU);
-      c.fillStyle = rgba(node.colorB, 0.85); c.fill();
-      c.lineWidth = 1.25; c.strokeStyle = rgba(node.colorA, 0.75 + node.activity * 0.25); c.stroke();
-      c.beginPath(); c.arc(node.x, node.y, baseR * 0.34, 0, TAU);
-      c.fillStyle = rgba(node.colorA, 0.9); c.fill();
-      // trust ring
-      const ringR = baseR + 4;
-      c.beginPath(); c.arc(node.x, node.y, ringR, 0, TAU);
-      c.strokeStyle = "rgba(255,255,255,0.08)"; c.lineWidth = 1.5; c.stroke();
-      c.beginPath(); c.arc(node.x, node.y, ringR, -Math.PI / 2, -Math.PI / 2 + TAU * node.trust);
-      c.strokeStyle = node.tempT > 0 ? node.temp : "rgba(255,255,255,0.45)"; c.lineWidth = 1.5; c.lineCap = "round"; c.stroke();
+      // body: the agent's own mark (icons.js), the same one used in the UI
+      const m = baseR * 2.5;
+      if (node.img && node.img.complete && node.img.naturalWidth) {
+        c.drawImage(node.img, node.x - m / 2, node.y - m / 2, m, m);
+      } else {
+        c.fillStyle = rgba(node.colorB, 0.9);
+        c.beginPath(); c.roundRect(node.x - m / 2, node.y - m / 2, m, m, m * 0.28); c.fill();
+      }
+      // trust: a short charge bar under the mark; warm or cool after a change
+      const bw = m * 0.9, by = node.y + m / 2 + 4;
+      c.fillStyle = "rgba(255,255,255,0.10)";
+      c.beginPath(); c.roundRect(node.x - bw / 2, by, bw, 2.5, 1.25); c.fill();
+      c.fillStyle = node.tempT > 0 ? node.temp : "rgba(255,255,255,0.6)";
+      c.beginPath(); c.roundRect(node.x - bw / 2, by, Math.max(2.5, bw * node.trust), 2.5, 1.25); c.fill();
       // label
       if (node.label > 0.01 && !this.compact) {
         c.globalAlpha = Math.min(1, node.label * 1.1);
         c.fillStyle = node.activity > 0.05 ? TOKENS.fg1 : TOKENS.fg2;
         c.font = `500 11px ${UI_FONT}`;
         c.textAlign = "center";
-        c.fillText(node.name, node.x, node.y + ringR + 14);
+        c.fillText(node.name, node.x, by + 16);
         c.globalAlpha = 1;
       }
     }
