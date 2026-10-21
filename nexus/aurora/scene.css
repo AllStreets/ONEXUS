@@ -101,7 +101,7 @@
 @keyframes nx-ledger-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 .nx-ledger-kind {
   flex: 0 0 auto;
-  font-size: 10px; font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
   padding: 1px 5px; border-radius: var(--nx-radius-xs);
 }
 .nx-lk-route    { background: rgba(var(--nx-info-rgb), 0.12);   color: var(--nx-info); }
@@ -221,7 +221,7 @@
 .nx-replay-row.active { background: var(--nx-accent-soft); box-shadow: inset 2px 0 0 var(--nx-accent); }
 .nx-replay-tag {
   flex: 0 0 auto;
-  font-size: 10px; font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
   padding: 1px 6px; border-radius: var(--nx-radius-xs);
   background: var(--nx-surface-3); color: var(--nx-fg-2);
   max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -232,7 +232,7 @@
 .nx-replay-detail:empty { display: none; }
 .nx-replay-detail-tag {
   display: inline-block;
-  font-size: 10px; font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
   padding: 2px 8px; border-radius: var(--nx-radius-xs); margin-bottom: var(--nx-space-2);
 }
 .nx-replay-detail-when { font-size: var(--nx-fs-micro); margin-bottom: var(--nx-space-3); }

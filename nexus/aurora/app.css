@@ -389,7 +389,7 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .nx-recent-kind {
-  font-size: 10px; font-weight: var(--nx-fw-semi);
+  font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi);
   letter-spacing: 0.04em; text-transform: uppercase;
   padding: 1px 5px;
   border-radius: var(--nx-radius-xs);
@@ -1267,7 +1267,7 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   display: block; width: 100%; height: 360px;
   margin-top: var(--nx-space-2);
   border: 1px solid var(--nx-line-2); border-radius: var(--nx-radius-md);
-  background: #fff;
+  background: #fff; /* the preview renders user markup on its own white page */
 }
 
 /* pair agent */
@@ -1926,7 +1926,7 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-cap-overlay { z-index: 70; }
 .nx-cap-sheet.nx-modal { width: min(660px, 100%); }
 .nx-cap-body { display: flex; flex-direction: column; gap: var(--nx-space-4); }
-.nx-cap-head { align-items: start; }
+.nx-cap-head.nx-detail-head { align-items: start; grid-template-columns: auto minmax(0, 1fr) auto; }
 .nx-cap-name { text-transform: capitalize; }
 .nx-cap-tag { color: var(--nx-fg-2); }
 .nx-cap-desc { font-size: var(--nx-fs-body); line-height: var(--nx-lh-body); color: var(--nx-fg-2); margin: 0; }
@@ -1993,7 +1993,7 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 }
 .nx-cap-hrow:last-child { border-bottom: 0; }
 .nx-cap-htag {
-  font-size: 10px; font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi); letter-spacing: 0.04em; text-transform: uppercase;
   padding: 1px 6px; border-radius: var(--nx-radius-xs);
 }
 .nx-cap-htag.gate  { background: rgba(var(--nx-ok-rgb), 0.12); color: var(--nx-ok); }
@@ -2647,10 +2647,10 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-atlas-canvas { width: 100%; height: min(72vh, 760px); display: block; }
 .nx-atlas-edge { stroke: var(--nx-line-3); stroke-width: 1; transition: stroke var(--nx-dur-2) var(--nx-ease); }
 .nx-atlas-node circle { fill: var(--nx-routine); stroke: none; }
-.nx-atlas-node text { fill: var(--nx-fg-2); font-family: var(--nx-font-ui); font-size: 12px; }
+.nx-atlas-node text { fill: var(--nx-fg-2); font-family: var(--nx-font-ui); font-size: var(--nx-fs-caption); }
 .nx-atlas-node.decayed circle { fill: var(--nx-trust-falling); }
 .nx-atlas-node.decayed text { fill: var(--nx-fg-3); font-style: italic; }
-.nx-atlas-hub-label { fill: var(--nx-fg-1); font-family: var(--nx-font-ui); font-size: 12px; font-weight: 600; }
+.nx-atlas-hub-label { fill: var(--nx-fg-1); font-family: var(--nx-font-ui); font-size: var(--nx-fs-caption); font-weight: 600; }
 /* Atlas spokes: a soft static underlay plus a thin dash that travels from
    the hub to each fact, in the fact's own color. */
 .nx-atlas-glow { stroke-width: 3; stroke-linecap: round; }

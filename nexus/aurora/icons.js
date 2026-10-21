@@ -340,7 +340,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   specter: {
-    tagline: "Red-team — counter-arguments and dissenting views",
+    tagline: "Red-team: counter-arguments and dissenting views",
     description: "Argues against the user's premise. Surfaces hidden assumptions, failure modes, and edge cases. No flattery.",
     intents: ["challenge", "red-team", "stress-test"],
     tools: [
@@ -351,7 +351,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   wraith: {
-    tagline: "Forgetting — controlled deletion + privacy hygiene",
+    tagline: "Forgetting: controlled deletion + privacy hygiene",
     description: "Removes targeted entries from Engram + Chronicle. Useful after a sensitive task. Requires explicit confirmation.",
     intents: ["forget", "erase", "redact"],
     tools: [
@@ -363,7 +363,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   legacy: {
-    tagline: "Crystallised memory — recall with citations",
+    tagline: "Crystallised memory: recall with citations",
     description: "Returns past decisions, prior threads, and persistent context with timestamps and source.",
     intents: ["recall", "remember", "cite"],
     tools: [
@@ -375,7 +375,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   echo: {
-    tagline: "Mirror — what the user just said, restated",
+    tagline: "Mirror: what the user just said, restated",
     description: "Restates the active topic in the user's own words to surface contradictions and confirm understanding.",
     intents: ["reflect", "summarise-self", "confirm"],
     tools: [
@@ -386,7 +386,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   sentry: {
-    tagline: "Heartbeat — watches for risks during long tasks",
+    tagline: "Heartbeat: watches for risks during long tasks",
     description: "Subscribes to Pulse + Chronicle, flags concerning patterns (trust drops, denied calls, runaway loops).",
     intents: ["watch", "alert", "halt-on-risk"],
     tools: [
@@ -398,7 +398,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   autonomic: {
-    tagline: "Autopilot — repetitive task chains, hands-off",
+    tagline: "Autopilot: repetitive task chains, hands-off",
     description: "Strings tools together for chores you've already approved. Re-routes around failures, asks only on new capabilities.",
     intents: ["automate", "loop", "background"],
     tools: [
@@ -411,7 +411,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   consciousness: {
-    tagline: "Inner state — moods, regulation, salience",
+    tagline: "Inner state: moods, regulation, salience",
     description: "Owns MoodEngine signals. Suggests transitions, flags overload, recommends pauses.",
     intents: ["regulate", "introspect", "transition-mood"],
     tools: [
@@ -423,7 +423,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   agents: {
-    tagline: "Dispatcher — routes to installed third-party agents",
+    tagline: "Dispatcher: routes to installed third-party agents",
     description: "Looks at the installed catalog (onexus-agents) and routes to whichever runnable MCP agent best matches the intent.",
     intents: ["dispatch", "delegate", "match-tool"],
     tools: [
@@ -436,7 +436,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   sigil: {
-    tagline: "Threat radar — kernel anomaly detection with emergency bypass",
+    tagline: "Threat radar: kernel anomaly detection with emergency bypass",
     description: "Watches Aegis trust deltas, gate verdicts, routing traffic, and the network log. Table-driven detections broadcast at emergency priority with a provenance hash; high-stakes hits auto-activate Specter (kill switch available).",
     intents: ["detect", "broadcast", "escalate"],
     tools: [
@@ -449,7 +449,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   atlas: {
-    tagline: "World model — temporal facts with confidence decay",
+    tagline: "World model: temporal facts with confidence decay",
     description: "Engram's semantic tier as a knowledge graph: facts decay deterministically until re-confirmed, contradictions coexist with competing confidences, and every answer cites its source.",
     intents: ["observe", "recall-world", "cite"],
     tools: [
@@ -461,8 +461,8 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   prism: {
-    tagline: "Cross-domain synthesis — connections the per-workspace view can't see",
-    description: "Reads across Engram partitions (Aegis-gated, always prompted) to surface recurring entities, cross-workspace contradictions, and patterns no single workspace can show — every finding citing its Engram/Atlas source.",
+    tagline: "Cross-domain synthesis: connections the per-workspace view can't see",
+    description: "Reads across Engram partitions (Aegis-gated, always prompted) to surface recurring entities, cross-workspace contradictions, and patterns no single workspace can show, every finding citing its Engram/Atlas source.",
     intents: ["synthesise", "recurring", "contradict"],
     tools: [
       { name: "engram.read.workspace", class: "Routine" },
@@ -473,8 +473,8 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   chronos: {
-    tagline: "Counterfactual reasoning — replay the decision DAG with one node flipped",
-    description: "Reconstructs a deterministic decision graph from Chronicle's recorded history, then answers counterfactuals — flip one grant or route to denied and report which downstream actions depended on it. The kernel is never re-run.",
+    tagline: "Counterfactual reasoning: replay the decision DAG with one node flipped",
+    description: "Reconstructs a deterministic decision graph from Chronicle's recorded history, then answers counterfactuals: flip one grant or route to denied and report which downstream actions depended on it. The kernel is never re-run.",
     intents: ["counterfactual", "timeline", "replay"],
     tools: [
       { name: "chronicle.read.workspace", class: "Routine" },
@@ -484,7 +484,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   herald: {
-    tagline: "Negotiation — structured agent-to-agent offers, counters, and commitments",
+    tagline: "Negotiation: structured agent-to-agent offers, counters, and commitments",
     description: "Runs an offer / counter / accept / reject / commit state machine where every step is a typed Pulse message. Each commit is gated by the initiator's capability class through Aegis, and the full transcript is recorded in Chronicle.",
     intents: ["negotiate", "propose", "commit"],
     tools: [
@@ -496,7 +496,7 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   serendipity: {
-    tagline: "Anti-optimization — the signal optimization would have hidden",
+    tagline: "Anti-optimization: the signal optimization would have hidden",
     description: "Reads Atlas facts (Aegis-gated), scores each by relevance and novelty, then deliberately surfaces high-novelty / low-relevance items on a budget. Every item cites its source; every discovery lands in Chronicle.",
     intents: ["discover", "surprise", "novelty"],
     tools: [
@@ -507,8 +507,8 @@ export const BUILTIN_CAPABILITIES = {
     network: false,
   },
   federation: {
-    tagline: "Peer sync — workspace-scoped, allowlist-only Atlas-fact federation",
-    description: "Diffs Atlas facts between this instance and an allowlisted peer, gated per workspace through Aegis. The sync engine never touches the network — real peer HTTP flows only through the federation protocol's Aegis-routed client. Kill switch available.",
+    tagline: "Peer sync: workspace-scoped, allowlist-only Atlas-fact federation",
+    description: "Diffs Atlas facts between this instance and an allowlisted peer, gated per workspace through Aegis. The sync engine never touches the network; real peer HTTP flows only through the federation protocol's Aegis-routed client. Kill switch available.",
     intents: ["sync", "federate", "peer"],
     tools: [
       { name: "federation.sync.workspace",  class: "Routine" },

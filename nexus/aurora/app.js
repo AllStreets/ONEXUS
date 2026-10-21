@@ -2233,12 +2233,12 @@ async function renderConversation(workspaceId) {
       const minus = (s) => new Date(now.getTime() - s * 1000).toISOString();
       t.push({
         role: "user",
-        body: "Refactor the kernel runtime — three candidates, smallest blast radius first.",
+        body: "Refactor the kernel runtime. Three candidates, smallest blast radius first.",
         ts: minus(140),
       });
       t.push({
         role: "agent", agent: "oracle", ts: minus(120),
-        body: "I traced the dependency graph across 47 files in src/kernel/. Three refactor candidates match your scope — diffs below, ordered by smallest blast radius:",
+        body: "I traced the dependency graph across 47 files in src/kernel/. Three refactor candidates match your scope. Diffs below, ordered by smallest blast radius:",
         attachments: [
           { kind: "diff", path: "src/agents/runtime.py", adds: 12, dels: 34, selected: false },
           { kind: "diff", path: "src/kernel/cortex.py", adds: 8,  dels: 2,  selected: true  },
@@ -2276,7 +2276,7 @@ async function renderConversation(workspaceId) {
             permission_class: "Sensitive",
             workspace_id: workspaceId,
             target: "src/kernel/cortex.py",
-            preview: "Apply candidate #2 — replaces the inline router fallback with explicit dispatch.",
+            preview: "Apply candidate #2, which replaces the inline router fallback with explicit dispatch.",
           }),
         });
       } catch {}
@@ -2404,7 +2404,7 @@ function renderEmptyThreadHTML(ws) {
         `;
       }).join("")
     : [
-        { glyph: "council",       label: "Convene the council",  hint: "Get a 3-round deliberation across the cognitive modules.", prompt: "Council: I'm refactoring my kernel runtime — what should I be careful about?" },
+        { glyph: "council",       label: "Convene the council",  hint: "Get a 3-round deliberation across the cognitive modules.", prompt: "Council: I'm refactoring my kernel runtime. What should I be careful about?" },
         { glyph: "oracle",        label: "Ask the oracle",        hint: "A first read across whatever is in this workspace.",      prompt: "Oracle: read this repo and summarise its architecture in 5 bullets." },
         { glyph: "specter",       label: "Red-team a plan",       hint: "Counter-arguments and dissenting views, no flattery.",     prompt: "Specter: red-team my decision to switch from postgres to sqlite." },
         { glyph: "legacy",        label: "Pull from memory",      hint: "Recall what was decided last time, with citations.",       prompt: "Legacy: what have I tried for this problem before?" },
@@ -3872,7 +3872,7 @@ async function renderCortexLauncher(hash) {
           const target = btn.dataset.handoff;
           if (!target) return;
           // Compose a tiny "continue" prompt that lets the new agent pick up
-          await continueOnCard(idx, "(continuing from where the previous agent left off — please proceed)", { targetModule: target });
+          await continueOnCard(idx, "(continuing from where the previous agent left off, please proceed)", { targetModule: target });
         });
       });
 
@@ -3918,7 +3918,7 @@ async function renderCortexLauncher(hash) {
         btn.addEventListener("click", async () => {
           const target = btn.dataset.handoffTo;
           runEntry._handoffPickerOpen = false;
-          await continueOnCard(idx, "(handed off to you with full prior context — please continue)", { targetModule: target });
+          await continueOnCard(idx, "(handed off to you with full prior context, please continue)", { targetModule: target });
         });
       });
     });
@@ -4598,9 +4598,9 @@ function applyChatHistoryTone(panel) {
 }
 
 function chatHistoryRelative(ts) {
-  if (!ts) return "—";
+  if (!ts) return "never";
   const then = Date.parse(ts);
-  if (!Number.isFinite(then)) return "—";
+  if (!Number.isFinite(then)) return "unknown";
   const s = Math.floor((Date.now() - then) / 1000);
   if (s < 60) return s <= 1 ? "just now" : `${s}s ago`;
   const m = Math.floor(s / 60);
@@ -5993,7 +5993,7 @@ async function renderSearch(hash) {
         const e = _searchThread.entries[i];
         if (!e) return;
         const summary = e.hits.slice(0, 5).map((h, j) =>
-          `${j + 1}. ${h.title || h.url} — ${h.url}${h.snippet ? `\n   ${h.snippet}` : ""}`
+          `${j + 1}. ${h.title || h.url}: ${h.url}${h.snippet ? `\n   ${h.snippet}` : ""}`
         ).join("\n");
         const prompt = `I searched the web for "${e.query}" and got these top results:\n\n${summary}\n\nWhat should I take away from this?`;
         location.hash = `#/cortex?prompt=${encodeURIComponent(prompt)}`;
