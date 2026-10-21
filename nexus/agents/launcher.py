@@ -137,6 +137,11 @@ class AgentLauncher:
         if not adapter:
             raise AgentLaunchError(f"Could not load adapter for '{slug}'")
 
+        if adapter.status == "planned":
+            raise AgentLaunchError(
+                f"The adapter for '{slug}' is planned, not built yet. {adapter.status_note}".strip(),
+                status=400,
+            )
         if not adapter.command:
             raise AgentLaunchError(f"Adapter for '{slug}' has no command", status=400)
         # Guard against a malicious/typo'd upstream manifest reaching exec.

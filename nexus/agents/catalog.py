@@ -74,6 +74,9 @@ class AdapterDescriptor:
     default_tier: str
     # Red-team round 3: an adapter that declares this runs in a container (see confine.py)
     confinement: dict[str, Any] | None = None
+    # "planned": the descriptor exists but its server doesn't yet (status_note says what's missing)
+    status: str | None = None
+    status_note: str = ""
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> AdapterDescriptor:
@@ -87,6 +90,8 @@ class AdapterDescriptor:
             trust_floor=data.get("trust_floor", 0.0),
             default_tier=data.get("default_tier", "OBSERVER"),
             confinement=data.get("confinement"),
+            status=data.get("status"),
+            status_note=data.get("status_note", ""),
         )
 
 

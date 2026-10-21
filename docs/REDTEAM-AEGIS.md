@@ -88,7 +88,7 @@ finding this review missed by accident.
    Done in round 2.
 
 Steps 2 and 3 are round 3. What remains is coverage, not mechanism: each catalog adapter
-needs an image with its program installed before it can declare confinement. Two of the 22
+needs an image with its program installed before it can declare confinement. Two of the 21
 hand-written adapters have one so far (see round 3).
 
 ---
@@ -178,10 +178,11 @@ Docker it is refused.
   `tests/agents/test_confined_adapters.py` launches both from the real catalog, speaks MCP
   to them and checks from inside each container that the network and your files are out of
   reach. Their images are built from the catalog repo and not yet published or pinned by
-  digest, so a new machine builds them first. The other twenty adapters still need an image
-  with their program installed (`aider-mcp`, an `npx` package and so on), and most still
-  need the server they point at, which hasn't been written. Until then they run unconfined,
-  or not at all, and the ledger says which. `require` mode is how an operator refuses that.
+  digest, so a new machine builds them first. The other 19 can't run at all yet: 18 point at a
+  server that was never written and one at a package that was never published. Their
+  descriptors now say `"status": "planned"`, the catalog no longer calls them runnable, and
+  the launcher refuses them with that reason. Each still needs its server and an image
+  before it can be confined. `require` mode refuses anything unconfined that does run.
 - **MCP manifest agents** (`mcp_agent.py`) still start as child processes. They got round
   2's environment limits but not round 3's container.
 - **The runtime is Docker's default (runc), not gVisor.** SMADP's sandbox prefers gVisor

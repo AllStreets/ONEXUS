@@ -82,3 +82,16 @@ def test_env_override_extends_allowlist(monkeypatch):
     monkeypatch.setenv("NEXUS_AGENT_COMMAND_ALLOWLIST", "my-custom-runner")
     assert "my-custom-runner" in _command_allowlist()
     assert "python" in _command_allowlist()  # defaults still present
+
+
+def test_planned_adapter_is_refused_with_its_reason():
+    class _Planned(_FakeCatalog):
+        def load_adapter(self, entry):
+            d = super().load_adapter(entry)
+            d.status, d.status_note = "planned", "Not runnable yet: the server hasn't been written."
+            return d
+
+    with pytest.raises(AgentLaunchError) as exc:
+        AgentLauncher(catalog=_Planned("python"), kernel=_FakeKernel()).launch("x")
+    assert exc.value.status == 400
+    assert "planned" in str(exc.value) and "hasn't been written" in str(exc.value)
