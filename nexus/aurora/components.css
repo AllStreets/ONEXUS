@@ -630,6 +630,8 @@
 .nx-skeleton-title { height: 18px; width: 40%; }
 .nx-skeleton-line { width: 100%; }
 .nx-skeleton-short { width: 60%; }
+.nx-skeleton-avatar { width: 36px; height: 36px; border-radius: var(--nx-radius-md); margin-bottom: var(--nx-space-4); }
+.nx-skeleton-avatar + .nx-skeleton { margin-top: 0; }
 @keyframes nx-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .nx-loading {
   display: flex; align-items: center; gap: var(--nx-space-2);

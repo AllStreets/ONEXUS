@@ -3039,48 +3039,63 @@ function renderWorkspacesGrid() {
     document.getElementById("nx-welcome-create").addEventListener("click", openNewWorkspaceForm);
     return;
   }
-  const tiles = state.workspaces.map(w => `
-    <div class="nx-ws-tile nx-tone-${w.tone || "indigo"} ${w.workspace_id === state.active ? "active" : ""}"
-         data-id="${w.workspace_id}">
-      <div class="tile-eyebrow">${escapeHtml((w.tone || "indigo").toUpperCase())}</div>
+  const tiles = state.workspaces.map(w => {
+    const tone = (w.tone || "indigo").toLowerCase();
+    const isActive = w.workspace_id === state.active;
+    const agents = Math.max((state.workspaceAgentCounts || {})[w.workspace_id] || 0, (w.resident_agents || []).length);
+    return `
+    <div class="nx-ws-tile nx-tone-${escapeHtml(tone)} ${isActive ? "active" : ""}" role="button" tabindex="0"
+         data-id="${w.workspace_id}" style="--tone:var(--nx-tone-${escapeHtml(tone)}-a, var(--nx-accent))" aria-label="Open workspace ${escapeHtml(w.name)}">
+      <div class="tile-top">
+        <span class="tile-swatch" aria-hidden="true"></span>
+        ${isActive ? `<span class="nx-status is-live">Active</span>` : ""}
+      </div>
       <div class="tile-name">${escapeHtml(w.name)}</div>
+      <div class="tile-eyebrow">${escapeHtml(tone.charAt(0).toUpperCase() + tone.slice(1))} · ${agents} agent${agents === 1 ? "" : "s"}</div>
       <div class="tile-footer">
         <div class="disc-stack">
           ${(w.resident_agents || []).slice(0, 3).map(a => agentDisc(a, { size: 22 })).join("")}
         </div>
-        <span class="nx-mono" style="opacity:0.8">
-          ${w.workspace_id === state.active ? "active" : (w.last_active_at ? "seen" : "—")}
+        <span class="tile-seen">
+          ${isActive ? "Open now" : (w.last_active_at ? `Seen ${escapeHtml(chatHistoryRelative(w.last_active_at))}` : "Not opened yet")}
         </span>
       </div>
     </div>
-  `).join("");
+  `;
+  }).join("");
   main.innerHTML = `
     <div class="nx-main-inner">
-      <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:24px">
-        <div>
-          <div class="nx-eyebrow" style="margin-bottom:6px">Rooms</div>
-          <div class="nx-display" style="font-size:28px;color:#f3ecff;font-weight:700">Workspaces</div>
-          <div class="nx-dim" style="font-size:13px;margin-top:4px">
-            ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"} · ⌘K to switch · ⌘N for new
-          </div>
+      <header class="nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Rooms</div>
+          <h1 class="nx-page-title">Workspaces</h1>
+          <p class="nx-page-sub">
+            ${state.workspaces.length} workspace${state.workspaces.length === 1 ? "" : "s"}. Press ⌘K to switch, ⌘N for a new one.
+          </p>
+        </div>
+        <div class="nx-page-actions">
+          <button class="nx-btn nx-btn-primary" id="nx-head-new-workspace" type="button">${icon("plus", 16)}New workspace</button>
         </div>
       </header>
       <div class="nx-ws-grid">
         ${tiles}
-        <div class="nx-ws-tile new" id="nx-inline-new-workspace">
-          ${UI.plus(22)}
-          <div style="font-size:13px;margin-top:6px">New workspace</div>
-        </div>
+        <button class="nx-ws-tile new" id="nx-inline-new-workspace" type="button">
+          ${icon("plus", 20)}
+          <span>New workspace</span>
+        </button>
       </div>
     </div>
   `;
+  document.getElementById("nx-head-new-workspace")?.addEventListener("click", openNewWorkspaceForm);
   main.querySelectorAll(".nx-ws-tile[data-id]").forEach(el => {
-    el.addEventListener("click", async () => {
+    const open = async () => {
       await fetch(`/api/workspaces/${el.dataset.id}/switch`, { method: "POST" });
       await loadWorkspaces();
       renderSidebar();
       location.hash = `#/conversation/${el.dataset.id}`;
-    });
+    };
+    el.addEventListener("click", open);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
   });
   document.getElementById("nx-inline-new-workspace").addEventListener("click", openNewWorkspaceForm);
 }
@@ -3088,7 +3103,13 @@ function renderWorkspacesGrid() {
 // ── Main view: catalog (spatial grid) ─────────────────────────────────────
 async function renderCatalog() {
   const main = document.getElementById("nx-main");
-  main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">loading catalog…</div></div>`;
+  main.innerHTML = `<div class="nx-main-inner">
+      <header class="nx-page-head"><div class="nx-page-head-text">
+        <div class="nx-eyebrow nx-page-eyebrow">Agent store</div>
+        <span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-short"></span>
+      </div></header>
+      <div class="nx-spatial" aria-busy="true">${Array.from({ length: 6 }, () => `<div class="nx-spatial-card nx-card"><span class="nx-skeleton nx-skeleton-avatar"></span><span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-short"></span></div>`).join("")}</div>
+    </div>`;
   // Parse hash for filters
   const filters = {};
   (location.hash.split("?")[1] || "").split("&").forEach(p => {
@@ -3111,27 +3132,30 @@ async function renderCatalog() {
     const cats = body.categories || [];
     main.innerHTML = `
       <div class="nx-main-inner">
-        <div class="nx-spatial-header">
-          <div>
-            <div class="nx-eyebrow" style="margin-bottom:6px">Agent store · ONEXUS catalog</div>
-            <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">${(body.total || 0).toLocaleString()} agents, graded &amp; runnable</div>
-            <div class="nx-dim" style="font-size:13px;margin-top:4px">${search ? `${agents.length} matching “${escapeHtml(search)}” across the whole catalog` : `showing ${agents.length} ${category ? "in " + escapeHtml(category.replace(/-/g, " ")) : "featured"} · ranked by ONEXUS benchmark score`}${runnableOnly && !search ? " · runnable via MCP adapter" : ""}</div>
+        <header class="nx-spatial-header nx-page-head">
+          <div class="nx-page-head-text">
+            <div class="nx-eyebrow nx-page-eyebrow">Agent store · ONEXUS catalog</div>
+            <h1 class="nx-page-title">${(body.total || 0).toLocaleString()} agents, graded and runnable</h1>
+            <p class="nx-page-sub">${search ? `${agents.length} matching “${escapeHtml(search)}” across the whole catalog` : `Showing ${agents.length} ${category ? "in " + escapeHtml(category.replace(/-/g, " ")) : "featured"}, ranked by ONEXUS benchmark score`}${runnableOnly && !search ? ". Runnable through an MCP adapter." : ""}</p>
           </div>
-          <form class="nx-cat-filters" id="nx-cat-filters">
-            <input type="search" id="nx-cat-q" value="${escapeHtml(search)}" placeholder="search the catalog…">
-            <select id="nx-cat-cat">
-              <option value="">all categories</option>
-              ${cats.map(c => `<option value="${escapeHtml(c)}" ${c===category?"selected":""}>${escapeHtml(c)}</option>`).join("")}
-            </select>
-            <label class="nx-cat-toggle">
-              <input type="checkbox" id="nx-cat-runnable" ${runnableOnly?"checked":""}>
-              runnable only
-            </label>
-          </form>
-        </div>
-        <div class="nx-spatial">
+        </header>
+        <form class="nx-cat-filters nx-toolbar" id="nx-cat-filters" role="search">
+          <div class="nx-search-field nx-cat-search">
+            ${icon("search", 14)}
+            <input type="search" id="nx-cat-q" class="nx-input" value="${escapeHtml(search)}" placeholder="Search the catalog" aria-label="Search the catalog">
+          </div>
+          <select id="nx-cat-cat" class="nx-select" aria-label="Category">
+            <option value="">All categories</option>
+            ${cats.map(c => `<option value="${escapeHtml(c)}" ${c===category?"selected":""}>${escapeHtml(c.replace(/-/g, " "))}</option>`).join("")}
+          </select>
+          <label class="nx-cat-toggle nx-check">
+            <input type="checkbox" id="nx-cat-runnable" ${runnableOnly?"checked":""}>
+            Runnable only
+          </label>
+        </form>
+        ${agents.length ? `<div class="nx-spatial">
           ${agents.map(renderCatalogCard).join("")}
-        </div>
+        </div>` : emptyStateHTML({ icon: "search", title: "No agents match", body: search ? `Nothing in the catalog matches “${escapeHtml(search)}”. Try a shorter word or clear the filters.` : "No agents in this category yet. Try another category or turn off Runnable only.", actions: `<a class="nx-btn" href="#/catalog">Clear filters</a>` })}
       </div>
     `;
     // Wire filter changes
@@ -3173,21 +3197,26 @@ async function renderCatalog() {
         e.stopPropagation();
         const btn = e.currentTarget;
         btn.disabled = true;
-        btn.textContent = "launching…";
+        btn.textContent = "Launching";
+        btn.setAttribute("aria-busy", "true");
         try {
           const r = await fetch(`/api/agents/${encodeURIComponent(slug)}/launch`, { method: "POST" });
           const body = await r.json().catch(() => ({}));
-          btn.textContent = r.ok ? "running" : (body.detail || body.message || "failed");
+          btn.textContent = r.ok ? "Running" : (body.detail || body.message || "Failed");
           if (r.ok) btn.classList.add("on");
         } catch (e) {
-          btn.textContent = "error";
+          btn.textContent = "Error";
         } finally {
+          btn.removeAttribute("aria-busy");
           setTimeout(() => { btn.disabled = false; }, 1200);
         }
       });
     });
   } catch (e) {
-    main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">could not load catalog: ${escapeHtml(e.message)}</div></div>`;
+    main.innerHTML = `<div class="nx-main-inner">
+      <header class="nx-page-head"><div class="nx-page-head-text"><div class="nx-eyebrow nx-page-eyebrow">Agent store</div><h1 class="nx-page-title">Catalog</h1></div></header>
+      <div class="nx-alert is-danger" role="alert">${icon("alert-circle", 16)}<div class="nx-alert-body"><div class="nx-alert-title">Could not load the catalog</div>${escapeHtml(e.message)}. Check that the ONEXUS-Agents catalog is available, then reload.</div></div>
+    </div>`;
   }
 }
 
@@ -3198,7 +3227,7 @@ function fmtCount(n) {
   if (n >= 1000) return (n / 1000).toFixed(n >= 10_000 ? 0 : 1) + "k";
   return String(n);
 }
-const STAR_GLYPH = `<svg viewBox="0 0 12 12" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M6 1l1.5 3.1 3.4.5-2.45 2.4.58 3.4L6 8.8 2.97 10.4l.58-3.4L1.1 4.6l3.4-.5z"/></svg>`;
+const STAR_GLYPH = icon("star", 12);
 
 function renderCatalogCard(a) {
   const runnable = a.runnable || a.is_builtin;
@@ -3208,29 +3237,29 @@ function renderCatalogCard(a) {
   const stars = fmtCount(a.stars);
   const rank = a.rank_in_category;
   return `
-    <div class="nx-spatial-card" data-slug="${escapeHtml(a.slug)}">
+    <div class="nx-spatial-card nx-card" data-slug="${escapeHtml(a.slug)}">
       <div class="nx-card-top">
         ${agentDisc(a.slug, { size: 36, trust: a.trust_floor ?? null })}
-        ${rank != null && rank <= 3 ? `<span class="nx-card-rank" title="rank ${rank} in ${escapeHtml(a.category || "category")}">#${rank}</span>` : ""}
+        ${rank != null && rank <= 3 ? `<span class="nx-card-rank nx-pill nx-pill-warn" title="Rank ${rank} in ${escapeHtml(a.category || "category")}">#${rank} in category</span>` : ""}
       </div>
       <div class="name">${escapeHtml(a.name || a.slug)}</div>
       <div class="tagline">${escapeHtml(a.tagline || a.description || "")}</div>
       ${score != null ? `
         <div class="nx-card-bench" title="ONEXUS benchmark score ${score.toFixed(3)}">
-          <div class="nx-card-bench-track"><div class="nx-card-bench-fill" style="width:${scorePct}%"></div></div>
+          <span class="nx-card-bench-lbl">Benchmark</span>
+          <div class="nx-card-bench-track nx-meter"><div class="nx-card-bench-fill nx-meter-fill" style="width:${scorePct}%"></div></div>
           <span class="nx-card-bench-val">${score.toFixed(2)}</span>
         </div>` : ""}
       <div class="status">
-        <span class="status-dot ${runnable ? "" : "sleeping"}"></span>
-        ${runnable ? "runnable" : "manifest-only"}
-        ${stars ? `<span class="nx-card-stars">${STAR_GLYPH}${stars}</span>` : ""}
+        <span class="nx-status ${runnable ? "is-ok" : ""}">${runnable ? "Runnable" : "Manifest only"}</span>
+        ${stars ? `<span class="nx-card-stars" title="GitHub stars">${STAR_GLYPH}${stars}</span>` : ""}
         <span class="badge-system">${escapeHtml((a.category || "").replace(/-/g, " "))}</span>
       </div>
       <div class="nx-card-actions">
-        ${runnable ? `<button class="launch-btn" type="button">Launch</button>` : ""}
-        <button class="compose-btn" type="button" title="Add to a Cortex launch">compose</button>
-        <button class="trust-btn" type="button">trust</button>
-        ${a.source_github ? `<a class="src-link" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener noreferrer">source ↗</a>` : ""}
+        ${runnable ? `<button class="launch-btn nx-btn nx-btn-sm" type="button">${icon("play", 12)}Launch</button>` : ""}
+        <button class="compose-btn nx-btn nx-btn-sm nx-btn-ghost" type="button" title="Add to a Cortex launch">Compose</button>
+        <button class="trust-btn nx-btn nx-btn-sm nx-btn-ghost" type="button" title="Open the trust sheet">Trust</button>
+        ${a.source_github ? `<a class="src-link nx-icon-btn" href="https://github.com/${escapeHtml(a.source_github)}" target="_blank" rel="noopener noreferrer" title="Source on GitHub" aria-label="Source on GitHub">${icon("external-link", 14)}</a>` : ""}
       </div>
     </div>
   `;
