@@ -3406,10 +3406,10 @@ const _cortexState = {
 
 // Bespoke swarm-template glyphs — line-stroke, same language as icons.js.
 const SWARM_TEMPLATE_ICONS = {
-  research: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5.2"/><path d="M12.8 12.8 18 18"/><path d="M9 6.4v5.2M6.4 9h5.2" opacity="0.5"/></svg>`,
-  build: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3.5" y="11" width="6.5" height="6.5" rx="1"/><rect x="12" y="11" width="6.5" height="6.5" rx="1"/><rect x="7.75" y="4" width="6.5" height="6.5" rx="1"/></svg>`,
-  monitor: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 11h4l2-5 3.5 10 2.5-7 1.5 2H20"/></svg>`,
-  negotiate: `<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6v11"/><path d="M5 6.5h9l-2.2 2.7L14 12H5z"/><circle cx="5" cy="5" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+  research: icon("search", 16),
+  build: icon("layers", 16),
+  monitor: icon("activity", 16),
+  negotiate: icon("flag", 16),
 };
 
 async function renderCortexLauncher(hash) {
@@ -3444,18 +3444,21 @@ async function renderCortexLauncher(hash) {
   const main = document.getElementById("nx-main");
   main.innerHTML = `
     <div class="nx-main-inner">
-      <header style="margin-bottom:18px">
-        <div class="nx-eyebrow" style="margin-bottom:6px">Cortex · multi-agent launcher</div>
-        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Launch</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">
-          Type a prompt and pick one or many agents. Cortex pre-suggests its top picks; tick whichever you want and dispatch in parallel.
-          You can also type <code>cortex …</code> into the home composer to land here.
+      <header class="nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Cortex · multi-agent launcher</div>
+          <h1 class="nx-page-title">Launch agents</h1>
+          <p class="nx-page-sub">
+            Write a prompt and pick one or many agents. Cortex suggests its top picks; tick the ones you want and dispatch them in parallel.
+            You can also type <code class="nx-code-inline">cortex</code> followed by a prompt into the home composer to land here.
+          </p>
         </div>
       </header>
 
       <section class="nx-swarm-templates" id="nx-swarm-templates" aria-label="Swarm templates"></section>
 
-      <section class="nx-card" id="nx-cortex-form" style="padding:18px;margin-bottom:18px">
+      <section class="nx-card nx-cortex-form" id="nx-cortex-form">
+        <label class="nx-sr-only" for="nx-cortex-prompt">Prompt</label>
         <textarea
           id="nx-cortex-prompt"
           rows="3"
@@ -3465,31 +3468,33 @@ async function renderCortexLauncher(hash) {
 
         <div class="nx-cortex-pickers">
           <div class="nx-cortex-pickers-head">
-            <div class="nx-eyebrow">AGENTS · pick one or many</div>
-            <div class="nx-cortex-search">
-              <input id="nx-cortex-agent-search" type="search"
-                     placeholder="search ${(state.catalogTotal || state.runnableCount || 0).toLocaleString()} catalog agents…"
+            <div class="nx-section-label">Agents, pick one or many</div>
+            <div class="nx-cortex-search nx-search-field">
+              ${icon("search", 14)}
+              <input id="nx-cortex-agent-search" type="search" class="nx-input"
+                     placeholder="Search ${(state.catalogTotal || state.runnableCount || 0).toLocaleString()} catalog agents"
+                     aria-label="Search catalog agents"
                      autocomplete="off" spellcheck="false">
             </div>
           </div>
-          <div class="nx-eyebrow nx-cortex-sub-eyebrow">BUILT-IN</div>
+          <div class="nx-eyebrow nx-cortex-sub-eyebrow">Built-in</div>
           <div class="nx-cortex-chips" id="nx-cortex-chips-builtin">
-            <div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">loading agents…</div>
+            <div class="nx-loading"><span class="nx-spinner" aria-hidden="true"></span>Loading agents</div>
           </div>
-          <div id="nx-cortex-catalog-section" style="display:none">
-            <div class="nx-eyebrow nx-cortex-sub-eyebrow" id="nx-cortex-catalog-heading">CATALOG · matches</div>
+          <div id="nx-cortex-catalog-section" hidden>
+            <div class="nx-eyebrow nx-cortex-sub-eyebrow" id="nx-cortex-catalog-heading">Catalog matches</div>
             <div class="nx-cortex-chips" id="nx-cortex-chips-catalog"></div>
           </div>
         </div>
 
         <div class="nx-cortex-actions">
-          <button id="nx-cortex-run" class="nx-cortex-run" type="button" disabled>
+          <button id="nx-cortex-run" class="nx-cortex-run nx-btn nx-btn-primary" type="button" disabled>
             <span class="nx-spinner" aria-hidden="true" hidden></span>
-            <span class="nx-cortex-run-label">pick agents to dispatch</span>
+            <span class="nx-cortex-run-label">Pick agents to dispatch</span>
           </button>
-          <button id="nx-cortex-top3" class="nx-cortex-pickbtn" type="button">pick top 3 for me</button>
-          <button id="nx-cortex-all" class="nx-cortex-pickbtn" type="button">all available</button>
-          <button id="nx-cortex-clear" class="nx-cortex-pickbtn" type="button">clear</button>
+          <button id="nx-cortex-top3" class="nx-cortex-pickbtn nx-btn nx-btn-ghost" type="button">${icon("sparkle", 14)}Pick top 3 for me</button>
+          <button id="nx-cortex-all" class="nx-cortex-pickbtn nx-btn nx-btn-ghost" type="button">All built-ins</button>
+          <button id="nx-cortex-clear" class="nx-cortex-pickbtn nx-btn nx-btn-ghost" type="button">Clear</button>
         </div>
 
         <div id="nx-cortex-error-slot"></div>
@@ -3511,12 +3516,15 @@ async function renderCortexLauncher(hash) {
     const spinner = runBtn.querySelector(".nx-spinner");
     if (spinner) spinner.hidden = !_cortexState.running;
     runBtn.classList.toggle("running", !!_cortexState.running);
+    runBtn.setAttribute("aria-busy", String(!!_cortexState.running));
     if (_cortexState.running) {
-      label.textContent = "dispatching…";
+      label.textContent = "Dispatching";
     } else if (n === 0) {
-      label.textContent = "pick agents to dispatch";
+      label.textContent = "Pick agents to dispatch";
+    } else if (!_cortexState.prompt.trim()) {
+      label.textContent = "Write a prompt to dispatch";
     } else {
-      label.textContent = `dispatch to ${n} agent${n === 1 ? "" : "s"}`;
+      label.textContent = `Dispatch to ${n} agent${n === 1 ? "" : "s"}`;
     }
   };
 
@@ -3529,13 +3537,16 @@ async function renderCortexLauncher(hash) {
     const err = _cortexState.lastError;
     if (!err) { slot.innerHTML = ""; return; }
     const text = err.status
-      ? `HTTP ${err.status} — ${err.detail || "no detail"}`
+      ? `HTTP ${err.status}: ${err.detail || "no detail"}`
       : (err.detail || "unknown error");
     slot.innerHTML = `
-      <div class="nx-cortex-error" role="alert">
-        <span class="nx-cortex-error-badge">DISPATCH FAILED</span>
-        <span class="nx-cortex-error-text">${escapeHtml(text)}</span>
-        <button type="button" class="nx-cortex-error-dismiss" aria-label="Dismiss error">${UI.close(11)}</button>
+      <div class="nx-cortex-error nx-alert is-danger" role="alert">
+        ${icon("alert-circle", 16)}
+        <div class="nx-alert-body">
+          <span class="nx-cortex-error-badge nx-alert-title">DISPATCH FAILED</span>
+          <span class="nx-cortex-error-text">${escapeHtml(text)}</span>
+        </div>
+        <button type="button" class="nx-cortex-error-dismiss nx-icon-btn" aria-label="Dismiss error">${UI.close(14)}</button>
       </div>
     `;
     slot.querySelector(".nx-cortex-error-dismiss")?.addEventListener("click", () => {
@@ -3553,21 +3564,21 @@ async function renderCortexLauncher(hash) {
     const builtinChips = all.map(slug => {
       const selected = _cortexState.selected.has(slug);
       const t = topMap[slug];
-      const scoreText = t ? `· ${(t.score * 100).toFixed(0)}%` : "";
+      const scoreText = t ? `${(t.score * 100).toFixed(0)}%` : "";
       const isPrimary = cands.primary === slug;
       const gradient = (typeof GRADIENTS !== "undefined" && GRADIENTS[slug]) || ["#9aa8ff", "#4d5bcf"];
       const disc = (typeof agentDisc === "function")
         ? agentDisc(slug, { size: 24 })
         : `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,${gradient[0]},${gradient[1]})"></span>`;
       return `
-        <button type="button" class="nx-cortex-chip ${selected ? "selected" : ""} ${topModules.has(slug) ? "top" : ""}" data-slug="${escapeHtml(slug)}" data-kind="builtin">
+        <button type="button" class="nx-cortex-chip nx-chip ${selected ? "selected" : ""} ${topModules.has(slug) ? "top" : ""}" data-slug="${escapeHtml(slug)}" data-kind="builtin" aria-pressed="${selected}">
           <span class="nx-cortex-chip-icon">${disc}</span>
           <span class="nx-cortex-chip-name">${escapeHtml(slug)}</span>
-          ${isPrimary ? `<span class="nx-cortex-chip-pill">PRIMARY</span>` : ""}
+          ${isPrimary ? `<span class="nx-cortex-chip-pill nx-pill nx-pill-accent">Primary</span>` : ""}
           ${scoreText ? `<span class="nx-cortex-chip-score">${escapeHtml(scoreText)}</span>` : ""}
         </button>
       `;
-    }).join("") || `<div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">no agents registered</div>`;
+    }).join("") || `<div class="nx-empty-line">No agents are registered with Cortex yet.</div>`;
     document.getElementById("nx-cortex-chips-builtin").innerHTML = builtinChips;
 
     // Catalog chips: union of (candidates.catalog_matches from prompt) and
@@ -3596,22 +3607,22 @@ async function renderCortexLauncher(hash) {
     const catalogEl = document.getElementById("nx-cortex-chips-catalog");
 
     if (catalogList.length === 0 && !_cortexState.catalogSearch) {
-      catalogSection.style.display = "none";
+      catalogSection.hidden = true;
     } else {
-      catalogSection.style.display = "";
+      catalogSection.hidden = false;
       catalogHeading.textContent = _cortexState.catalogSearch
-        ? `CATALOG · "${_cortexState.catalogSearch}" — ${catalogList.length} match${catalogList.length === 1 ? "" : "es"}`
-        : `CATALOG · ${catalogList.length} prompt match${catalogList.length === 1 ? "" : "es"}`;
+        ? `Catalog · ${catalogList.length} match${catalogList.length === 1 ? "" : "es"} for "${_cortexState.catalogSearch}"`
+        : `Catalog · ${catalogList.length} prompt match${catalogList.length === 1 ? "" : "es"}`;
       catalogEl.innerHTML = catalogList.map(c => {
         const selected = _cortexState.selected.has(c.slug);
         return `
-          <button type="button" class="nx-cortex-chip catalog ${selected ? "selected" : ""}" data-slug="${escapeHtml(c.slug)}" data-kind="catalog" title="${escapeHtml(c.tagline || c.name)}">
-            <span class="nx-cortex-chip-icon nx-cortex-chip-cat-icon"></span>
+          <button type="button" class="nx-cortex-chip nx-chip catalog ${selected ? "selected" : ""}" data-slug="${escapeHtml(c.slug)}" data-kind="catalog" aria-pressed="${selected}" title="${escapeHtml(c.tagline || c.name)}">
+            <span class="nx-cortex-chip-icon nx-cortex-chip-cat-icon">${icon("package", 13)}</span>
             <span class="nx-cortex-chip-name">${escapeHtml(c.name || c.slug)}</span>
             <span class="nx-cortex-chip-cat">${escapeHtml((c.category || "").replace(/-/g, " "))}</span>
           </button>
         `;
-      }).join("") || `<div class="nx-empty" style="opacity:0.5;padding:6px;font-size:12px">no catalog matches</div>`;
+      }).join("") || `<div class="nx-empty-line">No catalog agents match.</div>`;
     }
 
     // Wire all chips (both lists)
@@ -3634,12 +3645,12 @@ async function renderCortexLauncher(hash) {
     const { runs = [], succeeded = 0, failed = 0 } = _cortexState.runs;
     const anyPending = runs.some(r => r.pending);
     const summary = anyPending
-      ? `<span class="running"><span class="nx-spinner" aria-hidden="true"></span> dispatching to ${runs.length} agent${runs.length === 1 ? "" : "s"}…</span>`
-      : `<span class="ok">${succeeded} succeeded</span>
-         ${failed > 0 ? `<span class="fail" style="margin-left:10px">${failed} failed</span>` : ""}`;
+      ? `<span class="running nx-status is-live">Dispatching to ${runs.length} agent${runs.length === 1 ? "" : "s"}</span>`
+      : `<span class="ok nx-status is-ok">${succeeded} succeeded</span>
+         ${failed > 0 ? `<span class="fail nx-status is-danger">${failed} failed</span>` : ""}`;
     resultsEl.innerHTML = `
-      <header class="nx-cortex-results-head">
-        <div class="nx-eyebrow">${anyPending ? "DISPATCHING · agents are working" : "RESULTS · click a card to continue the conversation"}</div>
+      <header class="nx-cortex-results-head nx-section-head">
+        <div class="nx-section-label">${anyPending ? "Dispatching, agents are working" : "Results, continue any card below"}</div>
         <div class="nx-cortex-summary">${summary}</div>
       </header>
       <div class="nx-cortex-runlist">
@@ -3657,14 +3668,14 @@ async function renderCortexLauncher(hash) {
     if (m.role === "user") {
       return `
         <div class="nx-cortex-turn user">
-          <span class="nx-cortex-turn-tag">you</span>
+          <span class="nx-cortex-turn-tag">You</span>
           <div class="nx-cortex-turn-body">${escapeHtml(m.content)}</div>
         </div>
       `;
     }
     return `
       <div class="nx-cortex-turn agent">
-        <span class="nx-cortex-turn-tag">agent</span>
+        <span class="nx-cortex-turn-tag">Agent</span>
         <div class="nx-cortex-turn-body nx-msg-md">${renderMarkdown(m.content)}</div>
       </div>
     `;
@@ -3675,15 +3686,17 @@ async function renderCortexLauncher(hash) {
     // Render as RUNNING (spinner + pulsing border), never as an error.
     if (r.pending) {
       return `
-        <article class="nx-cortex-run-card pending" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
+        <article class="nx-cortex-run-card pending" data-module="${escapeHtml(r.module)}" data-idx="${idx}" aria-busy="true">
           <header class="nx-cortex-run-head">
+            ${agentDisc(r.module, { size: 24 })}
             <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
             <span class="nx-cortex-run-meta">
               <span class="nx-spinner" aria-hidden="true"></span>
-              <span class="nx-cortex-run-status running">running</span>
+              <span class="nx-cortex-run-status running">Running</span>
             </span>
           </header>
-          <div class="nx-cortex-run-body nx-dim">dispatched — waiting for ${escapeHtml(r.module)} to respond…</div>
+          <div class="nx-cortex-run-body nx-dim">Dispatched. Waiting for ${escapeHtml(r.module)} to respond.</div>
+          <div class="nx-progress is-indeterminate" aria-hidden="true"><div class="nx-progress-bar"></div></div>
         </article>
       `;
     }
@@ -3692,9 +3705,10 @@ async function renderCortexLauncher(hash) {
       return `
         <article class="nx-cortex-run-card fail" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
           <header class="nx-cortex-run-head">
+            ${agentDisc(r.module, { size: 24 })}
             <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
             <span class="nx-cortex-run-meta">
-              <span class="nx-cortex-run-status fail">error</span>
+              <span class="nx-cortex-run-status fail">Error</span>
               <span class="nx-dim">· failed after ${secs}s</span>
             </span>
           </header>
@@ -3712,19 +3726,20 @@ async function renderCortexLauncher(hash) {
       ];
     }
     const handoffPill = r.suggested_handoff
-      ? `<button class="nx-cortex-handoff-pill" data-handoff="${escapeHtml(r.suggested_handoff)}" title="The agent suggested handing the next turn to ${escapeHtml(r.suggested_handoff)}. Click to accept.">↗ hand off to ${escapeHtml(r.suggested_handoff)}</button>`
+      ? `<button class="nx-cortex-handoff-pill nx-btn nx-btn-sm nx-btn-tinted" type="button" data-handoff="${escapeHtml(r.suggested_handoff)}" title="The agent suggested handing the next turn to ${escapeHtml(r.suggested_handoff)}. Click to accept.">${icon("arrow-up-right", 12)}Hand off to ${escapeHtml(r.suggested_handoff)}</button>`
       : "";
     const turning = r._continuing
-      ? `<div class="nx-cortex-turn agent typing"><span class="nx-cortex-turn-tag">${escapeHtml(r._next_agent || r.module)}</span><div class="nx-cortex-turn-body nx-dim">thinking…</div></div>`
+      ? `<div class="nx-cortex-turn agent typing"><span class="nx-cortex-turn-tag">${escapeHtml(r._next_agent || r.module)}</span><div class="nx-cortex-turn-body"><span class="nx-typing" aria-label="Thinking"><span></span><span></span><span></span></span></div></div>`
       : "";
     return `
       <article class="nx-cortex-run-card ok" data-module="${escapeHtml(r.module)}" data-idx="${idx}">
         <header class="nx-cortex-run-head">
+          ${agentDisc(r.module, { size: 24 })}
           <span class="nx-cortex-run-name">${escapeHtml(r.module)}</span>
           <span class="nx-cortex-run-meta">
-            <span class="nx-cortex-run-status ok">ok</span>
+            <span class="nx-cortex-run-status ok">Done</span>
             <span class="nx-dim">· ${r.elapsed_ms}ms · ${r._messages.filter(m => m.role === "assistant").length} turn${r._messages.filter(m => m.role === "assistant").length === 1 ? "" : "s"}</span>
-            ${r.llm_augmented ? `<span class="nx-cortex-llm-pill" title="The agent's native handler returned a canned response, so Cortex re-asked the LLM to answer as this agent.">LLM</span>` : ""}
+            ${r.llm_augmented ? `<span class="nx-cortex-llm-pill nx-pill nx-pill-accent" title="The agent's native handler returned a canned response, so Cortex re-asked the LLM to answer as this agent.">LLM</span>` : ""}
           </span>
         </header>
         <div class="nx-cortex-turns">
@@ -3733,31 +3748,31 @@ async function renderCortexLauncher(hash) {
         </div>
 
         <footer class="nx-cortex-run-fb" data-fb-state="${r._feedback || ""}">
-          <button type="button" class="nx-cortex-fb-btn ${r._feedback === "up" ? "active" : ""}" data-fb="up" aria-label="Useful — +0.12 to ${escapeHtml(r.module)}'s trust">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M3 8h2v6H3V8zm3 6V8l3-5c.5 0 1 .5 1 1v3h3c.6 0 1 .4 1 1l-1 5c-.1.4-.5.7-1 .7H6z"/></svg>
-            <span>useful</span>
+          <button type="button" class="nx-cortex-fb-btn nx-btn nx-btn-sm nx-btn-ghost ${r._feedback === "up" ? "active" : ""}" data-fb="up" aria-pressed="${r._feedback === "up"}" aria-label="Useful: +0.12 to ${escapeHtml(r.module)}'s trust">
+            ${icon("thumbs-up", 14)}
+            <span>Useful</span>
           </button>
-          <button type="button" class="nx-cortex-fb-btn ${r._feedback === "down" ? "active down" : ""}" data-fb="down" aria-label="Not useful — −0.22 from ${escapeHtml(r.module)}'s trust">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 8h-2V2h2v6zm-3-6v6l-3 5c-.5 0-1-.5-1-1v-3H3c-.6 0-1-.4-1-1L3 3c.1-.4.5-.7 1-.7h6z"/></svg>
-            <span>wrong</span>
+          <button type="button" class="nx-cortex-fb-btn nx-btn nx-btn-sm nx-btn-ghost ${r._feedback === "down" ? "active down" : ""}" data-fb="down" aria-pressed="${r._feedback === "down"}" aria-label="Not useful: −0.22 from ${escapeHtml(r.module)}'s trust">
+            ${icon("thumbs-down", 14)}
+            <span>Wrong</span>
           </button>
           ${handoffPill}
-          <button type="button" class="nx-cortex-handoff-btn" data-pick-handoff="${escapeHtml(r.module)}">↗ hand off…</button>
-          <span class="nx-cortex-fb-hint nx-dim">${r._feedback === "up" ? "+0.12 applied — trust ↑" : r._feedback === "down" ? "−0.22 applied — trust ↓" : "rate this response · feeds Aegis trust"}</span>
+          <button type="button" class="nx-cortex-handoff-btn nx-btn nx-btn-sm nx-btn-ghost" data-pick-handoff="${escapeHtml(r.module)}">${icon("repeat", 12)}Hand off</button>
+          <span class="nx-cortex-fb-hint">${r._feedback === "up" ? "+0.12 applied, trust rose" : r._feedback === "down" ? "−0.22 applied, trust fell" : "Rating this response feeds Aegis trust"}</span>
         </footer>
 
         <form class="nx-cortex-followup" data-followup="${escapeHtml(r.module)}">
-          <input class="nx-cortex-followup-input" type="text" placeholder="ask a follow-up… (or '@<agent>' to hand off mid-message)" autocomplete="off">
-          <button type="submit" class="nx-cortex-followup-send" ${r._continuing ? "disabled" : ""}>${r._continuing ? "…" : "send"}</button>
+          <input class="nx-cortex-followup-input nx-input" type="text" placeholder="Ask a follow-up, or start with @agent to hand off" aria-label="Follow-up for ${escapeHtml(r.module)}" autocomplete="off">
+          <button type="submit" class="nx-cortex-followup-send nx-btn" ${r._continuing ? "disabled" : ""}>${r._continuing ? `<span class="nx-spinner" aria-hidden="true"></span>Sending` : "Send"}</button>
         </form>
 
         ${r._handoffPickerOpen ? `
           <div class="nx-cortex-handoff-picker">
-            <input class="nx-cortex-handoff-search" type="search" placeholder="search agents to hand off to…" autocomplete="off">
+            <div class="nx-search-field">${icon("search", 14)}<input class="nx-cortex-handoff-search nx-input" type="search" placeholder="Search agents to hand off to" aria-label="Search agents to hand off to" autocomplete="off"></div>
             <div class="nx-cortex-handoff-results">
               ${renderHandoffOptions(r)}
             </div>
-            <button type="button" class="nx-cortex-handoff-close" data-close-handoff="${escapeHtml(r.module)}">close</button>
+            <button type="button" class="nx-cortex-handoff-close nx-btn nx-btn-sm nx-btn-ghost" data-close-handoff="${escapeHtml(r.module)}">Close</button>
           </div>
         ` : ""}
       </article>
@@ -3773,16 +3788,16 @@ async function renderCortexLauncher(hash) {
       : (cands.catalog_matches || []);
     return `
       <div class="nx-cortex-handoff-group">
-        <div class="nx-eyebrow nx-cortex-handoff-eyebrow">BUILT-IN</div>
+        <div class="nx-eyebrow nx-cortex-handoff-eyebrow">Built-in</div>
         <div class="nx-cortex-handoff-chips">
-          ${builtins.map(s => `<button class="nx-cortex-handoff-chip" data-handoff-to="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
+          ${builtins.map(s => `<button type="button" class="nx-cortex-handoff-chip nx-chip" data-handoff-to="${escapeHtml(s)}">${agentDisc(s, { size: 20 })}${escapeHtml(s)}</button>`).join("")}
         </div>
       </div>
       ${catalog.length ? `
         <div class="nx-cortex-handoff-group">
-          <div class="nx-eyebrow nx-cortex-handoff-eyebrow">CATALOG</div>
+          <div class="nx-eyebrow nx-cortex-handoff-eyebrow">Catalog</div>
           <div class="nx-cortex-handoff-chips">
-            ${catalog.slice(0, 16).map(c => `<button class="nx-cortex-handoff-chip catalog" data-handoff-to="${escapeHtml(c.slug)}" title="${escapeHtml(c.tagline || "")}">${escapeHtml(c.name || c.slug)}</button>`).join("")}
+            ${catalog.slice(0, 16).map(c => `<button type="button" class="nx-cortex-handoff-chip nx-chip catalog" data-handoff-to="${escapeHtml(c.slug)}" title="${escapeHtml(c.tagline || "")}">${icon("package", 13)}${escapeHtml(c.name || c.slug)}</button>`).join("")}
           </div>
         </div>
       ` : ""}
@@ -4095,7 +4110,7 @@ async function renderCortexLauncher(hash) {
       _cortexState.runs = {
         runs: agents.map(slug => ({
           module: slug, success: false, response: "",
-          error: status ? `dispatch failed — HTTP ${status}: ${detail}` : `dispatch failed — ${detail}`,
+          error: status ? `Dispatch failed. HTTP ${status}: ${detail}` : `Dispatch failed. ${detail}`,
           elapsed_ms: elapsed,
         })),
         succeeded: 0, failed: agents.length,
@@ -4152,17 +4167,17 @@ async function renderCortexLauncher(hash) {
     const tpls = _cortexState.templates || [];
     if (!tpls.length) { el.innerHTML = ""; return; }
     el.innerHTML = `
-      <div class="nx-eyebrow nx-swarm-eyebrow">SWARM TEMPLATES · compose a run in one tap</div>
+      <div class="nx-section-head nx-swarm-eyebrow"><div class="nx-section-label">Swarm templates, compose a run in one tap</div></div>
       <div class="nx-swarm-grid">
         ${tpls.map(t => {
           const active = _cortexState.activeTemplate === t.id;
           const discs = (t.agents || []).slice(0, 5).map(a =>
             `<span class="nx-swarm-disc">${agentDisc(a, { size: 22 })}</span>`).join("");
           return `
-            <button type="button" class="nx-swarm-card ${active ? "active" : ""}" data-tpl="${escapeHtml(t.id)}">
+            <button type="button" class="nx-swarm-card ${active ? "active" : ""}" data-tpl="${escapeHtml(t.id)}" aria-pressed="${active}">
               <span class="nx-swarm-card-icon">${SWARM_TEMPLATE_ICONS[t.id] || ""}</span>
               <span class="nx-swarm-card-name">${escapeHtml(t.name)}</span>
-              <span class="nx-swarm-card-tag nx-dim">${escapeHtml(t.tagline)}</span>
+              <span class="nx-swarm-card-tag">${escapeHtml(t.tagline)}</span>
               <span class="nx-swarm-card-roster">${discs}<span class="nx-swarm-card-count">${(t.agents || []).length}</span></span>
             </button>`;
         }).join("")}
