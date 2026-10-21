@@ -15,7 +15,20 @@
   min-height: 0;
   overflow: hidden;
 }
-.nx-watch-stage { position: relative; min-width: 0; overflow: hidden; }
+.nx-watch-stage {
+  position: relative; min-width: 0; overflow: hidden;
+  /* the centerpiece: the mood pools behind the core, and faint orbit rings
+   * give the scene an instrument's frame */
+  background:
+    radial-gradient(48% 52% at 50% 52%, color-mix(in srgb, var(--nx-mood-1) 90%, transparent) 0%, transparent 70%),
+    radial-gradient(30% 36% at 50% 52%, color-mix(in srgb, var(--nx-accent) 9%, transparent) 0%, transparent 70%);
+}
+.nx-watch-stage::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-radial-gradient(circle at 50% 52%, transparent 0 79px, color-mix(in srgb, var(--nx-mood-tint) 12%, transparent) 79px 80px);
+  -webkit-mask: radial-gradient(60% 60% at 50% 52%, #000 0%, transparent 85%);
+  mask: radial-gradient(60% 60% at 50% 52%, #000 0%, transparent 85%);
+}
 .nx-watch-canvas { display: block; width: 100%; height: 100%; }
 /* floating title, top left over the stage. The constellation field starts
    150px down (scene.js), so the title sits in clear space. */
@@ -131,7 +144,9 @@
   width: 100%; height: 128px;
   border-radius: var(--nx-radius-md); overflow: hidden;
   border: 1px solid var(--nx-line-2);
-  background: var(--nx-surface-1);
+  background:
+    radial-gradient(60% 70% at 50% 50%, color-mix(in srgb, var(--nx-mood-1) 90%, transparent) 0%, transparent 75%),
+    var(--nx-glass-card);
   margin-bottom: var(--nx-space-1);
 }
 .nx-rail-scene canvas { display: block; width: 100%; height: 100%; }

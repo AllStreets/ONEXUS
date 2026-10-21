@@ -732,15 +732,21 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
   min-height: 52px;
   padding: var(--nx-space-2) var(--nx-space-3) var(--nx-space-2) var(--nx-space-2);
   margin: var(--nx-space-2) auto var(--region-pad-y);
-  background: var(--nx-surface-1);
-  border: 1px solid var(--nx-line-3);
+  /* the composer's edge is a mood gradient: accent at the left fading
+   * through the tint; on focus it lights fully */
+  border: 1px solid transparent;
   border-radius: var(--nx-radius-lg);
-  box-shadow: var(--nx-shadow-1);
-  transition: border-color var(--nx-dur-1) var(--nx-ease), box-shadow var(--nx-dur-2) var(--nx-ease);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--nx-mood-tint) 6%, var(--nx-surface-1)), var(--nx-surface-1)) padding-box,
+    linear-gradient(100deg, var(--nx-accent-line) 0%, color-mix(in srgb, var(--nx-mood-tint) 30%, transparent) 35%, var(--nx-line-3) 70%, color-mix(in srgb, var(--nx-mood-tint) 26%, transparent) 100%) border-box;
+  box-shadow: 0 18px 44px -26px color-mix(in srgb, var(--nx-accent) 50%, transparent), var(--nx-shadow-1);
+  transition: box-shadow var(--nx-dur-2) var(--nx-ease);
 }
 .nx-composer:focus-within {
-  border-color: var(--nx-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-accent) 16%, transparent), var(--nx-glow-soft);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--nx-mood-tint) 8%, var(--nx-surface-1)), var(--nx-surface-1)) padding-box,
+    linear-gradient(100deg, var(--nx-accent) 0%, color-mix(in srgb, var(--nx-accent) 60%, transparent) 50%, var(--nx-accent-line) 100%) border-box;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-accent) 16%, transparent), 0 22px 50px -24px var(--nx-accent-glow);
 }
 .nx-composer input {
   flex: 1; min-width: 0;

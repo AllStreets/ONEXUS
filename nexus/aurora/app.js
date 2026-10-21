@@ -682,7 +682,17 @@ function applyMood(moodKey) {
   const cls = "nx-mood-" + (moodKey || "calm_focus").replace(/_/g, "-");
   const current = [...document.body.classList].find(c => c.startsWith("nx-mood-"));
   if (current && current !== cls) document.body.classList.remove(current);
-  if (!document.body.classList.contains(cls)) document.body.classList.add(cls);
+  if (!document.body.classList.contains(cls)) {
+    document.body.classList.add(cls);
+    // A short ring on the mood pill marks the change (CSS only, no layout).
+    const pill = document.getElementById("nx-mood-pill");
+    if (pill && current) {
+      pill.classList.remove("nx-mood-shift");
+      void pill.offsetWidth;
+      pill.classList.add("nx-mood-shift");
+      setTimeout(() => pill.classList.remove("nx-mood-shift"), 1400);
+    }
+  }
   document.body.dataset.mood = moodKey;
   // Update mood-label in chrome
   const lbl = document.getElementById("nx-mood-label");
@@ -2547,7 +2557,7 @@ function renderPendingPermissionHTML(p) {
         <div class="nx-perm-prompt nx-perm-card class-${pc}" data-ticket="${escapeHtml(p.id)}" role="group" aria-label="Permission request from ${escapeHtml(slug)}">
           <span class="nx-perm-pulse" aria-hidden="true"></span>
           <div class="nx-perm-info">
-            <div class="nx-perm-eyebrow nx-perm-card-eyebrow">${escapeHtml(pc)} · <span class="nx-mono">${escapeHtml(p.capability || "")}</span></div>
+            <div class="nx-perm-eyebrow nx-perm-card-eyebrow">${icon("shield", 12)}${escapeHtml(pc)} · <span class="nx-mono">${escapeHtml(p.capability || "")}</span></div>
             <div class="nx-perm-body nx-perm-card-body">${p.target ? `${escapeHtml(slug)} on <code>${escapeHtml(p.target)}</code>` : `${escapeHtml(slug)}, no target given`}</div>
           </div>
           <div class="nx-perm-actions nx-perm-card-actions">
@@ -6755,9 +6765,25 @@ async function toggleCockpitOverlay() {
 }
 
 // ── Router ────────────────────────────────────────────────────────────────
+let _lastViewPath = null;
+function markViewEntrance(hash) {
+  // Views rise in once when the path changes, not on every re-render.
+  const path = (hash || "#/").split("?")[0];
+  const main = document.getElementById("nx-main");
+  if (!main || path === _lastViewPath) return;
+  const first = _lastViewPath === null;
+  _lastViewPath = path;
+  if (first) return;
+  main.classList.remove("nx-enter");
+  void main.offsetWidth;
+  main.classList.add("nx-enter");
+  setTimeout(() => main.classList.remove("nx-enter"), 520);
+}
+
 async function route(hash) {
   await loadWorkspaces();
   renderSidebar();
+  markViewEntrance(hash);
   if (!hash || hash === "#" || hash === "#/") {
     if (state.active) {
       location.hash = `#/conversation/${state.active}`;
