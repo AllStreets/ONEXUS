@@ -4,7 +4,7 @@
  * Overlays for ⌘K switcher / ⌘N new workspace / ⌘0 cockpit / ⌘P settings.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES, icon } from "/aurora/static/icons.js";
+import { KERNEL_MARK, agentDisc, identityDisc, GRADIENTS, GLYPHS, UI, BUILTIN_CAPABILITIES, icon, agentColors } from "/aurora/static/icons.js";
 import { renderMarkdown } from "/aurora/static/md.js";
 import { KernelScene } from "/aurora/static/scene.js";
 
@@ -259,7 +259,7 @@ function sceneWelcome() {
       <g transform="translate(200 130)">
         <circle r="112" fill="none" stroke="var(--nx-line-2)" stroke-width="1" class="nx-tour-anim-ring2"/>
         <circle r="84" fill="none" stroke="var(--nx-line-3)" stroke-width="1" stroke-dasharray="2 6" class="nx-tour-anim-ring1"/>
-        <circle r="62" fill="rgba(var(--nx-accent-rgb), 0.06)"/>
+        <circle r="62" fill="color-mix(in srgb, var(--nx-accent) 6%, transparent)"/>
         ${TOUR_MARK(40)}
       </g>
     </svg>
@@ -1524,7 +1524,7 @@ async function renderWatch() {
           <div class="nx-legend-row"><span class="nx-legend-mark line" style="--c:var(--nx-fg-1)"></span><span>A travelling bead is a <b>route</b> to a module.</span></div>
           <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:var(--nx-ok)"></span><span>A green flare: Aegis <b>allowed</b> a capability.</span></div>
           <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:var(--nx-trust-collapse)"></span><span>A red flare or veil: <b>denied</b>, or an anomaly.</span></div>
-          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:var(--nx-warn)"></span><span>A warm ring: <b>trust</b> rose. A cool one: it fell.</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark line" style="--c:var(--nx-warn)"></span><span>A warm bar under a mark: <b>trust</b> rose. A cool one: it fell.</span></div>
           <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:var(--nx-info)"></span><span>Motes sink into <b>memory strata</b> as Engram writes.</span></div>
         </div>
         <div class="nx-watch-rail-sec">
@@ -3006,9 +3006,9 @@ function renderWorkspacesGrid() {
     const agents = Math.max((state.workspaceAgentCounts || {})[w.workspace_id] || 0, (w.resident_agents || []).length);
     return `
     <div class="nx-ws-tile nx-tone-${escapeHtml(tone)} ${isActive ? "active" : ""}" role="button" tabindex="0"
-         data-id="${w.workspace_id}" style="--tone:var(--nx-tone-${escapeHtml(tone)}-a, var(--nx-accent))" aria-label="Open workspace ${escapeHtml(w.name)}">
+         data-id="${w.workspace_id}" style="--tone:var(--nx-tone-${escapeHtml(tone)}-a, var(--nx-accent));--tone-b:var(--nx-tone-${escapeHtml(tone)}-b, var(--nx-accent-strong))" aria-label="Open workspace ${escapeHtml(w.name)}">
       <div class="tile-top">
-        <span class="tile-swatch" aria-hidden="true"></span>
+        <span class="tile-swatch" aria-hidden="true">${workspaceEmblem(w, 36)}</span>
         ${isActive ? `<span class="nx-status is-live">Active</span>` : ""}
       </div>
       <div class="tile-name">${escapeHtml(w.name)}</div>
@@ -3145,9 +3145,9 @@ async function renderStore(hash) {
 
 function storeCardHTML(a) {
   const stars = fmtCount(a.stars);
-  return `<a class="nx-card nx-card-pad nx-card-interactive nx-store-card" href="#/store/${encodeURIComponent(a.slug)}">
+  return `<a class="nx-card nx-card-pad nx-card-interactive nx-store-card nx-agent-tinted" href="#/store/${encodeURIComponent(a.slug)}" style="${agentTintStyle(a.slug)}">
       <div class="nx-store-card-head">
-        ${agentDisc(a.slug, { size: 36 })}
+        ${agentDisc(a.slug, { size: 48 })}
         <div class="nx-store-card-id">
           <div class="nx-card-title">${escapeHtml(a.name)}</div>
           <div class="nx-card-sub">${escapeHtml((a.category || "").replace(/-/g, " "))}</div>
@@ -3194,8 +3194,8 @@ async function renderStoreAgent(slug) {
       : `<span class="nx-status is-warn">Not installable</span>`;
   main.innerHTML = `<div class="nx-main-inner nx-store-detail">
       <a class="nx-link nx-store-back" href="#/store">${icon("arrow-left", 14)}Agent store</a>
-      <header class="nx-detail-head">
-        ${agentDisc(a.slug, { size: 56 })}
+      <header class="nx-detail-head nx-agent-hero" style="${agentTintStyle(a.slug)}">
+        ${agentDisc(a.slug, { size: 72 })}
         <div class="nx-detail-text">
           <h1 class="nx-detail-title">${escapeHtml(a.name)}</h1>
           <p class="nx-detail-sub">${escapeHtml(noEmoji(a.tagline))}</p>
@@ -3525,9 +3525,9 @@ function renderCatalogCard(a) {
   const stars = fmtCount(a.stars);
   const rank = a.rank_in_category;
   return `
-    <div class="nx-spatial-card nx-card" data-slug="${escapeHtml(a.slug)}">
+    <div class="nx-spatial-card nx-card nx-agent-tinted" data-slug="${escapeHtml(a.slug)}" style="${agentTintStyle(a.slug)}">
       <div class="nx-card-top">
-        ${agentDisc(a.slug, { size: 36, trust: a.trust_floor ?? null })}
+        ${agentDisc(a.slug, { size: 48, trust: a.trust_floor ?? null })}
         ${rank != null && rank <= 3 ? `<span class="nx-card-rank nx-pill nx-pill-warn" title="Rank ${rank} in ${escapeHtml(a.category || "category")}">#${rank} in category</span>` : ""}
       </div>
       <div class="name">${escapeHtml(a.name || a.slug)}</div>
@@ -6523,9 +6523,15 @@ const WORKSPACE_TONES = [
   "slate", "graphite", "midnight",
 ];
 
-function _toneSwatchHex(tone) {
+function _toneSwatchHex(tone, part = "a") {
   const computed = getComputedStyle(document.documentElement);
-  return computed.getPropertyValue(`--nx-tone-${tone}-a`).trim() || "#888";
+  return computed.getPropertyValue(`--nx-tone-${tone}-${part}`).trim() || "#888";
+}
+
+// A workspace's emblem: a mark in its own tone with its initials.
+function workspaceEmblem(w, size = 32) {
+  const tone = (w.tone || "indigo").toLowerCase();
+  return identityDisc({ size, slug: w.name || w.workspace_id, shape: "squircle", gradient: [_toneSwatchHex(tone, "a"), _toneSwatchHex(tone, "b")] });
 }
 
 function openNewWorkspaceForm() {
@@ -6980,6 +6986,13 @@ function attachKeybinds() {
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────
+// Inline custom properties that tint a card or header with an agent's own
+// mark colors (see .nx-agent-tinted and .nx-agent-hero in app.css).
+function agentTintStyle(slug) {
+  const [a, b] = agentColors(slug);
+  return `--mark-a:${a};--mark-b:${b}`;
+}
+
 // Shared empty state (components.css .nx-empty-state). `body` and `actions`
 // are trusted HTML built by the caller; `title` is escaped here.
 function emptyStateHTML({ icon: name = "inbox", title = "", body = "", actions = "", compact = false } = {}) {
