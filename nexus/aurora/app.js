@@ -5276,7 +5276,7 @@ async function renderSettingsTab(tab) {
         <h3>Moods</h3>
         <p class="nx-panel-sub">
           The MoodEngine watches CPU, Engram busy ratio, trust events, time of day and resident agents.
-          Each of the eight moods sets the accent color the whole shell uses.
+          Each of the eight moods sets the color of the whole shell: the light behind the content, the tint of every surface and edge, and the accent.
         </p>
         <div class="nx-st-mood-now">
           <span class="nx-st-mood-swatch nx-mood-preview-${escapeHtml((current.mood || state.mood.mood || "calm_focus").replace(/_/g, "-"))}" aria-hidden="true"></span>
@@ -5459,7 +5459,7 @@ const GUIDE_PAGES = [
     body: "ONEXUS runs agents the way iOS runs apps: workspaces with their own memory, agents with their own trust, and every tool call gated by Aegis. This guide walks every surface in about eight minutes. Use the arrow keys to flip pages, click a number to jump, and press Esc to leave.",
     shot: "/aurora/static/guide/01-welcome.png",
     callouts: [
-      { x: 8.3, y: 23.7, label: "1", note: "Sidebar: the tools, your workspaces and recent agents." },
+      { x: 8.3, y: 25.6, label: "1", note: "Sidebar: the tools, your workspaces and recent agents." },
       { x: 47.9, y: 58, label: "2", note: "Main canvas: the workspace home with agent prompts." },
       { x: 89.6, y: 18.4, label: "3", note: "Cockpit rail: trust, permissions, the live kernel and mood." },
     ],
@@ -5473,9 +5473,9 @@ const GUIDE_PAGES = [
     shot: "/aurora/static/guide/09-sidebar.png",
     fullSidebar: true,
     callouts: [
-      { x: 30, y: 34.3, label: "1", note: "Workspace rows: click to switch, click the active one again for its home." },
-      { x: 87.9, y: 34.3, label: "2", note: "Hover any row to reveal the trash icon." },
-      { x: 49.8, y: 43.8, label: "3", note: "New workspace, or press ⌘N." },
+      { x: 49.8, y: 37.5, label: "1", note: "Workspace rows: click to switch, click the active one again for its home." },
+      { x: 87.9, y: 37.5, label: "2", note: "Hover any row to reveal the trash icon." },
+      { x: 49.8, y: 47.1, label: "3", note: "New workspace, or press ⌘N." },
     ],
     cta: { label: "Try it with ⌘K", action: "switcher" },
   },
@@ -5486,8 +5486,8 @@ const GUIDE_PAGES = [
     body: "Send a message and Cortex routes it to whoever is best placed to answer. Mention an agent (@oracle, @council) to call it directly. Press ⌘⏎ to send. The composer stays pinned at the bottom and the thread scrolls above it.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 22.6, y: 31.9, label: "1", note: "Agent identity tile and module name." },
-      { x: 49.4, y: 79, label: "2", note: "Inline permission card, shown on the first sensitive call." },
+      { x: 22.6, y: 24.4, label: "1", note: "Agent identity tile and module name." },
+      { x: 49.4, y: 35.2, label: "2", note: "Inline permission card, shown on the first sensitive call." },
       { x: 47.9, y: 94.4, label: "3", note: "Composer: type, paste or drop files, then press ⌘⏎." },
     ],
     cta: { label: "Try it in a room", action: "compose" },
@@ -5500,7 +5500,7 @@ const GUIDE_PAGES = [
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
       { x: 23.1, y: 94.4, label: "1", note: "The paperclip opens a file picker." },
-      { x: 47.9, y: 50.8, label: "2", note: "Drag a file anywhere on the canvas to drop it in." },
+      { x: 47.9, y: 31.2, label: "2", note: "Drag a file anywhere on the canvas to drop it in." },
       { x: 37.4, y: 91.6, label: "3", note: "Attached files appear as chips above the composer." },
     ],
     cta: { label: "Done", action: null },
@@ -5512,8 +5512,8 @@ const GUIDE_PAGES = [
     body: "Aegis classifies every capability as routine, notable, sensitive or privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always in this workspace, or deny. The cockpit log keeps a record of every decision, marked by class.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 26.4, y: 79, label: "1", note: "The amber pulse marks a sensitive request." },
-      { x: 62.6, y: 79, label: "2", note: "Three decisions: allow once, always in this workspace, or deny." },
+      { x: 26.4, y: 35.2, label: "1", note: "The amber pulse marks a sensitive request." },
+      { x: 62.6, y: 35.2, label: "2", note: "Three decisions: allow once, always in this workspace, or deny." },
       { x: 89.6, y: 36.3, label: "3", note: "The cockpit log records the decision." },
     ],
     cta: { label: "See it in action", action: "seed-permission" },
@@ -5550,7 +5550,7 @@ const GUIDE_PAGES = [
     eyebrow: "PAGE 8 / 13",
     chapter: "MOOD",
     title: "The shell shifts color with what's happening.",
-    body: "Click the mood pill at the top right of the title bar to open the mood picker. Pick any of the eight moods (calm focus, deep flow, routing, deliberating, creative, reflective, watchful, alert) and the <em>whole shell</em> takes its accent: the horizon light, the active workspace, the composer focus ring, primary buttons and live dots. Press <code>Auto, follow the kernel</code> to go back to automatic, which picks based on CPU load, Engram activity, time of day and trust events.",
+    body: "Click the mood pill at the top right of the title bar to open the mood picker. Pick any of the eight moods (calm focus, deep flow, routing, deliberating, creative, reflective, watchful, alert) and the <em>whole shell</em> crossfades into it: the light behind the content, the tint of every surface and edge, the chrome band, and the accent on the active workspace, the composer, primary buttons and live dots. Press <code>Auto, follow the kernel</code> to go back to automatic, which picks based on CPU load, Engram activity, time of day and trust events.",
     shot: "/aurora/static/guide/10-mood-picker.png",
     callouts: [
       { x: 91.9, y: 2.6,  label: "1", note: "The mood pill: click to open the picker." },
@@ -5604,8 +5604,8 @@ const GUIDE_PAGES = [
     body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar. Turn on Runnable only to see the 571 with MCP adapters that you can launch in one click. Each card links to its source repo.",
     shot: "/aurora/static/guide/06-catalog.png",
     callouts: [
-      { x: 47.9, y: 20.9, label: "1", note: "Filters: search, category and Runnable only." },
-      { x: 27.9, y: 49.6, label: "2", note: "Each card has Launch, Compose, Trust and a source link." },
+      { x: 47.9, y: 23.3, label: "1", note: "Filters: search, category and Runnable only." },
+      { x: 27.9, y: 53.3, label: "2", note: "Each card has Launch, Compose, Trust and a source link." },
     ],
     cta: { label: "Browse the catalog", action: "catalog" },
   },
