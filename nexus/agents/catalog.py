@@ -77,6 +77,8 @@ class AdapterDescriptor:
     # "planned": the descriptor exists but its server doesn't yet (status_note says what's missing)
     status: str | None = None
     status_note: str = ""
+    # values for declared keys, given to the store at install; never serialized or logged
+    secrets: dict[str, str] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> AdapterDescriptor:

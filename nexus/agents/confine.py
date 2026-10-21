@@ -48,6 +48,8 @@ class Confinement:
     memory: str = "1g"
     cpus: str = "1"
     pids: int = 256
+    # run the image's own entrypoint (a published server image) instead of a command
+    entrypoint: bool = False
 
     @classmethod
     def from_adapter(cls, raw: dict | None) -> Confinement | None:
@@ -63,7 +65,7 @@ class Confinement:
         command = raw.get("command")
         if command is not None and (not isinstance(command, str) or not command or "/" in command and not command.startswith("/")):
             raise ConfinementError(f"confinement.command is invalid: {command!r}")
-        return cls(image=image, command=command, hosts=hosts)
+        return cls(image=image, command=command, hosts=hosts, entrypoint=bool(raw.get("entrypoint")))
 
 
 def docker_available() -> bool:
@@ -142,5 +144,5 @@ def prepare(conf: Confinement, slug: str, command: str, args: list[str], env_key
     ]
     for key in sorted(set(env_keys) - {"HOME", "PATH"}):
         argv += ["-e", key]
-    argv += [conf.image, inner, *args]
+    argv += [conf.image, *args] if conf.entrypoint else [conf.image, inner, *args]
     return ConfinedLaunch(argv=argv, name=name, network=network, proxy=proxy)

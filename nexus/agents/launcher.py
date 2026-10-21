@@ -142,20 +142,36 @@ class AgentLauncher:
                 f"The adapter for '{slug}' is planned, not built yet. {adapter.status_note}".strip(),
                 status=400,
             )
-        if not adapter.command:
+        # Red-team round 3 (R3-1..R3-3): an adapter that declares confinement runs in a
+        # container that sees none of the operator's files and reaches only the hosts it
+        # declared. See confine.py.
+        mode = confinement_mode()
+        try:
+            conf = Confinement.from_adapter(getattr(adapter, "confinement", None)) if mode != "off" else None
+        except ConfinementError as exc:
+            raise AgentLaunchError(f"Adapter for '{slug}' has an invalid confinement block: {exc}", status=400)
+        if conf is None and mode == "require":
+            raise AgentLaunchError(
+                f"'{slug}' declares no confinement and NEXUS_AGENT_CONFINEMENT=require, so it "
+                f"will not run unconfined.", status=403,
+            )
+
+        if not adapter.command and not (conf and conf.entrypoint):
             raise AgentLaunchError(f"Adapter for '{slug}' has no command", status=400)
         # Guard against a malicious/typo'd upstream manifest reaching exec.
         # Reject shell metacharacters (plain names and absolute paths quote to
         # themselves; anything with spaces/;/$/backticks does not), then
-        # allowlist by program basename before we ever spawn.
-        if shlex.quote(adapter.command) != adapter.command:
+        # allowlist by program basename before we ever spawn. The allowlist is about
+        # what runs on this machine, so it applies to unconfined launches; a confined
+        # command runs inside its container.
+        if adapter.command and shlex.quote(adapter.command) != adapter.command:
             raise AgentLaunchError(
                 f"Adapter command for '{slug}' contains unsafe characters: "
                 f"{adapter.command!r}",
                 status=400,
             )
         base = _command_basename(adapter.command)
-        if base not in _command_allowlist():
+        if conf is None and base not in _command_allowlist():
             raise AgentLaunchError(
                 f"Adapter command '{adapter.command}' for '{slug}' is not on the "
                 f"launch allowlist. If you trust it, add it to "
@@ -174,21 +190,10 @@ class AgentLauncher:
                     provider_keys["OPENAI_API_KEY"] = key
                 elif key and pname == "anthropic":
                     provider_keys["ANTHROPIC_API_KEY"] = key
+        # Keys the person gave a store-installed agent, for that agent only.
+        provider_keys.update(getattr(adapter, "secrets", None) or {})
         env = child_environment(adapter.env.keys(), provider_keys=provider_keys)
 
-        # Red-team round 3 (R3-1..R3-3): an adapter that declares confinement runs in a
-        # container that sees none of the operator's files and reaches only the hosts it
-        # declared. See confine.py.
-        mode = confinement_mode()
-        try:
-            conf = Confinement.from_adapter(getattr(adapter, "confinement", None)) if mode != "off" else None
-        except ConfinementError as exc:
-            raise AgentLaunchError(f"Adapter for '{slug}' has an invalid confinement block: {exc}", status=400)
-        if conf is None and mode == "require":
-            raise AgentLaunchError(
-                f"'{slug}' declares no confinement and NEXUS_AGENT_CONFINEMENT=require, so it "
-                f"will not run unconfined.", status=403,
-            )
         confined: ConfinedLaunch | None = None
         if conf is not None:
             if not docker_available():

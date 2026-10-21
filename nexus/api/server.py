@@ -321,7 +321,16 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                     f"agent.{agent.slug}", allowed=True,
                     initial_trust=0.30,
                 )
-            launcher = AgentLauncher(catalog=catalog, kernel=kernel)
+            # Agent store: installed agents launch through the same path, confined.
+            from nexus.store.adapters import StoreAwareCatalog
+            from nexus.store.installer import Installer
+            from nexus.store.recipes import RecipeIndex
+            from nexus.store.state import StoreState
+
+            store_state = StoreState(config.data_dir)
+            app.state.store_installer = Installer(store_state, RecipeIndex(_catalog_path),
+                                                  chronicle=kernel.chronicle)
+            launcher = AgentLauncher(catalog=StoreAwareCatalog(catalog, store_state), kernel=kernel)
         except Exception as exc:
             import logging as _log
             _log.getLogger("nexus.api").warning("Agent catalog unavailable: %s", exc)
@@ -380,6 +389,8 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
     app.include_router(federation_router)
     app.include_router(multimodal_router)
     app.include_router(agents_router)
+    from nexus.api.routes.store import router as store_router
+    app.include_router(store_router)
 
     from nexus.api.routes.permissions import router as permissions_router
     from nexus.api.routes.installer import router as installer_router
