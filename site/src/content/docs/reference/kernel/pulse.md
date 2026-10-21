@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-Pulse — the Nexus message bus.
+Pulse: the Nexus message bus.
 Async in-process pub/sub with priority queuing and wildcard topics.
 
 - **Version:** `0.1.0`

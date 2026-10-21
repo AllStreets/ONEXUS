@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-Cortex — the Nexus router and orchestrator.
+Cortex: the Nexus router and orchestrator.
 Receives user input, selects the appropriate module, enforces permissions,
 logs to Chronicle, and stores interactions in Engram.
 

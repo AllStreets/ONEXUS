@@ -1,6 +1,6 @@
 ---
 title: "Changelog"
-description: "NEXUS release history -- what shipped, when, and why"
+description: "NEXUS release history: what shipped, when, and why"
 sidebar:
   order: 6
 ---
@@ -11,7 +11,7 @@ All notable changes to NEXUS, ordered newest first.
 
 ---
 
-### v0.1.0 -- Initial Release
+### v0.1.0: Initial Release
 
 **Narrow AI Agents (25 agents)**
 
@@ -27,9 +27,9 @@ Every agent credits the open source projects that inspired it.
 
 **Community Ecosystem**
 
-- ModuleValidator -- validates structure, manifest, and kernel import restrictions
-- ModuleRegistry -- JSON-backed searchable catalog
-- ModuleInstaller -- install/uninstall with automatic Cortex keyword registration
+- ModuleValidator: validates structure, manifest, and kernel import restrictions
+- ModuleRegistry: JSON-backed searchable catalog
+- ModuleInstaller: install/uninstall with automatic Cortex keyword registration
 - GitHub CI workflows for PR validation and registry rebuild
 
 **NEXUS Documentation Site**
@@ -41,14 +41,14 @@ Every agent credits the open source projects that inspired it.
 
 **Differentiation Layer (8 modules)**
 
-- Dream Loop -- background pattern discovery
-- Adversarial -- self-improvement red-teaming
-- Tripwire -- contradiction detection
-- Provenance -- reasoning chain tracer
-- Sandbox -- hypothetical simulation
-- Symbiosis -- module pathway mapping
-- Consciousness -- self-reflective awareness and emergent goal detection
-- Ethical Prism -- seven-framework ethical analysis
+- Dream Loop: background pattern discovery
+- Adversarial: self-improvement red-teaming
+- Tripwire: contradiction detection
+- Provenance: reasoning chain tracer
+- Sandbox: hypothetical simulation
+- Symbiosis: module pathway mapping
+- Consciousness: self-reflective awareness and emergent goal detection
+- Ethical Prism: seven-framework ethical analysis
 
 **Infrastructure**
 
@@ -58,45 +58,45 @@ Every agent credits the open source projects that inspired it.
 
 **Orchestration (2 modules)**
 
-- Council -- multi-agent deliberation with structured debate and preserved dissent
-- Autonomic -- earned autonomous action with per-domain trust boundaries
+- Council: multi-agent deliberation with structured debate and preserved dissent
+- Autonomic: earned autonomous action with per-domain trust boundaries
 
 **Network Layer (2 modules)**
 
-- Collective -- distributed state sync with noise-injected privacy
-- Legacy -- knowledge crystallization into frameworks and playbooks
+- Collective: distributed state sync with noise-injected privacy
+- Legacy: knowledge crystallization into frameworks and playbooks
 
 **Advanced Intelligence (3 modules)**
 
-- Specter -- pre-decision stress testing with adversarial analysis
-- Serendipity -- anti-optimization for cross-domain connection discovery
-- Forge -- autonomous negotiation with escalation guardrails
+- Specter: pre-decision stress testing with adversarial analysis
+- Serendipity: anti-optimization for cross-domain connection discovery
+- Forge: autonomous negotiation with escalation guardrails
 
 **Action Layer (5 modules)**
 
-- Wraith -- ephemeral async micro-agent spawner with death clocks
-- Echo -- behavioral fingerprinting per domain
-- Sigil -- severity-prioritized ambient threat radar
-- Herald -- A2A agent communication with reputation tracking (requires `--network`)
-- Weave -- social graph intelligence with relationship health tracking
+- Wraith: ephemeral async micro-agent spawner with death clocks
+- Echo: behavioral fingerprinting per domain
+- Sigil: severity-prioritized ambient threat radar
+- Herald: A2A agent communication with reputation tracking (requires `--network`)
+- Weave: social graph intelligence with relationship health tracking
 
 **Intelligence Layer (3 modules)**
 
-- Atlas -- SQLite-backed temporal knowledge graph with confidence decay
-- Prism -- tag-based cross-domain synthesis
-- Cipher -- source trust registry with provenance chains and conflict detection
+- Atlas: SQLite-backed temporal knowledge graph with confidence decay
+- Prism: tag-based cross-domain synthesis
+- Cipher: source trust registry with provenance chains and conflict detection
 
 **Perception Layer (2 modules)**
 
-- Oracle -- keyword-weighted anticipatory trigger engine
-- Sentry -- real-time cognitive state model
+- Oracle: keyword-weighted anticipatory trigger engine
+- Sentry: real-time cognitive state model
 
 **Kernel (5 components)**
 
-- Cortex -- keyword-scored message router with permission enforcement
-- Engram -- three-tier memory (working, episodic FTS5, semantic vector)
-- Pulse -- async pub/sub message bus with priority queuing
-- Chronicle -- immutable append-only audit trail (SQLite WAL)
-- Aegis -- graduated trust engine (0-100) with outcome-based adjustment
+- Cortex: keyword-scored message router with permission enforcement
+- Engram: three-tier memory (working, episodic FTS5, semantic vector)
+- Pulse: async pub/sub message bus with priority queuing
+- Chronicle: immutable append-only audit trail (SQLite WAL)
+- Aegis: graduated trust engine (0-100) with outcome-based adjustment
 
 804 tests. Apache 2.0 licensed.

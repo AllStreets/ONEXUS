@@ -48,77 +48,34 @@ const Tag = href ? 'a' : 'div';
 )}
 
 <style>
+  /* Module card: a graphite card on the site tokens. The tier color is
+     only a small mark; the accent is reserved for hover and focus. */
   .module-card {
-    background: var(--nexus-bg-surface);
-    border: 1px solid var(--nexus-border);
-    border-radius: 4px;
-    padding: 1.25rem 1.5rem;
+    background: var(--nx-gray-100);
+    border: 1px solid var(--nx-line-2);
+    border-radius: var(--nx-radius-md);
+    padding: 1.1rem 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
+    gap: 0.6rem;
+    transition: border-color 120ms var(--nx-ease), background 120ms var(--nx-ease);
     min-width: 0;
     overflow: hidden;
   }
-
-  .module-card:hover {
-    border-color: var(--card-accent);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--card-accent) 25%, transparent);
-  }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
+  .module-card--link { text-decoration: none; color: inherit; cursor: pointer; }
+  .module-card--link:hover { border-color: var(--nx-line-3); background: var(--nx-gray-200); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
   .card-name {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--card-accent);
-    letter-spacing: 0.02em;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-size: 0.95rem; font-weight: 600; color: var(--nx-fg-1);
   }
-
+  .card-name::before { content: ''; width: 8px; height: 8px; border-radius: 3px; background: var(--card-accent); }
   .card-status {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    padding: 0.2em 0.5em;
-    border: 1px solid var(--card-accent);
-    color: var(--card-accent);
-    border-radius: 2px;
-    opacity: 0.8;
-    white-space: nowrap;
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em;
+    padding: 0.15em 0.5em; border-radius: 999px;
+    border: 1px solid var(--nx-line-2); background: var(--nx-gray-200);
+    color: var(--nx-fg-3); white-space: nowrap;
   }
-
-  .card-description {
-    font-size: 0.85rem;
-    color: var(--nexus-text-secondary);
-    line-height: 1.55;
-    margin: 0;
-  }
-
-  .module-card--link {
-    text-decoration: none;
-    color: inherit;
-  }
-
-  .module-card--link:hover {
-    text-shadow: none;
-  }
-
-  .card-tier {
-    margin-top: auto;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.65rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--nexus-text-secondary);
-    opacity: 0.6;
-  }
+  .card-description { font-size: 0.85rem; color: var(--nx-fg-2); line-height: 1.55; margin: 0; }
+  .card-tier { margin-top: auto; font-size: 0.72rem; font-weight: 500; color: var(--nx-fg-3); }
 </style>

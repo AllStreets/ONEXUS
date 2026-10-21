@@ -29,18 +29,18 @@ The directory is created on first run if it does not exist. All databases live h
 | `NEXUS_DATA_DIR` | `~/.local/share/nexus/` | Root directory for all runtime data |
 | `NEXUS_LLM_PORT` | `8384` | Port of the local LLM HTTP server |
 | `NEXUS_DEFAULT_PROVIDER` | `local` | Default inference provider (`local`, `openai`, `anthropic`) |
-| `NEXUS_OPENAI_KEY` | — | OpenAI API key (enables OpenAI provider) |
-| `NEXUS_ANTHROPIC_KEY` | — | Anthropic API key (enables Anthropic provider) |
+| `NEXUS_OPENAI_KEY` |: | OpenAI API key (enables OpenAI provider) |
+| `NEXUS_ANTHROPIC_KEY` |: | Anthropic API key (enables Anthropic provider) |
 | `NEXUS_OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model name |
 | `NEXUS_ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Anthropic model name |
 | `NEXUS_LOG_LEVEL` | `INFO` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `NEXUS_AGENTS_CATALOG` | — | Path to an ONEXUS-Agents catalog clone |
+| `NEXUS_AGENTS_CATALOG` |: | Path to an ONEXUS-Agents catalog clone |
 
 Variables can be set in your shell profile or in a `.env` file in the working directory.
 
 ## Inference Providers
 
-NEXUS is model-agnostic. The kernel runs without any model connected -- connect a provider at startup via env vars or at runtime via the API.
+NEXUS is model-agnostic. The kernel runs without any model connected, connect a provider at startup via env vars or at runtime via the API.
 
 ### Cloud Providers
 
@@ -113,7 +113,7 @@ The provider router automatically falls back to the default if a specific provid
 
 ## Persistence
 
-All state is durable across sessions. There is no configuration file for runtime state -- everything is stored in SQLite databases inside `NEXUS_DATA_DIR`:
+All state is durable across sessions. There is no configuration file for runtime state, everything is stored in SQLite databases inside `NEXUS_DATA_DIR`:
 
 | Database | Contents |
 |----------|----------|

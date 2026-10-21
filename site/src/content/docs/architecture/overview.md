@@ -1,13 +1,13 @@
 ---
 title: Overview
-description: NEXUS microkernel architecture — 5 components, 51 modules, one message loop.
+description: "NEXUS microkernel architecture: 5 components, 51 modules, one message loop."
 sidebar:
   order: 1
 ---
 
 ## Microkernel Design
 
-NEXUS is a microkernel. The kernel is approximately 500 lines of Python across 5 files. It handles routing, memory, messaging, auditing, and trust — nothing else. All intelligence lives in modules that run on top of it.
+NEXUS is a microkernel. The kernel is approximately 500 lines of Python across 5 files. It handles routing, memory, messaging, auditing, and trust, nothing else. All intelligence lives in modules that run on top of it.
 
 ```
 nexus/kernel/
@@ -36,17 +36,17 @@ Every user input follows the same path through the kernel before a module ever s
 9.  Pulse emits a completion event (other modules may subscribe)
 ```
 
-No step is skipped. Every message — including internal module-to-module calls via Pulse — runs through the same trust gate and audit path.
+No step is skipped. Every message, including internal module-to-module calls via Pulse, runs through the same trust gate and audit path.
 
 ## Design Constraints
 
 These constraints are architectural commitments, not guidelines:
 
-**Local-first.** The kernel never touches the network. No telemetry, no central server, no cloud dependency — architecturally enforced, not just policy. Two modules (Collective and Herald) can optionally connect peer-to-peer, but they are blocked by default and require explicit `nexus allow --network` consent. Even then, every outbound event is logged to Chronicle. There is no central server. Every machine owns its own data.
+**Local-first.** The kernel never touches the network. No telemetry, no central server, no cloud dependency, architecturally enforced, not just policy. Two modules (Collective and Herald) can optionally connect peer-to-peer, but they are blocked by default and require explicit `nexus allow --network` consent. Even then, every outbound event is logged to Chronicle. There is no central server. Every machine owns its own data.
 
-**Lightweight kernel.** The kernel runs standalone without any LLM. Connect a model when you're ready — local open-source models via llama.cpp, Ollama, or vLLM, or cloud providers like OpenAI and Anthropic. Providers can be registered at runtime via the API.
+**Lightweight kernel.** The kernel runs standalone without any LLM. Connect a model when you're ready, local open-source models via llama.cpp, Ollama, or vLLM, or cloud providers like OpenAI and Anthropic. Providers can be registered at runtime via the API.
 
-**Model-agnostic.** The kernel communicates with any LLM over a standard HTTP API. Swap models by changing the provider configuration — no code changes required. Use open-source models for full sovereignty, or cloud APIs for convenience.
+**Model-agnostic.** The kernel communicates with any LLM over a standard HTTP API. Swap models by changing the provider configuration, no code changes required. Use open-source models for full sovereignty, or cloud APIs for convenience.
 
 **Apache 2.0 throughout.** Every model recommended in the default configuration is MIT or Apache 2.0 licensed. NEXUS itself is Apache 2.0. It is legally redistributable in commercial products.
 
@@ -54,7 +54,7 @@ These constraints are architectural commitments, not guidelines:
 
 ## Module Tiers
 
-Intelligence modules use the `NexusModule` interface. Agents use the `AgentModule` interface, which extends `NexusModule` with graduated sovereignty -- five trust tiers that unlock progressively more capable behavior.
+Intelligence modules use the `NexusModule` interface. Agents use the `AgentModule` interface, which extends `NexusModule` with graduated sovereignty: five trust tiers that unlock progressively more capable behavior.
 
 | Tier | Components | Interface |
 |------|-----------|-----------|
@@ -75,7 +75,7 @@ Intelligence modules use the `NexusModule` interface. Agents use the `AgentModul
 
 ## Testing
 
-NEXUS ships with 804 tests covering all kernel components, modules, agents, inference providers, messaging bridges, community ecosystem, and differentiation modules. The test suite requires no running LLM — all LLM calls are mocked. Run with:
+NEXUS ships with 804 tests covering all kernel components, modules, agents, inference providers, messaging bridges, community ecosystem, and differentiation modules. The test suite requires no running LLM, all LLM calls are mocked. Run with:
 
 ```bash
 pytest tests/ -v

@@ -9,7 +9,7 @@ sidebar:
 
 A single key-value store would be simpler. But a single store forces a tradeoff: either everything is queryable (expensive) or nothing is (useless for synthesis). NEXUS separates memory into three tiers that serve different access patterns.
 
-All three tiers live in `engram.db` — a single SQLite file — and are accessible through the same `context["engram"]` interface. The separation is logical, not operational.
+All three tiers live in `engram.db`, a single SQLite file, and are accessible through the same `context["engram"]` interface. The separation is logical, not operational.
 
 ## Working Memory
 
@@ -34,7 +34,7 @@ Working memory is cleared on `nexus forget --yes` and at the start of each new s
 
 Episodic memory stores timestamped records. Every message, response, and notable event is stored here by the kernel automatically. Modules can also write directly.
 
-The backing index is SQLite FTS5 (full-text search). This means episodic queries are fast keyword searches against natural language content — no LLM, no embeddings, no network call.
+The backing index is SQLite FTS5 (full-text search). This means episodic queries are fast keyword searches against natural language content, no LLM, no embeddings, no network call.
 
 ```python
 # Store an episodic record
@@ -80,6 +80,6 @@ Semantic memory is most useful for cross-domain retrieval: finding a security no
 
 The reason all three tiers are shared across all modules is synthesis.
 
-When Dreamweaver runs its overnight synthesis pass, it queries all three tiers — searching episodic memory for patterns, pulling semantically similar records across domains, and comparing against working context. A security concern noted by Sentry, a related code smell found by Atlas, and a configuration anomaly logged by Oracle can be connected into a single insight that none of the three modules could have generated alone.
+When Dreamweaver runs its overnight synthesis pass, it queries all three tiers, searching episodic memory for patterns, pulling semantically similar records across domains, and comparing against working context. A security concern noted by Sentry, a related code smell found by Atlas, and a configuration anomaly logged by Oracle can be connected into a single insight that none of the three modules could have generated alone.
 
 Shared memory is what makes NEXUS more than a collection of independent agents.

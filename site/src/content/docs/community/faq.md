@@ -1,6 +1,6 @@
 ---
 title: "FAQ"
-description: "Common questions about NEXUS -- hardware, privacy, models, and getting started"
+description: "Common questions about NEXUS: hardware, privacy, models, and getting started"
 sidebar:
   order: 5
 ---
@@ -17,7 +17,7 @@ A modular AI operating system that runs entirely on your machine. Five kernel co
 
 **Do I need a GPU?**
 
-No. The kernel is pure Python and SQLite -- no GPU required. If you run a local open-source model, a GPU accelerates inference but is not required (llama.cpp runs on CPU). You can also use cloud providers (OpenAI, Anthropic) and skip local models entirely.
+No. The kernel is pure Python and SQLite, no GPU required. If you run a local open-source model, a GPU accelerates inference but is not required (llama.cpp runs on CPU). You can also use cloud providers (OpenAI, Anthropic) and skip local models entirely.
 
 **Do I need an internet connection?**
 
@@ -25,11 +25,11 @@ Only for the initial setup (cloning the repo). After that, NEXUS runs fully offl
 
 **What models does NEXUS support?**
 
-Any model. Local open-source models via llama.cpp, Ollama, or vLLM (Qwen, DeepSeek, Phi, Llama, Gemma). Cloud providers: OpenAI (GPT-4o, o3) and Anthropic (Claude Opus, Sonnet, Haiku). Providers can be registered at runtime via the API -- no restart required.
+Any model. Local open-source models via llama.cpp, Ollama, or vLLM (Qwen, DeepSeek, Phi, Llama, Gemma). Cloud providers: OpenAI (GPT-4o, o3) and Anthropic (Claude Opus, Sonnet, Haiku). Providers can be registered at runtime via the API, no restart required.
 
 **Can I use NEXUS without any LLM at all?**
 
-Yes. The 25 narrow AI agents work using pattern-based analysis -- regex, heuristics, and rules. They provide useful results without any model. The intelligence tier modules (Atlas, Prism, Cipher) and differentiation modules require an LLM for full functionality.
+Yes. The 25 narrow AI agents work using pattern-based analysis, regex, heuristics, and rules. They provide useful results without any model. The intelligence tier modules (Atlas, Prism, Cipher) and differentiation modules require an LLM for full functionality.
 
 ---
 
@@ -37,11 +37,11 @@ Yes. The 25 narrow AI agents work using pattern-based analysis -- regex, heurist
 
 **Where is my data stored?**
 
-Everything lives in `~/.local/share/nexus/` -- three SQLite databases (memory, audit, trust). Nothing leaves your machine unless you explicitly enable a network module.
+Everything lives in `~/.local/share/nexus/`: three SQLite databases (memory, audit, trust). Nothing leaves your machine unless you explicitly enable a network module.
 
 **Does NEXUS phone home?**
 
-No. The kernel is architecturally incapable of network access. There is no telemetry, no analytics, no update checking. The code is open source -- verify this yourself.
+No. The kernel is architecturally incapable of network access. There is no telemetry, no analytics, no update checking. The code is open source, verify this yourself.
 
 **What about the network modules?**
 
@@ -49,7 +49,7 @@ Collective (federated learning) and Herald (agent-to-agent communication) can co
 
 **Can I export or delete my data?**
 
-`nexus forget --yes` clears all memory (Engram). Delete `~/.local/share/nexus/` to remove everything. The audit trail in Chronicle is append-only by design -- deleting the database file is the only way to remove it.
+`nexus forget --yes` clears all memory (Engram). Delete `~/.local/share/nexus/` to remove everything. The audit trail in Chronicle is append-only by design, deleting the database file is the only way to remove it.
 
 **Is NEXUS SOC 2 / HIPAA compatible?**
 
@@ -61,7 +61,7 @@ Chronicle's immutable audit trail is designed for compliance export. Every routi
 
 **What's the difference between a module and an agent?**
 
-Nothing technically -- both are `NexusModule` subclasses with the same interface. "Agent" is a label for the 25 narrow AI task specialists (Vex, Scribe, Ledger, etc.) that solve focused problems. "Module" is the broader term covering kernel-adjacent intelligence components (Atlas, Prism, Council, etc.).
+Nothing technically: both are `NexusModule` subclasses with the same interface. "Agent" is a label for the 25 narrow AI task specialists (Vex, Scribe, Ledger, etc.) that solve focused problems. "Module" is the broader term covering kernel-adjacent intelligence components (Atlas, Prism, Council, etc.).
 
 **How do I know which agent to use?**
 
@@ -77,7 +77,7 @@ Yes. The [Building a Module](/NEXUS/guides/building-a-module/) guide covers the 
 
 **How does trust scoring work?**
 
-Every module starts at trust level 0. Aegis adjusts trust based on outcomes -- positive results increase trust, failures decrease it. Trust is per-module, per-domain, enforced on every call. See [Earned Autonomy](/NEXUS/concepts/earned-autonomy/) for details.
+Every module starts at trust level 0. Aegis adjusts trust based on outcomes, positive results increase trust, failures decrease it. Trust is per-module, per-domain, enforced on every call. See [Earned Autonomy](/NEXUS/concepts/earned-autonomy/) for details.
 
 ---
 
@@ -98,9 +98,9 @@ pytest tests/ -v
 **What's the database schema?**
 
 NEXUS uses three SQLite databases:
-- **engram.db** -- working memory (ephemeral), episodic memory (FTS5 full-text search), semantic memory (sqlite-vec vector embeddings)
-- **chronicle.db** -- append-only audit log in WAL mode
-- **aegis.db** -- per-module trust scores and outcome history
+- **engram.db**: working memory (ephemeral), episodic memory (FTS5 full-text search), semantic memory (sqlite-vec vector embeddings)
+- **chronicle.db**: append-only audit log in WAL mode
+- **aegis.db**: per-module trust scores and outcome history
 
 **Can I use NEXUS in a commercial product?**
 
@@ -114,4 +114,4 @@ git pull origin main
 pip install -e .
 ```
 
-Your data directory is separate from the code -- updates don't affect stored memory, audit logs, or trust scores.
+Your data directory is separate from the code, updates don't affect stored memory, audit logs, or trust scores.

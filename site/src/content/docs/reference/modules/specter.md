@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-Specter — adversarial red-team agent.
+Specter: adversarial red-team agent.
 Runs structured adversarial analysis on high-stakes decisions:
 counter-arguments, failure modes, hidden assumptions, worst-case scenarios.
 Auto-activates based on detected stake level.

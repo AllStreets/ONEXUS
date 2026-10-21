@@ -11,7 +11,7 @@ import Hero from '../../components/Hero.astro';
 
 <Hero />
 
-<div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
+<div class="nx-home-section">
 
 ## A kernel, nine modules, one machine
 
@@ -23,11 +23,11 @@ The nervous system. Five components that every module depends on:
 
 | Component | Role |
 |-----------|------|
-| **Cortex** | Semantic intent router -- classifies what you need and dispatches to the right module |
-| **Engram** | Three-tier memory -- episodic (events), semantic (knowledge), procedural (skills) |
-| **Chronicle** | Immutable audit trail -- every action, every decision, fully traceable |
-| **Aegis** | Trust engine -- modules earn autonomy through demonstrated reliability (+0.12/-0.22) |
-| **Pulse** | Event bus -- real-time pub/sub between all modules |
+| **Cortex** | Semantic intent router: classifies what you need and dispatches to the right module |
+| **Engram** | Three-tier memory: episodic (events), semantic (knowledge), procedural (skills) |
+| **Chronicle** | Immutable audit trail: every action, every decision, fully traceable |
+| **Aegis** | Trust engine: modules earn autonomy through demonstrated reliability (+0.12/-0.22) |
+| **Pulse** | Event bus: real-time pub/sub between all modules |
 
 ### The Modules
 
@@ -35,31 +35,31 @@ The brain's regions. Each one does something fundamentally different:
 
 | Module | What It Does |
 |--------|-------------|
-| **Council** | Multi-perspective deliberation -- ethics, negotiation, simulation, synthesis, verification |
-| **Specter** | Adversarial analysis -- red-teaming, stress testing, counter-arguments, failure mode detection |
-| **Autonomic** | Earned autonomy -- learns routines, proposes actions, acts within earned trust boundaries |
-| **Oracle** | Anticipatory pattern detection -- trigger rules, threat radar, early warning |
-| **Wraith** | Sub-agent spawner -- ephemeral parallel workers with death clocks |
-| **Legacy** | Knowledge crystallization -- distills experience into frameworks, playbooks, heuristics |
-| **Consciousness** | Self-reflection -- journaling, pattern discovery, contradiction detection, reasoning traces |
-| **Sentry** | Cognitive regulation -- monitors focus, fatigue, flow state, cognitive load |
-| **Echo** | User modeling -- behavioral fingerprinting, social graph, relationship health |
+| **Council** | Multi-perspective deliberation: ethics, negotiation, simulation, synthesis, verification |
+| **Specter** | Adversarial analysis: red-teaming, stress testing, counter-arguments, failure mode detection |
+| **Autonomic** | Earned autonomy: learns routines, proposes actions, acts within earned trust boundaries |
+| **Oracle** | Anticipatory pattern detection: trigger rules, threat radar, early warning |
+| **Wraith** | Sub-agent spawner: ephemeral parallel workers with death clocks |
+| **Legacy** | Knowledge crystallization: distills experience into frameworks, playbooks, heuristics |
+| **Consciousness** | Self-reflection: journaling, pattern discovery, contradiction detection, reasoning traces |
+| **Sentry** | Cognitive regulation: monitors focus, fatigue, flow state, cognitive load |
+| **Echo** | User modeling: behavioral fingerprinting, social graph, relationship health |
 
 </div>
 
-<div style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem;">
+<div class="nx-home-section">
 
 ## Platform Services
 
 Beyond the kernel, ONEXUS ships with a full platform layer:
 
-- **API Server** -- REST + WebSocket endpoints for every kernel operation (FastAPI)
-- **Live Dashboard** -- dark-themed real-time web UI with trust gauges, Pulse streaming, Chronicle timeline
-- **Terminal UI** -- Rich split-pane TUI as an alternative to the basic CLI
-- **MCP Server** -- every module exposed as MCP tools for Claude, Cursor, VS Code
-- **Workflow Engine** -- DAG pipelines chaining modules, defined in YAML or Python
-- **Time-Travel Replay** -- reconstruct system state at any point in history from Chronicle data
-- **Federation** -- peer-to-peer ONEXUS mesh with capability exchange and cross-instance routing
+- **API Server**: REST + WebSocket endpoints for every kernel operation (FastAPI)
+- **Live Dashboard**: dark-themed real-time web UI with trust gauges, Pulse streaming, Chronicle timeline
+- **Terminal UI**: Rich split-pane TUI as an alternative to the basic CLI
+- **MCP Server**: every module exposed as MCP tools for Claude, Cursor, VS Code
+- **Workflow Engine**: DAG pipelines chaining modules, defined in YAML or Python
+- **Time-Travel Replay**: reconstruct system state at any point in history from Chronicle data
+- **Federation**: peer-to-peer ONEXUS mesh with capability exchange and cross-instance routing
 
 ## Trust System
 
@@ -71,17 +71,17 @@ Modules earn autonomy through demonstrated reliability. Every interaction adjust
 | 0.25 - 0.49 | ADVISOR | Can suggest actions proactively |
 | 0.50 - 0.74 | MONITOR | Can watch events and surface findings |
 | 0.75 - 0.99 | EXECUTOR | Can act, but substantive work needs user authorization |
-| 1.00 | AUTONOMOUS | Full autonomy -- revocable instantly, never decays |
+| 1.00 | AUTONOMOUS | Full autonomy: revocable instantly, never decays |
 
-Correct response: **+0.12**. Wrong response: **-0.22**. The asymmetry is intentional -- trust is hard to earn and easy to lose.
+Correct response: **+0.12**. Wrong response: **-0.22**. The asymmetry is intentional: trust is hard to earn and easy to lose.
 
 ## Model-Agnostic Inference
 
 | Provider | Setup |
 |----------|-------|
-| **Local (llama.cpp, Ollama, vLLM)** | Run any open-source model -- Qwen, DeepSeek, Phi, Llama, Gemma |
+| **Local (llama.cpp, Ollama, vLLM)** | Run any open-source model: Qwen, DeepSeek, Phi, Llama, Gemma |
 | **OpenAI** | Set `NEXUS_OPENAI_KEY` or register at runtime via the API |
 | **Anthropic** | Set `NEXUS_ANTHROPIC_KEY` or register at runtime via the API |
-| **No model** | Kernel runs standalone -- connect a provider whenever you're ready |
+| **No model** | Kernel runs standalone: connect a provider whenever you're ready |
 
 </div>

@@ -1,13 +1,13 @@
 ---
 title: "CouncilModule"
-description: "Multi-agent deliberation -- structured debate across modules with synthesized recommendations"
+description: "Multi-agent deliberation: structured debate across modules with synthesized recommendations"
 sidebar:
   order: 19
 ---
 
 ## Overview
 
-Council -- multi-agent deliberation orchestrator.
+Council: multi-agent deliberation orchestrator.
 Selects relevant modules, runs structured multi-round debate, and synthesizes a recommendation with preserved dissent. Inspired by Marvin Minsky's Society of Mind.
 
 - **Version:** `0.1.0`

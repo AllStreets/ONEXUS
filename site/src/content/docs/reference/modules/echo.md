@@ -1,13 +1,13 @@
 ---
 title: "EchoModule"
-description: "Behavioral fingerprinting — learns writing style and decision patterns"
+description: "Behavioral fingerprinting: learns writing style and decision patterns"
 sidebar:
   order: 7
 ---
 
 ## Overview
 
-Echo — behavioral fingerprinting and skill transfer.
+Echo: behavioral fingerprinting and skill transfer.
 Observes how the user writes across domains, builds behavioral profiles,
 and can score new text for style match. Patterns transfer across domains.
 

@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-Wraith — phantom agent spawner.
+Wraith: phantom agent spawner.
 Spawns ephemeral async micro-agents with single missions, time limits,
 and auto-termination. Results merge into Engram automatically.
 

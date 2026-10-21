@@ -1,6 +1,6 @@
 ---
 title: Build a Module
-description: Five steps to add a new intelligence module to NEXUS -- from file creation through tests to enabling it in a live session.
+description: "Five steps to add a new intelligence module to NEXUS: from file creation through tests to enabling it in a live session."
 sidebar:
   order: 1
 ---
@@ -26,11 +26,11 @@ class NexusModule(ABC):
     async def on_unload(self, context: dict) -> None: ...
 ```
 
-Every module must define `name`, `description`, `version`, and implement `handle()`. The base class enforces this at import time -- missing any of these raises `TypeError`.
+Every module must define `name`, `description`, `version`, and implement `handle()`. The base class enforces this at import time, missing any of these raises `TypeError`.
 
 ---
 
-## Step 1 -- Create the Module File
+## Step 1: Create the Module File
 
 Create a new Python file in `nexus/modules/`. The filename becomes the conventional module identifier.
 
@@ -100,11 +100,11 @@ If your module needs network access, set `requires_network = True`. Users must e
 nexus allow --network your_module
 ```
 
-All outbound data must be logged via `self._log_outbound(context, destination, summary)` -- this writes to Chronicle for audit compliance.
+All outbound data must be logged via `self._log_outbound(context, destination, summary)`: this writes to Chronicle for audit compliance.
 
 ---
 
-## Step 2 -- Register Routing Keywords
+## Step 2: Register Routing Keywords
 
 Open `nexus/kernel/cortex.py` and add an entry to `_MODULE_KEYWORDS`. Cortex routes incoming messages to your module when any of these words appear in the user's input.
 
@@ -119,7 +119,7 @@ Choose keywords that are specific enough to avoid false matches with other modul
 
 ---
 
-## Step 3 -- Write Tests
+## Step 3: Write Tests
 
 Create a test file mirroring the module's location:
 
@@ -188,7 +188,7 @@ async def test_handle_records_positive_outcome(module, context):
 
 ---
 
-## Step 4 -- Run Tests
+## Step 4: Run Tests
 
 ```bash
 pytest tests/modules/test_summarizer.py -v
@@ -202,7 +202,7 @@ pytest tests/ -v
 
 ---
 
-## Step 5 -- Enable the Module
+## Step 5: Enable the Module
 
 ```bash
 nexus allow summarizer
@@ -226,6 +226,6 @@ nexus status
 
 ## What's Next
 
-- [Build an Agent](/NEXUS/guides/building-an-agent/) -- task specialists with graduated sovereignty
-- [Earned Autonomy](/NEXUS/concepts/earned-autonomy/) -- how trust tiers work
-- [Connecting an LLM](/NEXUS/guides/connecting-an-llm/) -- local and cloud inference setup
+- [Build an Agent](/NEXUS/guides/building-an-agent/): task specialists with graduated sovereignty
+- [Earned Autonomy](/NEXUS/concepts/earned-autonomy/): how trust tiers work
+- [Connecting an LLM](/NEXUS/guides/connecting-an-llm/): local and cloud inference setup

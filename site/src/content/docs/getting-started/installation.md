@@ -13,7 +13,7 @@ sidebar:
 | Disk | 500 MB for NEXUS core |
 | GPU | Not required |
 
-No cloud accounts, API keys, or internet connection required after setup. The kernel runs standalone -- connect a model provider whenever you're ready.
+No cloud accounts, API keys, or internet connection required after setup. The kernel runs standalone: connect a model provider whenever you're ready.
 
 ## Install from Source
 
@@ -90,7 +90,7 @@ Start the kernel without any model. Memory, trust, audit, and event routing all 
 
 ## Data Directory
 
-NEXUS stores all runtime data -- memory databases, audit logs, trust scores -- in a single directory following the XDG Base Directory spec:
+NEXUS stores all runtime data, memory databases, audit logs, trust scores, in a single directory following the XDG Base Directory spec:
 
 ```
 ~/.local/share/nexus/

@@ -44,7 +44,7 @@ async def on_unload(self, context: dict) -> None:
     await context["pulse"].unsubscribe("file.*", self._on_file_event)
 ```
 
-`on_load` and `on_unload` are not abstract — they default to no-ops. Only implement them if the module needs setup or teardown.
+`on_load` and `on_unload` are not abstract: they default to no-ops. Only implement them if the module needs setup or teardown.
 
 ## Context Object
 
@@ -57,7 +57,7 @@ Every call to `handle()`, `on_load()`, and `on_unload()` receives a `context` di
 | `context["chronicle"]` | `Chronicle` | Append-only audit log, queryable |
 | `context["pulse"]` | `Pulse` | Async pub/sub event bus |
 
-Modules access kernel services only through this context. They do not import kernel classes directly. This keeps modules testable in isolation — pass a mock context and the module has no external dependencies.
+Modules access kernel services only through this context. They do not import kernel classes directly. This keeps modules testable in isolation, pass a mock context and the module has no external dependencies.
 
 ## Data Pipelines
 
@@ -117,7 +117,7 @@ class MyAgent(AgentModule):
 | **AUTONOMOUS** | 75-99 | Acts within defined boundaries without asking. |
 | **SOVEREIGN** | 100 | Coordinates with other agents independently. |
 
-Trust is tracked by Aegis and can be revoked at any time. The `AgentModule.handle()` method routes through these tiers automatically -- agents only implement the tier-specific methods they support.
+Trust is tracked by Aegis and can be revoked at any time. The `AgentModule.handle()` method routes through these tiers automatically, agents only implement the tier-specific methods they support.
 
 ## Component Tiers
 

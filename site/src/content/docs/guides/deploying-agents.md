@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-ONEXUS ships with 9 cognitive modules -- the brain. For task-specific work (coding, browser automation, data engineering, financial modeling), you connect external agents from the [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) catalog.
+ONEXUS ships with 9 cognitive modules, the brain. For task-specific work (coding, browser automation, data engineering, financial modeling), you connect external agents from the [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) catalog.
 
 ## Setup
 
@@ -17,7 +17,7 @@ export NEXUS_AGENTS_CATALOG=~/onexus-agents
 onexus run
 ```
 
-ONEXUS reads the catalog at startup. The catalog is a directory of JSON files -- one per agent, organized by category. No database, no server. The git history is the audit log.
+ONEXUS reads the catalog at startup. The catalog is a directory of JSON files, one per agent, organized by category. No database, no server. The git history is the audit log.
 
 ## Browsing the Catalog
 
@@ -49,10 +49,10 @@ Full metadata for a specific agent, including its MCP adapter descriptor (transp
 
 ## Runnable vs Catalogued
 
-Every agent in the catalog has metadata: name, category, stars, license, composite score, rank. But only agents marked `runnable: true` have an MCP adapter -- the bridge that lets ONEXUS actually dispatch work to them.
+Every agent in the catalog has metadata: name, category, stars, license, composite score, rank. But only agents marked `runnable: true` have an MCP adapter: the bridge that lets ONEXUS actually dispatch work to them.
 
 A runnable agent declares:
-- `adapter_ref` -- path to the MCP server descriptor (`adapters/<name>/mcp.json`)
+- `adapter_ref`: path to the MCP server descriptor (`adapters/<name>/mcp.json`)
 - The adapter specifies transport (stdio/SSE), command, env keys, capabilities, and a `trust_floor`
 
 The trust floor is the minimum Aegis trust score required before ONEXUS will dispatch to the agent. This prevents untrusted agents from executing without earning their way up.

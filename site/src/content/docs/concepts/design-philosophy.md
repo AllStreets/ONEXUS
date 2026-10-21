@@ -1,6 +1,6 @@
 ---
 title: Design Philosophy
-description: The four principles behind NEXUS — local-first, anti-fragile, compounding value, and model-agnostic.
+description: "The four principles behind NEXUS: local-first, anti-fragile, compounding value, and model-agnostic."
 sidebar:
   order: 4
 ---
@@ -9,7 +9,7 @@ sidebar:
 
 NEXUS makes no outbound network connections except to the LLM endpoint you configure, which defaults to `localhost:8080`. No telemetry. No cloud sync. No third-party APIs.
 
-This is not just a privacy preference — it is an architectural constraint. The kernel has no HTTP client for external services. Modules that need external data (Oracle reading the filesystem, Sentry monitoring processes) operate on local resources. The intelligence tier uses only the locally running LLM.
+This is not just a privacy preference, it is an architectural constraint. The kernel has no HTTP client for external services. Modules that need external data (Oracle reading the filesystem, Sentry monitoring processes) operate on local resources. The intelligence tier uses only the locally running LLM.
 
 The practical consequence: NEXUS works without internet access. It works on air-gapped machines. It works when the cloud is down. Your data never leaves your machine unless you explicitly write a module that sends it somewhere.
 
@@ -19,7 +19,7 @@ A fragile system degrades gracefully. An anti-fragile system gets stronger under
 
 Four modules embody this directly:
 
-**Specter** is the adversarial red-team module. It attacks the system's own reasoning — looking for gaps, inconsistencies, and failure modes in plans before they execute. When Specter finds a flaw, the system is better for it.
+**Specter** is the adversarial red-team module. It attacks the system's own reasoning, looking for gaps, inconsistencies, and failure modes in plans before they execute. When Specter finds a flaw, the system is better for it.
 
 **Serendipity** is the anti-optimization engine. It deliberately surfaces low-probability, high-value connections that a purely goal-directed system would prune. Unexpected associations are features, not noise.
 
@@ -35,9 +35,9 @@ The most important design decision in NEXUS is shared memory. All modules read f
 
 **Echo** remembers. It stores user preferences, recurring patterns, and behavioral context in episodic memory. The longer you use NEXUS, the better Echo's context becomes.
 
-**Legacy** crystallizes knowledge. It distills episodic memory into durable semantic representations — converting the raw record of what happened into reusable knowledge about what it means.
+**Legacy** crystallizes knowledge. It distills episodic memory into durable semantic representations, converting the raw record of what happened into reusable knowledge about what it means.
 
-**Engram** itself compounds. A semantic memory built over months of use across multiple modules contains connections that no single interaction could have produced. Atlas analyzing code, Sentry flagging anomalies, and Dreamweaver synthesizing overnight — all of it feeds into a shared knowledge base that grows more valuable the longer the system runs.
+**Engram** itself compounds. A semantic memory built over months of use across multiple modules contains connections that no single interaction could have produced. Atlas analyzing code, Sentry flagging anomalies, and Dreamweaver synthesizing overnight, all of it feeds into a shared knowledge base that grows more valuable the longer the system runs.
 
 This is the inverse of most AI tools, which start fresh on every session. NEXUS sessions compound.
 

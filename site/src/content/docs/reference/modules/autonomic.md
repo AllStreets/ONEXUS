@@ -1,13 +1,13 @@
 ---
 title: "AutonomicModule"
-description: "Earned autonomous action -- observes patterns, learns routines, acts within trust boundaries"
+description: "Earned autonomous action: observes patterns, learns routines, acts within trust boundaries"
 sidebar:
   order: 20
 ---
 
 ## Overview
 
-Autonomic -- earned autonomous action engine.
+Autonomic: earned autonomous action engine.
 Observes patterns, learns routines, and gradually takes autonomous action as trust is earned through successful outcomes. Every action is auditable, every decision is adversarially checked, and trust retreats on failure.
 
 - **Version:** `0.1.0`

@@ -1,13 +1,13 @@
 ---
 title: "OracleModule"
-description: "Anticipatory trigger engine — scans for patterns and fires events"
+description: "Anticipatory trigger engine: scans for patterns and fires events"
 sidebar:
   order: 1
 ---
 
 ## Overview
 
-Oracle — anticipatory trigger engine.
+Oracle: anticipatory trigger engine.
 Scans input against configurable trigger rules with keyword-weighted scoring.
 Fires events when pattern density exceeds thresholds.
 Observe-only: Oracle never takes actions, only surfaces information.

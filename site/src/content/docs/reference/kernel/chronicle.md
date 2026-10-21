@@ -7,7 +7,7 @@ sidebar:
 
 ## Overview
 
-Chronicle — immutable audit trail for every Nexus action.
+Chronicle: immutable audit trail for every Nexus action.
 SQLite-backed, queryable, exportable for compliance.
 
 - **Version:** `0.1.0`

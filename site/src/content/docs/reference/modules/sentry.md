@@ -1,13 +1,13 @@
 ---
 title: "SentryModule"
-description: "Cognitive load model — tracks user focus, fatigue, stress, and flow"
+description: "Cognitive load model: tracks user focus, fatigue, stress, and flow"
 sidebar:
   order: 2
 ---
 
 ## Overview
 
-Sentry — cognitive load model.
+Sentry: cognitive load model.
 Maintains a real-time estimate of the user's cognitive state based on
 behavioral signals (typing speed, message frequency, time gaps).
 Outputs a state vector: focus, fatigue, stress, flow.

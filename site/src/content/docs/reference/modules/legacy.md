@@ -7,10 +7,10 @@ sidebar:
 
 ## Overview
 
-Legacy -- knowledge crystallization engine.
+Legacy: knowledge crystallization engine.
 Distills months of decisions, outcomes, and behavioral patterns into
 structured, exportable knowledge artifacts. Extracts frameworks, playbooks,
-and heuristics from actual behavior -- not self-reported preferences.
+and heuristics from actual behavior, not self-reported preferences.
 
 - **Version:** `0.1.0`
 - **Class:** `ArtifactType`

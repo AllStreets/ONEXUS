@@ -50,7 +50,7 @@ nexus allow oracle
 nexus allow oracle atlas prism
 ```
 
-Modules start with a trust score of 0.0 from Aegis. Trust increases (+0.12) as the module produces correct outcomes and decreases (-0.22) on failures -- the asymmetry is intentional.
+Modules start with a trust score of 0.0 from Aegis. Trust increases (+0.12) as the module produces correct outcomes and decreases (-0.22) on failures, the asymmetry is intentional.
 
 To revoke a module:
 
@@ -109,8 +109,8 @@ This clears Engram (all three tiers) but leaves the audit trail in Chronicle and
 
 NEXUS has two extensibility paths:
 
-- **[Build a Module](/NEXUS/guides/building-a-module/)** -- persistent intelligence components (perception, reasoning, memory). Extend `NexusModule`, implement `handle()`, register keywords in Cortex.
+- **[Build a Module](/NEXUS/guides/building-a-module/)**: persistent intelligence components (perception, reasoning, memory). Extend `NexusModule`, implement `handle()`, register keywords in Cortex.
 
-- **[Build an Agent](/NEXUS/guides/building-an-agent/)** -- task specialists with graduated sovereignty. Extend `AgentModule`, implement `analyze()` + `suggest()` + `monitor()` + `coordinate()`. Agents start at trust 0 and earn autonomy through demonstrated reliability.
+- **[Build an Agent](/NEXUS/guides/building-an-agent/)**: task specialists with graduated sovereignty. Extend `AgentModule`, implement `analyze()` + `suggest()` + `monitor()` + `coordinate()`. Agents start at trust 0 and earn autonomy through demonstrated reliability.
 
 Both paths get full access to the kernel: Engram (memory), Chronicle (audit), Aegis (trust), Pulse (events), and LLM (inference).

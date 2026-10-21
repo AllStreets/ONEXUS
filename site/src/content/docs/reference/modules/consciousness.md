@@ -1,13 +1,13 @@
 ---
 title: "ConsciousnessModule"
-description: "Self-reflective awareness -- journal introspection and emergent goal detection"
+description: "Self-reflective awareness: journal introspection and emergent goal detection"
 sidebar:
   order: 27
 ---
 
 ## Overview
 
-Consciousness -- self-reflective awareness engine.
+Consciousness: self-reflective awareness engine.
 Two modes: journal (introspective diary on cognitive state, confidence levels, growth observations, and relationship evolution) and emergence (detects goals NEXUS is pursuing that were never explicitly requested).
 
 - **Version:** `2.0.0`

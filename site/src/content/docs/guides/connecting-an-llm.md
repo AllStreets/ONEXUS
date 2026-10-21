@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-NEXUS is model-agnostic. The kernel runs without any model -- connect a provider when you need inference. Three paths: cloud API, local open-source model, or runtime registration.
+NEXUS is model-agnostic. The kernel runs without any model, connect a provider when you need inference. Three paths: cloud API, local open-source model, or runtime registration.
 
 ## Option A: Cloud Providers
 
@@ -81,7 +81,7 @@ All MIT or Apache 2.0 licensed:
 
 | Model | Notes |
 |-------|-------|
-| Qwen 3 8B | Default recommendation -- good balance of speed and quality |
+| Qwen 3 8B | Default recommendation: good balance of speed and quality |
 | Qwen 3 32B | Complex reasoning, long-context tasks |
 | DeepSeek-R1 7B | Strong code generation and technical analysis |
 | Phi-4 Mini | Fast responses, lightweight |

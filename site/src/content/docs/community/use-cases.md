@@ -1,6 +1,6 @@
 ---
 title: "Use Cases"
-description: "Real-world problems NEXUS agents solve -- pick your scenario, find the right agent"
+description: "Real-world problems NEXUS agents solve: pick your scenario, find the right agent"
 sidebar:
   order: 3
 ---
@@ -15,7 +15,7 @@ You don't need to understand the architecture to use NEXUS. Find your problem, f
 
 **"I need to check my codebase for vulnerabilities before shipping."**
 
-Use **Vex**. Point it at a file or directory and it scans for 28 vulnerability patterns -- SQL injection, XSS, hardcoded credentials, insecure deserialization, path traversal. No LLM required. Works on any Python, JavaScript, or config file.
+Use **Vex**. Point it at a file or directory and it scans for 28 vulnerability patterns: SQL injection, XSS, hardcoded credentials, insecure deserialization, path traversal. No LLM required. Works on any Python, JavaScript, or config file.
 
 ```
 > scan this code for vulnerabilities
@@ -56,7 +56,7 @@ Use **Mint**. Give it line items and client info, it calculates tax by region, f
 
 **"I'm reviewing a contract and want to know what's risky."**
 
-Use **Redline**. It scans agreements for 15 risky clause patterns -- unlimited liability, unilateral termination, automatic renewal, non-compete overreach, IP assignment, and missing protections like limitation of liability or data handling clauses.
+Use **Redline**. It scans agreements for 15 risky clause patterns: unlimited liability, unilateral termination, automatic renewal, non-compete overreach, IP assignment, and missing protections like limitation of liability or data handling clauses.
 
 **"I need financial projections for my startup pitch."**
 
@@ -91,7 +91,7 @@ Use **Vigil**. It parses common log formats (ISO timestamp, syslog, bracketed le
 
 **"I need to extract structured data from a web page."**
 
-Use **Quarry**. Give it HTML content and it extracts links, headings, tables, and metadata into structured output. No browser needed -- it works directly on HTML.
+Use **Quarry**. Give it HTML content and it extracts links, headings, tables, and metadata into structured output. No browser needed: it works directly on HTML.
 
 **"Our API response times are getting worse and I don't know why."**
 
@@ -107,7 +107,7 @@ Use **Scribe**. Paste the transcript and it extracts participants, action items,
 
 **"I have bullet points and need them turned into a real document."**
 
-Use **Kindle**. It expands bullet points into polished prose -- blog posts, documentation, reports, or emails. Detects tone (professional, technical, casual, academic, marketing) and format automatically.
+Use **Kindle**. It expands bullet points into polished prose, blog posts, documentation, reports, or emails. Detects tone (professional, technical, casual, academic, marketing) and format automatically.
 
 **"I need to evaluate a research paper for my literature review."**
 
@@ -121,7 +121,7 @@ Use **Compass**. Tell it your current experience level and target language, and 
 
 ### Development Workflow
 
-**"My code is getting hard to maintain -- where should I refactor?"**
+**"My code is getting hard to maintain, where should I refactor?"**
 
 Use **Carve**. It measures complexity metrics, finds functions over 30 lines, detects deep nesting (4+ levels), identifies duplicate string literals, and flags chained elif blocks.
 
@@ -131,7 +131,7 @@ Use **Remedy**. Paste the error message or stack trace and it identifies the err
 
 **"I need to write tests but don't know where to start."**
 
-Use **Axiom**. Point it at a function and it generates test case stubs -- happy path, edge cases (empty input, None, boundary values), and error cases based on type hints.
+Use **Axiom**. Point it at a function and it generates test case stubs, happy path, edge cases (empty input, None, boundary values), and error cases based on type hints.
 
 **"I need a regex but I can never remember the syntax."**
 

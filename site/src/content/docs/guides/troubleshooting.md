@@ -40,7 +40,7 @@ The package isn't installed in the active Python environment. Install with:
 pip install -e .
 ```
 
-The `-e` flag means editable -- changes to source are reflected immediately.
+The `-e` flag means editable: changes to source are reflected immediately.
 
 **`Python version 3.10 is not supported`**
 
@@ -129,7 +129,7 @@ _MODULE_KEYWORDS = {
 
 **Messages always route to the wrong module**
 
-Cortex routes by keyword score -- the module with the most keyword matches wins. If your message matches another module's keywords more strongly, be more specific:
+Cortex routes by keyword score, the module with the most keyword matches wins. If your message matches another module's keywords more strongly, be more specific:
 
 ```
 # Vague -- might hit the wrong module
@@ -249,4 +249,4 @@ This is a separate gate from normal module trust. Both `nexus allow herald` (tru
 
 **Collective shares my data**
 
-Collective shares noise-injected model aggregates, never raw data. Differential privacy is applied before any information leaves your instance. Every outbound event is logged to Chronicle -- you can audit exactly what was shared.
+Collective shares noise-injected model aggregates, never raw data. Differential privacy is applied before any information leaves your instance. Every outbound event is logged to Chronicle, you can audit exactly what was shared.
