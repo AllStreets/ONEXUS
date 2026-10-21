@@ -5523,14 +5523,14 @@ function openHistoryPopover(anchorEl, kind, onPick) {
 
   const pop = document.createElement("div");
   pop.id = "nx-history-popover";
-  pop.className = "nx-history-popover";
+  pop.className = "nx-history-popover nx-popover";
   pop.style.top  = (rect.bottom + 8) + "px";
   pop.style.left = rect.left + "px";
 
   if (!items.length) {
     pop.innerHTML = `
-      <div class="nx-hp-head">${kind} history</div>
-      <div class="nx-hp-empty">no history yet</div>
+      <div class="nx-hp-head"><span class="nx-section-label">${kind === "workshop" ? "Workshop" : "Search"} history</span></div>
+      <div class="nx-hp-empty nx-empty-line">Nothing here yet. Runs and searches you make are kept on this machine.</div>
     `;
   } else {
     const rowsHTML = items.map((it, i) => {
@@ -5538,7 +5538,7 @@ function openHistoryPopover(anchorEl, kind, onPick) {
         ? `<span class="hp-lang">${escapeHtml(it.language || "")}</span> <span class="hp-prev">${escapeHtml((it.code || "").split("\n")[0].slice(0, 64))}</span>`
         : `<span class="hp-prev">${escapeHtml(it.query || "")}</span>`;
       return `
-        <button class="nx-hp-row" data-i="${i}">
+        <button class="nx-hp-row" type="button" data-i="${i}">
           ${preview}
           <span class="hp-ago">${escapeHtml(fmtAgo(it.ts))}</span>
         </button>
@@ -5546,8 +5546,8 @@ function openHistoryPopover(anchorEl, kind, onPick) {
     }).join("");
     pop.innerHTML = `
       <div class="nx-hp-head">
-        <span>${kind} history · ${items.length}</span>
-        <button class="nx-hp-clear" id="nx-hp-clear" title="Clear ${kind} history">clear</button>
+        <span class="nx-section-label">${kind === "workshop" ? "Workshop" : "Search"} history · ${items.length}</span>
+        <button class="nx-hp-clear nx-btn nx-btn-sm nx-btn-danger" type="button" id="nx-hp-clear" title="Clear ${kind} history">Clear</button>
       </div>
       <div class="nx-hp-list">${rowsHTML}</div>
     `;
@@ -5605,12 +5605,12 @@ function renderWorkshopPreview(language, code, outEl) {
   } else { // markdown
     doc = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:-apple-system,system-ui,sans-serif;color:#1a1620;background:#fff;padding:22px;line-height:1.6;max-width:760px}pre,code{font-family:ui-monospace,monospace;background:#f0eef5;padding:2px 5px;border-radius:4px}pre{padding:12px;overflow:auto}</style></head><body>${renderMarkdown(code)}</body></html>`;
   }
-  outEl.innerHTML = `<div class="nx-workshop-stats"><span class="ok">preview</span><span>${escapeHtml(language)}</span><span class="nx-dim">rendered in a sandboxed frame</span></div>`;
+  outEl.innerHTML = `<div class="nx-workshop-stats"><span class="ok nx-status is-ok">Preview</span><span class="nx-mono">${escapeHtml(language)}</span><span class="nx-dim">Rendered in a sandboxed frame</span></div>`;
   const frame = document.createElement("iframe");
   frame.className = "nx-workshop-preview";
   frame.setAttribute("sandbox", "allow-scripts");
   frame.setAttribute("title", `${language} preview`);
-  frame.style.cssText = "width:100%;height:360px;border:1px solid var(--nx-hairline);border-radius:10px;background:#fff;margin-top:8px";
+
   frame.srcdoc = doc;
   outEl.appendChild(frame);
 }
@@ -5631,53 +5631,52 @@ async function renderWorkshop() {
 
   main.innerHTML = `
     <div class="nx-main-inner">
-      <header style="display:flex;align-items:end;justify-content:space-between;margin-bottom:18px">
-        <div>
-          <div class="nx-eyebrow" style="margin-bottom:6px">Workshop</div>
-          <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Code &amp; sandbox</div>
-          <div class="nx-dim" style="font-size:13px;margin-top:4px">${available.length} languages (${installedLangs.length} installed) · gated by Aegis · logged to Chronicle · coder agent on the right</div>
+      <header class="nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Workshop</div>
+          <h1 class="nx-page-title">Code and sandbox</h1>
+          <p class="nx-page-sub">${available.length} languages, ${installedLangs.length} installed. Every run is gated by Aegis and logged to Chronicle. The coder agent pairs with you on the right.</p>
         </div>
       </header>
 
       <div class="nx-workshop with-chat">
         <div class="nx-workshop-left">
           <div class="nx-workshop-controls">
-            <input id="nx-workshop-lang" class="nx-input" list="nx-workshop-lang-list"
-                   value="${escapeHtml(lastLang)}" placeholder="search language…"
+            <input id="nx-workshop-lang" class="nx-input nx-input-mono nx-workshop-lang" list="nx-workshop-lang-list"
+                   value="${escapeHtml(lastLang)}" placeholder="Language"
                    autocomplete="off" spellcheck="false" aria-label="Language (type to search)">
             <datalist id="nx-workshop-lang-list">
-              ${available.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}${langs[l]?.installed ? "" : " — not installed"}</option>`).join("")}
+              ${available.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}${langs[l]?.installed ? "" : " (not installed)"}</option>`).join("")}
             </datalist>
-            <button id="nx-workshop-run" class="nx-run-btn">
+            <button id="nx-workshop-run" class="nx-run-btn nx-btn nx-btn-primary" type="button">
+              ${icon("play", 14)}
               <span>Run</span>
               <span class="run-kbd">⌘⏎</span>
             </button>
-            <button id="nx-workshop-history" class="nx-history-btn" title="Recent runs (clearable)">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="6" cy="6" r="4.5"/>
-                <path d="M6 3.5V6l1.8 1.2"/>
-              </svg>
+            <button id="nx-workshop-history" class="nx-history-btn nx-btn" type="button" title="Recent runs">
+              ${icon("history", 14)}
               <span>History</span>
             </button>
           </div>
-          <textarea id="nx-workshop-code" class="nx-workshop-code" spellcheck="false"
-                    placeholder="# write code — runs in a subprocess sandbox, no network access by default"
+          <textarea id="nx-workshop-code" class="nx-workshop-code" spellcheck="false" aria-label="Code"
+                    placeholder="# Write code here. It runs in a subprocess sandbox with no network access by default."
           >${escapeHtml(lastCode)}</textarea>
-          <div class="nx-workshop-out" id="nx-workshop-out">
-            <div class="nx-empty" style="opacity:0.45;padding:18px;font-size:11.5px">Run a snippet to see stdout / stderr here.</div>
+          <div class="nx-workshop-out" id="nx-workshop-out" aria-live="polite">
+            <div class="nx-empty-line nx-workshop-hint">${icon("terminal", 14)}Run a snippet to see stdout and stderr here.</div>
           </div>
         </div>
         <aside class="nx-workshop-chat" id="nx-workshop-chat">
           <header class="nx-workshop-chat-head">
-            <div class="nx-eyebrow">PAIR · coder agent</div>
-            <button class="nx-workshop-chat-clear" id="nx-workshop-chat-clear" title="Clear conversation">clear</button>
+            <div class="nx-workshop-chat-title">${agentDisc("agents", { size: 24 })}<div><div class="nx-workshop-chat-name">Coder</div><div class="nx-workshop-chat-sub">Pair agent</div></div></div>
+            <button class="nx-workshop-chat-clear nx-btn nx-btn-sm nx-btn-ghost" type="button" id="nx-workshop-chat-clear" title="Clear conversation">Clear</button>
           </header>
-          <div class="nx-workshop-chat-thread" id="nx-workshop-chat-thread"></div>
+          <div class="nx-workshop-chat-thread" id="nx-workshop-chat-thread" aria-live="polite"></div>
           <form class="nx-workshop-chat-form" id="nx-workshop-chat-form">
-            <input type="text" id="nx-workshop-chat-input" class="nx-workshop-chat-input"
-                   placeholder="ask the coder — sees your code + last run output"
+            <input type="text" id="nx-workshop-chat-input" class="nx-workshop-chat-input nx-input"
+                   placeholder="Ask the coder"
+                   aria-label="Ask the coder"
                    autocomplete="off">
-            <button type="submit" class="nx-workshop-chat-send">↵</button>
+            <button type="submit" class="nx-workshop-chat-send nx-btn nx-btn-icon" aria-label="Send">${icon("arrow-up", 16)}</button>
           </form>
         </aside>
       </div>
@@ -5699,11 +5698,11 @@ async function renderWorkshop() {
     // The language field is a free-text search box; guide typos before we
     // bother the sandbox.
     if (!available.includes(language)) {
-      outEl.innerHTML = `<div class="nx-empty" style="opacity:0.7;padding:14px;font-size:11.5px">Unknown language <b>${escapeHtml(language || "(blank)")}</b>. Pick one from the list (${available.length} available).</div>`;
+      outEl.innerHTML = `<div class="nx-alert is-warn" role="alert">${icon("alert-triangle", 16)}<div class="nx-alert-body">Unknown language <b class="nx-mono">${escapeHtml(language || "(blank)")}</b>. Pick one from the list, ${available.length} are available.</div></div>`;
       return;
     }
     runBtn.disabled = true;
-    outEl.innerHTML = `<div class="nx-empty" style="opacity:0.55;padding:14px;font-size:11.5px">Running…</div>`;
+    outEl.innerHTML = `<div class="nx-loading"><span class="nx-spinner" aria-hidden="true"></span>Running in the sandbox</div>`;
     try {
       const r = await fetch("/api/workshop/run", {
         method: "POST",
@@ -5725,12 +5724,13 @@ async function renderWorkshop() {
       };
       outEl.innerHTML = `
         <div class="nx-workshop-stats">
-          <span class="${body.exit_code === 0 ? 'ok' : 'fail'}">exit ${body.exit_code}</span>
-          <span>${body.elapsed_ms} ms</span>
-          ${body.truncated ? `<span class="warn">truncated</span>` : ""}
+          <span class="nx-status ${body.exit_code === 0 ? 'ok is-ok' : 'fail is-danger'}">Exit ${body.exit_code}</span>
+          <span class="nx-mono">${body.elapsed_ms} ms</span>
+          ${body.truncated ? `<span class="warn nx-status is-warn">Truncated</span>` : ""}
         </div>
-        ${body.stdout ? `<div class="nx-workshop-block"><div class="nx-workshop-block-lbl">STDOUT</div><pre>${escapeHtml(body.stdout)}</pre></div>` : ""}
-        ${body.stderr ? `<div class="nx-workshop-block err"><div class="nx-workshop-block-lbl">STDERR</div><pre>${escapeHtml(body.stderr)}</pre></div>` : ""}
+        ${body.stdout ? `<div class="nx-workshop-block"><div class="nx-workshop-block-lbl nx-section-label">stdout</div><pre>${escapeHtml(body.stdout)}</pre></div>` : ""}
+        ${body.stderr ? `<div class="nx-workshop-block err"><div class="nx-workshop-block-lbl nx-section-label">stderr</div><pre>${escapeHtml(body.stderr)}</pre></div>` : ""}
+        ${!body.stdout && !body.stderr ? `<div class="nx-empty-line">The program finished without printing anything.</div>` : ""}
       `;
       // Save to history (only successful runs we can recall)
       if (code && code.trim()) {
@@ -5769,20 +5769,20 @@ async function renderWorkshop() {
 
   const repaintChat = () => {
     if (_workshopThread.messages.length === 0) {
-      chatThreadEl.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:14px;font-size:11.5px">no questions yet — try "what's wrong?" or "make this faster"</div>`;
+      chatThreadEl.innerHTML = emptyStateHTML({ icon: "message", title: "Ask the coder", body: `It reads your code and the last run. Try “what's wrong?” or “make this faster”.`, compact: false });
       return;
     }
     chatThreadEl.innerHTML = _workshopThread.messages.map((m, i) => {
       const codeBlocks = m.role === "assistant" ? extractCodeBlocks(m.content) : [];
       const applyBtn = codeBlocks.length > 0
-        ? `<button class="nx-workshop-chat-apply" data-apply-idx="${i}" data-block-idx="0">↪ apply code</button>`
+        ? `<button class="nx-workshop-chat-apply nx-btn nx-btn-sm nx-btn-tinted" type="button" data-apply-idx="${i}" data-block-idx="0">${icon("corner-down-left", 12)}Apply code</button>`
         : "";
       const renderedBody = m.role === "assistant"
         ? renderMarkdownLite(m.content)
         : escapeHtml(m.content);
       return `
         <div class="nx-workshop-chat-msg ${m.role}">
-          <span class="nx-workshop-chat-tag">${m.role === "user" ? "you" : "coder"}</span>
+          <span class="nx-workshop-chat-tag">${m.role === "user" ? "You" : "Coder"}</span>
           <div class="nx-workshop-chat-body">${renderedBody}</div>
           ${applyBtn}
         </div>
@@ -5801,7 +5801,7 @@ async function renderWorkshop() {
             langEl.value = blocks[bi].lang;
             state._workshopLang = blocks[bi].lang;
           }
-          btn.innerHTML = `${UI.check(12)} applied — ⌘⏎ to run`;
+          btn.innerHTML = `${UI.check(12)} Applied. Press ⌘⏎ to run`;
           btn.disabled = true;
         }
       });
@@ -5828,7 +5828,7 @@ async function renderWorkshop() {
     _workshopThread.messages.push({ role: "user", content: text });
     repaintChat();
     // Pending placeholder
-    _workshopThread.messages.push({ role: "assistant", content: "thinking…", _pending: true });
+    _workshopThread.messages.push({ role: "assistant", content: "Thinking", _pending: true });
     repaintChat();
 
     try {
@@ -5915,25 +5915,26 @@ async function renderSearch(hash) {
   const initial = qMatch ? decodeURIComponent(qMatch[1]) : "";
   main.innerHTML = `
     <div class="nx-main-inner">
-      <header style="margin-bottom:18px">
-        <div class="nx-eyebrow" style="margin-bottom:6px">Search</div>
-        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Search the web — without leaving</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">Routes through aegis.network() · default provider: DuckDuckGo · no tracking · continuous thread keeps prior queries visible</div>
+      <header class="nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Search</div>
+          <h1 class="nx-page-title">Search the web without leaving</h1>
+          <p class="nx-page-sub">Routes through <code class="nx-code-inline">aegis.network()</code>. The default provider is DuckDuckGo, with no tracking. Earlier queries stay visible below.</p>
+        </div>
       </header>
-      <form class="nx-composer" id="nx-search-form" style="margin:0 0 18px">
+      <form class="nx-search-bar" id="nx-search-form" role="search">
+        ${icon("search", 16)}
         <input id="nx-search-q" type="search" value="${escapeHtml(initial)}" autofocus
-               placeholder="what do you need to know? (prior results stay visible below)" style="flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:14px">
-        <button type="button" id="nx-search-history" class="nx-history-btn" title="Recent searches (clearable)">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="6" cy="6" r="4.5"/>
-            <path d="M6 3.5V6l1.8 1.2"/>
-          </svg>
+               aria-label="Search the web"
+               placeholder="What do you need to know?">
+        <button type="button" id="nx-search-history" class="nx-history-btn nx-btn nx-btn-ghost nx-btn-sm" title="Recent searches">
+          ${icon("history", 14)}
           <span>History</span>
         </button>
-        <button type="button" id="nx-search-clear" class="nx-history-btn" title="Clear this thread">
+        <button type="button" id="nx-search-clear" class="nx-history-btn nx-btn nx-btn-ghost nx-btn-sm" title="Clear this thread">
           <span>Clear thread</span>
         </button>
-        <button type="submit" class="nx-run-btn">Search</button>
+        <button type="submit" class="nx-run-btn nx-btn nx-btn-primary">Search</button>
       </form>
       <div class="nx-search-thread" id="nx-search-thread"></div>
     </div>
@@ -5945,7 +5946,7 @@ async function renderSearch(hash) {
 
   const repaint = () => {
     if (_searchThread.entries.length === 0) {
-      threadEl.innerHTML = `<div class="nx-empty" style="opacity:0.5;padding:32px;text-align:center;font-size:13px">No searches yet — type a query above. Subsequent searches stack here so you can compare results across queries.</div>`;
+      threadEl.innerHTML = emptyStateHTML({ icon: "globe", title: "No searches yet", body: "Type a query above. Each new search stacks here, so you can compare results across queries." });
       return;
     }
     threadEl.innerHTML = _searchThread.entries.slice().reverse().map((e, revIdx) => {
@@ -5954,10 +5955,10 @@ async function renderSearch(hash) {
         return `
           <section class="nx-search-section pending" data-idx="${idx}">
             <header class="nx-search-section-head">
-              <div class="nx-eyebrow">QUERY · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
+              <div class="nx-eyebrow">Query · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
               <div class="nx-search-section-q">${escapeHtml(e.query)}</div>
             </header>
-            <div class="nx-empty" style="padding:14px;opacity:0.55">Searching…</div>
+            <div class="nx-search-results" aria-busy="true">${[0, 1, 2].map(() => `<div class="nx-search-hit"><span class="nx-skeleton nx-skeleton-title"></span><span class="nx-skeleton nx-skeleton-short"></span><span class="nx-skeleton nx-skeleton-line"></span></div>`).join("")}</div>
           </section>
         `;
       }
@@ -5965,15 +5966,15 @@ async function renderSearch(hash) {
         return `
           <section class="nx-search-section fail" data-idx="${idx}">
             <header class="nx-search-section-head">
-              <div class="nx-eyebrow">QUERY · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
+              <div class="nx-eyebrow">Query · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
               <div class="nx-search-section-q">${escapeHtml(e.query)}</div>
             </header>
-            <div class="nx-empty" style="color:#f86078;padding:14px">${escapeHtml(e.error)}</div>
+            <div class="nx-alert is-danger" role="alert">${icon("alert-circle", 16)}<div class="nx-alert-body">${escapeHtml(e.error)}</div></div>
           </section>
         `;
       }
       const resultsHTML = e.hits.length === 0
-        ? `<div class="nx-empty" style="padding:14px;opacity:0.55">No results for ${escapeHtml(e.query)}.</div>`
+        ? `<div class="nx-empty-line">No results for ${escapeHtml(e.query)}. Try different words.</div>`
         : e.hits.map((h, hi) => `
             <div class="nx-search-hit" data-open-reader="${idx}:${hi}" tabindex="0" role="button">
               <div class="hit-title">${escapeHtml(h.title || h.url)}</div>
@@ -5981,7 +5982,7 @@ async function renderSearch(hash) {
               ${h.snippet ? `<div class="hit-snippet">${escapeHtml(h.snippet)}</div>` : ""}
               <div class="hit-actions">
                 ${h.source ? `<span class="hit-source">${escapeHtml(h.source)}</span>` : ""}
-                <a class="hit-external" href="${escapeHtml(h.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">open in browser ↗</a>
+                <a class="hit-external nx-link" href="${escapeHtml(h.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open in browser ${icon("external-link", 12)}</a>
               </div>
             </div>
           `).join("");
@@ -5989,12 +5990,12 @@ async function renderSearch(hash) {
         <section class="nx-search-section" data-idx="${idx}">
           <header class="nx-search-section-head">
             <div class="nx-search-section-meta">
-              <div class="nx-eyebrow">QUERY · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
+              <div class="nx-eyebrow">Query · ${escapeHtml(chatHistoryRelative(e.ts))}</div>
               <div class="nx-search-section-q">${escapeHtml(e.query)}</div>
             </div>
             <div class="nx-search-section-actions">
-              <span class="nx-dim" style="font-size:11px">${e.hits.length} ${e.hits.length === 1 ? "result" : "results"}</span>
-              <button class="nx-search-ask-cortex" data-ask-cortex="${idx}">↗ ask cortex about these</button>
+              <span class="nx-search-count">${e.hits.length} ${e.hits.length === 1 ? "result" : "results"}</span>
+              <button class="nx-search-ask-cortex nx-btn nx-btn-sm nx-btn-tinted" type="button" data-ask-cortex="${idx}">${icon("workflow", 12)}Ask Cortex about these</button>
             </div>
           </header>
           <div class="nx-search-results">${resultsHTML}</div>
@@ -6045,22 +6046,22 @@ async function renderSearch(hash) {
     panel.innerHTML = `
       <header class="nx-reader-head">
         <div class="nx-reader-meta">
-          <div class="nx-eyebrow">READER · in-app preview</div>
+          <div class="nx-eyebrow">Reader · in-app preview</div>
           <h2>${escapeHtml(hit.title || hit.url)}</h2>
-          <a class="nx-reader-url" href="${escapeHtml(hit.url)}" target="_blank" rel="noopener">${escapeHtml(hit.url)} ↗</a>
+          <a class="nx-reader-url" href="${escapeHtml(hit.url)}" target="_blank" rel="noopener">${escapeHtml(hit.url)} ${icon("external-link", 12)}</a>
         </div>
-        <button class="nx-reader-close" aria-label="Close reader">${UI.close(14)}</button>
+        <button class="nx-reader-close nx-icon-btn" type="button" aria-label="Close reader">${UI.close(16)}</button>
       </header>
       <section class="nx-reader-digest">
-        <div class="nx-eyebrow">DIGEST · LLM summary</div>
-        <div class="nx-reader-digest-body nx-dim">summarising…</div>
+        <div class="nx-section-label">Digest, LLM summary</div>
+        <div class="nx-reader-digest-body nx-dim"><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-short"></span></div>
       </section>
       <section class="nx-reader-text">
-        <div class="nx-eyebrow">CLEAN TEXT</div>
-        <div class="nx-reader-text-body nx-dim">loading…</div>
+        <div class="nx-section-label">Clean text</div>
+        <div class="nx-reader-text-body nx-dim"><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-short"></span></div>
       </section>
       <footer class="nx-reader-actions">
-        <button class="nx-reader-ask">↗ ask cortex about this page</button>
+        <button class="nx-reader-ask nx-btn nx-btn-primary nx-btn-block" type="button">${icon("workflow", 14)}Ask Cortex about this page</button>
       </footer>
     `;
     panel.querySelector(".nx-reader-close").addEventListener("click", () => {
@@ -6069,7 +6070,7 @@ async function renderSearch(hash) {
     try {
       const r = await fetch(`/api/search/reader?url=${encodeURIComponent(hit.url)}&digest=true`);
       if (!r.ok) {
-        panel.querySelector(".nx-reader-text-body").innerHTML = `<span class="fail">reader failed (${r.status})</span>`;
+        panel.querySelector(".nx-reader-text-body").innerHTML = `<span class="fail">The reader could not load this page (HTTP ${r.status}).</span>`;
         panel.querySelector(".nx-reader-digest-body").innerHTML = "";
         return;
       }
@@ -6080,13 +6081,13 @@ async function renderSearch(hash) {
         digestBody.classList.remove("nx-dim");
         digestBody.innerHTML = escapeHtml(data.digest).replace(/\n/g, "<br>");
       } else {
-        digestBody.innerHTML = `<span class="nx-dim">${escapeHtml(data.error || "no digest available")}</span>`;
+        digestBody.innerHTML = `<span class="nx-dim">${escapeHtml(data.error || "No digest available.")}</span>`;
       }
       if (data.text) {
         textBody.classList.remove("nx-dim");
-        textBody.innerHTML = escapeHtml(data.text).replace(/\n/g, "<br>") + (data.truncated ? `<div class="nx-dim" style="margin-top:12px;font-size:11px">— truncated (open in browser for full page)</div>` : "");
+        textBody.innerHTML = escapeHtml(data.text).replace(/\n/g, "<br>") + (data.truncated ? `<div class="nx-reader-trunc">Truncated. Open it in the browser for the full page.</div>` : "");
       } else {
-        textBody.innerHTML = `<span class="nx-dim">${escapeHtml(data.error || "no text extracted")}</span>`;
+        textBody.innerHTML = `<span class="nx-dim">${escapeHtml(data.error || "No text could be extracted.")}</span>`;
       }
       panel.querySelector(".nx-reader-ask").addEventListener("click", () => {
         const ctx = (data.digest || data.text || "").slice(0, 2000);
@@ -6094,7 +6095,7 @@ async function renderSearch(hash) {
         location.hash = `#/cortex?prompt=${encodeURIComponent(prompt)}`;
       });
     } catch (err) {
-      panel.querySelector(".nx-reader-text-body").innerHTML = `<span class="fail">network error: ${escapeHtml(err.message)}</span>`;
+      panel.querySelector(".nx-reader-text-body").innerHTML = `<span class="fail">Network error: ${escapeHtml(err.message)}</span>`;
     }
   }
 
