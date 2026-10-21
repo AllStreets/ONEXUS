@@ -26,17 +26,26 @@ const TAU = Math.PI * 2;
 const GOLDEN = 2.399963229728653; // golden angle (rad)
 
 // memory tiers, top→bottom, deepest tier sinks lowest (semantic/atlas = bedrock)
+// Canvas colors mirror tokens.css (a canvas cannot read CSS variables per
+// frame): status ok/info/warn/danger, the trust temperatures and fg tones.
+const TOKENS = {
+  ok: "#76cf8a", info: "#8fb0f8", warn: "#f5b75b", collapse: "#f4785a",
+  falling: "#8fb6cf", fg1: "#eceef2", fg2: "#b6bcc6", fg3: "#8d949f",
+  surface: "#16191e", canvas: "#0b0c0f",
+};
+const UI_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif";
+
 const STRATA = [
-  { key: "working",  label: "WORKING",  tint: "#9affb6" },
-  { key: "episodic", label: "EPISODIC", tint: "#a8b4ff" },
-  { key: "semantic", label: "SEMANTIC", tint: "#c8a0ff" },
-  { key: "atlas",    label: "ATLAS",    tint: "#7ee8b2" },
+  { key: "working",  label: "Working",  tint: TOKENS.ok },
+  { key: "episodic", label: "Episodic", tint: TOKENS.info },
+  { key: "semantic", label: "Semantic", tint: "#b8a6f0" },
+  { key: "atlas",    label: "Atlas",    tint: "#7ad5b8" },
 ];
 
 const VERDICT_COLOR = {
-  allow:  "#9affb6",
-  prompt: "#f8c460",
-  deny:   "#f8643c",
+  allow:  TOKENS.ok,
+  prompt: TOKENS.warn,
+  deny:   TOKENS.collapse,
 };
 
 // ── small helpers ───────────────────────────────────────────────────────────
@@ -84,7 +93,7 @@ export class KernelScene {
     this.motes = [];                          // memory particles
     this.ripples = [];                        // radar / detection rings
     this.strata = STRATA.map((s) => ({ ...s, level: 0, flash: 0 }));
-    this.accent = "#a8b4ff";
+    this.accent = "#4ed5d5";
     this.veil = 0;                            // emergency veil intensity 0..1
     this.energy = 0;                          // recent kernel activity 0..1
     this.t = 0; this.last = 0; this.raf = null; this.running = false;
@@ -172,7 +181,7 @@ export class KernelScene {
           trust: clamp(m.trust ?? 0.5, 0, 1),
           targetTrust: clamp(m.trust ?? 0.5, 0, 1),
           activity: 0, label: 1, temp: null, tempT: 0,
-          colorA: m.colorA || "#a8b4ff", colorB: m.colorB || "#4d5bcf",
+          colorA: m.colorA || "#8fb0f8", colorB: m.colorB || "#3a4a9c",
           tier: m.tier || "",
           r: this.compact ? 5.5 : 8.5,
           hx: this.core ? this.core.x : 0, hy: this.core ? this.core.y : 0,
@@ -219,7 +228,7 @@ export class KernelScene {
 
   gate({ agent, verdict, permission_class, capability } = {}) {
     const v = String(verdict || "").toLowerCase();
-    const color = VERDICT_COLOR[v] || "#a8b4ff";
+    const color = VERDICT_COLOR[v] || TOKENS.info;
     const node = this._node(agent) || this._node(permission_class);
     const x = node ? node.hx : this.core.x, y = node ? node.hy : this.core.y;
     if (node) node.activity = 1;
@@ -232,7 +241,7 @@ export class KernelScene {
     if (typeof new_score === "number") node.targetTrust = clamp(new_score, 0, 1);
     const rising = (new_score ?? 0) >= (old_score ?? new_score ?? 0);
     const collapse = typeof new_score === "number" && new_score < 0.5 && !rising;
-    node.temp = collapse ? "#f8643c" : rising ? "#f8c460" : "#8cb8d4";
+    node.temp = collapse ? TOKENS.collapse : rising ? TOKENS.warn : TOKENS.falling;
     node.tempT = this.reduced ? 0.01 : 1;
     node.activity = Math.max(node.activity, 0.7);
     this.flares.push({ x: node.hx, y: node.hy, color: node.temp, t: 0, dur: 0.7, r0: node.r + 2, r1: 26, sym: "" });
@@ -250,7 +259,7 @@ export class KernelScene {
   detection(det = {}) {
     const node = this._node(det.module) || this._node("sigil");
     const x = node ? node.hx : this.core.x, y = node ? node.hy : this.core.y;
-    this.ripples.push({ x, y, t: 0, dur: this.reduced ? 0.2 : 1.6, color: "#f8643c", max: Math.max(this.W, this.H) * 0.5 });
+    this.ripples.push({ x, y, t: 0, dur: this.reduced ? 0.2 : 1.6, color: TOKENS.collapse, max: Math.max(this.W, this.H) * 0.5 });
     this.energy = Math.min(1, this.energy + 0.4);
   }
 
@@ -322,8 +331,8 @@ export class KernelScene {
     c.clearRect(0, 0, w, h);
     // atmosphere — mood-tinted radial wash behind everything
     const bg = c.createRadialGradient(this.core.x, this.core.y, 0, this.core.x, this.core.y, Math.max(w, h) * 0.7);
-    bg.addColorStop(0, rgba(this.accent, 0.10 + this.energy * 0.06));
-    bg.addColorStop(0.5, rgba(this.accent, 0.03));
+    bg.addColorStop(0, rgba(this.accent, 0.06 + this.energy * 0.06));
+    bg.addColorStop(0.5, rgba(this.accent, 0.015));
     bg.addColorStop(1, "rgba(0,0,0,0)");
     c.fillStyle = bg; c.fillRect(0, 0, w, h);
 
@@ -342,7 +351,7 @@ export class KernelScene {
     const c = this.ctx;
     c.lineWidth = 1;
     for (const node of this.nodes.values()) {
-      const a = 0.05 + node.activity * 0.35;
+      const a = 0.06 + node.activity * 0.4;
       const grd = c.createLinearGradient(this.core.x, this.core.y, node.x, node.y);
       grd.addColorStop(0, rgba(this.accent, a * 0.5));
       grd.addColorStop(1, rgba(node.colorA, a));
@@ -364,7 +373,7 @@ export class KernelScene {
       }
       c.globalAlpha = 1;
       const r = this.compact ? 7 : 11;
-      c.drawImage(glowSprite("#fbf7ff"), p.x - r, p.y - r, r * 2, r * 2);
+      c.drawImage(glowSprite(TOKENS.fg1), p.x - r, p.y - r, r * 2, r * 2);
       const r2 = this.compact ? 4 : 6;
       c.drawImage(glowSprite(b.color), p.x - r2, p.y - r2, r2 * 2, r2 * 2);
     }
@@ -375,28 +384,33 @@ export class KernelScene {
     const c = this.ctx;
     for (const node of this.nodes.values()) {
       const baseR = node.r * (1 + node.activity * 0.45 + Math.sin(this.t * 1.2 + node.seed * TAU) * 0.05);
-      // glow halo
-      c.globalCompositeOperation = "lighter";
-      const halo = baseR * (3 + node.activity * 2);
-      c.globalAlpha = 0.35 + node.activity * 0.5;
-      c.drawImage(glowSprite(node.colorA), node.x - halo, node.y - halo, halo * 2, halo * 2);
-      c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
-      // body
-      const grd = c.createRadialGradient(node.x - baseR * 0.3, node.y - baseR * 0.3, 0, node.x, node.y, baseR);
-      grd.addColorStop(0, node.colorA); grd.addColorStop(1, node.colorB);
-      c.beginPath(); c.arc(node.x, node.y, baseR, 0, TAU); c.fillStyle = grd; c.fill();
+      // glow halo: only while the node is active
+      if (node.activity > 0.02) {
+        c.globalCompositeOperation = "lighter";
+        const halo = baseR * (2.4 + node.activity * 2);
+        c.globalAlpha = node.activity * 0.6;
+        c.drawImage(glowSprite(node.colorA), node.x - halo, node.y - halo, halo * 2, halo * 2);
+        c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+      }
+      // body: a flat disc in the agent's deep tone, edged in its light tone
+      c.beginPath(); c.arc(node.x, node.y, baseR, 0, TAU);
+      c.fillStyle = rgba(node.colorB, 0.85); c.fill();
+      c.lineWidth = 1.25; c.strokeStyle = rgba(node.colorA, 0.75 + node.activity * 0.25); c.stroke();
+      c.beginPath(); c.arc(node.x, node.y, baseR * 0.34, 0, TAU);
+      c.fillStyle = rgba(node.colorA, 0.9); c.fill();
       // trust ring
       const ringR = baseR + 4;
       c.beginPath(); c.arc(node.x, node.y, ringR, 0, TAU);
-      c.strokeStyle = "rgba(255,255,255,0.10)"; c.lineWidth = 2; c.stroke();
+      c.strokeStyle = "rgba(255,255,255,0.08)"; c.lineWidth = 1.5; c.stroke();
       c.beginPath(); c.arc(node.x, node.y, ringR, -Math.PI / 2, -Math.PI / 2 + TAU * node.trust);
-      c.strokeStyle = node.tempT > 0 ? node.temp : "rgba(255,255,255,0.6)"; c.lineWidth = 2; c.lineCap = "round"; c.stroke();
+      c.strokeStyle = node.tempT > 0 ? node.temp : "rgba(255,255,255,0.45)"; c.lineWidth = 1.5; c.lineCap = "round"; c.stroke();
       // label
       if (node.label > 0.01 && !this.compact) {
-        c.globalAlpha = node.label * 0.9;
-        c.fillStyle = "#e8e4f0"; c.font = "500 10px 'IBM Plex Mono', ui-monospace, monospace";
+        c.globalAlpha = Math.min(1, node.label * 1.1);
+        c.fillStyle = node.activity > 0.05 ? TOKENS.fg1 : TOKENS.fg2;
+        c.font = `500 11px ${UI_FONT}`;
         c.textAlign = "center";
-        c.fillText(node.name, node.x, node.y + ringR + 13);
+        c.fillText(node.name, node.x, node.y + ringR + 14);
         c.globalAlpha = 1;
       }
     }
@@ -406,15 +420,19 @@ export class KernelScene {
   _drawCore() {
     const c = this.ctx, x = this.core.x, y = this.core.y;
     const beat = 1 + Math.sin(this.core.pulse) * 0.06 + this.energy * 0.18;
-    const R = (this.compact ? 13 : 22) * beat;
+    const R = (this.compact ? 12 : 20) * beat;
+    // The core is the ONEXUS mark in the mood accent: an orbit, a solid
+    // centre and one node, with a soft halo that swells with energy.
     c.globalCompositeOperation = "lighter";
-    const halo = R * 3.4; c.globalAlpha = 0.5 + this.energy * 0.4;
-    c.drawImage(glowSprite("#c9b8ff"), x - halo, y - halo, halo * 2, halo * 2);
+    const halo = R * 3; c.globalAlpha = 0.28 + this.energy * 0.4;
+    c.drawImage(glowSprite(this.accent), x - halo, y - halo, halo * 2, halo * 2);
     c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
-    const grd = c.createRadialGradient(x - R * 0.35, y - R * 0.4, 0, x, y, R);
-    grd.addColorStop(0, "#fbf7ff"); grd.addColorStop(0.4, "#c9b8ff"); grd.addColorStop(1, "#5a4ac4");
-    c.beginPath(); c.arc(x, y, R, 0, TAU); c.fillStyle = grd; c.fill();
-    c.beginPath(); c.arc(x, y, R * 0.32, 0, TAU); c.fillStyle = "rgba(255,255,255,0.85)"; c.fill();
+    c.beginPath(); c.arc(x, y, R, 0, TAU); c.fillStyle = TOKENS.canvas; c.fill();
+    c.lineWidth = Math.max(1.5, R * 0.15); c.strokeStyle = this.accent; c.stroke();
+    c.beginPath(); c.arc(x, y, R * 0.38, 0, TAU); c.fillStyle = this.accent; c.fill();
+    const nx = x + R * 0.707, ny = y - R * 0.707;
+    c.beginPath(); c.arc(nx, ny, R * 0.24, 0, TAU); c.fillStyle = this.accent; c.fill();
+    c.lineWidth = R * 0.1; c.strokeStyle = TOKENS.canvas; c.stroke();
   }
 
   _drawFlares() {
@@ -459,7 +477,7 @@ export class KernelScene {
     const c = this.ctx, w = this.W;
     for (const s of this.strata) {
       // band base
-      c.fillStyle = rgba(s.tint, 0.03 + s.level * 0.07);
+      c.fillStyle = rgba(s.tint, 0.015 + s.level * 0.06);
       c.fillRect(0, s.y - s.h / 2, w, s.h);
       // sediment line — brightens as memories land
       const a = 0.14 + s.flash * 0.6 + s.level * 0.2;
@@ -467,11 +485,11 @@ export class KernelScene {
       grd.addColorStop(0, rgba(s.tint, 0)); grd.addColorStop(0.5, rgba(s.tint, a)); grd.addColorStop(1, rgba(s.tint, 0));
       c.fillStyle = grd; c.fillRect(0, s.y + s.h / 2 - 1.5, w, 1.5);
       // label
-      c.globalAlpha = 0.4 + s.flash * 0.4;
-      c.fillStyle = s.tint; c.font = "500 8.5px 'IBM Plex Mono', ui-monospace, monospace";
-      c.textAlign = "left"; c.fillText(s.label, 12, s.y + 3);
+      c.globalAlpha = 0.75 + s.flash * 0.25;
+      c.fillStyle = TOKENS.fg3; c.font = `600 10px ${UI_FONT}`;
+      c.textAlign = "left"; c.fillText(s.label.toUpperCase(), 14, s.y + 3);
       c.textAlign = "right";
-      c.fillStyle = "rgba(232,228,240,0.4)";
+      c.fillStyle = TOKENS.fg3;
       c.fillText(Math.round(s.level * 100) + "%", w - 12, s.y + 3);
       c.globalAlpha = 1;
     }

@@ -2564,162 +2564,152 @@ body.nx-cockpit-hidden .nx-cockpit-rail { display: none; }
 .nx-cortex-handoff-chip.catalog { text-transform: none; max-width: 240px; overflow: hidden; text-overflow: ellipsis; padding-left: var(--nx-space-2); }
 .nx-cortex-handoff-close { margin-top: var(--nx-space-3); }
 
-/* ── Kernel live visualization (N1.3) ─────────────────────────────────── */
-.nx-kernel-viz { display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
-.nx-kv-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.nx-kv-route .nx-kv-target { color: var(--nx-text-high); font-family: var(--nx-font-mono); }
-.nx-kv-cap { font-family: var(--nx-font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nx-kv-mod { font-family: var(--nx-font-mono); min-width: 72px; }
-.nx-kv-divider { border-top: 1px solid var(--nx-hairline); margin: 4px 0; }
-.nx-kv-gate-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+/* ── Kernel live readout (rail and cockpit) ───────────────────────────── */
+.nx-kernel-viz { display: flex; flex-direction: column; gap: var(--nx-space-1-5); font-size: var(--nx-fs-caption); }
+.nx-kv-row { display: flex; align-items: center; gap: var(--nx-space-2); min-width: 0; }
+.nx-kv-tag { font-size: var(--nx-fs-micro); color: var(--nx-fg-3); flex: none; }
+.nx-kv-route .nx-kv-target { color: var(--nx-fg-1); font-family: var(--nx-font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-kv-trail { margin-left: auto; color: var(--nx-fg-3); font-size: var(--nx-fs-micro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.nx-kv-cap { font-family: var(--nx-font-mono); color: var(--nx-fg-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-kv-mod { font-family: var(--nx-font-mono); color: var(--nx-fg-2); min-width: 76px; }
+.nx-kv-spark svg { flex: 1; min-width: 40px; }
+.nx-kv-divider { border-top: 1px solid var(--nx-line-1); margin: var(--nx-space-1) 0; }
+/* gate verdict dots use the permission-class palette */
+.nx-kv-gate-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .nx-kv-gate-dot.v-allow  { background: var(--nx-routine); }
 .nx-kv-gate-dot.v-prompt { background: var(--nx-sensitive); }
 .nx-kv-gate-dot.v-deny   { background: var(--nx-privileged); }
 .nx-kv-gate-dot.pc-notable.v-allow { background: var(--nx-notable); }
 
-/* Sigil detections — radar pings */
-.nx-radar-row { display: flex; align-items: center; gap: 8px; color: var(--nx-trust-collapse); font-size: 11px; }
-.nx-radar-rule { font-family: var(--nx-font-mono); letter-spacing: 0.06em; }
-.nx-radar-ping-dot { animation: nx-radar-ping 1.6s ease-out infinite; transform-origin: center; }
+/* Sigil detections: radar pings in the alert palette */
+.nx-radar-row { display: flex; align-items: center; gap: var(--nx-space-2); color: var(--nx-trust-collapse); font-size: var(--nx-fs-caption); }
+.nx-radar-rule { font-family: var(--nx-font-mono); }
+.nx-radar-module { color: var(--nx-fg-3); }
+.nx-radar-ping-dot { animation: nx-radar-ping 1.6s var(--nx-ease-io) infinite; transform-origin: center; }
 @keyframes nx-radar-ping {
   0%   { opacity: 1; }
   70%  { opacity: 0.25; }
   100% { opacity: 1; }
 }
 
-/* Emergency broadcast — full-surface veil, alert palette */
+/* Emergency broadcast: a full-surface veil in the alert palette */
 .nx-emergency-veil {
   position: fixed; inset: 0; z-index: 320;
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(ellipse at center,
-              rgba(248, 100, 60, 0.18), rgba(12, 10, 20, 0.82));
+  padding: var(--nx-space-4);
+  background: radial-gradient(ellipse at center, rgba(244, 120, 90, 0.14), var(--nx-scrim));
 }
 .nx-emergency-card {
   border: 1px solid var(--nx-trust-collapse);
-  background: rgba(22, 10, 10, 0.94);
-  border-radius: var(--nx-card-radius);
-  padding: 22px 26px; max-width: 440px;
+  background: var(--nx-surface-overlay);
+  box-shadow: var(--nx-shadow-3), 0 0 48px -12px var(--nx-trust-collapse);
+  border-radius: var(--nx-radius-lg);
+  padding: var(--nx-space-5) var(--nx-space-6); max-width: 460px;
 }
 .nx-emergency-title {
-  font-family: var(--nx-font-mono); letter-spacing: 0.18em;
-  color: var(--nx-trust-collapse); font-size: 12px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: var(--nx-space-2);
+  font-size: var(--nx-fs-body); font-weight: var(--nx-fw-semi);
+  color: var(--nx-trust-collapse); margin-bottom: var(--nx-space-2);
 }
-.nx-emergency-body { color: var(--nx-text-mid); font-size: 13px; margin-bottom: 14px; }
-.nx-emergency-dismiss {
-  font-family: var(--nx-font-mono); font-size: 11px; letter-spacing: 0.12em;
-  color: var(--nx-text-high); background: transparent;
-  border: 1px solid var(--nx-card-border); border-radius: var(--nx-radius-sm);
-  padding: 6px 14px; cursor: pointer;
-}
+.nx-emergency-body { color: var(--nx-fg-2); font-size: var(--nx-fs-ui); margin-bottom: var(--nx-space-4); line-height: var(--nx-lh-body); }
 
-@media (prefers-reduced-motion: reduce) {
-  .nx-radar-ping-dot { animation: none; }
-  .nx-emergency-veil { background: rgba(12, 10, 20, 0.88); }
-}
-
-/* ── N2 surfaces: morning brief · Atlas graph · Chronos timeline ─────────── */
-
-.nx-morning-brief { display: flex; flex-direction: column; gap: 6px; }
-.nx-brief-empty { font-size: 12px; }
-.nx-brief-head { font-size: 12.5px; font-weight: 600; line-height: 1.35; }
-.nx-brief-date { font-size: 11px; }
-.nx-brief-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+/* ── Rail: morning brief, negotiations, federation sync ───────────────── */
+.nx-morning-brief { display: flex; flex-direction: column; gap: var(--nx-space-1-5); }
+.nx-brief-head { font-size: var(--nx-fs-ui); font-weight: var(--nx-fw-semi); color: var(--nx-fg-1); line-height: var(--nx-lh-snug); }
+.nx-brief-date { font-size: var(--nx-fs-micro); }
+.nx-brief-chips { display: flex; flex-wrap: wrap; gap: var(--nx-space-1); margin-top: 2px; }
 .nx-brief-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: 10px;
-  background: rgba(184, 196, 255, 0.10);
-  border: 1px solid var(--nx-hairline);
-  font-size: 11px; color: var(--nx-routine);
+  display: inline-flex; align-items: center; gap: var(--nx-space-1-5);
+  height: 22px; padding: 0 var(--nx-space-2); border-radius: var(--nx-radius-full);
+  background: var(--nx-surface-2);
+  border: 1px solid var(--nx-line-2);
+  font-size: var(--nx-fs-micro); color: var(--nx-fg-2);
 }
-.nx-brief-count {
-  font-size: 10px; opacity: 0.7; padding-left: 4px;
-  border-left: 1px solid var(--nx-hairline);
-}
+.nx-brief-count { font-variant-numeric: tabular-nums; color: var(--nx-fg-3); padding-left: var(--nx-space-1-5); border-left: 1px solid var(--nx-line-2); }
 
-/* N3.1 Herald negotiation cockpit panel */
-.nx-herald-panel { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; }
-.nx-herald-meta { font-size: 10.5px; margin-bottom: 2px; }
-.nx-herald-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 2px 0; line-height: 1.3;
-}
+.nx-herald-panel { display: flex; flex-direction: column; gap: var(--nx-space-1); font-size: var(--nx-fs-caption); }
+.nx-herald-meta { font-size: var(--nx-fs-micro); margin-bottom: 2px; }
+.nx-herald-row { display: flex; align-items: center; gap: var(--nx-space-2); padding: 2px 0; line-height: var(--nx-lh-snug); }
 .nx-herald-kind {
   display: inline-block; min-width: 56px;
-  padding: 1px 7px; border-radius: 9px;
-  background: rgba(255, 217, 168, 0.12);
-  border: 1px solid var(--nx-hairline);
-  color: #ffd9a8; font-size: 10.5px;
+  padding: 1px 7px; border-radius: var(--nx-radius-xs);
+  background: rgba(var(--nx-warn-rgb), 0.10);
+  color: var(--nx-warn); font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi);
 }
 
-/* N3.2 federation sync cockpit panel */
-.nx-fedsync-panel { display: flex; flex-direction: column; gap: 6px; }
-.nx-fedsync-row { display: flex; gap: 16px; }
-.nx-fedsync-stat { display: flex; flex-direction: column; line-height: 1.1; }
-.nx-fedsync-val { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
-.nx-fedsync-note { font-size: 10.5px; }
+.nx-fedsync-panel { display: flex; flex-direction: column; gap: var(--nx-space-2); }
+.nx-fedsync-row { display: flex; gap: var(--nx-space-6); }
+.nx-fedsync-val { font-size: var(--nx-fs-h3); }
+.nx-fedsync-note { font-size: var(--nx-fs-micro); color: var(--nx-fg-3); }
 
-/* Atlas force-layout graph view */
-.nx-atlas-view, .nx-chronos-view { padding: 28px 32px; max-width: 920px; margin: 0 auto; }
-.nx-view-head h2 { font-size: 18px; margin: 0 0 4px; }
-.nx-view-head p { font-size: 12.5px; margin: 0 0 18px; }
-.nx-atlas-canvas { width: 100%; height: auto; display: block; }
-.nx-atlas-edge {
-  stroke: var(--nx-hairline); stroke-width: 1;
-  transition: stroke 0.2s ease;
-}
+/* ── Atlas: world model graph ─────────────────────────────────────────── */
+.nx-atlas-frame { padding: var(--nx-space-2); background: var(--nx-surface-sunken); overflow: hidden; }
+.nx-atlas-canvas { width: 100%; height: min(72vh, 760px); display: block; }
+.nx-atlas-edge { stroke: var(--nx-line-3); stroke-width: 1; transition: stroke var(--nx-dur-2) var(--nx-ease); }
 .nx-atlas-node circle { fill: var(--nx-routine); stroke: none; }
-.nx-atlas-node text { fill: var(--nx-text, #e6e6f0); font-size: 10px; }
-.nx-atlas-node.decayed circle { fill: var(--nx-sensitive); }
-.nx-atlas-node.decayed text { fill: var(--nx-sensitive); font-style: italic; }
-
-/* Atlas spokes — illuminated connective strings: a soft static glow underlay
-   plus a thin flowing dash that travels from the hub out to each fact, in the
-   fact's own colour. Staggered per-spoke so the whole graph shimmers alive. */
+.nx-atlas-node text { fill: var(--nx-fg-2); font-family: var(--nx-font-ui); font-size: 12px; }
+.nx-atlas-node.decayed circle { fill: var(--nx-trust-falling); }
+.nx-atlas-node.decayed text { fill: var(--nx-fg-3); font-style: italic; }
+.nx-atlas-hub-label { fill: var(--nx-fg-1); font-family: var(--nx-font-ui); font-size: 12px; font-weight: 600; }
+/* Atlas spokes: a soft static underlay plus a thin dash that travels from
+   the hub to each fact, in the fact's own color. */
 .nx-atlas-glow { stroke-width: 3; stroke-linecap: round; }
 .nx-atlas-spoke {
-  stroke-width: 1.5; stroke-linecap: round;
+  stroke-width: 1.25; stroke-linecap: round;
   stroke-dasharray: 2 11;
   animation: nx-atlas-flow 2.6s linear infinite;
 }
 @keyframes nx-atlas-flow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -26; } }
 
-/* Chronos counterfactual timeline */
-.nx-chronos-list { display: flex; flex-direction: column; gap: 2px; }
-.nx-chronos-row {
+/* ── Chronos: decision timeline ───────────────────────────────────────── */
+.nx-chronos-head, .nx-chronos-row {
   display: grid;
-  grid-template-columns: 150px 70px 90px 1fr auto;
-  align-items: center; gap: 10px;
-  padding: 5px 10px; border-radius: 6px;
-  font-size: 12px; transition: background 0.15s ease;
+  grid-template-columns: 160px 80px 110px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--nx-space-3);
 }
-.nx-chronos-row:hover { background: rgba(255, 255, 255, 0.03); }
-.nx-chronos-branch {
-  border-left: 2px solid var(--nx-chronos-branch);
-  padding-left: 8px;
+.nx-chronos-head {
+  padding: 0 var(--nx-space-3) var(--nx-space-1-5);
+  font-size: var(--nx-fs-micro); font-weight: var(--nx-fw-semi);
+  letter-spacing: var(--nx-track-label); text-transform: uppercase; color: var(--nx-fg-3);
 }
-.nx-chronos-branch:hover { background: rgba(184, 196, 255, 0.07); }
-.nx-chronos-kind { color: var(--nx-chronos-branch); }
-.nx-chronos-flip {
-  font-size: 11px; padding: 2px 9px; border-radius: 10px;
-  background: rgba(184, 196, 255, 0.10);
-  border: 1px solid var(--nx-chronos-branch);
-  color: var(--nx-chronos-branch); cursor: pointer;
-  transition: background 0.15s ease;
+.nx-chronos-list {
+  display: flex; flex-direction: column;
+  background: var(--nx-surface-1); border: 1px solid var(--nx-line-2);
+  border-radius: var(--nx-radius-md); overflow: hidden;
 }
-.nx-chronos-flip:hover { background: rgba(184, 196, 255, 0.20); }
+.nx-chronos-row {
+  min-height: 40px; padding: var(--nx-space-1-5) var(--nx-space-3);
+  font-size: var(--nx-fs-caption); color: var(--nx-fg-2);
+  transition: background var(--nx-dur-1) var(--nx-ease);
+}
+.nx-chronos-row + .nx-chronos-row { border-top: 1px solid var(--nx-line-1); }
+.nx-chronos-row:hover { background: var(--nx-surface-2); }
+.nx-chronos-time { font-family: var(--nx-font-mono); font-size: var(--nx-fs-micro); color: var(--nx-fg-3); }
+.nx-chronos-mod { font-family: var(--nx-font-mono); color: var(--nx-fg-1); overflow: hidden; text-overflow: ellipsis; }
+.nx-chronos-prev { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-chronos-branch { box-shadow: inset 2px 0 0 var(--nx-chronos-branch); }
+.nx-chronos-kind { color: var(--nx-fg-2); }
+.nx-chronos-branch .nx-chronos-kind { color: var(--nx-chronos-branch); font-weight: var(--nx-fw-medium); }
 .nx-chronos-result {
-  margin-top: 18px; padding: 14px 16px; border-radius: 10px;
-  background: rgba(184, 196, 255, 0.06);
-  border: 1px solid var(--nx-hairline);
+  margin-bottom: var(--nx-space-5); padding: var(--nx-space-4);
+  border-radius: var(--nx-radius-md);
+  background: rgba(var(--nx-info-rgb), 0.06);
+  border: 1px solid rgba(var(--nx-info-rgb), 0.34);
 }
-.nx-chronos-result-head { font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }
-.nx-chronos-pruned {
-  font-size: 12px; padding: 3px 0; color: var(--nx-trust-collapse);
+.nx-chronos-result-head { display: flex; align-items: center; gap: var(--nx-space-2); font-size: var(--nx-fs-ui); font-weight: var(--nx-fw-semi); color: var(--nx-fg-1); margin-bottom: var(--nx-space-2); }
+.nx-chronos-result-head svg { color: var(--nx-info); }
+.nx-chronos-pruned { font-family: var(--nx-font-mono); font-size: var(--nx-fs-caption); padding: var(--nx-space-1) 0; color: var(--nx-trust-collapse); }
+@media (max-width: 760px) {
+  .nx-chronos-head { display: none; }
+  .nx-chronos-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .nx-chronos-time, .nx-chronos-prev { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nx-atlas-node, .nx-atlas-edge, .nx-chronos-row,
   .nx-chronos-flip, .nx-chronos-branch { transition: none; }
+  .nx-atlas-spoke { animation: none; }
+  .nx-emergency-veil { background: var(--nx-scrim); }
   .nx-radar-ping-dot { animation: none; }
 }
 

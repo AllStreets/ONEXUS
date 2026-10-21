@@ -1161,7 +1161,7 @@ async function renderAtlasGraph() {
   // strings in the fact's own colour (green = live, steel = decayed).
   const spokeSVG = nodes.map((nd, i) => {
     const p = pos[nd.id];
-    const col = nd.decayed ? "#8cb8d4" : "#9affb6";
+    const col = nd.decayed ? "var(--nx-trust-falling)" : "var(--nx-ok)";
     const glowOp = (0.05 + 0.10 * p.conf).toFixed(3);
     const flowOp = (0.30 + 0.55 * p.conf).toFixed(3);
     const delay = (i * 0.13).toFixed(2);
@@ -1185,23 +1185,29 @@ async function renderAtlasGraph() {
     return `<g class="${cls}" style="opacity:${op}">
         <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(4 + 7 * p.conf).toFixed(1)}"/>
         <text x="${lx.toFixed(1)}" y="${(p.y + 4).toFixed(1)}" text-anchor="${anchor}">${escapeHtml(short)}</text>
-        <title>${escapeHtml(label)} — confidence ${p.conf.toFixed(2)}${nd.decayed ? " (decayed)" : ""} · ${escapeHtml(nd.source_ref || "unrecorded")}</title>
+        <title>${escapeHtml(label)}, confidence ${p.conf.toFixed(2)}${nd.decayed ? " (decayed)" : ""} · ${escapeHtml(nd.source_ref || "unrecorded")}</title>
       </g>`;
   }).join("");
   const hubSVG = nodes.length ? `
-    <circle cx="${cx}" cy="${cy}" r="34" fill="url(#nx-atlas-hub)"/>
+    <circle cx="${cx}" cy="${cy}" r="34" fill="var(--nx-surface-2)" stroke="var(--nx-accent)" stroke-width="1.5"/>
+    <circle cx="${cx}" cy="${cy}" r="44" fill="none" stroke="var(--nx-accent-line)" stroke-width="1"/>
     <text x="${cx}" y="${cy + 5}" text-anchor="middle" class="nx-atlas-hub-label">${escapeHtml(hubSubject)}</text>` : "";
   main.innerHTML = `
+    <div class="nx-main-inner">
     <section class="nx-view nx-atlas-view">
-      <header class="nx-view-head">
-        <h2>Atlas — world model graph</h2>
-        <p class="nx-dim">${nodes.length} facts · hub = <b>${escapeHtml(hubSubject || "—")}</b> · distance + dimness track decay; size + opacity track live confidence.</p>
+      <header class="nx-view-head nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Atlas · world model</div>
+          <h1 class="nx-page-title">World model graph</h1>
+          <p class="nx-page-sub">${nodes.length} fact${nodes.length === 1 ? "" : "s"}${hubSubject ? `, centred on <b>${escapeHtml(hubSubject)}</b>` : ""}. Distance and dimness show decay; size and opacity show live confidence.</p>
+        </div>
+        <div class="nx-page-actions"><span class="nx-status is-ok">Live</span><span class="nx-status">Decayed</span></div>
       </header>
-      ${nodes.length ? `<svg class="nx-atlas-canvas" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atlas knowledge graph" style="width:100%;height:72vh;display:block">
-        <defs><radialGradient id="nx-atlas-hub" cx="40%" cy="35%"><stop offset="0%" stop-color="#c9b8ff"/><stop offset="100%" stop-color="#5a4ac4"/></radialGradient></defs>
+      ${nodes.length ? `<div class="nx-atlas-frame nx-card"><svg class="nx-atlas-canvas" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atlas knowledge graph">
         ${spokeSVG}${edgeSVG}${nodeSVG}${hubSVG}
-      </svg>` : `<div class="nx-empty">No facts recorded yet. Teach Atlas with "observe: subject | relation | object".</div>`}
-    </section>`;
+      </svg></div>` : emptyStateHTML({ icon: "share", title: "No facts recorded yet", body: `Teach Atlas with <code class="nx-code-inline">observe: subject | relation | object</code>.` })}
+    </section>
+    </div>`;
 }
 
 async function renderChronosTimeline() {
@@ -1218,10 +1224,10 @@ async function renderChronosTimeline() {
     const branch = d.branch_point;
     const cls = branch ? "nx-chronos-row nx-chronos-branch" : "nx-chronos-row";
     const btn = branch
-      ? `<button class="nx-chronos-flip" data-id="${escapeHtml(d.id)}" data-module="${escapeHtml(d.module || "")}" data-action="${escapeHtml(d.kind === "grant" ? "permission_granted" : d.action)}">what if?</button>`
+      ? `<button class="nx-chronos-flip nx-btn nx-btn-sm nx-btn-tinted" type="button" data-id="${escapeHtml(d.id)}" data-module="${escapeHtml(d.module || "")}" data-action="${escapeHtml(d.kind === "grant" ? "permission_granted" : d.action)}">${icon("branch", 12)}What if?</button>`
       : "";
     return `<div class="${cls}">
-        <span class="nx-chronos-time nx-dim">${escapeHtml((d.timestamp || "").slice(0, 19))}</span>
+        <span class="nx-chronos-time">${escapeHtml((d.timestamp || "").slice(0, 19).replace("T", " "))}</span>
         <span class="nx-chronos-kind">${escapeHtml(d.kind)}</span>
         <span class="nx-chronos-mod">${escapeHtml(d.module || "-")}</span>
         <span class="nx-chronos-prev nx-dim">${escapeHtml((d.preview || "").slice(0, 48))}</span>
@@ -1231,20 +1237,25 @@ async function renderChronosTimeline() {
   const res = state.n2.chronos.result;
   const resultHTML = res && res.flipped ? `
     <div class="nx-chronos-result">
-      <div class="nx-chronos-result-head">If ${escapeHtml(res.flipped.module || "?")}'s ${escapeHtml(res.flipped.action)} had been denied — would NOT have happened:</div>
+      <div class="nx-chronos-result-head">${icon("branch", 14)}If ${escapeHtml(res.flipped.module || "?")}'s ${escapeHtml(res.flipped.action)} had been denied, this would not have happened:</div>
       ${(res.would_not_have_happened || []).map(a =>
         `<div class="nx-chronos-pruned">${escapeHtml(a.module || "-")} · ${escapeHtml(a.action)} · ${escapeHtml((a.preview || "").slice(0, 48))}</div>`
-      ).join("") || `<div class="nx-dim">nothing downstream depended on it</div>`}
+      ).join("") || `<div class="nx-empty-line">Nothing downstream depended on it.</div>`}
     </div>` : "";
   main.innerHTML = `
+    <div class="nx-main-inner">
     <section class="nx-view nx-chronos-view">
-      <header class="nx-view-head">
-        <h2>Chronos — decision timeline</h2>
-        <p class="nx-dim">${rows.length} decisions · branch points (grants &amp; routes) can be flipped to preview the counterfactual. The kernel is never re-run.</p>
+      <header class="nx-view-head nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Chronos · counterfactuals</div>
+          <h1 class="nx-page-title">Decision timeline</h1>
+          <p class="nx-page-sub">${rows.length} decision${rows.length === 1 ? "" : "s"}. Branch points (grants and routes) can be flipped to preview the counterfactual. The kernel is never re-run.</p>
+        </div>
       </header>
-      <div class="nx-chronos-list">${rowsHTML || `<div class="nx-empty">No decisions recorded yet.</div>`}</div>
       ${resultHTML}
-    </section>`;
+      ${rowsHTML ? `<div class="nx-chronos-head" aria-hidden="true"><span>Time</span><span>Kind</span><span>Module</span><span>Preview</span><span></span></div><div class="nx-chronos-list">${rowsHTML}</div>` : emptyStateHTML({ icon: "branch", title: "No decisions recorded yet", body: "Run an agent and every route and grant will appear here, in order." })}
+    </section>
+    </div>`;
   main.querySelectorAll(".nx-chronos-flip").forEach(btn => {
     btn.addEventListener("click", () =>
       runCounterfactual(btn.dataset.module, btn.dataset.action, btn.dataset.id));
@@ -1470,7 +1481,7 @@ function renderLedger() {
   const el = document.getElementById("nx-watch-ledger");
   if (!el) return;
   if (!state.scene.ledger.length) {
-    el.innerHTML = `<div class="nx-ledger-empty">Waiting for kernel activity… dispatch an agent to see it think.</div>`;
+    el.innerHTML = `<div class="nx-ledger-empty nx-empty-line">Waiting for kernel activity. Dispatch an agent to watch it think.</div>`;
     return;
   }
   el.innerHTML = state.scene.ledger.map((e) => `
@@ -1485,7 +1496,7 @@ function renderWatchStat() {
   if (!el) return;
   const C = state.scene.counters;
   el.innerHTML = `
-    <span class="nx-watch-chip"><span class="nx-watch-pulse"></span>${state.coreOnDuty || state.scene.modules.length} on duty</span>
+    <span class="nx-watch-chip"><span class="nx-watch-pulse"></span><b>${state.coreOnDuty || state.scene.modules.length}</b> on duty</span>
     <span class="nx-watch-chip"><b>${C.routes}</b> routes</span>
     <span class="nx-watch-chip"><b>${C.denies}</b> denied</span>`;
 }
@@ -1498,29 +1509,29 @@ async function renderWatch() {
     <div class="nx-watch">
       <div class="nx-watch-stage">
         <div class="nx-watch-head">
-          <div class="nx-watch-eyebrow">ONEXUS · KERNEL</div>
-          <div class="nx-watch-title nx-display">Watch it think.</div>
-          <div class="nx-watch-sub">Cortex routes, Aegis grants and denies, Engram remembers — the kernel's cognition, live. Nothing is hidden.</div>
+          <div class="nx-watch-eyebrow nx-eyebrow">ONEXUS · Kernel</div>
+          <h1 class="nx-watch-title">Watch it think.</h1>
+          <div class="nx-watch-sub">Cortex routes, Aegis grants and denies, Engram remembers. The kernel's cognition, live, with nothing hidden.</div>
         </div>
         <div class="nx-watch-stat" id="nx-watch-stat"></div>
         <canvas class="nx-watch-canvas" id="nx-watch-canvas"></canvas>
       </div>
       <div class="nx-watch-rail">
         <div class="nx-watch-rail-sec">
-          <div class="nx-watch-rail-label">Reading the scene</div>
-          <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:#c9b8ff;--m:11px"></span><span>The <b>core</b> is Cortex — every route begins here</span></div>
-          <div class="nx-legend-row"><span class="nx-legend-mark line" style="--c:#fbf7ff"></span><span>A travelling bead is a <b>route</b> to a module</span></div>
-          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#9affb6"></span><span>Green flare — Aegis <b>allowed</b> a capability</span></div>
-          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#f8643c"></span><span>Red flare / veil — <b>denied</b> or an anomaly</span></div>
-          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:#f8c460"></span><span>Warm ring — <b>trust</b> rose; cool — it fell</span></div>
-          <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:#c8a0ff"></span><span>Motes sink into <b>memory strata</b> as Engram writes</span></div>
+          <div class="nx-watch-rail-label nx-section-label">Reading the scene</div>
+          <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:var(--nx-accent);--m:11px"></span><span>The <b>core</b> is Cortex. Every route begins here.</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark line" style="--c:var(--nx-fg-1)"></span><span>A travelling bead is a <b>route</b> to a module.</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:var(--nx-ok)"></span><span>A green flare: Aegis <b>allowed</b> a capability.</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:var(--nx-trust-collapse)"></span><span>A red flare or veil: <b>denied</b>, or an anomaly.</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark ring" style="--c:var(--nx-warn)"></span><span>A warm ring: <b>trust</b> rose. A cool one: it fell.</span></div>
+          <div class="nx-legend-row"><span class="nx-legend-mark" style="--c:var(--nx-info)"></span><span>Motes sink into <b>memory strata</b> as Engram writes.</span></div>
         </div>
         <div class="nx-watch-rail-sec">
-          <div class="nx-watch-rail-label">Characters · on duty <span class="nx-dim" style="text-transform:none;letter-spacing:0">— click to direct</span></div>
+          <div class="nx-section-head"><div class="nx-watch-rail-label nx-section-label">On duty</div><span class="nx-watch-hint">Click to direct</span></div>
           <div class="nx-cast" id="nx-watch-cast"></div>
         </div>
         <div class="nx-watch-rail-sec grow">
-          <div class="nx-watch-rail-label">Live ledger <a href="#/memory" class="nx-cp-watch-link" style="float:right">full replay ↗</a></div>
+          <div class="nx-section-head"><div class="nx-watch-rail-label nx-section-label">Live ledger</div><a href="#/memory" class="nx-cp-watch-link nx-link">Full replay</a></div>
           <div class="nx-ledger" id="nx-watch-ledger"></div>
         </div>
       </div>
@@ -1541,12 +1552,12 @@ function renderWatchCast() {
   const el = document.getElementById("nx-watch-cast");
   if (!el) return;
   const mods = state.scene.modules;
-  if (!mods.length) { el.innerHTML = `<span class="nx-dim" style="font-size:11px">summoning the cast…</span>`; return; }
+  if (!mods.length) { el.innerHTML = `<div class="nx-loading"><span class="nx-spinner" aria-hidden="true"></span>Loading the modules</div>`; return; }
   el.innerHTML = mods.map(m => {
     const tier = tierForTrust(m.trust);
     return `
-      <button type="button" class="nx-cast-chip" data-slug="${escapeHtml(m.name)}" title="${escapeHtml(m.name)} · ${escapeHtml(tier)} · trust ${m.trust.toFixed(2)} — click to open">
-        <span class="nx-cast-disc">${agentDisc(m.name, { size: 26, trust: m.trust })}</span>
+      <button type="button" class="nx-cast-chip" data-slug="${escapeHtml(m.name)}" title="${escapeHtml(m.name)} · ${escapeHtml(tier.toLowerCase())} · trust ${m.trust.toFixed(2)}. Click to open.">
+        <span class="nx-cast-disc">${agentDisc(m.name, { size: 22 })}</span>
         <span class="nx-cast-name">${escapeHtml(m.name)}</span>
       </button>`;
   }).join("");
@@ -1558,11 +1569,11 @@ function renderWatchCast() {
 const _replayState = { events: [], idx: 0, playing: false, timer: null };
 
 // Bespoke transport glyphs (no emoji — design invariant). Inline SVG only.
-const ICON_PLAY = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M3 2l7 4-7 4z"/></svg>`;
-const ICON_PAUSE = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><rect x="3" y="2.5" width="2.4" height="7" rx="0.6"/><rect x="6.6" y="2.5" width="2.4" height="7" rx="0.6"/></svg>`;
-const ICON_STEP = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M3 2.5l4 3.5-4 3.5z"/><rect x="7.6" y="2.5" width="1.8" height="7" rx="0.6"/></svg>`;
-const REPLAY_LABEL = `<span class="nx-replay-ico">${ICON_PLAY}</span> replay`;
-const PAUSE_LABEL = `<span class="nx-replay-ico">${ICON_PAUSE}</span> pause`;
+const ICON_PLAY = icon("play", 14);
+const ICON_PAUSE = icon("pause", 14);
+const ICON_STEP = icon("skip-forward", 14);
+const REPLAY_LABEL = `<span class="nx-replay-ico">${ICON_PLAY}</span>Replay`;
+const PAUSE_LABEL = `<span class="nx-replay-ico">${ICON_PAUSE}</span>Pause`;
 
 // Map a Chronicle/replay event to a legible (kind, label, summary) triple.
 function replayEventView(e) {
@@ -1581,7 +1592,7 @@ function replayEventView(e) {
 
 async function renderMemory() {
   const main = document.getElementById("nx-main");
-  main.innerHTML = `<div class="nx-main-inner"><div class="nx-empty">reading memory…</div></div>`;
+  main.innerHTML = `<div class="nx-main-inner"><header class="nx-page-head"><div class="nx-page-head-text"><div class="nx-eyebrow nx-page-eyebrow">Engram · Chronicle</div><h1 class="nx-page-title">Memory and replay</h1></div></header><div class="nx-mem-tiers" aria-busy="true">${[0, 1, 2].map(() => `<div class="nx-mem-tier"><span class="nx-skeleton nx-skeleton-short"></span><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-line"></span><span class="nx-skeleton nx-skeleton-short"></span></div>`).join("")}</div></div>`;
   const j = (url) => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
   const [activity, episodic, atlas, timeline] = await Promise.all([
     j("/api/chronicle?source=cortex&limit=16"), j("/api/memory/episodic?limit=12"),
@@ -1601,7 +1612,7 @@ async function renderMemory() {
   const tierCard = (label, count, body) => `
     <div class="nx-mem-tier">
       <div class="nx-mem-tier-head"><span class="nx-mem-tier-label">${label}</span><span class="nx-mem-tier-count">${count}</span></div>
-      <div class="nx-mem-tier-body">${body || `<span class="nx-dim" style="font-size:11px">empty</span>`}</div>
+      <div class="nx-mem-tier-body">${body || `<div class="nx-empty-line">Nothing here yet.</div>`}</div>
     </div>`;
 
   const activityBody = acts.slice(0, 8).map(e => {
@@ -1619,36 +1630,38 @@ async function renderMemory() {
       <div class="nx-fact-triple"><b>${escapeHtml(f.subject || "")}</b> <span class="nx-dim">${escapeHtml(f.relation || "")}</span> ${escapeHtml(f.object || "")}</div>
       <div class="nx-fact-conf" title="confidence ${conf.toFixed(3)} (stored ${stored.toFixed(3)})">
         <div class="nx-fact-conf-track"><div class="nx-fact-conf-stored" style="width:${storedPct}%"></div><div class="nx-fact-conf-fill" style="width:${decayPct}%"></div></div>
-        <span class="nx-fact-conf-val ${f.decayed ? "decayed" : ""}">${decayPct}%${f.decayed ? " ↓" : ""}</span>
+        <span class="nx-fact-conf-val ${f.decayed ? "decayed" : ""}">${decayPct}%${f.decayed ? " decayed" : ""}</span>
       </div>
     </div>`;
   }).join("");
 
   main.innerHTML = `
     <div class="nx-main-inner nx-mem">
-      <header style="margin-bottom:18px">
-        <div class="nx-eyebrow" style="margin-bottom:6px">Engram · Chronicle</div>
-        <div class="nx-display" style="font-size:26px;color:#f3ecff;font-weight:700">Memory &amp; Replay</div>
-        <div class="nx-dim" style="font-size:13px;margin-top:4px">Watch what the swarm remembers — and replay every decision it made, in order, from the append-only Chronicle.</div>
+      <header class="nx-page-head">
+        <div class="nx-page-head-text">
+          <div class="nx-eyebrow nx-page-eyebrow">Engram · Chronicle</div>
+          <h1 class="nx-page-title">Memory and replay</h1>
+          <p class="nx-page-sub">See what the swarm remembers, and replay every decision it made, in order, from the append-only Chronicle.</p>
+        </div>
       </header>
 
       <div class="nx-mem-tiers">
-        ${tierCard("LIVE · SESSION", acts.length, activityBody)}
-        ${tierCard("EPISODIC", (episodic && episodic.count) || epi.length, epiBody)}
+        ${tierCard("Live session", acts.length, activityBody)}
+        ${tierCard("Episodic", (episodic && episodic.count) || epi.length, epiBody)}
         <div class="nx-mem-tier">
-          <div class="nx-mem-tier-head"><span class="nx-mem-tier-label">ATLAS · WORLD MODEL</span><a class="nx-mem-tier-link" href="#/atlas">graph ↗</a></div>
-          <div class="nx-mem-tier-body">${atlasBody || `<span class="nx-dim" style="font-size:11px">no facts yet</span>`}</div>
-          <div class="nx-mem-tier-foot nx-dim">solid bar = decayed confidence · faint = stored. Facts fade until re-confirmed.</div>
+          <div class="nx-mem-tier-head"><span class="nx-mem-tier-label">Atlas world model</span><a class="nx-mem-tier-link nx-link" href="#/atlas">Graph</a></div>
+          <div class="nx-mem-tier-body">${atlasBody || `<div class="nx-empty-line">No facts yet.</div>`}</div>
+          <div class="nx-mem-tier-foot">The solid bar is decayed confidence; the faint bar is stored. Facts fade until they are confirmed again.</div>
         </div>
       </div>
 
       <section class="nx-replay">
         <div class="nx-replay-head">
-          <div class="nx-eyebrow">CHRONICLE REPLAY · ${_replayState.events.length} decisions</div>
+          <div class="nx-section-label">Chronicle replay · ${_replayState.events.length} decisions</div>
           <div class="nx-replay-controls">
-            <button class="nx-replay-btn" id="nx-replay-play" title="Play / pause the run">${REPLAY_LABEL}</button>
-            <button class="nx-replay-btn" id="nx-replay-step" title="Step one decision">step <span class="nx-replay-ico">${ICON_STEP}</span></button>
-            <input type="range" id="nx-replay-scrub" min="0" max="${Math.max(0, _replayState.events.length - 1)}" value="${_replayState.idx}">
+            <button class="nx-replay-btn nx-btn nx-btn-sm" type="button" id="nx-replay-play" title="Play or pause the run">${REPLAY_LABEL}</button>
+            <button class="nx-replay-btn nx-btn nx-btn-sm nx-btn-ghost" type="button" id="nx-replay-step" title="Step one decision">Step <span class="nx-replay-ico">${ICON_STEP}</span></button>
+            <input type="range" id="nx-replay-scrub" class="nx-replay-scrub" aria-label="Replay position" min="0" max="${Math.max(0, _replayState.events.length - 1)}" value="${_replayState.idx}">
           </div>
         </div>
         <div class="nx-replay-body">
@@ -1674,7 +1687,7 @@ function renderReplayList() {
   const el = document.getElementById("nx-replay-list");
   if (!el) return;
   const evs = _replayState.events;
-  if (!evs.length) { el.innerHTML = `<div class="nx-dim" style="font-size:12px;padding:10px">No recorded decisions yet — run a swarm, then replay it here.</div>`; return; }
+  if (!evs.length) { el.innerHTML = emptyStateHTML({ icon: "history", title: "Nothing to replay yet", body: "Run a swarm, then replay it here.", compact: true }); return; }
   el.innerHTML = evs.map((e, i) => {
     const v = replayEventView(e);
     return `<button type="button" class="nx-replay-row ${i === _replayState.idx ? "active" : ""}" data-i="${i}">
