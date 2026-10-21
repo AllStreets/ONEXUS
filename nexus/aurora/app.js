@@ -2062,7 +2062,7 @@ async function renderConversation(workspaceId) {
     } catch {}
   }
   if (!ws) {
-    main.innerHTML = `<div class="nx-empty">workspace not found: ${escapeHtml(workspaceId)}</div>`;
+    main.innerHTML = `<div class="nx-main-inner">${emptyStateHTML({ icon: "folder", title: "Workspace not found", body: `There is no workspace called ${escapeHtml(workspaceId)}. It may have been deleted.`, actions: `<a class="nx-btn" href="#/workspaces">See all workspaces</a>` })}</div>`;
     return;
   }
   renderChromeContext();
@@ -2074,8 +2074,8 @@ async function renderConversation(workspaceId) {
   const isEmpty = thread.length === 0 && pending.length === 0;
   const onDuty = (ws.resident_agents || [])[0];
   const meta = onDuty
-    ? `started by you · ${onDuty} on duty${(ws.resident_agents || []).length > 1 ? ` · ${(ws.resident_agents || [])[1]} listening` : ""}`
-    : `started by you · council routing`;
+    ? `Started by you · ${onDuty} on duty${(ws.resident_agents || []).length > 1 ? ` · ${(ws.resident_agents || [])[1]} listening` : ""}`
+    : `Started by you · council routing`;
 
   const attachedFiles = state.attachments?.get(workspaceId) || [];
   // Use a <label for="..."> wrapping the paperclip — clicking a label for a
@@ -2085,36 +2085,29 @@ async function renderConversation(workspaceId) {
   const composerHTML = `
     ${renderCodebasePanelHTML(workspaceId)}
     <form class="nx-composer" id="nx-composer" autocomplete="off">
-      <label class="nx-attach-btn" id="nx-attach-btn" for="nx-file-input" title="Attach file (or drag-and-drop)">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9.8 5.5 5.8 9.5a2 2 0 1 1-2.8-2.8L8 1.7a3 3 0 0 1 4.2 4.2L7.2 11a4 4 0 0 1-5.7-5.6"/>
-        </svg>
+      <label class="nx-attach-btn nx-icon-btn" id="nx-attach-btn" for="nx-file-input" title="Attach a file (or drag and drop)" aria-label="Attach a file">
+        ${icon("paperclip", 16)}
       </label>
-      <button type="button" class="nx-attach-btn" id="nx-codebase-btn" title="Browse codebases (attach source files)" aria-expanded="${state.codebasePanel.has(workspaceId)}">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 4 2 7l3 3"/>
-          <path d="M9 4l3 3-3 3"/>
-        </svg>
+      <button type="button" class="nx-attach-btn nx-icon-btn ${state.codebasePanel.has(workspaceId) ? "is-on" : ""}" id="nx-codebase-btn" title="Browse codebases to attach source files" aria-label="Browse codebases" aria-expanded="${state.codebasePanel.has(workspaceId)}">
+        ${icon("code", 16)}
       </button>
       <input type="file" id="nx-file-input" multiple aria-hidden="true" class="nx-file-input-vis">
       <input id="nx-composer-input"
-             placeholder="${attachedFiles.length ? `message + ${attachedFiles.length} file${attachedFiles.length===1?'':'s'}…` : 'message agents in this workspace…'}"
+             placeholder="${attachedFiles.length ? `Message with ${attachedFiles.length} file${attachedFiles.length===1?'':'s'} attached` : 'Message the agents in this workspace'}"
              aria-label="Compose a message"
              autofocus>
-      <div class="nx-composer-kbd">
-        <span class="kbd">⌘</span><span class="kbd">⏎</span><span class="hint">send</span>
+      <div class="nx-composer-kbd" aria-hidden="true">
+        <span class="nx-kbd">⌘</span><span class="nx-kbd">⏎</span><span class="hint">to send</span>
       </div>
     </form>
     ${attachedFiles.length ? `
       <div class="nx-attached-strip">
         ${attachedFiles.map(f => `
           <span class="nx-attached-chip" data-id="${escapeHtml(f.id)}" title="${escapeHtml(f.name)} · ${(f.size/1024).toFixed(1)} KB">
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2 0h6l4 4v10H2z"/>
-              <path d="M8 0v4h4"/>
-            </svg>
+            ${icon("file", 13)}
             <span class="chip-name">${escapeHtml(truncate(f.name, 24))}</span>
-            <button type="button" class="chip-x" data-id="${escapeHtml(f.id)}" aria-label="Remove">×</button>
+            <span class="chip-sz">${(f.size/1024).toFixed(1)} KB</span>
+            <button type="button" class="chip-x" data-id="${escapeHtml(f.id)}" aria-label="Remove ${escapeHtml(f.name)}">${icon("x", 12)}</button>
           </span>
         `).join("")}
       </div>
@@ -2141,16 +2134,17 @@ async function renderConversation(workspaceId) {
         <div class="nx-conv-head">
           <div class="nx-conv-head-row">
             <div class="nx-conv-crumb">
-              <button class="crumb-link" id="nx-crumb-home" data-id="${escapeHtml(ws.workspace_id)}">
-                <span class="crumb-dim">workspace /</span>
-                <span class="crumb-strong">${escapeHtml((ws.name || ws.workspace_id).toLowerCase())}</span>
+              <button class="crumb-link" id="nx-crumb-home" data-id="${escapeHtml(ws.workspace_id)}" type="button">
+                <span class="crumb-dim">Workspace</span>
+                <span class="crumb-sep" aria-hidden="true">/</span>
+                <span class="crumb-strong">${escapeHtml(ws.name || ws.workspace_id)}</span>
               </button>
-              <span class="crumb-dim">— today, ${stamp}</span>
+              <span class="crumb-dim">Today, ${stamp}</span>
             </div>
             <div class="nx-conv-head-actions">
-              <button class="nx-conv-action" id="nx-new-thread" title="Start a new thread in this workspace">
-                <span class="nx-plus" aria-hidden="true"></span>
-                <span>new thread</span>
+              <button class="nx-conv-action nx-btn nx-btn-sm" id="nx-new-thread" type="button" title="Start a new thread in this workspace">
+                ${icon("plus", 14)}
+                <span>New thread</span>
               </button>
             </div>
           </div>
@@ -2445,7 +2439,7 @@ function renderEmptyThreadHTML(ws) {
               <div class="nx-prompt-label">${escapeHtml(label)}</div>
               <div class="nx-prompt-hint">${escapeHtml(hint)}</div>
             </div>
-            <div class="nx-prompt-arrow">↗</div>
+            <div class="nx-prompt-arrow">${icon("arrow-up-right", 16)}</div>
           </button>
         `;
       }).join("")
@@ -2461,27 +2455,28 @@ function renderEmptyThreadHTML(ws) {
               <div class="nx-prompt-label">${escapeHtml(s.label)}</div>
               <div class="nx-prompt-hint">${escapeHtml(s.hint)}</div>
             </div>
-            <div class="nx-prompt-arrow">↩</div>
+            <div class="nx-prompt-arrow">${icon("corner-down-left", 16)}</div>
           </button>
         `).join("");
 
   return `
     <div class="nx-welcome">
-      <div class="nx-welcome-orb">${KERNEL_MARK(72)}</div>
+      <div class="nx-welcome-orb">${KERNEL_MARK(44)}</div>
+      <div class="nx-eyebrow nx-welcome-eyebrow">Workspace</div>
       <h1>${escapeHtml(ws.name)}</h1>
-      <p>A workspace is a room with its own agents, memory, and grants. Send a
-         message to start — or pick a thread below. Every tool call passes
-         through <span class="nx-mono" style="color:#c9b8ff">Aegis</span>, every event lands in
-         <span class="nx-mono" style="color:#c9b8ff">Chronicle</span>.</p>
+      <p>A workspace is a room with its own agents, memory and grants. Send a
+         message to start, or pick a thread below. Every tool call passes
+         through <span class="nx-welcome-term">Aegis</span> and every event lands in
+         <span class="nx-welcome-term">Chronicle</span>.</p>
       <div class="nx-prompt-grid" id="nx-prompt-grid">
         ${cards}
       </div>
       <div class="nx-welcome-links">
-        <button class="nx-tour-link" id="nx-tour-link" data-workspace="${escapeHtml(ws.workspace_id)}">
-          See the safety model in action — fire a sample permission prompt
+        <button class="nx-tour-link nx-btn nx-btn-ghost" id="nx-tour-link" type="button" data-workspace="${escapeHtml(ws.workspace_id)}">
+          ${icon("shield-check", 16)}<span>See the safety model: fire a sample permission prompt</span>
         </button>
-        <button class="nx-tour-link" id="nx-welcome-guide" style="border-color:rgba(168,124,232,0.32);color:#c9b8ff">
-          Open the guide · ${GUIDE_PAGES.length} pages · ?
+        <button class="nx-tour-link nx-btn nx-btn-ghost" id="nx-welcome-guide" type="button">
+          ${icon("book-open", 16)}<span>Open the guide, ${GUIDE_PAGES.length} pages</span><span class="nx-kbd">?</span>
         </button>
       </div>
     </div>
@@ -2495,10 +2490,7 @@ function renderMessageHTML(m) {
       <div class="nx-msg-user-files">
         ${atts.map(a => `
           <span class="nx-file-chip">
-            <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2 0h6l4 4v10H2z"/>
-              <path d="M8 0v4h4"/>
-            </svg>
+            ${icon("file", 12)}
             <span>${escapeHtml(a.name)}</span>
             <span class="chip-sz">${(a.size/1024).toFixed(1)} KB</span>
           </span>
@@ -2518,12 +2510,12 @@ function renderMessageHTML(m) {
   const time = formatTime(m.ts) || "";
   if (m.typing) {
     return `
-      <div class="nx-msg-agent">
-        ${agentDisc(slug, { size: 40 })}
+      <div class="nx-msg-agent is-typing">
+        ${agentDisc(slug, { size: 32 })}
         <div class="nx-msg-col">
           <div class="nx-msg-head">
-            <span class="nx-msg-name">routing…</span>
-            <span class="nx-msg-meta">cortex is picking a module</span>
+            <span class="nx-msg-name">Routing</span>
+            <span class="nx-msg-meta">Cortex is picking a module</span>
           </div>
           <div class="nx-typing"><span></span><span></span><span></span></div>
         </div>
@@ -2535,11 +2527,11 @@ function renderMessageHTML(m) {
     <div class="nx-diff-stack">
       ${diffs.map(d => `
         <div class="nx-diff-card ${d.selected ? "selected" : ""}" data-path="${escapeHtml(d.path)}">
-          <span class="nx-diff-icon" aria-hidden="true"></span>
+          <span class="nx-diff-icon" aria-hidden="true">${icon("file-text", 14)}</span>
           <span class="nx-diff-path">${escapeHtml(d.path)}</span>
           <span class="nx-diff-adds">+${d.adds || 0}</span>
           <span class="nx-diff-dels">−${d.dels || 0}</span>
-          <span class="nx-diff-trail" aria-hidden="true"></span>
+          <span class="nx-diff-trail" aria-hidden="true">${d.selected ? icon("check", 14) : ""}</span>
         </div>
       `).join("")}
     </div>
@@ -2550,31 +2542,25 @@ function renderMessageHTML(m) {
   // pre-wrap (cheap incremental updates); on completion the body is
   // re-rendered as markdown. User messages stay plain-escaped.
   const bodyHTML = m.streaming
-    ? `<div class="nx-msg-body" style="white-space:pre-wrap">${escapeHtml(m.body)}<span class="nx-stream-caret" aria-hidden="true"></span></div>`
+    ? `<div class="nx-msg-body nx-msg-streaming">${escapeHtml(m.body)}<span class="nx-stream-caret" aria-hidden="true"></span></div>`
     : `<div class="nx-msg-body nx-msg-md">${m.html || renderMarkdown(m.body)}</div>`;
   return `
     <div class="nx-msg-agent" data-message-id="${escapeHtml(m.id || "")}" data-module="${escapeHtml(slug)}">
-      ${agentDisc(slug, { size: 40 })}
+      ${agentDisc(slug, { size: 32 })}
       <div class="nx-msg-col">
         <div class="nx-msg-head">
           <span class="nx-msg-name">${escapeHtml(slug)}</span>
           <span class="nx-msg-meta">${escapeHtml(time)}</span>
-          ${m.memory_id ? `<span class="nx-msg-memory" title="Stored in Engram: ${escapeHtml(m.memory_id)}">remembered</span>` : ""}
+          ${m.memory_id ? `<span class="nx-msg-memory nx-pill nx-pill-ok" title="Stored in Engram: ${escapeHtml(m.memory_id)}">${icon("database", 12)}Remembered</span>` : ""}
         </div>
         ${bodyHTML}
         ${diffHTML}
         <div class="nx-msg-footer">
-          <button class="nx-fb-btn ${fb === 'up' ? 'on' : ''}" data-fb="up" title="Mark this response as useful (raises ${escapeHtml(slug)}'s trust)">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M3 6V10H1.5V6z"/>
-              <path d="M3 6h5.5l1.5-2.5c.3-.6 0-1.5-.8-1.5H7l.4-1.3c.1-.5-.3-1-.8-1H6L4 4 3 5"/>
-            </svg>
+          <button class="nx-fb-btn nx-icon-btn ${fb === 'up' ? 'on' : ''}" type="button" data-fb="up" aria-pressed="${fb === 'up'}" aria-label="Useful" title="Mark this response as useful (raises ${escapeHtml(slug)}'s trust)">
+            ${icon("thumbs-up", 14)}
           </button>
-          <button class="nx-fb-btn ${fb === 'down' ? 'on down' : ''}" data-fb="down" title="Mark this response as unhelpful (lowers ${escapeHtml(slug)}'s trust)">
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:rotate(180deg)">
-              <path d="M3 6V10H1.5V6z"/>
-              <path d="M3 6h5.5l1.5-2.5c.3-.6 0-1.5-.8-1.5H7l.4-1.3c.1-.5-.3-1-.8-1H6L4 4 3 5"/>
-            </svg>
+          <button class="nx-fb-btn nx-icon-btn ${fb === 'down' ? 'on down' : ''}" type="button" data-fb="down" aria-pressed="${fb === 'down'}" aria-label="Not useful" title="Mark this response as unhelpful (lowers ${escapeHtml(slug)}'s trust)">
+            ${icon("thumbs-down", 14)}
           </button>
         </div>
       </div>
@@ -2587,26 +2573,26 @@ function renderPendingPermissionHTML(p) {
   const slug = p.agent_slug || "oracle";
   return `
     <div class="nx-msg-agent">
-      ${agentDisc(slug, { size: 40 })}
-      <div>
+      ${agentDisc(slug, { size: 32 })}
+      <div class="nx-msg-col">
         <div class="nx-msg-head">
           <span class="nx-msg-name">${escapeHtml(slug)}</span>
-          <span class="nx-msg-meta">requesting access</span>
+          <span class="nx-msg-meta">Requesting access</span>
         </div>
         <div class="nx-msg-body">
           Needs <span class="nx-cap">${escapeHtml(p.capability)}</span>${p.target ? ` on <span class="nx-code">${escapeHtml(p.target)}</span>` : ""}.
           ${p.preview ? ` ${escapeHtml(p.preview)}` : ""} How should Aegis remember this?
         </div>
-        <div class="nx-perm-prompt class-${pc}" data-ticket="${escapeHtml(p.id)}">
+        <div class="nx-perm-prompt nx-perm-card class-${pc}" data-ticket="${escapeHtml(p.id)}" role="group" aria-label="Permission request from ${escapeHtml(slug)}">
           <span class="nx-perm-pulse" aria-hidden="true"></span>
           <div class="nx-perm-info">
-            <div class="nx-perm-eyebrow">${escapeHtml((p.capability || "").toUpperCase())} · ${pc.toUpperCase()}</div>
-            <div class="nx-perm-body">${escapeHtml(slug)} → <span class="nx-code">${escapeHtml(p.target || "—")}</span></div>
+            <div class="nx-perm-eyebrow nx-perm-card-eyebrow">${escapeHtml(pc)} · <span class="nx-mono">${escapeHtml(p.capability || "")}</span></div>
+            <div class="nx-perm-body nx-perm-card-body">${p.target ? `${escapeHtml(slug)} on <code>${escapeHtml(p.target)}</code>` : `${escapeHtml(slug)}, no target given`}</div>
           </div>
-          <div class="nx-perm-actions">
-            <button class="nx-perm-btn allow"  data-decision="allow_once">allow once</button>
-            <button class="nx-perm-btn always" data-decision="allow_always_in_workspace">always · here</button>
-            <button class="nx-perm-btn deny"   data-decision="deny">deny</button>
+          <div class="nx-perm-actions nx-perm-card-actions">
+            <button class="nx-perm-btn allow nx-btn nx-btn-sm nx-btn-primary" type="button" data-decision="allow_once">Allow once</button>
+            <button class="nx-perm-btn always nx-btn nx-btn-sm" type="button" data-decision="allow_always_in_workspace">Always in this workspace</button>
+            <button class="nx-perm-btn deny nx-btn nx-btn-sm nx-btn-danger" type="button" data-decision="deny">Deny</button>
           </div>
         </div>
       </div>
@@ -2651,7 +2637,7 @@ function _cbKey(codebaseId, rel) { return `${codebaseId}|${rel}`; }
 function renderCodebaseLevelHTML(codebaseId, rel, depth) {
   const entries = state.codebaseTrees.get(_cbKey(codebaseId, rel)) || [];
   if (!entries.length) {
-    return `<div class="nx-cb-empty" style="padding-left:${14 + depth * 14}px">empty</div>`;
+    return `<div class="nx-cb-empty" style="padding-left:${14 + depth * 14}px">Empty folder</div>`;
   }
   return entries.map(e => {
     const childRel = rel ? `${rel}/${e.name}` : e.name;
@@ -2662,7 +2648,8 @@ function renderCodebaseLevelHTML(codebaseId, rel, depth) {
         <button type="button" class="nx-cb-row nx-cb-dir ${open ? "open" : ""}"
                 data-cb-dir data-cb-id="${escapeHtml(codebaseId)}" data-cb-rel="${encodeURIComponent(childRel)}"
                 style="padding-left:${pad}px">
-          <span class="nx-cb-arrow" aria-hidden="true">›</span>
+          <span class="nx-cb-arrow" aria-hidden="true">${icon("chevron-right", 12)}</span>
+          ${icon("folder", 13)}
           <span class="nx-cb-name">${escapeHtml(e.name)}</span>
         </button>
         ${open ? renderCodebaseLevelHTML(codebaseId, childRel, depth + 1) : ""}
@@ -2672,9 +2659,7 @@ function renderCodebaseLevelHTML(codebaseId, rel, depth) {
       <button type="button" class="nx-cb-row nx-cb-file"
               data-cb-file data-cb-id="${escapeHtml(codebaseId)}" data-cb-rel="${encodeURIComponent(childRel)}"
               style="padding-left:${pad}px" title="Attach ${escapeHtml(e.name)} to the composer">
-        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
-          <path d="M2 0h6l4 4v10H2z"/><path d="M8 0v4h4"/>
-        </svg>
+        ${icon("file", 13)}
         <span class="nx-cb-name">${escapeHtml(e.name)}</span>
         <span class="nx-cb-size">${((e.size || 0) / 1024).toFixed(1)} KB</span>
       </button>
@@ -2693,12 +2678,13 @@ function renderCodebasePanelHTML(workspaceId) {
           <button type="button" class="nx-cb-row nx-cb-dir ${open ? "open" : ""}"
                   data-cb-dir data-cb-id="${escapeHtml(r.id)}" data-cb-rel=""
                   title="${escapeHtml(r.path)}">
-            <span class="nx-cb-arrow" aria-hidden="true">›</span>
+            <span class="nx-cb-arrow" aria-hidden="true">${icon("chevron-right", 12)}</span>
+            ${icon("folder", 13)}
             <span class="nx-cb-name">${escapeHtml(r.name)}</span>
             <span class="nx-cb-path">${escapeHtml(truncate(r.path, 48))}</span>
           </button>
-          <button type="button" class="nx-cb-remove" data-cb-remove data-cb-id="${escapeHtml(r.id)}"
-                  title="Unregister this codebase" aria-label="Unregister ${escapeHtml(r.name)}">×</button>
+          <button type="button" class="nx-cb-remove nx-icon-btn" data-cb-remove data-cb-id="${escapeHtml(r.id)}"
+                  title="Unregister this codebase" aria-label="Unregister ${escapeHtml(r.name)}">${icon("x", 14)}</button>
         </div>
         ${open ? renderCodebaseLevelHTML(r.id, "", 1) : ""}
       </div>
@@ -2707,15 +2693,15 @@ function renderCodebasePanelHTML(workspaceId) {
   return `
     <div class="nx-codebase-panel" id="nx-codebase-panel">
       <div class="nx-cb-head">
-        <span class="nx-cb-title">CODEBASES</span>
-        <span class="nx-cb-hint">read-only · click a file to attach it</span>
+        <span class="nx-cb-title nx-section-label">Codebases</span>
+        <span class="nx-cb-hint">Read only. Click a file to attach it.</span>
       </div>
-      ${rows || `<div class="nx-cb-empty">no codebases registered for this workspace yet</div>`}
+      ${rows || `<div class="nx-cb-empty">No codebases registered for this workspace yet.</div>`}
       <form class="nx-cb-add" id="nx-cb-add">
-        <input id="nx-cb-path" placeholder="/absolute/path/to/repo" aria-label="Absolute path to a local codebase" autocomplete="off">
-        <button type="submit">register</button>
+        <input id="nx-cb-path" class="nx-input nx-input-mono" placeholder="/absolute/path/to/repo" aria-label="Absolute path to a local codebase" autocomplete="off">
+        <button type="submit" class="nx-btn">Register</button>
       </form>
-      ${state._codebaseErr ? `<div class="nx-cb-err" role="alert">${escapeHtml(state._codebaseErr)}</div>` : ""}
+      ${state._codebaseErr ? `<div class="nx-cb-err nx-alert is-danger" role="alert">${icon("alert-circle", 16)}<div class="nx-alert-body">${escapeHtml(state._codebaseErr)}</div></div>` : ""}
     </div>
   `;
 }
@@ -3042,11 +3028,11 @@ function renderWorkspacesGrid() {
     main.innerHTML = `
       <div class="nx-main-inner">
         <div class="nx-welcome">
-          <div class="nx-welcome-orb">${KERNEL_MARK(96)}</div>
+          <div class="nx-welcome-orb">${KERNEL_MARK(44)}</div>
           <h1>Welcome to ONEXUS</h1>
-          <p>An operating system for agents. Each room — a workspace — has its own
-             agents, memory, and grants. Create your first one to get started.</p>
-          <button class="nx-welcome-cta" id="nx-welcome-create">Create your first workspace · ⌘N</button>
+          <p>An operating system for agents. Each room, a workspace, has its own
+             agents, memory and grants. Create your first one to get started.</p>
+          <button class="nx-welcome-cta nx-btn nx-btn-primary nx-btn-lg" id="nx-welcome-create" type="button">${icon("plus", 16)}Create your first workspace<span class="nx-kbd">⌘N</span></button>
         </div>
       </div>
     `;
@@ -6608,6 +6594,18 @@ function attachKeybinds() {
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────
+// Shared empty state (components.css .nx-empty-state). `body` and `actions`
+// are trusted HTML built by the caller; `title` is escaped here.
+function emptyStateHTML({ icon: name = "inbox", title = "", body = "", actions = "", compact = false } = {}) {
+  return `
+    <div class="nx-empty-state${compact ? " nx-empty-state-compact" : ""}">
+      <span class="nx-empty-state-icon">${icon(name, 20)}</span>
+      ${title ? `<div class="nx-empty-state-title">${escapeHtml(title)}</div>` : ""}
+      ${body ? `<div class="nx-empty-state-body">${body}</div>` : ""}
+      ${actions ? `<div class="nx-empty-state-actions">${actions}</div>` : ""}
+    </div>`;
+}
+
 function escapeHtml(s) {
   if (s == null) return "";
   const d = document.createElement("div");
