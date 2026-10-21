@@ -786,3 +786,131 @@
   overflow: auto;
   white-space: pre;
 }
+
+/* ── Signature details ──────────────────────────────────────────────────
+ * The few details that make Aurora recognisable, repeated the same way
+ * everywhere: the orbit tick on labels, the mood rule under page headers,
+ * the hex core behind empty states, the lit primary action, the mood edge
+ * on the composer and the permission card, the view entrance. */
+
+/* Cards and panels are a little glassy, so the mood field colors them. */
+.nx-card, .nx-panel { background-color: var(--nx-glass-card); }
+
+/* Section labels open with a short accent tick. */
+.nx-section-label { display: inline-flex; align-items: center; gap: var(--nx-space-2); }
+.nx-section-label::before {
+  content: ""; flex: none; width: 10px; height: 2px; border-radius: 1px;
+  background: linear-gradient(90deg, var(--nx-accent), color-mix(in srgb, var(--nx-accent) 20%, transparent));
+}
+
+/* Page header: the eyebrow takes the accent, led by the orbit mark, and a
+ * mood rule closes the header. */
+.nx-page-head { position: relative; padding-bottom: var(--nx-space-5); }
+.nx-page-head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, var(--nx-accent) 0%, color-mix(in srgb, var(--nx-mood-tint) 35%, transparent) 22%, var(--nx-line-1) 60%, transparent 100%);
+}
+.nx-page-eyebrow, .nx-watch-eyebrow { display: inline-flex; align-items: center; gap: var(--nx-space-2); color: var(--nx-accent); }
+.nx-page-eyebrow::before, .nx-watch-eyebrow::before {
+  content: ""; width: 12px; height: 12px; flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='8.25' fill='none' stroke='black' stroke-width='2.2'/><circle cx='12' cy='12' r='3.2'/><circle cx='17.83' cy='6.17' r='2.4'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='8.25' fill='none' stroke='black' stroke-width='2.2'/><circle cx='12' cy='12' r='3.2'/><circle cx='17.83' cy='6.17' r='2.4'/></svg>") center / contain no-repeat;
+}
+.nx-page-title, .nx-watch .nx-watch-title {
+  background: linear-gradient(100deg, var(--nx-fg-1) 55%, color-mix(in srgb, var(--nx-accent) 55%, var(--nx-fg-1)));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+}
+
+/* The primary action is lit: accent to accent-strong with a top light. */
+.nx-btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--nx-accent) 82%, white) 0%, var(--nx-accent) 45%, var(--nx-accent-strong) 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 45%, transparent), 0 6px 18px -8px var(--nx-accent-glow);
+}
+.nx-btn-primary:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--nx-accent) 70%, white) 0%, var(--nx-accent) 50%, var(--nx-accent-strong) 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 50%, transparent), 0 10px 28px -8px var(--nx-accent-glow);
+  filter: none;
+}
+.nx-btn-primary:active { background: var(--nx-accent-strong); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25); }
+.nx-btn-primary:disabled, .nx-btn-primary[aria-disabled="true"] { box-shadow: none; filter: saturate(0.4); }
+
+/* Empty states sit on a hex core, the same shape as a built-in agent. */
+.nx-empty-state-icon {
+  width: 52px; height: 52px; margin-bottom: var(--nx-space-3);
+  border: 0; border-radius: 0;
+  clip-path: polygon(50% 2%, 92% 26%, 92% 74%, 50% 98%, 8% 74%, 8% 26%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 22%, transparent), transparent 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--nx-accent) 70%, transparent), color-mix(in oklab, var(--nx-accent-strong) 45%, var(--nx-gray-100)));
+  color: var(--nx-fg-on-accent);
+  filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--nx-accent) 35%, transparent));
+}
+.nx-empty-state-icon svg { width: 22px; height: 22px; stroke-width: 2; }
+
+/* Loading shimmer carries the mood. */
+.nx-skeleton {
+  background: linear-gradient(90deg, var(--nx-surface-2) 0%, color-mix(in srgb, var(--nx-accent) 16%, var(--nx-gray-400)) 50%, var(--nx-surface-2) 100%);
+  background-size: 200% 100%;
+}
+
+/* Permission card: a class-colored edge, a faint hatch and a lit header. */
+.nx-perm-card {
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(135deg, rgba(var(--pc-rgb), 0.06) 0 1px, transparent 1px 9px),
+    linear-gradient(90deg, rgba(var(--pc-rgb), 0.12), rgba(var(--pc-rgb), 0.03) 55%),
+    var(--nx-glass-card);
+  box-shadow: 0 18px 40px -24px rgba(var(--pc-rgb), 0.55), inset 3px 0 0 var(--pc);
+}
+.nx-perm-card-eyebrow { display: inline-flex; align-items: center; gap: var(--nx-space-1-5); }
+
+/* Micro-motion: marks lift a touch when their row is hovered. */
+.nx-card-interactive .nx-mark, .nx-row-interactive .nx-mark, .nx-agent-row .nx-mark,
+.nx-prompt-card .nx-mark, .nx-cast-chip .nx-mark, .nx-chip .nx-mark, .nx-disc-btn .nx-mark {
+  transition: transform var(--nx-dur-2) var(--nx-ease);
+}
+.nx-card-interactive:hover .nx-mark, .nx-row-interactive:hover .nx-mark, .nx-agent-row:hover .nx-mark,
+.nx-prompt-card:hover .nx-mark, .nx-cast-chip:hover .nx-mark, .nx-chip:hover .nx-mark, .nx-disc-btn:hover .nx-mark {
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* The ONEXUS mark's node travels its orbit, slowly. */
+.nx-kernel-mark .nx-mark-orbit { transform-origin: 12px 12px; animation: nx-orbit 14s linear infinite; }
+@keyframes nx-orbit { to { transform: rotate(360deg); } }
+
+/* View entrance: a view rises in once when the route changes. */
+.nx-main.nx-enter .nx-main-inner,
+.nx-main.nx-enter > .nx-watch,
+.nx-main.nx-enter > .nx-cockpit { animation: nx-view-enter 420ms var(--nx-ease) both; }
+@keyframes nx-view-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Mood change: the pill rings once in the new accent. */
+.nx-mood-pill.nx-mood-shift { animation: nx-mood-ring 1.3s var(--nx-ease) both; }
+@keyframes nx-mood-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--nx-accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--nx-accent) 0%, transparent); }
+}
+
+/* Welcome core: the kernel mark sits inside two faint orbit rings. */
+.nx-welcome .nx-welcome-orb { position: relative; overflow: visible; }
+.nx-welcome .nx-welcome-orb::before,
+.nx-welcome .nx-welcome-orb::after {
+  content: ""; position: absolute; border-radius: 50%; pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--nx-accent) 22%, transparent);
+}
+.nx-welcome .nx-welcome-orb::before { inset: -14px; }
+.nx-welcome .nx-welcome-orb::after {
+  inset: -30px; border-style: dashed;
+  border-color: color-mix(in srgb, var(--nx-mood-tint) 14%, transparent);
+  animation: nx-orbit 60s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-main.nx-enter .nx-main-inner, .nx-main.nx-enter > .nx-watch, .nx-main.nx-enter > .nx-cockpit,
+  .nx-mood-pill.nx-mood-shift, .nx-kernel-mark .nx-mark-orbit, .nx-welcome .nx-welcome-orb::after { animation: none; }
+}

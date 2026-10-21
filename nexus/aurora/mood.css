@@ -34,18 +34,20 @@
 
   /* Mood-tinted surfaces and edges. The tint is small (3 to 8 percent),
    * so lightness, and with it text contrast, barely moves. */
-  --nx-surface-sunken:  color-mix(in oklab, var(--nx-mood-tint) 3%, var(--nx-gray-0));
-  --nx-surface-canvas:  color-mix(in oklab, var(--nx-mood-tint) 2%, var(--nx-gray-50));
-  --nx-surface-1:       color-mix(in oklab, var(--nx-mood-tint) 5%, var(--nx-gray-100));
-  --nx-surface-2:       color-mix(in oklab, var(--nx-mood-tint) 6%, var(--nx-gray-200));
-  --nx-surface-3:       color-mix(in oklab, var(--nx-mood-tint) 7%, var(--nx-gray-300));
-  --nx-surface-overlay: color-mix(in oklab, var(--nx-mood-tint) 5%, var(--nx-gray-150));
-  --nx-line-1: color-mix(in srgb, var(--nx-mood-tint) 10%, rgba(255, 255, 255, 0.06));
-  --nx-line-2: color-mix(in srgb, var(--nx-mood-tint) 14%, rgba(255, 255, 255, 0.10));
-  --nx-line-3: color-mix(in srgb, var(--nx-mood-tint) 18%, rgba(255, 255, 255, 0.16));
-  /* Glass: the shell regions let the field show through, a little. */
-  --nx-glass-sunken: color-mix(in srgb, var(--nx-surface-sunken) 64%, transparent);
-  --nx-glass-chrome: color-mix(in srgb, var(--nx-surface-canvas) 70%, transparent);
+  --nx-surface-sunken:  color-mix(in oklab, var(--nx-mood-1) 40%, var(--nx-gray-0));
+  --nx-surface-canvas:  color-mix(in oklab, var(--nx-mood-1) 34%, var(--nx-gray-50));
+  --nx-surface-1:       color-mix(in oklab, var(--nx-mood-tint) 8%, var(--nx-gray-100));
+  --nx-surface-2:       color-mix(in oklab, var(--nx-mood-tint) 10%, var(--nx-gray-200));
+  --nx-surface-3:       color-mix(in oklab, var(--nx-mood-tint) 11%, var(--nx-gray-300));
+  --nx-surface-overlay: color-mix(in oklab, var(--nx-mood-tint) 7%, var(--nx-gray-150));
+  --nx-line-1: color-mix(in srgb, var(--nx-mood-tint) 14%, rgba(255, 255, 255, 0.06));
+  --nx-line-2: color-mix(in srgb, var(--nx-mood-tint) 20%, rgba(255, 255, 255, 0.10));
+  --nx-line-3: color-mix(in srgb, var(--nx-mood-tint) 26%, rgba(255, 255, 255, 0.16));
+  /* Glass: the shell regions let the field show through. */
+  --nx-glass-sunken: color-mix(in srgb, var(--nx-surface-sunken) 58%, transparent);
+  --nx-glass-chrome: color-mix(in srgb, var(--nx-surface-canvas) 62%, transparent);
+  /* Card glass: opaque enough for text, but the field still colors it. */
+  --nx-glass-card: color-mix(in srgb, var(--nx-surface-1) 82%, transparent);
 
   --nx-mood-primary: var(--nx-accent);
   --nx-mood-glow:    var(--nx-accent-glow);
@@ -72,19 +74,22 @@ body.nx-mood {
 /* The ambient field: three lights, set apart so they never stack, plus the
  * accent horizon along the top. A slow drift keeps it alive. */
 .nx-ambient {
+  /* The canvas itself is a mood color (a third of field 1), so the mood is
+   * felt everywhere; the lights reach across the centre instead of hugging
+   * the edges. Peaks stay inside the contrast budget. */
   background:
-    radial-gradient(42% 52% at 8% 4%, var(--nx-mood-1) 0%, transparent 70%),
-    radial-gradient(38% 50% at 96% 96%, var(--nx-mood-2) 0%, transparent 70%),
-    radial-gradient(34% 40% at 72% 18%, var(--nx-mood-3) 0%, transparent 70%),
-    radial-gradient(120% 60% at 50% -30%, color-mix(in srgb, var(--nx-accent) 7%, transparent) 0%, transparent 60%),
+    radial-gradient(70% 80% at 10% 0%, color-mix(in srgb, var(--nx-mood-1) 85%, transparent) 0%, transparent 72%),
+    radial-gradient(60% 75% at 100% 100%, color-mix(in srgb, var(--nx-mood-2) 85%, transparent) 0%, transparent 72%),
+    radial-gradient(55% 60% at 62% 38%, color-mix(in srgb, var(--nx-mood-3) 70%, transparent) 0%, transparent 75%),
+    radial-gradient(120% 60% at 50% -30%, color-mix(in srgb, var(--nx-accent) 8%, transparent) 0%, transparent 60%),
     var(--nx-surface-canvas);
 }
 .nx-ambient::before {
   content: "";
   position: absolute; inset: -12%;
   background:
-    radial-gradient(30% 34% at 30% 60%, color-mix(in srgb, var(--nx-mood-3) 70%, transparent) 0%, transparent 70%),
-    radial-gradient(26% 30% at 78% 52%, color-mix(in srgb, var(--nx-mood-1) 70%, transparent) 0%, transparent 70%);
+    radial-gradient(34% 38% at 34% 62%, color-mix(in srgb, var(--nx-mood-3) 55%, transparent) 0%, transparent 70%),
+    radial-gradient(30% 34% at 76% 46%, color-mix(in srgb, var(--nx-mood-1) 55%, transparent) 0%, transparent 70%);
   opacity: 0.8;
   animation: nx-drift 48s var(--nx-ease-io) infinite alternate;
   pointer-events: none;

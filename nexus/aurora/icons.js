@@ -10,7 +10,7 @@ export const KERNEL_MARK = (size = 24) => `
 <svg width="${size}" height="${size}" viewBox="0 0 24 24" class="nx-kernel-mark" fill="none" aria-hidden="true">
   <circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.75" opacity="0.9"/>
   <circle cx="12" cy="12" r="3" fill="currentColor"/>
-  <circle cx="17.83" cy="6.17" r="1.9" fill="currentColor" stroke="var(--nx-surface-canvas, #0b0c0f)" stroke-width="1.4"/>
+  <g class="nx-mark-orbit"><circle cx="17.83" cy="6.17" r="1.9" fill="currentColor" stroke="var(--nx-surface-canvas, #0b0c0f)" stroke-width="1.4"/></g>
 </svg>`;
 
 /* ── Agent marks ─────────────────────────────────────────────────────────
