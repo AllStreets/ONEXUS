@@ -5496,8 +5496,8 @@ const GUIDE_PAGES = [
     body: "Send a message and Cortex routes it to whoever is best placed to answer. Mention an agent (@oracle, @council) to call it directly. Press ⌘⏎ to send. The composer stays pinned at the bottom and the thread scrolls above it.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 22.6, y: 24.4, label: "1", note: "Agent identity tile and module name." },
-      { x: 49.4, y: 35.2, label: "2", note: "Inline permission card, shown on the first sensitive call." },
+      { x: 22.6, y: 32, label: "1", note: "Agent identity tile and module name." },
+      { x: 49.4, y: 79, label: "2", note: "Inline permission card, shown on the first sensitive call." },
       { x: 47.9, y: 94.4, label: "3", note: "Composer: type, paste or drop files, then press ⌘⏎." },
     ],
     cta: { label: "Try it in a room", action: "compose" },
@@ -5510,7 +5510,7 @@ const GUIDE_PAGES = [
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
       { x: 23.1, y: 94.4, label: "1", note: "The paperclip opens a file picker." },
-      { x: 47.9, y: 31.2, label: "2", note: "Drag a file anywhere on the canvas to drop it in." },
+      { x: 47.9, y: 50.9, label: "2", note: "Drag a file anywhere on the canvas to drop it in." },
       { x: 37.4, y: 91.6, label: "3", note: "Attached files appear as chips above the composer." },
     ],
     cta: { label: "Done", action: null },
@@ -5522,8 +5522,8 @@ const GUIDE_PAGES = [
     body: "Aegis classifies every capability as routine, notable, sensitive or privileged. Routine runs silently. Sensitive pauses the agent until you allow once, allow always in this workspace, or deny. The cockpit log keeps a record of every decision, marked by class.",
     shot: "/aurora/static/guide/02-conversation.png",
     callouts: [
-      { x: 26.4, y: 35.2, label: "1", note: "The amber pulse marks a sensitive request." },
-      { x: 62.6, y: 35.2, label: "2", note: "Three decisions: allow once, always in this workspace, or deny." },
+      { x: 26.4, y: 79, label: "1", note: "The amber pulse marks a sensitive request." },
+      { x: 62.6, y: 79, label: "2", note: "Three decisions: allow once, always in this workspace, or deny." },
       { x: 89.6, y: 36.3, label: "3", note: "The cockpit log records the decision." },
     ],
     cta: { label: "See it in action", action: "seed-permission" },
@@ -5589,9 +5589,9 @@ const GUIDE_PAGES = [
     body: "Open the Workshop from the sidebar or press ⌘E. Pick a runtime such as Python, JavaScript or shell, then press Run or ⌘⏎. Code runs in a subprocess sandbox with a stripped environment, an 8-second timeout, and captured stdout and stderr. Every run lands in Chronicle.",
     shot: "/aurora/static/guide/04-workshop.png",
     callouts: [
-      { x: 25.3, y: 24.2, label: "1", note: "Language picker." },
-      { x: 34.9, y: 43.7, label: "2", note: "Code editor in a monospaced well." },
-      { x: 34.9, y: 76, label: "3", note: "Output: exit code, elapsed time, stdout and stderr." },
+      { x: 25.3, y: 26.6, label: "1", note: "Language picker." },
+      { x: 34.9, y: 45.9, label: "2", note: "Code editor in a monospaced well." },
+      { x: 34.9, y: 78.1, label: "3", note: "Output: exit code, elapsed time, stdout and stderr." },
     ],
     cta: { label: "Open the Workshop with ⌘E", action: "workshop" },
   },
@@ -5602,7 +5602,7 @@ const GUIDE_PAGES = [
     body: "Press ⌘/ to open Search. Queries route through aegis.network() to DuckDuckGo's instant-answer API by default, with no tracking. Set NEXUS_BRAVE_KEY for organic results from Brave Search. Wikipedia is always a fallback, so you never see an empty page.",
     shot: "/aurora/static/guide/05-search.png",
     callouts: [
-      { x: 47.9, y: 24.4, label: "1", note: "The search bar. Press ⌘/ from anywhere to get here." },
+      { x: 47.9, y: 26.8, label: "1", note: "The search bar. Press ⌘/ from anywhere to get here." },
       { x: 47.9, y: 40, label: "2", note: "Results: title, URL, snippet and source." },
     ],
     cta: { label: "Open Search with ⌘/", action: "search" },
@@ -5614,8 +5614,8 @@ const GUIDE_PAGES = [
     body: "ONEXUS ships with the AllStreets/ONEXUS-Agents catalog bundled. Browse it from the sidebar. Turn on Runnable only to see the 571 with MCP adapters that you can launch in one click. Each card links to its source repo.",
     shot: "/aurora/static/guide/06-catalog.png",
     callouts: [
-      { x: 47.9, y: 23.3, label: "1", note: "Filters: search, category and Runnable only." },
-      { x: 27.9, y: 53.3, label: "2", note: "Each card has Launch, Compose, Trust and a source link." },
+      { x: 47.9, y: 25.7, label: "1", note: "Filters: search, category and Runnable only." },
+      { x: 27.9, y: 55.7, label: "2", note: "Each card has Launch, Compose, Trust and a source link." },
     ],
     cta: { label: "Browse the catalog", action: "catalog" },
   },

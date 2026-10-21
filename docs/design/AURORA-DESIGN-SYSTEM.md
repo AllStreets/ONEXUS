@@ -69,10 +69,10 @@ The mood is central to ONEXUS, so it sets the whole color atmosphere, not just t
 | Token | Role |
 | --- | --- |
 | `--nx-accent` / `--nx-accent-strong` | Interactive color: focus, primary actions, live states, the active workspace |
-| `--nx-mood-1`, `-2`, `-3` | The ambient field: three lights behind the content (top left, bottom right, upper right), set apart so they never stack, plus a slow drift |
-| `--nx-mood-tint` | Mixed into every surface (2 to 7 percent), every line (10 to 18 percent) and the chrome band |
+| `--nx-mood-1`, `-2`, `-3` | The ambient field: three wide lights (top left, bottom right, and one across the center) plus a slow drift. The canvas and sunken surfaces are themselves a third of field 1, so the mood shows even where no light reaches |
+| `--nx-mood-tint` | Mixed into cards and raised surfaces (7 to 11 percent), every line (14 to 26 percent) and the chrome band |
 
-The shell regions (chrome, sidebar, rail) are mood-tinted glass over the field; cards are mood-tinted but opaque. All five colors are registered with `@property`, so changing mood crossfades the whole window over about 1.4 seconds; under `prefers-reduced-motion` it snaps. `prefers-contrast: more` drops the field and the tints.
+The shell regions (chrome, sidebar, rail) are mood-tinted glass over the field. Cards and panels use `--nx-glass-card`, the card surface at 82 percent, so the field colors them while text stays on a solid enough ground. Headers and primary actions carry the accent (see Signature details). The test: the mood should be nameable from any screenshot of any view. All five colors are registered with `@property`, so changing mood crossfades the whole window over about 1.4 seconds; under `prefers-reduced-motion` it snaps. `prefers-contrast: more` drops the field and the tints.
 
 **Contrast rule.** Field colors are chosen against a luminance budget, not by eye: at the brightest point of a field, with the accent horizon on top, `--nx-fg-3` must keep 4.8:1 and `--nx-fg-2` 6.5:1. This is measured on real pixels for every mood (hide the text, screenshot, sample the brightest background behind each text box). To change a field color, keep its relative luminance at or under 0.035.
 
@@ -99,6 +99,19 @@ Agents are never drawn as a circle with a dot. Every agent has a mark from `icon
 - `agentDisc(slug, { size, trust })` is the one call site. `trust` adds a charge bar inside the tile. `agentColors(slug)` returns the mark's color pair for tinting a card (`.nx-agent-tinted`) or a detail header (`.nx-agent-hero`); `agentMarkDataURL(slug)` gives the canvas scene the same mark.
 
 Small dots stay only where they mean status (live, ok, warn, a permission class) and are always paired with a word.
+
+## Signature details
+
+A short list of details that make Aurora recognisable. They live in the "Signature details" section of `components.css` and are used the same way everywhere, never one-off.
+
+- **Orbit tick.** Every `.nx-section-label` opens with a 10px accent tick.
+- **Page header.** `.nx-page-eyebrow` (and the Watch eyebrow) is the accent, led by a 12px ONEXUS orbit mark. The title shades from `--nx-fg-1` into the accent. A mood rule, accent fading to a line, closes the header.
+- **Lit primary.** `.nx-btn-primary` is a vertical accent gradient with a top light and an accent glow. Still one per surface.
+- **Composer.** A gradient edge in the mood (accent, tint, line) and a soft accent shadow; on focus the edge lights fully. It is the most polished surface in the app, with the permission card.
+- **Permission card.** The class color sets a 3px edge, a faint diagonal hatch and a wash fading left to right; the eyebrow leads with a shield.
+- **Hex core.** Empty-state icons sit on the same hex as a built-in agent, filled with the accent. The welcome mark sits inside two orbit rings, the outer one dashed and turning once a minute.
+- **Kernel stage.** The Watch scene and the rail's live scene sit on a pool of field 1 behind the core; Watch adds faint concentric orbit rings.
+- **Motion with a job.** A view rises in 6px when the route changes (not on re-render). The mood pill rings once in the new accent when the mood changes. The ONEXUS mark's node travels its orbit every 14 seconds. Marks lift a touch when their row or card is hovered. Loading shimmer is accent-tinted. All of it stops under `prefers-reduced-motion`.
 
 ## Components
 
