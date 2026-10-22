@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/wordmark-v2.svg" alt="ONEXUS — the operating system for agents" width="100%"/>
+<img src=".github/assets/wordmark-v2.svg" alt="ONEXUS, an operating system for agents" width="100%"/>
 
 &nbsp;
 
@@ -11,7 +11,7 @@
 ---
 
 <p align="center">
-  <img src=".github/assets/hero-calm-v2.png" alt="ONEXUS Aurora dashboard" width="100%"/>
+  <img src=".github/assets/hero-calm-v2.png" alt="Aurora in calm focus: a conversation in the Home lab workspace where Oracle asks for fs.write and Aegis waits for an answer" width="100%"/>
 </p>
 
 <p align="center"><em>Aurora, the ONEXUS shell. One local process: tool calls an agent routes through the runtime are checked by Aegis and logged to Chronicle, and a static import check keeps the kernel off the network.</em></p>
@@ -153,20 +153,37 @@ The whole shell **shifts color with what's happening**. Aegis observes the kerne
 
 <table>
 <tr>
-<td width="50%"><img src=".github/assets/hero-calm-v2.png" alt="calm focus — violet"/></td>
-<td width="50%"><img src=".github/assets/hero-creative-v2.png" alt="creative — navy blue"/></td>
+<td width="50%"><img src=".github/assets/hero-calm-v2.png" alt="Calm focus, teal: a conversation with a pending permission request"/></td>
+<td width="50%"><img src=".github/assets/hero-creative-v2.png" alt="Creative, ultramarine: the agent store"/></td>
 </tr>
 <tr>
-<td align="center"><strong>calm focus</strong> · violet · default, low load</td>
-<td align="center"><strong>creative</strong> · vivid navy · open-ended ideation</td>
+<td align="center"><strong>calm focus</strong> · teal · default, low load</td>
+<td align="center"><strong>creative</strong> · ultramarine · open-ended ideation</td>
 </tr>
 <tr>
-<td width="50%"><img src=".github/assets/hero-deepflow-v2.png" alt="deep flow — jewel green"/></td>
-<td width="50%"><img src=".github/assets/hero-alert-v2.png" alt="alert — crimson"/></td>
+<td width="50%"><img src=".github/assets/hero-deepflow-v2.png" alt="Deep flow, jade: the workspaces grid"/></td>
+<td width="50%"><img src=".github/assets/hero-alert-v2.png" alt="Alert, signal red: the kernel watch view after a denied request"/></td>
 </tr>
 <tr>
-<td align="center"><strong>deep flow</strong> · jewel green · long uninterrupted stretches</td>
-<td align="center"><strong>alert</strong> · crimson · trust collapse or denied call</td>
+<td align="center"><strong>deep flow</strong> · jade · long uninterrupted stretches</td>
+<td align="center"><strong>alert</strong> · signal red · trust collapse or denied call</td>
+</tr>
+</table>
+
+<p align="center">
+  <img src=".github/assets/clips/mood-shift.webp" alt="Picking creative, deep flow and then alert from the mood pill, and the whole window changing color each time" width="100%"/>
+</p>
+
+<table>
+<tr>
+<td width="33%"><a href=".github/assets/clips/mood-shift.mp4"><img src=".github/assets/clips/poster-mood-shift.png" alt="Clip: changing the mood"/></a></td>
+<td width="33%"><a href=".github/assets/clips/permission.mp4"><img src=".github/assets/clips/poster-permission.png" alt="Clip: answering a permission request with Allow once"/></a></td>
+<td width="33%"><a href=".github/assets/clips/store.mp4"><img src=".github/assets/clips/poster-store.png" alt="Clip: finding an agent in the store"/></a></td>
+</tr>
+<tr>
+<td align="center"><a href=".github/assets/clips/mood-shift.mp4">Changing the mood</a> · 13s</td>
+<td align="center"><a href=".github/assets/clips/permission.mp4">Answering a permission request</a> · 9s</td>
+<td align="center"><a href=".github/assets/clips/store.mp4">Finding an agent in the store</a> · 12s</td>
 </tr>
 </table>
 
@@ -183,7 +200,7 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 
 - Workspace pills with **25 color tones** to pick from on create:
 
-  <img src=".github/assets/workspace-tones.svg" alt="The 25 workspace tones — indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, mocha, coral, rose, crimson, magenta, fuchsia, plum, orchid, slate, graphite, midnight" width="100%"/>
+  <img src=".github/assets/workspace-tones.svg" alt="The 25 workspace tones: indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, coral, rose, crimson, magenta, fuchsia, plum, orchid, mocha, slate, graphite, midnight" width="100%"/>
 
 - Hover any pill → reveals a neon-red trash icon to delete that workspace
 - Recent agents block — built-in identity discs with trust tier
@@ -260,10 +277,10 @@ Aegis classifies every capability into one of four classes:
 | **Privileged** | coral | never auto-grant — Settings → Security only |
 
 <p align="center">
-  <img src=".github/assets/trust-collapse-v2.svg" alt="Trust meter — at trust below 0.50 every grant collapses and alert mood fires" width="100%"/>
+  <img src=".github/assets/trust-collapse-v2.svg" alt="Trust tiers from 0 to 1: observer, advisor from 0.25, monitor from 0.50, executor from 0.75, autonomous at 1.0. Below 0.50 every grant collapses and the shell turns to alert; from 0.75 notable calls run without a prompt" width="100%"/>
 </p>
 
-The kernel writes every decision to **Chronicle**, a SQLite ledger that ONEXUS only ever appends to (it isn't hash-chained yet, so it isn't tamper-evident against another process running as you). The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster: search every Aegis-registered module, and click revoke to drop its trust to 0 and remove its grants.
+The kernel writes every decision to **Chronicle**, a SQLite ledger that ONEXUS only ever appends to. Each row is hash-chained to the one before it, so an edited or deleted row is named when the chain is verified. The Aurora cockpit log surfaces the last N entries by class. Settings → Security shows the live trust roster: search every Aegis-registered module, and click revoke to drop its trust to 0 and remove its grants.
 
 ---
 
@@ -291,7 +308,7 @@ Click any disc in the cockpit to see its declared tools, permission classes, tru
 ## Architecture
 
 <p align="center">
-  <img src=".github/assets/architecture-v2.svg" alt="ONEXUS architecture — shell on top, the five kernel components (Cortex, Engram, Pulse, Chronicle, Aegis), modules + agent catalog at the bottom" width="100%"/>
+  <img src=".github/assets/architecture-v2.svg" alt="ONEXUS architecture: the Aurora shell on top, the kernel with Cortex, Engram, Pulse, Chronicle and Aegis in the middle, and built-in modules, the agent catalog and the confined agent store at the bottom" width="100%"/>
 </p>
 
 **The kernel never touches the network.** Every outbound HTTP request from any built-in module goes through `aegis.network()` which logs to Chronicle, checks the agent's `net.*` capability declaration, and runs through `AegisTransport` (a wrapped httpx client). A static invariant test enforces that no kernel module other than `aegis.py` imports `httpx` or `requests`.
