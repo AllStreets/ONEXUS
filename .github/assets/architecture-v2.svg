@@ -1,218 +1,128 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-label="ONEXUS architecture diagram">
-  <title>ONEXUS architecture</title>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" role="img" aria-labelledby="t d">
+  <title id="t">How ONEXUS fits together</title>
+  <desc id="d">The Aurora shell talks to the kernel over HTTP and WebSocket. The kernel has five components: Cortex, Engram, Pulse, Chronicle and Aegis, which checks every call against the agent's manifest. Below it sit 16 built-in modules, the ONEXUS-Agents catalog with 5,063 manifests, 558 marked runnable and 21 hand-written adapters, and the agent store with 53 verified agents that each run in their own container behind an egress proxy.</desc>
   <defs>
-    <!-- Shell band gradient (top) -->
-    <linearGradient id="shell" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"  stop-color="#1a1626"/>
-      <stop offset="50%" stop-color="#231a36"/>
-      <stop offset="100%" stop-color="#1a1626"/>
-    </linearGradient>
-
-    <!-- Kernel component gradient (the 4 inner boxes) -->
-    <linearGradient id="kernel" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#1f1a30"/>
-      <stop offset="100%" stop-color="#160f24"/>
-    </linearGradient>
-
-    <!-- Aegis gradient (highlighted) -->
-    <linearGradient id="aegis" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"  stop-color="#3a2868"/>
-      <stop offset="100%" stop-color="#1c0d3a"/>
-    </linearGradient>
-
-    <!-- Bottom band gradient (modules + catalog) -->
-    <linearGradient id="band" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#100c1c"/>
-      <stop offset="50%"  stop-color="#150e22"/>
-      <stop offset="100%" stop-color="#100c1c"/>
-    </linearGradient>
-
-    <!-- Arrow markers -->
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0,0 L10,5 L0,10 z" fill="#b48bff"/>
+    <radialGradient id="field" cx="0.08" cy="0" r="1">
+      <stop offset="0" stop-color="#0d2d30" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#0d2d30" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="field2" cx="1" cy="1" r="0.8">
+      <stop offset="0" stop-color="#0c2a49" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#0c2a49" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="#9ba2ad" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
-    <marker id="arrow-back" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#b48bff"/>
-    </marker>
-
-    <!-- Pure-blur filter, used on the glow shape ONLY (not on the box that
-         contains the text — applying a Gaussian blur to a group that also
-         holds text would soften the text rendering, even with feMerge). -->
-    <filter id="aegis-glow-only" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="18"/>
-    </filter>
   </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .h1 { font-size: 24px; font-weight: 600; fill: #eceef2; letter-spacing: -0.3px; }
+    .sub { font-size: 14px; fill: #9ba2ad; }
+    .h2 { font-size: 17px; font-weight: 600; fill: #eceef2; }
+    .h3 { font-size: 15px; font-weight: 600; fill: #eceef2; }
+    .body { font-size: 13px; fill: #b6bcc6; }
+    .meta { font-size: 12px; fill: #9ba2ad; }
+    .stat { font-size: 24px; font-weight: 600; fill: #eceef2; letter-spacing: -0.3px; }
+    .panel { fill: #111317; fill-opacity: 0.82; stroke: #4ed5d5; stroke-opacity: 0.16; }
+    .card { fill: #16191e; stroke: #ffffff; stroke-opacity: 0.09; }
+  </style>
 
-  <!-- Canvas -->
-  <rect width="1280" height="720" fill="#08060f"/>
+  <rect width="1280" height="820" rx="16" fill="#0b0c0f"/>
+  <rect width="1280" height="820" rx="16" fill="url(#field)"/>
+  <rect width="1280" height="820" rx="16" fill="url(#field2)"/>
 
-  <!-- ─── Shell band (top) ─────────────────────────────────────────────── -->
-  <!-- Outer shell container — flat fill so the eye doesn't read a gradient. -->
-  <rect x="40" y="40" width="1200" height="124" rx="16" fill="#160f24"
-        stroke="rgba(180,139,255,0.18)" stroke-width="1"/>
+  <text x="48" y="64" class="h1">How ONEXUS fits together</text>
+  <text x="48" y="92" class="sub">One local Python process. Every call an agent makes through it is checked by Aegis before it runs.</text>
 
-  <!-- SHELL label -->
-  <text x="640" y="70" text-anchor="middle"
-        font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
-        letter-spacing="0.32em" fill="#c9b8ff">ONEXUS · SHELL</text>
-
-  <!-- Five region chips — each label in its own rounded box for a more
-       professional, scannable feel. Spaced evenly across the band. -->
-  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="16"
-     font-weight="600" fill="#f3ecff" text-anchor="middle">
-
-    <!-- chrome -->
-    <rect x="76"   y="104" width="180" height="36" rx="10"
-          fill="rgba(180,139,255,0.10)"
-          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
-    <text x="166"  y="128">chrome</text>
-
-    <!-- sidebar -->
-    <rect x="280"  y="104" width="180" height="36" rx="10"
-          fill="rgba(180,139,255,0.10)"
-          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
-    <text x="370"  y="128">sidebar</text>
-
-    <!-- conversation -->
-    <rect x="484"  y="104" width="220" height="36" rx="10"
-          fill="rgba(180,139,255,0.10)"
-          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
-    <text x="594"  y="128">conversation</text>
-
-    <!-- cockpit -->
-    <rect x="728"  y="104" width="180" height="36" rx="10"
-          fill="rgba(180,139,255,0.10)"
-          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
-    <text x="818"  y="128">cockpit</text>
-
-    <!-- overlays -->
-    <rect x="932"  y="104" width="220" height="36" rx="10"
-          fill="rgba(180,139,255,0.10)"
-          stroke="rgba(180,139,255,0.35)" stroke-width="1"/>
-    <text x="1042" y="128">overlays</text>
-  </g>
-
-  <!-- ─── Kernel band (middle) — 4 components + Aegis below ────────────── -->
-
-  <!-- 4 top kernel components -->
-  <g font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">
-    <!-- Cortex -->
-    <g>
-      <rect x="120" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
-            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
-      <text x="220" y="260" font-size="22" font-weight="700" fill="#f3ecff">Cortex</text>
-      <text x="220" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">ROUTING</text>
-      <text x="220" y="314" font-size="12" fill="#a8a0c8">pattern · semantic ·</text>
-      <text x="220" y="330" font-size="12" fill="#a8a0c8">LLM fallback</text>
-    </g>
-
-    <!-- Engram -->
-    <g>
-      <rect x="380" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
-            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
-      <text x="480" y="260" font-size="22" font-weight="700" fill="#f3ecff">Engram</text>
-      <text x="480" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">MEMORY</text>
-      <text x="480" y="314" font-size="12" fill="#a8a0c8">working · episodic ·</text>
-      <text x="480" y="330" font-size="12" fill="#a8a0c8">semantic search</text>
-    </g>
-
-    <!-- Pulse -->
-    <g>
-      <rect x="640" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
-            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
-      <text x="740" y="260" font-size="22" font-weight="700" fill="#f3ecff">Pulse</text>
-      <text x="740" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">HEARTBEAT</text>
-      <text x="740" y="314" font-size="12" fill="#a8a0c8">module ticks ·</text>
-      <text x="740" y="330" font-size="12" fill="#a8a0c8">background work</text>
-    </g>
-
-    <!-- Chronicle -->
-    <g>
-      <rect x="900" y="220" width="200" height="120" rx="12" fill="url(#kernel)"
-            stroke="rgba(180,139,255,0.45)" stroke-width="1.5"/>
-      <text x="1000" y="260" font-size="22" font-weight="700" fill="#f3ecff">Chronicle</text>
-      <text x="1000" y="288" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.18em" fill="#c9b8ff">AUDIT</text>
-      <text x="1000" y="314" font-size="12" fill="#a8a0c8">immutable</text>
-      <text x="1000" y="330" font-size="12" fill="#a8a0c8">append-only</text>
-    </g>
-
-    <!-- Aegis — highlighted, centered below.
-         The glow is rendered FIRST as a separate blurred shape so the
-         actual box + text stay perfectly crisp on top. -->
-
-    <!-- Violet halo (blurred shape behind the box) -->
-    <rect x="410" y="420" width="460" height="160" rx="20"
-          fill="#5d3aa8" opacity="0.55"
-          filter="url(#aegis-glow-only)"/>
-
-    <!-- The actual Aegis box — crisp -->
-    <rect x="430" y="440" width="420" height="120" rx="14" fill="url(#aegis)"
-          stroke="#b48bff" stroke-width="2"/>
-
-    <!-- Crisp text on top -->
-    <g text-anchor="middle">
-      <text x="640" y="478" font-size="26" font-weight="700" fill="#f3ecff">Aegis</text>
-      <text x="640" y="506" font-family="ui-monospace,monospace" font-size="11" letter-spacing="0.20em" fill="#b48bff">CAPABILITY ARBITER</text>
-      <text x="640" y="532" font-size="13" fill="#e8defc">every tool call passes through · class + trust</text>
-      <text x="640" y="548" font-size="13" fill="#a8a0c8">+ grants + first-use prompt + chronicle log</text>
-    </g>
-  </g>
-
-  <!-- ─── Connecting arrows ────────────────────────────────────────────── -->
-  <g stroke="#b48bff" stroke-width="2" fill="none">
-    <!-- Between top 4 -->
-    <path d="M320,280 L380,280" marker-end="url(#arrow)"/>
-    <path d="M380,290 L320,290" marker-end="url(#arrow-back)"/>
-    <path d="M580,280 L640,280" marker-end="url(#arrow)"/>
-    <path d="M640,290 L580,290" marker-end="url(#arrow-back)"/>
-    <path d="M840,280 L900,280" marker-end="url(#arrow)"/>
-    <path d="M900,290 L840,290" marker-end="url(#arrow-back)"/>
-
-    <!-- Cortex → Aegis (the gating path) -->
-    <path d="M220,340 L220,500 L430,500" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
-  </g>
-
-  <!-- Label on the arrow from Cortex to Aegis -->
-  <text x="250" y="430" font-family="ui-monospace,monospace" font-size="10"
-        letter-spacing="0.10em" fill="#8a8098">routes through</text>
-
-  <!-- ─── Bottom band (modules + catalog) ──────────────────────────────── -->
-  <rect x="40" y="610" width="1200" height="90" rx="14" fill="url(#band)"
-        stroke="rgba(232,222,252,0.10)"/>
-
-  <!-- Modules column -->
+  <rect x="48" y="124" width="1184" height="112" rx="12" class="panel"/>
+  <text x="76" y="170" class="h2">Aurora shell</text>
+  <text x="76" y="194" class="meta">In the browser, or the Tauri app</text>
   <g>
-    <text x="70" y="640" font-family="ui-monospace,monospace" font-size="11"
-          letter-spacing="0.28em" fill="#c9b8ff">MODULES</text>
-    <text x="70" y="666" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#e8defc">
-      council · specter · oracle · wraith · echo
-    </text>
-    <text x="70" y="685" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#e8defc">
-      sentry · autonomic · legacy · consciousness · agents
-    </text>
+    <rect x="432" y="148" width="182" height="64" rx="8" class="card"/>
+    <text x="450" y="176" class="h3">Chrome</text>
+    <text x="450" y="196" class="meta">workspace, mood, clock</text>
+    <rect x="626" y="148" width="182" height="64" rx="8" class="card"/>
+    <text x="644" y="176" class="h3">Sidebar</text>
+    <text x="644" y="196" class="meta">workspaces and tools</text>
+    <rect x="820" y="148" width="182" height="64" rx="8" class="card"/>
+    <text x="838" y="176" class="h3">Views</text>
+    <text x="838" y="196" class="meta">conversation, store, watch</text>
+    <rect x="1014" y="148" width="194" height="64" rx="8" class="card"/>
+    <text x="1032" y="176" class="h3">Cockpit rail</text>
+    <text x="1032" y="196" class="meta">trust, permissions, kernel</text>
   </g>
 
-  <!-- vertical divider -->
-  <line x1="700" y1="625" x2="700" y2="685" stroke="rgba(232,222,252,0.10)"/>
+  <line x1="640" y1="240" x2="640" y2="280" stroke="#9ba2ad" stroke-width="1.4" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="654" y="265" class="meta">HTTP and WebSocket</text>
 
-  <!-- Catalog column -->
+  <rect x="48" y="284" width="1184" height="252" rx="12" class="panel"/>
+  <text x="76" y="322" class="h2">Kernel</text>
+  <text x="140" y="322" class="meta">five components</text>
+
+  <rect x="72" y="342" width="275" height="86" rx="8" class="card"/>
+  <text x="92" y="374" class="h3">Cortex</text>
+  <text x="92" y="398" class="body">Routes each message to a module</text>
+
+  <rect x="359" y="342" width="275" height="86" rx="8" class="card"/>
+  <text x="379" y="374" class="h3">Engram</text>
+  <text x="379" y="398" class="body">Working, episodic and semantic</text>
+  <text x="379" y="416" class="body">memory, plus Atlas facts</text>
+
+  <rect x="646" y="342" width="275" height="86" rx="8" class="card"/>
+  <text x="666" y="374" class="h3">Pulse</text>
+  <text x="666" y="398" class="body">In-process event bus</text>
+
+  <rect x="933" y="342" width="275" height="86" rx="8" class="card"/>
+  <text x="953" y="374" class="h3">Chronicle</text>
+  <text x="953" y="398" class="body">Append-only ledger, hash-chained</text>
+  <text x="953" y="416" class="body">so an edited row is caught</text>
+
+  <rect x="72" y="444" width="1136" height="68" rx="8" fill="#4ed5d5" fill-opacity="0.08" stroke="#4ed5d5" stroke-opacity="0.55"/>
+  <circle cx="102" cy="478" r="8.25" fill="none" stroke="#4ed5d5" stroke-width="1.75"/>
+  <circle cx="102" cy="478" r="3" fill="#4ed5d5"/>
+  <text x="124" y="474" class="h3" style="fill:#7fe0d6">Aegis</text>
+  <text x="124" y="496" class="meta">the capability arbiter</text>
+  <text x="300" y="474" class="body">Checks every tool call, file open and network request against the agent's manifest,</text>
+  <text x="300" y="494" class="body">then allows it, asks you, or denies it. Trust and grants decide which.</text>
+
+  <g stroke="#9ba2ad" stroke-width="1.4">
+    <line x1="241" y1="540" x2="241" y2="572" marker-start="url(#arrow)"/>
+    <line x1="640" y1="540" x2="640" y2="572" marker-start="url(#arrow)"/>
+    <line x1="1039" y1="540" x2="1039" y2="572" marker-start="url(#arrow)"/>
+  </g>
+
+  <rect x="48" y="576" width="386" height="196" rx="12" class="panel"/>
+  <text x="72" y="610" class="h2">Built-in modules</text>
+  <text x="72" y="632" class="meta">16, each with its own manifest and trust score</text>
+  <text x="72" y="666" class="body">council · specter · oracle · wraith · echo</text>
+  <text x="72" y="688" class="body">legacy · sentry · autonomic · consciousness</text>
+  <text x="72" y="710" class="body">sigil · atlas · chronos · prism · herald</text>
+  <text x="72" y="732" class="body">serendipity · agents, the catalog dispatcher</text>
+
+  <rect x="447" y="576" width="386" height="196" rx="12" class="panel"/>
+  <text x="471" y="610" class="h2">Agent catalog</text>
+  <text x="471" y="632" class="meta">ONEXUS-Agents, read from a sibling checkout</text>
+  <text x="471" y="682" class="stat">5,063</text>
+  <text x="471" y="704" class="meta">manifests</text>
+  <text x="595" y="682" class="stat">558</text>
+  <text x="595" y="704" class="meta">marked runnable</text>
+  <text x="719" y="682" class="stat">21</text>
+  <text x="719" y="704" class="meta">adapters</text>
+  <text x="471" y="744" class="body">40 categories. Reloaded from disk every 5 minutes.</text>
+
+  <rect x="846" y="576" width="386" height="196" rx="12" class="panel"/>
+  <text x="870" y="610" class="h2">Agent store</text>
+  <text x="870" y="632" class="meta">53 verified agents, each in its own container</text>
   <g>
-    <text x="720" y="640" font-family="ui-monospace,monospace" font-size="11"
-          letter-spacing="0.28em" fill="#c9b8ff">AGENT CATALOG · ONEXUS-AGENTS</text>
-    <text x="720" y="666" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#e8defc">
-      6,745 manifests · 571 runnable (MCP adapter)
-    </text>
-    <text x="720" y="685" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#a8a0c8">
-      nightly rebuild · vendored at build time
-    </text>
+    <rect x="870" y="652" width="104" height="46" rx="8" class="card"/>
+    <text x="922" y="680" class="body" text-anchor="middle">Agent</text>
+    <line x1="978" y1="675" x2="1002" y2="675" stroke="#9ba2ad" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <rect x="1006" y="652" width="104" height="46" rx="8" class="card"/>
+    <text x="1058" y="680" class="body" text-anchor="middle">Egress proxy</text>
+    <line x1="1114" y1="675" x2="1134" y2="675" stroke="#9ba2ad" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <rect x="1138" y="652" width="70" height="46" rx="8" fill="none" stroke="#76cf8a" stroke-opacity="0.6" stroke-dasharray="3 3"/>
+    <text x="1173" y="680" class="body" text-anchor="middle">Hosts</text>
   </g>
-
-  <!-- Bottom callout: kernel.network.io = ∅ -->
-  <g transform="translate(640 760)">
-    <text text-anchor="middle"
-          font-family="ui-monospace,'JetBrains Mono',monospace" font-size="11"
-          letter-spacing="0.20em" fill="#9affb6"
-          opacity="0.9">kernel.network.io = ∅ · STATIC-VERIFIED</text>
-  </g>
+  <text x="870" y="726" class="meta">Read-only root, none of your files. It reaches only</text>
+  <text x="870" y="744" class="meta">the hosts you approve; with none, no network at all.</text>
 </svg>
