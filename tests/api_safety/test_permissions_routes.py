@@ -62,3 +62,26 @@ def test_agents_install_confirm_persists(client, tmp_path):
     resp = client.post("/api/agents/install", json={"manifest": manifest, "confirm": True})
     assert resp.status_code == 200
     assert (tmp_path / "agents" / "real" / "manifest.json").exists()
+
+
+def test_deny_is_logged_in_the_shape_the_cockpit_counts(client):
+    """Pressing Deny must leave a chronicle row the cockpit's "denied"
+    counter recognises: source aegis, action permission_revoked, decision
+    deny. The rail used to count only gate verdicts, so a user deny never
+    moved it."""
+    with client:
+        ticket = client.post("/api/permissions/seed", json={
+            "agent_slug": "oracle", "capability": "fs.write",
+            "permission_class": "Sensitive", "target": "src/kernel/cortex.py",
+        }).json()["ticket_id"]
+        assert client.post("/api/permissions/decide", json={
+            "ticket_id": ticket, "decision": "deny",
+        }).json() == {"ok": True}
+        entries = client.get("/api/chronicle?source=aegis&limit=50").json()["entries"]
+    denies = [e for e in entries if e["action"] == "permission_revoked"]
+    assert denies and denies[0]["payload"]["decision"] == "deny"
+    assert denies[0]["payload"]["target"] == "src/kernel/cortex.py"
+
+    js = client.get("/aurora/static/app.js").text
+    assert 'e.action === "permission_revoked"' in js
+    assert 'String(p.decision || "").toLowerCase() === "deny"' in js

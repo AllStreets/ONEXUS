@@ -36,23 +36,27 @@ class DecideRequest(BaseModel):
     decision: str  # "allow_once" | "allow_always_in_workspace" | "allow_always_everywhere" | "deny"
 
 
+def _pending_views(inbox: PermissionInbox) -> list[dict]:
+    """One shape for every pending ticket, shared by the REST and WebSocket
+    feeds so the inline card never loses a field (such as ``target``) when
+    the push stream refreshes it."""
+    return [
+        PendingView(
+            id=p.id,
+            agent_slug=p.request.agent_slug,
+            capability=p.request.capability,
+            permission_class=p.request.permission_class,
+            workspace_id=p.request.workspace_id,
+            preview=p.request.preview,
+            target=p.request.target,
+        ).model_dump()
+        for p in inbox.pending()
+    ]
+
+
 @router.get("/pending")
 async def pending(request: Request) -> dict:
-    inbox = _get_inbox(request)
-    return {
-        "pending": [
-            PendingView(
-                id=p.id,
-                agent_slug=p.request.agent_slug,
-                capability=p.request.capability,
-                permission_class=p.request.permission_class,
-                workspace_id=p.request.workspace_id,
-                preview=p.request.preview,
-                target=p.request.target,
-            ).model_dump()
-            for p in inbox.pending()
-        ],
-    }
+    return {"pending": _pending_views(_get_inbox(request))}
 
 
 @router.websocket("/ws")
@@ -61,21 +65,7 @@ async def permissions_ws(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            inbox = _get_inbox(websocket)
-            pending = inbox.pending()
-            await websocket.send_json({
-                "pending": [
-                    {
-                        "id": p.id,
-                        "agent_slug": p.request.agent_slug,
-                        "capability": p.request.capability,
-                        "permission_class": p.request.permission_class,
-                        "workspace_id": p.request.workspace_id,
-                        "preview": p.request.preview,
-                    }
-                    for p in pending
-                ],
-            })
+            await websocket.send_json({"pending": _pending_views(_get_inbox(websocket))})
             await asyncio.sleep(2.0)
     except WebSocketDisconnect:
         return

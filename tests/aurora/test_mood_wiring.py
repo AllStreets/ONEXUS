@@ -32,3 +32,31 @@ def test_mood_signals_initialized_on_startup(client):
     assert body["mood"] in valid_moods
     assert isinstance(body.get("drift_seconds"), int)
     assert "reason" in body
+
+
+def _mood_after(client, predicate, tries=40):
+    import time
+    for _ in range(tries):
+        mood = client.get("/api/mood/current").json()["mood"]
+        if predicate(mood):
+            return mood
+        time.sleep(0.05)
+    return mood
+
+
+def test_revoking_an_agent_turns_the_shell_alert(client):
+    """A revoke drops trust to 0 and collapses grants; the README and the
+    trust diagram promise the shell turns to alert. The Pulse handler used to
+    latch the flag without a timestamp, so the TTL treated it as stale and the
+    mood never changed."""
+    with client:
+        assert client.get("/api/mood/current").json()["mood"] == "calm_focus"
+        assert client.post("/api/trust/specter/revoke").json()["revoked"] is True
+        assert _mood_after(client, lambda m: m == "alert") == "alert"
+
+
+def test_a_rise_below_half_is_not_a_collapse(client):
+    """Modules start at 0.30; nudging one up to 0.34 must not raise the alarm."""
+    with client:
+        client.post("/api/trust/oracle/adjust", json={"delta": 0.04, "reason": "test"})
+        assert _mood_after(client, lambda m: m == "alert", tries=10) == "calm_focus"

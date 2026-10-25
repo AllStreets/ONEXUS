@@ -213,12 +213,17 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
                 app.state.mood_signals = updated
 
         async def _on_trust_change(msg):
-            _signals = app.state.mood_signals
-            score = (msg.payload or {}).get("new_score")
-            if score is not None and score < 0.5:
-                import dataclasses
-                updated = dataclasses.replace(_signals, trust_collapsed=True)
-                app.state.mood_signals = updated
+            # A collapse is a FALL that leaves an agent under 0.50 (a revoke, a
+            # thumbs-down), not any score below it: modules start at 0.30, so a
+            # rise from 0.30 to 0.34 is not an alarm. It is a momentary
+            # observation: /api/mood reads it as fresh for its signal TTL, then
+            # the shell steps back down. Without the timestamp the flag was
+            # treated as stale on arrival and a revoke never turned the shell red.
+            import time as _time
+            p = msg.payload or {}
+            score, old = p.get("new_score"), p.get("old_score")
+            if score is not None and score < 0.5 and (old is None or score < old):
+                app.state.trust_collapse_at = _time.monotonic()
 
         kernel.pulse.subscribe("cortex.route", _on_cortex_route)
         kernel.pulse.subscribe("aegis.trust_change", _on_trust_change)

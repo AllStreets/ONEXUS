@@ -124,8 +124,14 @@ def _effective_signals(app_state) -> MoodSignals:
     go stale. This makes mood live and self-recovering instead of sticky."""
     signals = getattr(app_state, "mood_signals", None) or MoodSignals()
     at = getattr(app_state, "mood_signals_at", None)
-    if at is None or (time.monotonic() - at) > _SIGNAL_TTL:
-        return MoodSignals(workspace_tone=getattr(signals, "workspace_tone", "INDIGO"))
+    now = time.monotonic()
+    if at is None or (now - at) > _SIGNAL_TTL:
+        signals = MoodSignals(workspace_tone=getattr(signals, "workspace_tone", "INDIGO"))
+    # A trust collapse seen on Pulse (server.py) is its own fresh observation.
+    collapsed_at = getattr(app_state, "trust_collapse_at", None)
+    if collapsed_at is not None and (now - collapsed_at) <= _SIGNAL_TTL:
+        import dataclasses
+        signals = dataclasses.replace(signals, trust_collapsed=True)
     return signals
 
 

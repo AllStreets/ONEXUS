@@ -36,3 +36,12 @@ def test_trust_overlay_logic_present_in_app_js(client):
     assert "nx-trust-wash-collapse" in r.text
     assert "nx-trust-wash-rising" in r.text
     assert "nx-trust-wash-falling" in r.text
+
+
+def test_revoke_refreshes_the_rail_and_rises_never_wash_as_collapse(client):
+    js = client.get("/aurora/static/app.js").text
+    revoke = js[js.index('/revoke`, { method: "POST" })'):][:400]
+    # the cockpit rail reloads right after a revoke from the trust sheet
+    assert "loadTrust()" in revoke and "renderCockpitRail()" in revoke
+    # a trust rise below 0.50 must not flash the collapse wash
+    assert "payload.new_score >= payload.old_score" in js

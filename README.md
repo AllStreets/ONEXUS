@@ -11,10 +11,10 @@
 ---
 
 <p align="center">
-  <img src=".github/assets/hero-calm-v2.png" alt="Aurora in calm focus: a conversation in the Home lab workspace where Oracle asks for fs.write and Aegis waits for an answer" width="100%"/>
+  <a href=".github/assets/clips/watch.mp4"><img src=".github/assets/clips/hero.webp" alt="Kernel watch while agents work: Cortex sends routes out to the built-in modules, Aegis flares as it grants each call, and the whole window changes color as the mood moves from calm focus to creative to deep flow" width="100%"/></a>
 </p>
 
-<p align="center"><em>Aurora, the ONEXUS shell. One local process: tool calls an agent routes through the runtime are checked by Aegis and logged to Chronicle, and a static import check keeps the kernel off the network.</em></p>
+<p align="center"><em>Aurora, the ONEXUS shell, with the kernel watch open while agents work. Every route Cortex makes and every call Aegis grants shows up as it happens, and all of it is logged to Chronicle. One local process, and a static import check keeps the kernel off the network.</em></p>
 
 ---
 
@@ -28,20 +28,22 @@ that declaration by **Aegis**, allowed or denied, and appended to the Chronicle 
 agent that never declared `network.outbound.example.com` is refused when it asks ONEXUS to
 reach that host, and the refusal is a recorded event rather than a silent failure.
 
-Third-party agents are launched as ordinary processes and are not sandboxed yet, so Aegis
-governs the calls they route through ONEXUS, not everything they could do on their own.
-The [red-team report](docs/REDTEAM-AEGIS.md#threat-model-and-non-goals) spells out exactly
-what is and isn't protected, and what closes the gap.
+Agents installed from the agent store run confined. Each one gets its own container that
+sees none of your files, and it can reach only the hosts you approved at install, through
+an egress proxy that refuses everything else. Catalog adapters that don't declare a
+container still launch as ordinary processes, so for those Aegis governs the calls they
+route through ONEXUS, not everything they could do on their own. The
+[red-team report](docs/REDTEAM-AEGIS.md#threat-model-and-non-goals) spells out exactly
+what is and isn't protected.
 
 Trust is earned rather than assigned. Each module carries a score that moves on recorded
 outcomes, and the score decides how much rope it gets — from *suggest only*, through
 *monitor*, to *execute*, to *fully autonomous*. Revoking it is one click and takes effect on
 the next call, not the next restart.
 
-That is the whole idea. Everything else — the workspaces, the ten built-in cognitive modules,
-the in-shell editor, the mood engine, the third-party agents from
-[ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) — is the interface that makes
-living inside it bearable. **It runs agents the way iOS runs apps**: one runtime, one
+That is the whole idea. Everything else is the interface that makes living inside it
+bearable: the workspaces, the sixteen built-in modules, the in-shell editor, the mood engine,
+and the third-party agents from [ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents). **It runs agents the way iOS runs apps**: one runtime, one
 manifest format, one trust model, one set of surfaces.
 
 A workspace is a room: it owns its own agents, memory, file grants, and home tone.
@@ -153,16 +155,16 @@ The whole shell **shifts color with what's happening**. Aegis observes the kerne
 
 <table>
 <tr>
-<td width="50%"><img src=".github/assets/hero-calm-v2.png" alt="Calm focus, teal: a conversation with a pending permission request"/></td>
-<td width="50%"><img src=".github/assets/hero-creative-v2.png" alt="Creative, ultramarine: the agent store"/></td>
+<td width="50%"><img src=".github/assets/hero-calm-v2.png" alt="Calm focus, teal: the kernel watch with routes in flight from Cortex to the built-in modules"/></td>
+<td width="50%"><img src=".github/assets/hero-creative-v2.png" alt="Creative, ultramarine: the rea agent just installed from the store, with the 207 tools it offered and the hosts found in its code"/></td>
 </tr>
 <tr>
 <td align="center"><strong>calm focus</strong> · teal · default, low load</td>
 <td align="center"><strong>creative</strong> · ultramarine · open-ended ideation</td>
 </tr>
 <tr>
-<td width="50%"><img src=".github/assets/hero-deepflow-v2.png" alt="Deep flow, jade: the workspaces grid"/></td>
-<td width="50%"><img src=".github/assets/hero-alert-v2.png" alt="Alert, signal red: the kernel watch view after a denied request"/></td>
+<td width="50%"><img src=".github/assets/hero-deepflow-v2.png" alt="Deep flow, jade: Oracle asks to write src/kernel/cortex.py and Aegis holds the call for an answer"/></td>
+<td width="50%"><img src=".github/assets/hero-alert-v2.png" alt="Alert, signal red: seconds after an agent's trust was revoked, the trust rail reads collapse and the whole shell has turned red"/></td>
 </tr>
 <tr>
 <td align="center"><strong>deep flow</strong> · jade · long uninterrupted stretches</td>
@@ -170,20 +172,18 @@ The whole shell **shifts color with what's happening**. Aegis observes the kerne
 </tr>
 </table>
 
-<p align="center">
-  <img src=".github/assets/clips/mood-shift.webp" alt="Picking creative, deep flow and then alert from the mood pill, and the whole window changing color each time" width="100%"/>
-</p>
-
 <table>
 <tr>
-<td width="33%"><a href=".github/assets/clips/mood-shift.mp4"><img src=".github/assets/clips/poster-mood-shift.png" alt="Clip: changing the mood"/></a></td>
-<td width="33%"><a href=".github/assets/clips/permission.mp4"><img src=".github/assets/clips/poster-permission.png" alt="Clip: answering a permission request with Allow once"/></a></td>
-<td width="33%"><a href=".github/assets/clips/store.mp4"><img src=".github/assets/clips/poster-store.png" alt="Clip: finding an agent in the store"/></a></td>
+<td width="25%"><a href=".github/assets/clips/watch.mp4"><img src=".github/assets/clips/poster-watch.png" alt="Clip: the kernel watch while agents work and the mood changes"/></a></td>
+<td width="25%"><a href=".github/assets/clips/permission.mp4"><img src=".github/assets/clips/poster-permission.png" alt="Clip: answering a permission request with Allow once"/></a></td>
+<td width="25%"><a href=".github/assets/clips/store.mp4"><img src=".github/assets/clips/poster-store.png" alt="Clip: installing an agent from the store"/></a></td>
+<td width="25%"><a href=".github/assets/clips/revoke.mp4"><img src=".github/assets/clips/poster-revoke.png" alt="Clip: revoking an agent's trust"/></a></td>
 </tr>
 <tr>
-<td align="center"><a href=".github/assets/clips/mood-shift.mp4">Changing the mood</a> · 13s</td>
-<td align="center"><a href=".github/assets/clips/permission.mp4">Answering a permission request</a> · 9s</td>
-<td align="center"><a href=".github/assets/clips/store.mp4">Finding an agent in the store</a> · 12s</td>
+<td align="center"><a href=".github/assets/clips/watch.mp4">Watching the kernel</a> · 15s</td>
+<td align="center"><a href=".github/assets/clips/permission.mp4">Answering a permission request</a> · 13s</td>
+<td align="center"><a href=".github/assets/clips/store.mp4">Installing from the store</a> · 15s, install step at 2x</td>
+<td align="center"><a href=".github/assets/clips/revoke.mp4">Revoking an agent</a> · 15s</td>
 </tr>
 </table>
 
@@ -229,7 +229,7 @@ Aurora is a **persistent three-column workspace** — sidebar, conversation, coc
 - **TRUST · last 60 minutes** — sparkline + delta + class breakdown (routine / notable / sensitive / denied)
 - **Recent permissions** — color-coded by class, with capability + target + status + time
 - **Ambient mood** — mood mesh thumbnail with the kernel's current reading and contributing reasons
-- **Built-in agents** — 10 identity discs, click any for the full capability sheet
+- **Built-in agents**: the count of built-in modules and runnable catalog agents, both read from the running kernel, and identity discs you can click for the full capability sheet
 - Footer: `kernel.network.io = ∅ (static-verified)` — the kernel itself never touches the network
 
 Press <kbd>⌘ 0</kbd> for the expanded six-panel cockpit overlay.
@@ -286,20 +286,28 @@ The kernel writes every decision to **Chronicle**, a SQLite ledger that ONEXUS o
 
 ## Built-in agents
 
-Ten cognitive modules ship with ONEXUS. Each declares its own capabilities and trust floor.
+Sixteen modules ship with ONEXUS, each with its own manifest of capabilities and a trust
+floor. Fourteen take messages through Cortex routing. Herald and Serendipity are called through
+their own API routes, and Herald's negotiations show in the cockpit rail.
 
 | Agent | Glyph | What it does |
 |---|---|---|
-| **Council** | compass | 3-round deliberation across the cognitive modules |
-| **Oracle** | eye | first-read analysis across whatever's in the workspace |
-| **Specter** | warning triangle | red-team — counter-arguments and dissenting views, no flattery |
-| **Wraith** | wisp | controlled forgetting — privacy hygiene, sensitive deletion |
-| **Legacy** | open book | crystallized memory — recall with citations |
-| **Echo** | nested arcs | mirror — restates the user's words to surface contradictions |
-| **Sentry** | heartbeat | watches for runaway loops, trust drops, denied calls |
-| **Autonomic** | concentric rings | autopilot — repeats approved tool chains hands-off |
-| **Consciousness** | spiral | inner state — moods, regulation, salience |
-| **Agents-dispatcher** | tile grid | routes to installed third-party MCP agents |
+| **Council** | two brackets weighing a bar | 3-round deliberation across the cognitive modules |
+| **Oracle** | lens with a diamond iris | first-read analysis across whatever's in the workspace |
+| **Specter** | crosshair in a diamond | red-team: counter-arguments and dissenting views, no flattery |
+| **Wraith** | lines that shorten and fade | controlled forgetting: privacy hygiene, sensitive deletion |
+| **Legacy** | cut crystal | crystallized memory: recall with citations |
+| **Echo** | mirrored chevrons | mirror: restates the user's words to surface contradictions |
+| **Sentry** | pulse inside a shield | watches for runaway loops, trust drops, denied calls |
+| **Autonomic** | endless loop | autopilot: repeats approved tool chains hands-off |
+| **Consciousness** | square turning in a square | inner state: moods, regulation, salience |
+| **Agents** | docked tiles and an open slot | dispatches to installed third-party MCP agents |
+| **Sigil** | radar sweep | threat radar over trust deltas, gate verdicts and routing traffic |
+| **Atlas** | isometric cube | temporal knowledge graph with confidence that decays until re-confirmed |
+| **Chronos** | forking timeline | counterfactuals over Chronicle: what if that grant had been denied |
+| **Prism** | prism splitting a beam | synthesis across workspaces, gated by Aegis |
+| **Herald** | pennant on a staff | agent-to-agent negotiation where every commitment is gated |
+| **Serendipity** | two sparks | surfaces the novel, low-relevance facts optimization would hide |
 
 Click any disc in the cockpit to see its declared tools, permission classes, trust floor, and network reach.
 
@@ -336,6 +344,15 @@ Drag any file anywhere on the conversation canvas — the surface gets a mood-ti
 ## Catalog
 
 ONEXUS ships with the [AllStreets/ONEXUS-Agents](https://github.com/AllStreets/ONEXUS-Agents) catalog bundled — every entry is a single JSON manifest under `catalog/<category>/<slug>.json`, spanning 40 categories. Entries marked `runnable` are **derived from each repo's own declared metadata**, not from anything executed here, so treat them as leads; 21 carry hand-maintained adapters. Browse from the sidebar's *agent catalog* link, filter by category / runnable-only / search, click Launch on any runnable card. Whatever you launch is still gated by Aegis like everything else.
+
+### Agent store
+
+The store is the part of the catalog that can be installed by a program: 53 agents whose
+recipe was read from their own published package, then built, started confined and asked
+for their tools before they were listed. Installing one pulls or builds its image, starts it
+in a container with none of your files, and asks it for its tools over MCP; nothing is saved
+unless all three steps pass. You pick which of the hosts found in its code it may reach, and
+the egress proxy refuses the rest. Open it from the sidebar's *agent store* link.
 
 The catalog rebuilds nightly via a [GitHub Actions cron](.github/workflows/nightly-catalog.yml) that reads the catalog repo's head SHA and pushes a fresh Docker image to GHCR.
 
