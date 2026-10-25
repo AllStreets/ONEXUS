@@ -74,8 +74,10 @@ In [`assets/`](assets/).
 - **`assets/onexus-aurora.png`** — Aurora at rest: the dark, ambient shell with a
   workspace, the agent sidebar, and the live kernel-activity feed. The hero image
   (best paired with a clip of the shell shifting color).
-- **`assets/onexus-providers.png`** — Settings → Providers: live provider health
-  (Ollama healthy/green by default) and the in-app "Restart Ollama" control.
+- **`assets/onexus-providers.png`**: Settings, Providers. Live provider health
+  (Ollama healthy by default) and the in-app "Restart Ollama" control. Captured
+  from a clean demo install whose local Ollama lists one model, llama3.1:8b, the
+  documented default; on your machine it lists whatever models you have pulled.
 
 ## Links
 

@@ -618,6 +618,7 @@ async function loadTrustBreakdown() {
     }
   } catch {}
   state.trust.breakdown = bd;
+  renderWatchStat(); // the Watch header's denied chip reads this same count
 }
 
 async function loadPermissions() {
@@ -1463,7 +1464,7 @@ function driveScenes(m) {
     pushLedger("route", `<b>${escapeHtml(p.target || "?")}</b>${top ? " · " + escapeHtml(top) : ""}`);
   } else if (m.topic === "kernel.gate") {
     const v = String(p.verdict || "").toLowerCase();
-    if (v === "deny") C.denies++; else C.gates++;
+    if (v === "deny") { C.denies++; loadTrustBreakdown(); } else C.gates++;
     forEachScene((s) => s.gate(p));
     pushLedger(v === "deny" ? "deny" : "gate",
       `${escapeHtml(truncate(p.capability || "", 28))} <span class="nx-dim">${escapeHtml(p.agent || "")} · ${escapeHtml(v)}</span>`);
@@ -1518,7 +1519,7 @@ function renderWatchStat() {
   el.innerHTML = `
     <span class="nx-watch-chip"><span class="nx-watch-pulse"></span><b>${state.coreOnDuty || state.scene.modules.length}</b> on duty</span>
     <span class="nx-watch-chip"><b>${C.routes}</b> routes</span>
-    <span class="nx-watch-chip"><b>${C.denies}</b> denied</span>`;
+    <span class="nx-watch-chip" title="Denied in the last 60 minutes, by the gate or by you. The same count as the trust rail."><b>${state.trust.breakdown.denied || 0}</b> denied</span>`;
 }
 
 // ── The Watch view — the headline full-surface kernel scene ─────────────────
