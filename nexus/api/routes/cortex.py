@@ -268,7 +268,13 @@ async def list_modules(request: Request) -> dict[str, Any]:
     modules = sorted(cortex.list_modules())
     # "+ 1" for cortex's own routing layer, which is on duty whenever a module is.
     on_duty = (["routing"] if modules else []) + modules
-    return {"modules": modules, "on_duty": on_duty, "count": len(on_duty)}
+    # Every built-in module that ships a manifest, including the ones served
+    # by their own routes (herald, serendipity) rather than through routing.
+    # The cockpit's "N built-in" label reads this instead of guessing.
+    from nexus.kernel.cortex import default_builtin_registry
+    builtins = sorted(default_builtin_registry().slugs())
+    return {"modules": modules, "on_duty": on_duty, "count": len(on_duty),
+            "builtins": builtins}
 
 
 # ── Swarm templates ─────────────────────────────────────────────────────────

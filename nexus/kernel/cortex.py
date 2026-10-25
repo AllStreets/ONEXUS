@@ -448,7 +448,7 @@ class IntentClassifier:
 
 
 def default_builtin_registry():
-    """Build the registry of the 10 built-in NexusModule classes.
+    """Build the registry of the built-in NexusModule classes (16 ship).
 
     Lazy imports — these modules import the kernel transitively, so
     a module-level import here would create a circular dependency at

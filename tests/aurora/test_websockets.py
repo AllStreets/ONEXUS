@@ -41,3 +41,21 @@ class TestPermissionsWebSocket:
         with client.websocket_connect("/api/permissions/ws") as ws:
             data = ws.receive_json()
         assert data["pending"] == []
+
+
+class TestPermissionsWebSocketPayload:
+    def test_permissions_ws_carries_target(self, client):
+        """The push stream must carry the same fields as GET /pending,
+        including target, or the inline card loses its target on refresh."""
+        # One portal for the whole test, so the seeded ticket's event loop
+        # (and its cleanup task) outlives the seed request.
+        with client:
+            client.post("/api/permissions/seed", json={
+                "agent_slug": "oracle", "capability": "fs.write",
+                "permission_class": "Sensitive", "target": "src/kernel/cortex.py",
+            })
+            rest = client.get("/api/permissions/pending").json()["pending"]
+            with client.websocket_connect("/api/permissions/ws") as ws:
+                pushed = ws.receive_json()["pending"]
+        assert pushed == rest
+        assert pushed[0]["target"] == "src/kernel/cortex.py"

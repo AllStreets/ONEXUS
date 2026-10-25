@@ -1,48 +1,99 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img"
-     aria-label="25 workspace tones available in ONEXUS: indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, mocha, coral, rose, crimson, magenta, fuchsia, plum, orchid, slate, graphite, plus a custom dot.">
-  <title>Workspace tones</title>
-  <rect width="1200" height="280" fill="#0c0820" rx="14"/>
-  <text x="60" y="42" font-family="ui-monospace,'JetBrains Mono',monospace"
-        font-size="11" letter-spacing="0.32em" fill="#c9b8ff">25 WORKSPACE TONES</text>
-  <text x="60" y="62" font-family="ui-sans-serif,system-ui,sans-serif"
-        font-size="12" fill="#8a8098">pick on create · cluster the rooms by mood, region, or project</text>
-
-  <!-- Each chip: 16px swatch + name. 5 cols × 5 rows. Cell ≈ 220×38. -->
-  <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#e8defc"
-     dominant-baseline="middle">
-    <!-- ROW 1: blues / purples -->
-    <g><circle cx="78"   cy="110" r="9" fill="#5a6cd0"/><text x="98"   y="110">indigo</text></g>
-    <g><circle cx="278"  cy="110" r="9" fill="#8a6cee"/><text x="298"  y="110">violet</text></g>
-    <g><circle cx="478"  cy="110" r="9" fill="#b4a8f0"/><text x="498"  y="110">lavender</text></g>
-    <g><circle cx="678"  cy="110" r="9" fill="#4a78f0"/><text x="698"  y="110">cobalt</text></g>
-    <g><circle cx="878"  cy="110" r="9" fill="#5cb8f0"/><text x="898"  y="110">sky</text></g>
-
-    <!-- ROW 2: cyans / greens -->
-    <g><circle cx="78"   cy="146" r="9" fill="#4cb4d0"/><text x="98"   y="146">ocean</text></g>
-    <g><circle cx="278"  cy="146" r="9" fill="#4cd4c0"/><text x="298"  y="146">teal</text></g>
-    <g><circle cx="478"  cy="146" r="9" fill="#80e8a8"/><text x="498"  y="146">mint</text></g>
-    <g><circle cx="678"  cy="146" r="9" fill="#88a888"/><text x="698"  y="146">sage</text></g>
-    <g><circle cx="878"  cy="146" r="9" fill="#4cd068"/><text x="898"  y="146">emerald</text></g>
-
-    <!-- ROW 3: lime / warm -->
-    <g><circle cx="78"   cy="182" r="9" fill="#b8d860"/><text x="98"   y="182">lime</text></g>
-    <g><circle cx="278"  cy="182" r="9" fill="#e8a06c"/><text x="298"  y="182">amber</text></g>
-    <g><circle cx="478"  cy="182" r="9" fill="#f0c870"/><text x="498"  y="182">honey</text></g>
-    <g><circle cx="678"  cy="182" r="9" fill="#f08c4c"/><text x="698"  y="182">tangerine</text></g>
-    <g><circle cx="878"  cy="182" r="9" fill="#b08868"/><text x="898"  y="182">mocha</text></g>
-
-    <!-- ROW 4: pinks / reds -->
-    <g><circle cx="78"   cy="218" r="9" fill="#f06a78"/><text x="98"   y="218">coral</text></g>
-    <g><circle cx="278"  cy="218" r="9" fill="#f070a0"/><text x="298"  y="218">rose</text></g>
-    <g><circle cx="478"  cy="218" r="9" fill="#d04848"/><text x="498"  y="218">crimson</text></g>
-    <g><circle cx="678"  cy="218" r="9" fill="#c060a0"/><text x="698"  y="218">magenta</text></g>
-    <g><circle cx="878"  cy="218" r="9" fill="#d058c8"/><text x="898"  y="218">fuchsia</text></g>
-
-    <!-- ROW 5: purple / neutrals -->
-    <g><circle cx="78"   cy="254" r="9" fill="#7e5ea0"/><text x="98"   y="254">plum</text></g>
-    <g><circle cx="278"  cy="254" r="9" fill="#b070d8"/><text x="298"  y="254">orchid</text></g>
-    <g><circle cx="478"  cy="254" r="9" fill="#889098"/><text x="498"  y="254">slate</text></g>
-    <g><circle cx="678"  cy="254" r="9" fill="#5c6068"/><text x="698"  y="254">graphite</text></g>
-    <g><circle cx="878"  cy="254" r="9" fill="#3a4078" stroke="rgba(232,222,252,0.20)" stroke-width="0.5"/><text x="898"  y="254">midnight</text></g>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 372" width="1200" height="372" role="img" aria-labelledby="t d">
+  <title id="t">The 25 workspace tones</title>
+  <desc id="d">indigo, violet, lavender, cobalt, sky, ocean, teal, mint, sage, emerald, lime, amber, honey, tangerine, coral, rose, crimson, magenta, fuchsia, plum, orchid, mocha, slate, graphite, midnight.</desc>
+  <defs>
+    <radialGradient id="field" cx="0.08" cy="0" r="0.9"><stop offset="0" stop-color="#0d2d30" stop-opacity="0.55"/><stop offset="1" stop-color="#0d2d30" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g-indigo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6f7fe0"/><stop offset="1" stop-color="#2c3a78"/></linearGradient>
+    <linearGradient id="g-violet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a7ef0"/><stop offset="1" stop-color="#3a2868"/></linearGradient>
+    <linearGradient id="g-lavender" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b4a8f0"/><stop offset="1" stop-color="#5a4d8c"/></linearGradient>
+    <linearGradient id="g-cobalt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a86f0"/><stop offset="1" stop-color="#1c3878"/></linearGradient>
+    <linearGradient id="g-sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5cb8f0"/><stop offset="1" stop-color="#1c5078"/></linearGradient>
+    <linearGradient id="g-ocean" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4cb4d0"/><stop offset="1" stop-color="#1c4858"/></linearGradient>
+    <linearGradient id="g-teal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4cd4c0"/><stop offset="1" stop-color="#1c5854"/></linearGradient>
+    <linearGradient id="g-mint" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#80e8a8"/><stop offset="1" stop-color="#2c6840"/></linearGradient>
+    <linearGradient id="g-sage" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#98b898"/><stop offset="1" stop-color="#3e5840"/></linearGradient>
+    <linearGradient id="g-emerald" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4cd068"/><stop offset="1" stop-color="#1c5024"/></linearGradient>
+    <linearGradient id="g-lime" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b8d860"/><stop offset="1" stop-color="#4c5818"/></linearGradient>
+    <linearGradient id="g-amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8a06c"/><stop offset="1" stop-color="#844820"/></linearGradient>
+    <linearGradient id="g-honey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0c870"/><stop offset="1" stop-color="#84541c"/></linearGradient>
+    <linearGradient id="g-tangerine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f08c4c"/><stop offset="1" stop-color="#843818"/></linearGradient>
+    <linearGradient id="g-coral" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f06a78"/><stop offset="1" stop-color="#842830"/></linearGradient>
+    <linearGradient id="g-rose" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f070a0"/><stop offset="1" stop-color="#842854"/></linearGradient>
+    <linearGradient id="g-crimson" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e05858"/><stop offset="1" stop-color="#581c1c"/></linearGradient>
+    <linearGradient id="g-magenta" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d070b0"/><stop offset="1" stop-color="#5e2050"/></linearGradient>
+    <linearGradient id="g-fuchsia" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d868d0"/><stop offset="1" stop-color="#5c1c54"/></linearGradient>
+    <linearGradient id="g-plum" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a080c0"/><stop offset="1" stop-color="#2c1c44"/></linearGradient>
+    <linearGradient id="g-orchid" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b878e0"/><stop offset="1" stop-color="#4c2868"/></linearGradient>
+    <linearGradient id="g-mocha" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b89070"/><stop offset="1" stop-color="#4c382c"/></linearGradient>
+    <linearGradient id="g-slate" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#98a0a8"/><stop offset="1" stop-color="#383c44"/></linearGradient>
+    <linearGradient id="g-graphite" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c8088"/><stop offset="1" stop-color="#1c2028"/></linearGradient>
+    <linearGradient id="g-midnight" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6870b0"/><stop offset="1" stop-color="#0c1024"/></linearGradient>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .h1 { font-size: 20px; font-weight: 600; fill: #eceef2; letter-spacing: -0.2px; }
+    .sub { font-size: 14px; fill: #9ba2ad; }
+    .grp { font-size: 13px; fill: #9ba2ad; }
+    .name { font-size: 14px; fill: #eceef2; }
+  </style>
+  <rect width="1200" height="372" rx="16" fill="#0b0c0f"/>
+  <rect width="1200" height="372" rx="16" fill="url(#field)"/>
+  <rect x="0.5" y="0.5" width="1199" height="371" rx="15.5" fill="none" stroke="#4ed5d5" stroke-opacity="0.14"/>
+  <text x="48" y="58" class="h1">Workspace tones</text>
+  <text x="48" y="84" class="sub">Pick one of 25 when you create a workspace. Its card, emblem and sidebar dot are set in it.</text>
+  <text x="48" y="137" class="grp">Cool</text>
+  <rect x="200" y="118" width="28" height="28" rx="7" fill="url(#g-indigo)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="240" y="137" class="name">indigo</text>
+  <rect x="338" y="118" width="28" height="28" rx="7" fill="url(#g-violet)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="378" y="137" class="name">violet</text>
+  <rect x="476" y="118" width="28" height="28" rx="7" fill="url(#g-lavender)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="516" y="137" class="name">lavender</text>
+  <rect x="614" y="118" width="28" height="28" rx="7" fill="url(#g-cobalt)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="654" y="137" class="name">cobalt</text>
+  <rect x="752" y="118" width="28" height="28" rx="7" fill="url(#g-sky)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="792" y="137" class="name">sky</text>
+  <rect x="890" y="118" width="28" height="28" rx="7" fill="url(#g-ocean)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="930" y="137" class="name">ocean</text>
+  <rect x="1028" y="118" width="28" height="28" rx="7" fill="url(#g-teal)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="1068" y="137" class="name">teal</text>
+  <text x="48" y="185" class="grp">Fresh</text>
+  <rect x="200" y="166" width="28" height="28" rx="7" fill="url(#g-mint)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="240" y="185" class="name">mint</text>
+  <rect x="338" y="166" width="28" height="28" rx="7" fill="url(#g-sage)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="378" y="185" class="name">sage</text>
+  <rect x="476" y="166" width="28" height="28" rx="7" fill="url(#g-emerald)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="516" y="185" class="name">emerald</text>
+  <rect x="614" y="166" width="28" height="28" rx="7" fill="url(#g-lime)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="654" y="185" class="name">lime</text>
+  <text x="48" y="233" class="grp">Warm</text>
+  <rect x="200" y="214" width="28" height="28" rx="7" fill="url(#g-amber)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="240" y="233" class="name">amber</text>
+  <rect x="338" y="214" width="28" height="28" rx="7" fill="url(#g-honey)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="378" y="233" class="name">honey</text>
+  <rect x="476" y="214" width="28" height="28" rx="7" fill="url(#g-tangerine)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="516" y="233" class="name">tangerine</text>
+  <rect x="614" y="214" width="28" height="28" rx="7" fill="url(#g-coral)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="654" y="233" class="name">coral</text>
+  <rect x="752" y="214" width="28" height="28" rx="7" fill="url(#g-rose)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="792" y="233" class="name">rose</text>
+  <rect x="890" y="214" width="28" height="28" rx="7" fill="url(#g-crimson)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="930" y="233" class="name">crimson</text>
+  <text x="48" y="281" class="grp">Pink and purple</text>
+  <rect x="200" y="262" width="28" height="28" rx="7" fill="url(#g-magenta)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="240" y="281" class="name">magenta</text>
+  <rect x="338" y="262" width="28" height="28" rx="7" fill="url(#g-fuchsia)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="378" y="281" class="name">fuchsia</text>
+  <rect x="476" y="262" width="28" height="28" rx="7" fill="url(#g-plum)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="516" y="281" class="name">plum</text>
+  <rect x="614" y="262" width="28" height="28" rx="7" fill="url(#g-orchid)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="654" y="281" class="name">orchid</text>
+  <text x="48" y="329" class="grp">Earth and neutral</text>
+  <rect x="200" y="310" width="28" height="28" rx="7" fill="url(#g-mocha)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="240" y="329" class="name">mocha</text>
+  <rect x="338" y="310" width="28" height="28" rx="7" fill="url(#g-slate)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="378" y="329" class="name">slate</text>
+  <rect x="476" y="310" width="28" height="28" rx="7" fill="url(#g-graphite)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="516" y="329" class="name">graphite</text>
+  <rect x="614" y="310" width="28" height="28" rx="7" fill="url(#g-midnight)" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="654" y="329" class="name">midnight</text>
 </svg>

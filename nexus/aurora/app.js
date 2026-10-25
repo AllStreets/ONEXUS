@@ -23,6 +23,7 @@ const state = {
   agents: [],              // catalog/runtime metadata
   runnableCount: 0,        // live count of runnable (MCP-adapter) catalog agents
   catalogTotal: 0,         // live count of ALL catalog agents (for search/picker labels)
+  builtinCount: 0,         // built-in modules that ship a manifest (/api/cortex/modules builtins)
   coreOnDuty: 0,           // live count of always-on cortex modules + routing ("agents on duty")
   recentAgents: [],
   // cache-bust query string appended to guide image src so users always
@@ -483,15 +484,15 @@ async function refreshRunnableCount() {
     // the kernel boots, regardless of a workspace's declared resident_agents.
     const rm = await fetch("/api/cortex/modules");
     if (rm.ok) {
-      const n = Number((await rm.json()).count ?? 0);
+      const body = await rm.json();
+      const n = Number(body.count ?? 0);
       if (Number.isFinite(n) && n >= 0) state.coreOnDuty = n;
+      // Every built-in module that ships a manifest, straight from the kernel.
+      if (Array.isArray(body.builtins)) state.builtinCount = body.builtins.length;
     }
   } catch {}
   const label = document.getElementById("nx-agents-label");
-  if (label && state.agents) {
-    const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
-    label.textContent = `${totalBuiltin} built-in · ${state.runnableCount || 0} runnable`;
-  }
+  if (label) label.textContent = agentsLabelText();
   renderChromeContext();
 }
 
@@ -602,7 +603,11 @@ async function loadTrustBreakdown() {
       const p = e.payload || {};
       const v = String(p.verdict || "").toLowerCase();
       const pc = String(p.permission_class || "").toLowerCase();
-      if (v === "deny") bd.denied++;
+      // A gate DENY verdict, or the user pressing Deny on a permission card
+      // (logged by /api/permissions/decide as permission_revoked).
+      const userDenied = e.action === "permission_revoked"
+        && String(p.decision || "").toLowerCase() === "deny";
+      if (v === "deny" || userDenied) bd.denied++;
       if (pc && bd[pc] !== undefined) bd[pc]++;
       else if ((e.action || "").includes("trust_change")) bd.notable++;
     }
@@ -613,6 +618,7 @@ async function loadTrustBreakdown() {
     }
   } catch {}
   state.trust.breakdown = bd;
+  renderWatchStat(); // the Watch header's denied chip reads this same count
 }
 
 async function loadPermissions() {
@@ -1458,7 +1464,7 @@ function driveScenes(m) {
     pushLedger("route", `<b>${escapeHtml(p.target || "?")}</b>${top ? " · " + escapeHtml(top) : ""}`);
   } else if (m.topic === "kernel.gate") {
     const v = String(p.verdict || "").toLowerCase();
-    if (v === "deny") C.denies++; else C.gates++;
+    if (v === "deny") { C.denies++; loadTrustBreakdown(); } else C.gates++;
     forEachScene((s) => s.gate(p));
     pushLedger(v === "deny" ? "deny" : "gate",
       `${escapeHtml(truncate(p.capability || "", 28))} <span class="nx-dim">${escapeHtml(p.agent || "")} · ${escapeHtml(v)}</span>`);
@@ -1495,8 +1501,12 @@ function renderLedger() {
     el.innerHTML = `<div class="nx-ledger-empty nx-empty-line">Waiting for kernel activity. Dispatch an agent to watch it think.</div>`;
     return;
   }
+  // Only rows that arrived since the last render play the entrance; replaying
+  // it on every row made the whole ledger flash blank under steady traffic.
+  const since = renderLedger._at || 0;
+  renderLedger._at = Date.now();
   el.innerHTML = state.scene.ledger.map((e) => `
-    <div class="nx-ledger-row">
+    <div class="nx-ledger-row${e.t > since ? " is-new" : ""}">
       <span class="nx-ledger-kind nx-lk-${LEDGER_KIND_CLASS[e.kind] || "route"}">${LEDGER_KIND_LABEL[e.kind] || e.kind}</span>
       <span class="nx-ledger-body">${e.html}</span>
     </div>`).join("");
@@ -1509,7 +1519,7 @@ function renderWatchStat() {
   el.innerHTML = `
     <span class="nx-watch-chip"><span class="nx-watch-pulse"></span><b>${state.coreOnDuty || state.scene.modules.length}</b> on duty</span>
     <span class="nx-watch-chip"><b>${C.routes}</b> routes</span>
-    <span class="nx-watch-chip"><b>${C.denies}</b> denied</span>`;
+    <span class="nx-watch-chip" title="Denied in the last 60 minutes, by the gate or by you. The same count as the trust rail."><b>${state.trust.breakdown.denied || 0}</b> denied</span>`;
 }
 
 // ── The Watch view — the headline full-surface kernel scene ─────────────────
@@ -1574,6 +1584,12 @@ function renderWatchCast() {
   }).join("");
   el.querySelectorAll(".nx-cast-chip[data-slug]").forEach(c =>
     c.addEventListener("click", () => openCapabilitySheet(c.dataset.slug)));
+  // When the cast scrolls, fade the cut-off row instead of slicing it, and
+  // drop the fade once the last row is in view.
+  const fade = () => el.classList.toggle("has-more",
+    el.scrollHeight - el.clientHeight - el.scrollTop > 2);
+  fade();
+  if (!el.dataset.fadeWired) { el.dataset.fadeWired = "1"; el.addEventListener("scroll", fade, { passive: true }); }
 }
 
 // ── N6 — Memory & Replay (Engram + Chronicle made visible) ──────────────────
@@ -1809,13 +1825,20 @@ function renderMoodCard() {
   `;
 }
 
+// "16 built-in · 558 runnable": both numbers come from the running kernel
+// (/api/cortex/modules builtins, the catalog's runnable total). Until they
+// load, the built-in half is left out rather than guessed.
+function agentsLabelText() {
+  const runnable = `${state.runnableCount || 0} runnable`;
+  return state.builtinCount ? `${state.builtinCount} built-in · ${runnable}` : runnable;
+}
+
 function renderAgentDiscs() {
   const el = document.getElementById("nx-agent-discs");
   if (!el) return;
   const BUILTINS = ["oracle", "council", "wraith", "echo", "prism", "chronos"];
-  const totalBuiltin = state.agents.filter(a => a.is_builtin).length || 10;
-  document.getElementById("nx-agents-label").textContent =
-    `${totalBuiltin} built-in · ${state.runnableCount || 0} runnable`;
+  const totalBuiltin = state.builtinCount || 0;
+  document.getElementById("nx-agents-label").textContent = agentsLabelText();
   const overflow = Math.max(0, totalBuiltin - BUILTINS.length);
   el.innerHTML = BUILTINS.map(slug => `<button class="nx-disc-btn" data-slug="${slug}" title="${escapeHtml(BUILTIN_CAPABILITIES[slug]?.tagline || slug)}">${agentDisc(slug, { size: 28 })}</button>`).join("") +
     (overflow > 0 ? `<button class="nx-agent-overflow" type="button" title="Browse the catalog">+${overflow}</button>` : "");
@@ -1949,6 +1972,10 @@ async function openCapabilitySheet(slug) {
     try {
       await fetch(`/api/trust/${encodeURIComponent(slug)}/revoke`, { method: "POST" });
       await hydrateTrustSheet(slug, floorSeed);
+      // The rail's trust card and permission log move with the revoke now,
+      // not on the next 30-second poll.
+      await Promise.allSettled([loadTrust(), loadPermissions()]);
+      renderCockpitRail();
       btn.classList.remove("armed", "is-armed"); btn.dataset.armed = "0";
     } catch {}
     btn.disabled = false; btn.textContent = "Revoke trust";
@@ -2335,7 +2362,9 @@ async function renderConversation(workspaceId) {
             decision: btn.dataset.decision,
           }),
         });
-        await loadPermissions();
+        // Trust too, so the rail's class breakdown (denied, sensitive, ...)
+        // moves with the answer instead of waiting for the next poll.
+        await Promise.allSettled([loadPermissions(), loadTrust()]);
         renderCockpitRail();
         renderConversation(workspaceId);
       });
@@ -6904,7 +6933,10 @@ async function pollTrustEvents() {
 
     const payload = ev.payload || {};
     let cls;
-    if (typeof payload.new_score === "number" && payload.new_score < 0.50) {
+    // Collapse is a fall that leaves the agent under 0.50; a rise from the
+    // 0.30 starting score (a thumbs-up) is not one.
+    if (typeof payload.new_score === "number" && payload.new_score < 0.50
+        && !(typeof payload.old_score === "number" && payload.new_score >= payload.old_score)) {
       cls = "nx-trust-wash-collapse";
     } else if (typeof payload.new_score === "number" && typeof payload.old_score === "number"
                && payload.new_score > payload.old_score) {

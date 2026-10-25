@@ -5,7 +5,7 @@ def test_modules_route_returns_roster(client):
     r = client.get("/api/cortex/modules")
     assert r.status_code == 200
     body = r.json()
-    assert set(body) == {"modules", "on_duty", "count"}
+    assert set(body) == {"modules", "on_duty", "count", "builtins"}
     # The full built-in cognitive roster is registered at kernel boot.
     assert "council" in body["modules"]
     assert "specter" in body["modules"]
@@ -19,6 +19,17 @@ def test_on_duty_prepends_routing_and_counts(client):
     assert body["on_duty"][1:] == body["modules"]
     assert body["count"] == len(body["on_duty"])
     assert body["count"] >= 2
+
+
+def test_builtins_lists_every_shipped_manifest(client):
+    from nexus.kernel.cortex import default_builtin_registry
+    body = client.get("/api/cortex/modules").json()
+    shipped = sorted(default_builtin_registry().slugs())
+    # The cockpit's "N built-in" label is len(builtins); it must match what
+    # actually ships, including modules served by their own routes.
+    assert body["builtins"] == shipped
+    assert {"herald", "serendipity"} <= set(body["builtins"])
+    assert set(body["modules"]) <= set(body["builtins"])
 
 
 def test_swarm_templates_returns_curated_swarms(client):
@@ -38,3 +49,13 @@ def test_swarm_templates_only_offer_registered_modules(client):
         # A template must never offer an agent this kernel can't actually run.
         assert set(tpl["agents"]) <= registered
         assert isinstance(tpl["prompt"], str) and tpl["prompt"]
+
+
+def test_cockpit_builtin_label_reads_the_kernel(client):
+    js = client.get("/aurora/static/app.js").text
+    # The label used to fall back to a hardcoded 10 whatever shipped.
+    assert "|| 10" not in js
+    assert "body.builtins" in js and "state.builtinCount" in js
+    # ...and the markup no longer ships a stale count before it loads.
+    html = client.get("/aurora").text
+    assert "10 built-in" not in html

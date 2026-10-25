@@ -104,12 +104,12 @@
 .nx-legend-row b { color: var(--nx-fg-1); font-weight: var(--nx-fw-medium); }
 
 /* live ledger: newest events stream in at the top */
+.nx-ledger-row.is-new { animation: nx-ledger-in var(--nx-dur-3) var(--nx-ease); }
 .nx-ledger { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
 .nx-ledger-row {
   display: flex; align-items: baseline; gap: var(--nx-space-2);
   padding: var(--nx-space-1-5) 0; border-bottom: 1px solid var(--nx-line-1);
   font-size: var(--nx-fs-caption); line-height: var(--nx-lh-snug);
-  animation: nx-ledger-in var(--nx-dur-3) var(--nx-ease);
 }
 @keyframes nx-ledger-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 .nx-ledger-kind {
@@ -155,6 +155,12 @@
 .nx-cast {
   display: flex; flex-wrap: wrap; gap: var(--nx-space-1-5);
   max-height: 188px; overflow-y: auto; overscroll-behavior: contain;
+}
+/* more chips below: fade the cut-off row so it reads as "scroll for more"
+   rather than as chips clipped by mistake (toggled in renderWatchCast) */
+.nx-cast.has-more {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
 }
 .nx-cast-chip {
   display: inline-flex; align-items: center; gap: var(--nx-space-1-5);
