@@ -60,3 +60,25 @@ def test_a_rise_below_half_is_not_a_collapse(client):
     with client:
         client.post("/api/trust/oracle/adjust", json={"delta": 0.04, "reason": "test"})
         assert _mood_after(client, lambda m: m == "alert", tries=10) == "calm_focus"
+
+
+def test_a_route_sets_the_active_agent_for_the_mood(client):
+    """Cortex publishes its routing decisions as kernel.route. The mood
+    listener was subscribed to cortex.route, a topic nothing publishes, so a
+    route never reached the mood engine."""
+    import asyncio
+    import time
+
+    from nexus.kernel.pulse import Message
+
+    with client:
+        kernel = client.app.state.kernel
+        client.portal.call(
+            kernel.pulse.publish,
+            Message(topic="kernel.route", source="cortex", payload={"target": "council"}),
+        )
+        for _ in range(40):
+            if getattr(client.app.state.mood_signals, "active_agent", None) == "council":
+                break
+            time.sleep(0.05)
+        assert client.app.state.mood_signals.active_agent == "council"

@@ -225,7 +225,8 @@ def create_app(config: NexusConfig | None = None) -> FastAPI:
             if score is not None and score < 0.5 and (old is None or score < old):
                 app.state.trust_collapse_at = _time.monotonic()
 
-        kernel.pulse.subscribe("cortex.route", _on_cortex_route)
+        # Cortex publishes its routing decisions as kernel.route.
+        kernel.pulse.subscribe("kernel.route", _on_cortex_route)
         kernel.pulse.subscribe("aegis.trust_change", _on_trust_change)
 
         # Keep the agent catalog fresh: re-read it from disk every 5 minutes so

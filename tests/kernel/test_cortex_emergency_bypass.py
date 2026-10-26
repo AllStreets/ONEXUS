@@ -79,3 +79,30 @@ async def test_file_kill_switch_blocks_autoactivation(tmp_path):
     await pulse.publish(_detection())
     await asyncio.sleep(0.3)
     assert chronicle.query(source="cortex", action="specter_auto_activated") == []
+
+
+async def test_a_slow_specter_does_not_hold_up_the_bus(tmp_path):
+    """Pulse runs handlers one at a time. The adversarial read used to be
+    awaited inside the handler, so a slow local model held every event behind
+    it, including the trust-collapse alert."""
+    cortex, pulse, chronicle, _ = _build(tmp_path)
+
+    async def _slow_llm(msg: str) -> str:
+        await asyncio.sleep(2.0)
+        return "adversarial read: slow"
+
+    cortex.set_llm(_slow_llm)
+    seen = []
+
+    async def _watch(msg):
+        seen.append(msg.topic)
+
+    pulse.subscribe("aegis.trust_change", _watch)
+    await pulse.publish(_detection())
+    await pulse.publish(Message(topic="aegis.trust_change", source="aegis",
+                                payload={"module": "echo", "old_score": 0.3, "new_score": 0.0}))
+    await asyncio.sleep(0.3)
+    assert seen == ["aegis.trust_change"]
+    assert chronicle.query(source="cortex", action="specter_auto_activated") == []
+    await asyncio.sleep(2.0)
+    assert chronicle.query(source="cortex", action="specter_auto_activated")
