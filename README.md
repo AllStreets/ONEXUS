@@ -14,10 +14,10 @@
 ---
 
 <p align="center">
-  <a href=".github/assets/clips/watch.mp4"><img src=".github/assets/clips/hero.webp" alt="Kernel watch while agents work: Cortex sends routes out to the built-in modules, Aegis flares as it grants each call, and the whole window changes color as the mood moves from calm focus to creative to deep flow" width="100%"/></a>
+  <a href=".github/assets/clips/story.mp4"><picture><source srcset=".github/assets/clips/story.webp" type="image/webp"/><img src=".github/assets/clips/poster-story.png" alt="The whole Aurora window in one take: a message asking to refactor the kernel runtime is typed and sent, Cortex routes it to Council and the window turns from teal to a warm red as Council replies, Council asks for fs.write on nexus/kernel/cortex.py, Allow once clears the request, and a thumbs-up lifts the trust rail" width="100%"/></picture></a>
 </p>
 
-<p align="center"><em>Aurora, the ONEXUS shell, with the kernel watch open while agents work. Every route Cortex makes and every call Aegis grants shows up as it happens, and all of it is logged to Chronicle. One local process, and a static import check keeps the kernel off the network.</em></p>
+<p align="center"><em>Aurora, the ONEXUS shell. You ask for a kernel refactor; Cortex routes it to Council and the shell's colour follows; Council needs to write <code>nexus/kernel/cortex.py</code>, so Aegis holds the call until you answer, and the answer and the trust change land in Chronicle. One local process, and a static import check keeps the kernel off the network. <a href=".github/assets/clips/story.mp4">Full quality (mp4, 18 s)</a>.</em></p>
 
 ---
 
