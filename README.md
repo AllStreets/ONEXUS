@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src=".github/assets/wordmark-v2.svg" alt="ONEXUS, an operating system for agents" width="100%"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/wordmark-dark.svg"/>
+  <img src=".github/assets/wordmark-light.svg" alt="ONEXUS, an operating system for agents" width="100%"/>
+</picture>
 
 &nbsp;
 
@@ -180,10 +183,10 @@ The whole shell **shifts color with what's happening**. Aegis observes the kerne
 <td width="25%"><a href=".github/assets/clips/revoke.mp4"><img src=".github/assets/clips/poster-revoke.png" alt="Clip: revoking an agent's trust"/></a></td>
 </tr>
 <tr>
-<td align="center"><a href=".github/assets/clips/watch.mp4">Watching the kernel</a> · 15s</td>
+<td align="center"><a href=".github/assets/clips/watch.mp4">Watching the kernel</a> · 13s</td>
 <td align="center"><a href=".github/assets/clips/permission.mp4">Answering a permission request</a> · 13s</td>
 <td align="center"><a href=".github/assets/clips/store.mp4">Installing from the store</a> · 15s, install step at 2x</td>
-<td align="center"><a href=".github/assets/clips/revoke.mp4">Revoking an agent</a> · 15s</td>
+<td align="center"><a href=".github/assets/clips/revoke.mp4">Revoking an agent</a> · 13s</td>
 </tr>
 </table>
 
