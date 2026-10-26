@@ -6,6 +6,7 @@ logs to Chronicle, and stores interactions in Engram.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 from collections import deque
@@ -517,6 +518,9 @@ class Cortex:
         self._config = config
         self._modules: dict[str, NexusModule] = {}
         self._llm = None
+        # Background work started from Pulse handlers, held so it is not
+        # collected before it finishes.
+        self._background_tasks: set = set()
         self._classifier = IntentClassifier()
         # Active workspace routing pins — set via set_workspace_config().
         # List of (intent_name_or_None, category_or_None, agent_slug).
@@ -629,6 +633,15 @@ class Cortex:
             f"module={payload.get('module', 'unknown')} "
             f"evidence={payload.get('evidence', [])}"
         )
+        # Pulse runs handlers one at a time, so awaiting Specter's model call
+        # here held the whole bus: the trust-collapse alert and every event
+        # behind it waited for a slow local model. The read runs on its own.
+        task = asyncio.ensure_future(self._specter_emergency_read(specter, prompt, msg, payload))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+    async def _specter_emergency_read(self, specter, prompt: str, msg: Message,
+                                      payload: dict[str, Any]) -> None:
         try:
             response = await specter.handle(prompt, self._build_context())
         except Exception as exc:
