@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.jpg" alt="ONEXUS in raised teal letters beside its orbit mark, over a dim map of the kernel with modules on rings around Cortex, and the line An operating system for agents beneath it" width="100%"/>
+<img src=".github/assets/banner.webp" alt="ONEXUS beside its orbit mark, with the line An operating system for agents. Watch it think. To the right, a live capture of the kernel view: Cortex sends routes out to the modules while the window shifts from calm teal to creative blue to deep-flow green" width="100%"/>
 
 &nbsp;
 
