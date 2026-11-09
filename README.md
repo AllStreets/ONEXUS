@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.webp" alt="ONEXUS beside its orbit mark, with the line An operating system for agents. Watch it think. To the right, a live capture of the kernel view: Cortex sends routes out to the modules while the window shifts from calm teal to creative blue to deep-flow green" width="100%"/>
+<img src=".github/assets/banner.webp" alt="ONEXUS beside its orbit mark, a kernel core circled by a small mint hexagon for an agent, with the line An operating system for agents. Teal and mint aurora curtains ripple slowly on the left and fade into a starfield on the right" width="100%"/>
 
 &nbsp;
 
