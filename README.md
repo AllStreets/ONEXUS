@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner-aurora.webp" alt="ONEXUS beside its orbit mark, a kernel core circled by a small mint hexagon for an agent, with the line An operating system for agents. Teal and mint aurora curtains ripple slowly across the whole banner" width="100%"/>
+<img src=".github/assets/onexus-aurora.webp" alt="ONEXUS, centred, beside its orbit mark: a kernel core circled by a small mint hexagon for an agent, with the line An operating system for agents. Teal and mint aurora curtains ripple slowly across the whole banner" width="100%"/>
 
 &nbsp;
 
