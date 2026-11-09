@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/wordmark-dark.svg"/>
-  <img src=".github/assets/wordmark-light.svg" alt="ONEXUS, an operating system for agents" width="100%"/>
-</picture>
+<img src=".github/assets/banner.jpg" alt="ONEXUS in raised violet letters over a dark field, with the line An operating system for agents beneath it" width="100%"/>
 
 &nbsp;
 
