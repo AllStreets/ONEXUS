@@ -1,6 +1,17 @@
 <div align="center">
 
-<img src=".github/assets/banner.jpg" alt="ONEXUS in raised violet letters over a dark field, with the line An operating system for agents beneath it" width="100%"/>
+<img src=".github/assets/banner.jpg" alt="ONEXUS in raised teal letters beside its orbit mark, over a dim map of the kernel with modules on rings around Cortex, and the line An operating system for agents beneath it" width="100%"/>
+
+<a href="#whats-verified"><img alt="tests" src="https://img.shields.io/badge/tests-1%2C415_passing-4ed5d5?style=for-the-badge&labelColor=08090b"/></a>
+<a href="#the-safety-model"><img alt="capability gate" src="https://img.shields.io/badge/every_tool_call-capability--gated-9a7ef0?style=for-the-badge&labelColor=08090b"/></a>
+<a href="#whats-verified"><img alt="kernel egress" src="https://img.shields.io/badge/kernel_egress-static_invariant-4ed5d5?style=for-the-badge&labelColor=08090b"/></a>
+<a href="#the-safety-model"><img alt="audit" src="https://img.shields.io/badge/audit-append--only-9a7ef0?style=for-the-badge&labelColor=08090b"/></a>
+<a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-4ed5d5?style=for-the-badge&labelColor=08090b"/></a>
+<br/>
+<img alt="release" src="https://img.shields.io/badge/release-v1.0-6b7382?style=flat-square&labelColor=08090b"/>
+<img alt="python" src="https://img.shields.io/badge/python-3.11+-6b7382?style=flat-square&labelColor=08090b"/>
+<img alt="inference" src="https://img.shields.io/badge/inference-local_by_default_%28Ollama%29-6b7382?style=flat-square&labelColor=08090b"/>
+<a href="https://github.com/AllStreets/ONEXUS-Agents"><img alt="catalog" src="https://img.shields.io/badge/agent_catalog-ONEXUS--Agents-6b7382?style=flat-square&labelColor=08090b"/></a>
 
 &nbsp;
 
